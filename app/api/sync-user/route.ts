@@ -60,29 +60,73 @@ export async function POST() {
     
     console.log("저장할 데이터:", userData);
 
-    const { data, error } = await supabase
+    // 먼저 기존 사용자 조회 (삭제되지 않은 사용자만)
+    const { data: existingUser, error: fetchError } = await supabase
       .from("users")
-      .upsert(userData, {
-        onConflict: "clerk_user_id",
-      })
-      .select()
-      .single();
+      .select("*")
+      .eq("clerk_user_id", clerkUser.id)
+      .is("deleted_at", null)
+      .maybeSingle();
 
-    if (error) {
-      console.error("❌ Supabase 동기화 에러:", error);
+    if (fetchError) {
+      console.error("❌ 사용자 조회 에러:", fetchError);
       console.groupEnd();
       return NextResponse.json(
-        { error: "Failed to sync user", details: error.message },
+        { error: "Failed to fetch user", details: fetchError.message },
         { status: 500 }
       );
     }
 
-    console.log("✅ Supabase 동기화 완료:", data);
+    let result;
+    if (existingUser) {
+      // 기존 사용자 업데이트
+      console.log("기존 사용자 발견, 업데이트 중...");
+      const { data, error: updateError } = await supabase
+        .from("users")
+        .update({
+          name: userData.name,
+          email: userData.email,
+          role: userData.role,
+        })
+        .eq("id", existingUser.id)
+        .select()
+        .single();
+
+      if (updateError) {
+        console.error("❌ 사용자 업데이트 에러:", updateError);
+        console.groupEnd();
+        return NextResponse.json(
+          { error: "Failed to update user", details: updateError.message },
+          { status: 500 }
+        );
+      }
+      result = data;
+    } else {
+      // 새 사용자 생성
+      console.log("새 사용자 생성 중...");
+      const { data, error: insertError } = await supabase
+        .from("users")
+        .insert(userData)
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error("❌ 사용자 생성 에러:", insertError);
+        console.groupEnd();
+        return NextResponse.json(
+          { error: "Failed to create user", details: insertError.message },
+          { status: 500 }
+        );
+      }
+      result = data;
+    }
+
+    console.log("✅ Supabase 동기화 완료:", result);
     console.groupEnd();
     
     return NextResponse.json({
       success: true,
-      user: data,
+      user: result,
     });
   } catch (error) {
     console.error("❌ 동기화 중 예외 발생:", error);
