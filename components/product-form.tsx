@@ -1,0 +1,391 @@
+/**
+ * @file components/product-form.tsx
+ * @description 상품 등록/수정 폼 컴포넌트
+ */
+
+"use client";
+
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import {
+  createProduct,
+  updateProduct,
+  type CreateProductInput,
+} from "@/actions/admin-products";
+import type { Category, ProductWithDetails } from "@/types/database";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+// 폼 스키마
+const productSchema = z.object({
+  category_id: z.string().min(1, "카테고리를 선택해주세요."),
+  name: z.string().min(2, "상품명을 입력해주세요."),
+  slug: z
+    .string()
+    .min(2, "slug를 입력해주세요.")
+    .regex(/^[a-z0-9-]+$/, "소문자, 숫자, 하이픈만 사용 가능합니다."),
+  price: z.number().min(0, "가격은 0원 이상이어야 합니다."),
+  discount_price: z.number().min(0).nullable().optional(),
+  description: z.string().optional(),
+  status: z.enum(["active", "hidden", "sold_out"]),
+  stock: z.number().min(0, "재고는 0개 이상이어야 합니다."),
+  is_featured: z.boolean(),
+  is_new: z.boolean(),
+});
+
+type ProductFormData = z.infer<typeof productSchema>;
+
+interface ProductFormProps {
+  categories: Category[];
+  product?: ProductWithDetails;
+}
+
+export default function ProductForm({ categories, product }: ProductFormProps) {
+  const [isPending, startTransition] = useTransition();
+  const router = useRouter();
+  const isEdit = !!product;
+
+  const form = useForm<ProductFormData>({
+    resolver: zodResolver(productSchema),
+    defaultValues: {
+      category_id: product?.category_id || "",
+      name: product?.name || "",
+      slug: product?.slug || "",
+      price: product?.price || 0,
+      discount_price: product?.discount_price || null,
+      description: product?.description || "",
+      status: product?.status || "active",
+      stock: product?.stock || 0,
+      is_featured: product?.is_featured || false,
+      is_new: product?.is_new || false,
+    },
+  });
+
+  const onSubmit = (data: ProductFormData) => {
+    console.log("[ProductForm] 제출:", data);
+
+    startTransition(async () => {
+      if (isEdit && product) {
+        // 수정
+        const result = await updateProduct({
+          id: product.id,
+          ...data,
+        });
+
+        if (result.success) {
+          alert(result.message);
+          router.push("/admin/products");
+        } else {
+          alert(result.message);
+        }
+      } else {
+        // 생성
+        const result = await createProduct({
+          ...data,
+          images: [], // TODO: 이미지 업로드 기능 추가
+        });
+
+        if (result.success) {
+          alert(result.message);
+          router.push("/admin/products");
+        } else {
+          alert(result.message);
+        }
+      }
+    });
+  };
+
+  // slug 자동 생성 (상품명 기반)
+  const handleNameChange = (name: string) => {
+    if (!isEdit) {
+      const slug = name
+        .toLowerCase()
+        .replace(/[^a-z0-9가-힣\s]/g, "")
+        .replace(/\s+/g, "-")
+        .replace(/[가-힣]/g, "");
+      form.setValue("slug", slug);
+    }
+  };
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm p-6">
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FormField
+              control={form.control}
+              name="category_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-[#4a3f48]">
+                    카테고리 <span className="text-[#ff6b9d]">*</span>
+                  </FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger className="w-full border-[#f5d5e3] focus:border-[#fad2e6] focus:ring-[#fad2e6]">
+                        <SelectValue placeholder="카테고리 선택" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {categories.map((category) => (
+                        <SelectItem key={category.id} value={category.id}>
+                          {category.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="status"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-[#4a3f48]">
+                    상태 <span className="text-[#ff6b9d]">*</span>
+                  </FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger className="w-full border-[#f5d5e3] focus:border-[#fad2e6] focus:ring-[#fad2e6]">
+                        <SelectValue placeholder="상태 선택" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="active">판매중</SelectItem>
+                      <SelectItem value="hidden">숨김</SelectItem>
+                      <SelectItem value="sold_out">품절</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
+          <FormField
+            control={form.control}
+            name="name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-[#4a3f48]">
+                  상품명 <span className="text-[#ff6b9d]">*</span>
+                </FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="상품명을 입력하세요"
+                    className="border-[#f5d5e3] focus:border-[#fad2e6] focus:ring-[#fad2e6]"
+                    {...field}
+                    onChange={(e) => {
+                      field.onChange(e);
+                      handleNameChange(e.target.value);
+                    }}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="slug"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-[#4a3f48]">
+                  URL Slug <span className="text-[#ff6b9d]">*</span>
+                </FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="product-slug"
+                    className="border-[#f5d5e3] focus:border-[#fad2e6] focus:ring-[#fad2e6]"
+                    {...field}
+                  />
+                </FormControl>
+                <p className="text-xs text-[#8b7d84]">
+                  URL에 사용될 고유한 식별자 (소문자, 숫자, 하이픈만 사용)
+                </p>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <FormField
+              control={form.control}
+              name="price"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-[#4a3f48]">
+                    정가 <span className="text-[#ff6b9d]">*</span>
+                  </FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      placeholder="0"
+                      className="border-[#f5d5e3] focus:border-[#fad2e6] focus:ring-[#fad2e6]"
+                      {...field}
+                      onChange={(e) =>
+                        field.onChange(parseInt(e.target.value) || 0)
+                      }
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="discount_price"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-[#4a3f48]">할인가</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      placeholder="할인 없음"
+                      className="border-[#f5d5e3] focus:border-[#fad2e6] focus:ring-[#fad2e6]"
+                      {...field}
+                      onChange={(e) =>
+                        field.onChange(
+                          e.target.value ? parseInt(e.target.value) : null,
+                        )
+                      }
+                      value={field.value || ""}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="stock"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-[#4a3f48]">
+                    재고 <span className="text-[#ff6b9d]">*</span>
+                  </FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      placeholder="0"
+                      className="border-[#f5d5e3] focus:border-[#fad2e6] focus:ring-[#fad2e6]"
+                      {...field}
+                      onChange={(e) =>
+                        field.onChange(parseInt(e.target.value) || 0)
+                      }
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
+          <FormField
+            control={form.control}
+            name="description"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-[#4a3f48]">상품 설명</FormLabel>
+                <FormControl>
+                  <Textarea
+                    placeholder="상품에 대한 자세한 설명을 입력하세요"
+                    className="border-[#f5d5e3] focus:border-[#fad2e6] focus:ring-[#fad2e6] resize-none"
+                    rows={6}
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <div className="flex gap-4">
+            <FormField
+              control={form.control}
+              name="is_featured"
+              render={({ field }) => (
+                <FormItem className="flex items-center gap-2">
+                  <FormControl>
+                    <input
+                      type="checkbox"
+                      checked={field.value}
+                      onChange={field.onChange}
+                      className="w-4 h-4 text-[#ff6b9d] border-[#f5d5e3] rounded focus:ring-[#fad2e6]"
+                    />
+                  </FormControl>
+                  <FormLabel className="text-[#4a3f48] cursor-pointer">
+                    베스트 상품
+                  </FormLabel>
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="is_new"
+              render={({ field }) => (
+                <FormItem className="flex items-center gap-2">
+                  <FormControl>
+                    <input
+                      type="checkbox"
+                      checked={field.value}
+                      onChange={field.onChange}
+                      className="w-4 h-4 text-[#ff6b9d] border-[#f5d5e3] rounded focus:ring-[#fad2e6]"
+                    />
+                  </FormControl>
+                  <FormLabel className="text-[#4a3f48] cursor-pointer">
+                    신상품
+                  </FormLabel>
+                </FormItem>
+              )}
+            />
+          </div>
+
+          <div className="flex gap-3 pt-4">
+            <Button
+              type="submit"
+              disabled={isPending}
+              className="flex-1 h-12 bg-[#ff6b9d] hover:bg-[#ff5088] text-white disabled:opacity-50"
+            >
+              {isPending ? "처리 중..." : isEdit ? "상품 수정" : "상품 등록"}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => router.back()}
+              className="h-12 border-[#fad2e6] text-[#4a3f48] hover:bg-[#ffeef5]"
+            >
+              취소
+            </Button>
+          </div>
+        </form>
+      </Form>
+    </div>
+  );
+}

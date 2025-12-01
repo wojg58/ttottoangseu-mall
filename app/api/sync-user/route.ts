@@ -8,22 +8,35 @@ import { getServiceRoleClient } from "@/lib/supabase/service-role";
  * 클라이언트에서 로그인 후 이 API를 호출하여 사용자 정보를 Supabase에 저장합니다.
  * 이미 존재하는 경우 업데이트하고, 없으면 새로 생성합니다.
  */
-export async function POST() {
+export async function POST(request: Request) {
   try {
     console.group("🔐 API: 사용자 동기화 요청");
-    
+
     // Clerk 인증 확인
     const authResult = await auth();
-    const { userId } = authResult;
-    
+    let userId = authResult?.userId;
+
     console.log("auth() 결과:", { userId, hasAuth: !!authResult });
+
+    // auth()로 userId를 못 가져온 경우, Authorization 헤더에서 토큰 확인
+    if (!userId) {
+      const authHeader = request.headers.get("Authorization");
+      if (authHeader?.startsWith("Bearer ")) {
+        console.log("Authorization 헤더에서 토큰 발견, 재시도...");
+        // 토큰이 있으면 auth()를 다시 시도 (미들웨어가 처리했을 수 있음)
+        const retryAuth = await auth();
+        userId = retryAuth?.userId;
+        console.log("재시도 결과:", { userId });
+      }
+    }
 
     if (!userId) {
       console.error("❌ 인증 실패: userId가 없습니다");
+      console.log("요청 헤더:", Object.fromEntries(request.headers.entries()));
       console.groupEnd();
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    
+
     console.log("✅ 인증 확인됨, userId:", userId);
 
     // Clerk에서 사용자 정보 가져오기
@@ -36,7 +49,7 @@ export async function POST() {
       console.groupEnd();
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
-    
+
     console.log("✅ Clerk 사용자 정보:", {
       id: clerkUser.id,
       name: clerkUser.fullName || clerkUser.username,
@@ -57,7 +70,7 @@ export async function POST() {
       email: clerkUser.emailAddresses[0]?.emailAddress || "",
       role: "customer",
     };
-    
+
     console.log("저장할 데이터:", userData);
 
     // 먼저 기존 사용자 조회 (삭제되지 않은 사용자만)
@@ -73,7 +86,7 @@ export async function POST() {
       console.groupEnd();
       return NextResponse.json(
         { error: "Failed to fetch user", details: fetchError.message },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -97,7 +110,7 @@ export async function POST() {
         console.groupEnd();
         return NextResponse.json(
           { error: "Failed to update user", details: updateError.message },
-          { status: 500 }
+          { status: 500 },
         );
       }
       result = data;
@@ -115,7 +128,7 @@ export async function POST() {
         console.groupEnd();
         return NextResponse.json(
           { error: "Failed to create user", details: insertError.message },
-          { status: 500 }
+          { status: 500 },
         );
       }
       result = data;
@@ -123,7 +136,7 @@ export async function POST() {
 
     console.log("✅ Supabase 동기화 완료:", result);
     console.groupEnd();
-    
+
     return NextResponse.json({
       success: true,
       user: result,
@@ -133,7 +146,7 @@ export async function POST() {
     console.groupEnd();
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

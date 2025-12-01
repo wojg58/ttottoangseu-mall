@@ -8,40 +8,37 @@ import { useEffect, useRef } from "react";
  *
  * 사용자가 로그인한 상태에서 이 훅을 사용하면
  * 자동으로 /api/sync-user를 호출하여 Supabase users 테이블에 사용자 정보를 저장합니다.
- *
- * @example
- * ```tsx
- * 'use client';
- *
- * import { useSyncUser } from '@/hooks/use-sync-user';
- *
- * export default function Layout({ children }) {
- *   useSyncUser();
- *   return <>{children}</>;
- * }
- * ```
  */
 export function useSyncUser() {
-  const { isLoaded, userId } = useAuth();
+  const { isLoaded, isSignedIn, userId, getToken } = useAuth();
   const syncedRef = useRef(false);
 
   useEffect(() => {
     // 이미 동기화했거나, 로딩 중이거나, 로그인하지 않은 경우 무시
-    if (syncedRef.current || !isLoaded || !userId) {
+    if (syncedRef.current || !isLoaded || !isSignedIn || !userId) {
       return;
     }
 
-    // 동기화 실행
+    // 동기화 실행 (약간의 딜레이 추가)
     const syncUser = async () => {
       try {
+        // Clerk 세션이 완전히 준비될 때까지 잠시 대기
+        await new Promise((resolve) => setTimeout(resolve, 500));
+
         console.group("🔄 사용자 동기화 시작");
         console.log("userId:", userId);
-        
+
+        // Clerk 토큰 가져오기
+        const token = await getToken();
+        console.log("토큰 존재:", !!token);
+
         const response = await fetch("/api/sync-user", {
           method: "POST",
-          credentials: "include", // 쿠키 포함
+          credentials: "include",
           headers: {
             "Content-Type": "application/json",
+            // 토큰이 있으면 Authorization 헤더에도 추가
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
         });
 
@@ -63,5 +60,5 @@ export function useSyncUser() {
     };
 
     syncUser();
-  }, [isLoaded, userId]);
+  }, [isLoaded, isSignedIn, userId, getToken]);
 }

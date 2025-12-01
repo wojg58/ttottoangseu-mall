@@ -1,0 +1,322 @@
+/**
+ * @file app/products/[slug]/page.tsx
+ * @description 상품 상세 페이지
+ *
+ * 주요 기능:
+ * 1. 상품 이미지 갤러리
+ * 2. 상품 정보 (이름, 가격, 설명)
+ * 3. 옵션 선택
+ * 4. 수량 선택
+ * 5. 장바구니 담기 / 바로 구매
+ */
+
+import Image from "next/image";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import {
+  Home,
+  Heart,
+  ShoppingCart,
+  Minus,
+  Plus,
+  Share2,
+  Truck,
+  Shield,
+  RefreshCw,
+  Star,
+} from "lucide-react";
+import { getProductBySlug } from "@/actions/products";
+import ProductImageGallery from "@/components/product-image-gallery";
+import AddToCartButton from "@/components/add-to-cart-button";
+
+interface ProductDetailPageProps {
+  params: Promise<{
+    slug: string;
+  }>;
+}
+
+export default async function ProductDetailPage({
+  params,
+}: ProductDetailPageProps) {
+  const { slug } = await params;
+
+  console.log("[ProductDetailPage] 렌더링, slug:", slug);
+
+  // 상품 정보 조회
+  const product = await getProductBySlug(slug);
+
+  if (!product) {
+    notFound();
+  }
+
+  // 할인율 계산
+  const discountRate =
+    product.discount_price && product.price > 0
+      ? Math.round(
+          ((product.price - product.discount_price) / product.price) * 100,
+        )
+      : 0;
+
+  // 표시 가격
+  const displayPrice = product.discount_price ?? product.price;
+
+  // 품절 여부
+  const isSoldOut = product.status === "sold_out" || product.stock === 0;
+
+  // 이미지 정렬
+  const sortedImages = [...(product.images || [])].sort(
+    (a, b) => a.sort_order - b.sort_order,
+  );
+  const primaryImage =
+    sortedImages.find((img) => img.is_primary) || sortedImages[0];
+
+  return (
+    <main className="py-8">
+      <div className="shop-container">
+        {/* 브레드크럼 */}
+        <nav className="flex items-center gap-2 text-sm text-[#8b7d84] mb-6">
+          <Link
+            href="/"
+            className="hover:text-[#ff6b9d] flex items-center gap-1"
+          >
+            <Home className="w-4 h-4" />홈
+          </Link>
+          <span>/</span>
+          <Link href="/products" className="hover:text-[#ff6b9d]">
+            상품
+          </Link>
+          <span>/</span>
+          <Link
+            href={`/products/category/${product.category.slug}`}
+            className="hover:text-[#ff6b9d]"
+          >
+            {product.category.name}
+          </Link>
+          <span>/</span>
+          <span className="text-[#4a3f48] truncate max-w-[200px]">
+            {product.name}
+          </span>
+        </nav>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
+          {/* 왼쪽: 이미지 갤러리 */}
+          <ProductImageGallery
+            images={sortedImages}
+            productName={product.name}
+          />
+
+          {/* 오른쪽: 상품 정보 */}
+          <div className="flex flex-col">
+            {/* 뱃지 */}
+            <div className="flex items-center gap-2 mb-3">
+              {product.is_new && <span className="shop-badge-new">NEW</span>}
+              {product.is_featured && (
+                <span className="shop-badge bg-[#ff6b9d] text-white">BEST</span>
+              )}
+              {isSoldOut && <span className="shop-badge-soldout">품절</span>}
+            </div>
+
+            {/* 카테고리 */}
+            <Link
+              href={`/products/category/${product.category.slug}`}
+              className="text-sm text-[#8b7d84] hover:text-[#ff6b9d] mb-2"
+            >
+              {product.category.name}
+            </Link>
+
+            {/* 상품명 */}
+            <h1 className="text-2xl lg:text-3xl font-bold text-[#4a3f48] mb-4">
+              {product.name}
+            </h1>
+
+            {/* 리뷰 (임시) */}
+            <div className="flex items-center gap-2 mb-6">
+              <div className="flex items-center">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <Star
+                    key={star}
+                    className={`w-4 h-4 ${
+                      star <= 4
+                        ? "fill-yellow-400 text-yellow-400"
+                        : "fill-gray-200 text-gray-200"
+                    }`}
+                  />
+                ))}
+              </div>
+              <span className="text-sm text-[#4a3f48] font-medium">4.8</span>
+              <span className="text-sm text-[#8b7d84]">(리뷰 12개)</span>
+            </div>
+
+            {/* 가격 */}
+            <div className="bg-[#ffeef5] rounded-xl p-6 mb-6">
+              <div className="flex items-baseline gap-3 flex-wrap">
+                {discountRate > 0 && (
+                  <span className="text-2xl font-bold text-[#ff6b9d]">
+                    {discountRate}%
+                  </span>
+                )}
+                <span className="text-3xl font-bold text-[#4a3f48]">
+                  {displayPrice.toLocaleString()}원
+                </span>
+                {discountRate > 0 && (
+                  <span className="text-lg text-[#8b7d84] line-through">
+                    {product.price.toLocaleString()}원
+                  </span>
+                )}
+              </div>
+              {discountRate > 0 && (
+                <p className="text-sm text-[#ff6b9d] mt-2">
+                  🎉 {(product.price - displayPrice).toLocaleString()}원 할인!
+                </p>
+              )}
+            </div>
+
+            {/* 옵션 선택 (variants가 있는 경우) */}
+            {product.variants && product.variants.length > 0 && (
+              <div className="mb-6">
+                <h3 className="text-sm font-bold text-[#4a3f48] mb-3">
+                  옵션 선택
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {product.variants
+                    .filter((v) => !v.deleted_at)
+                    .map((variant) => (
+                      <button
+                        key={variant.id}
+                        disabled={variant.stock === 0}
+                        className={`px-4 py-2 rounded-lg border text-sm transition-colors ${
+                          variant.stock === 0
+                            ? "border-gray-200 text-gray-400 cursor-not-allowed"
+                            : "border-[#f5d5e3] text-[#4a3f48] hover:border-[#ff6b9d] hover:bg-[#ffeef5]"
+                        }`}
+                      >
+                        {variant.variant_value}
+                        {variant.price_adjustment !== 0 && (
+                          <span className="ml-1 text-xs text-[#8b7d84]">
+                            ({variant.price_adjustment > 0 ? "+" : ""}
+                            {variant.price_adjustment.toLocaleString()}원)
+                          </span>
+                        )}
+                        {variant.stock === 0 && (
+                          <span className="ml-1 text-xs text-red-400">
+                            품절
+                          </span>
+                        )}
+                      </button>
+                    ))}
+                </div>
+              </div>
+            )}
+
+            {/* 재고 */}
+            <div className="mb-6">
+              <p className="text-sm text-[#8b7d84]">
+                {isSoldOut ? (
+                  <span className="text-red-500">품절된 상품입니다</span>
+                ) : product.stock <= 5 ? (
+                  <span className="text-orange-500">
+                    🔥 {product.stock}개 남음 - 품절 임박!
+                  </span>
+                ) : (
+                  <span>재고: {product.stock}개</span>
+                )}
+              </p>
+            </div>
+
+            {/* 장바구니/구매 버튼 */}
+            <AddToCartButton
+              productId={product.id}
+              productName={product.name}
+              price={displayPrice}
+              stock={product.stock}
+              isSoldOut={isSoldOut}
+            />
+
+            {/* 찜하기/공유 */}
+            <div className="flex items-center gap-4 mt-4">
+              <button className="flex items-center gap-2 text-[#8b7d84] hover:text-[#ff6b9d] transition-colors">
+                <Heart className="w-5 h-5" />
+                <span className="text-sm">찜하기</span>
+              </button>
+              <button className="flex items-center gap-2 text-[#8b7d84] hover:text-[#ff6b9d] transition-colors">
+                <Share2 className="w-5 h-5" />
+                <span className="text-sm">공유하기</span>
+              </button>
+            </div>
+
+            {/* 배송/안심 정보 */}
+            <div className="border-t border-[#f5d5e3] mt-6 pt-6">
+              <div className="grid grid-cols-3 gap-4 text-center">
+                <div className="flex flex-col items-center gap-2">
+                  <Truck className="w-6 h-6 text-[#ff6b9d]" />
+                  <span className="text-xs text-[#4a3f48]">빠른 배송</span>
+                </div>
+                <div className="flex flex-col items-center gap-2">
+                  <Shield className="w-6 h-6 text-[#ff6b9d]" />
+                  <span className="text-xs text-[#4a3f48]">안전 결제</span>
+                </div>
+                <div className="flex flex-col items-center gap-2">
+                  <RefreshCw className="w-6 h-6 text-[#ff6b9d]" />
+                  <span className="text-xs text-[#4a3f48]">교환/환불</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 상품 상세 설명 */}
+        <section className="mt-12 lg:mt-16">
+          <div className="border-b border-[#f5d5e3]">
+            <nav className="flex gap-8">
+              <button className="py-4 text-[#ff6b9d] border-b-2 border-[#ff6b9d] font-bold">
+                상품 설명
+              </button>
+              <button className="py-4 text-[#8b7d84] hover:text-[#4a3f48]">
+                리뷰 (12)
+              </button>
+              <button className="py-4 text-[#8b7d84] hover:text-[#4a3f48]">
+                문의 (3)
+              </button>
+            </nav>
+          </div>
+
+          <div className="py-8">
+            {product.description ? (
+              <div className="prose prose-pink max-w-none">
+                <p className="text-[#4a3f48] whitespace-pre-line leading-relaxed">
+                  {product.description}
+                </p>
+              </div>
+            ) : (
+              <p className="text-[#8b7d84] text-center py-8">
+                상품 설명이 없습니다.
+              </p>
+            )}
+
+            {/* 상품 이미지들 (상세 이미지) */}
+            {sortedImages.length > 1 && (
+              <div className="mt-8 space-y-4">
+                {sortedImages.slice(1).map((image, index) => (
+                  <div
+                    key={image.id}
+                    className="relative aspect-square max-w-2xl mx-auto rounded-xl overflow-hidden"
+                  >
+                    <Image
+                      src={image.image_url}
+                      alt={
+                        image.alt_text ||
+                        `${product.name} 상세 이미지 ${index + 1}`
+                      }
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+      </div>
+    </main>
+  );
+}

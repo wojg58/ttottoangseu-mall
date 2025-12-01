@@ -1,4 +1,4 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { auth } from "@clerk/nextjs/server";
 
 /**
@@ -11,23 +11,26 @@ import { auth } from "@clerk/nextjs/server";
  *
  * @example
  * ```tsx
- * // Server Component
- * import { createClerkSupabaseClient } from '@/lib/supabase/server';
+ * // Server Component / Server Action
+ * import { createClient } from '@/lib/supabase/server';
  *
  * export default async function MyPage() {
- *   const supabase = createClerkSupabaseClient();
+ *   const supabase = await createClient();
  *   const { data } = await supabase.from('table').select('*');
  *   return <div>...</div>;
  * }
  * ```
  */
-export function createClerkSupabaseClient() {
+export async function createClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-  return createClient(supabaseUrl, supabaseKey, {
+  return createSupabaseClient(supabaseUrl, supabaseKey, {
     async accessToken() {
       return (await auth()).getToken();
     },
   });
 }
+
+// 하위 호환성을 위한 alias
+export const createClerkSupabaseClient = createClient;
