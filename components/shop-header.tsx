@@ -17,6 +17,7 @@
 
 import { SignedOut, SignInButton, SignedIn, UserButton } from "@clerk/nextjs";
 import Link from "next/link";
+import Image from "next/image";
 import { Search, ShoppingCart, Heart, Menu, X } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -24,8 +25,8 @@ import { Input } from "@/components/ui/input";
 
 // 카테고리 데이터 (DB에서 가져올 예정이지만 일단 하드코딩)
 const CATEGORIES = [
-  { name: "베스트", slug: "best", emoji: "🏆" },
-  { name: "산리오", slug: "sanrio", emoji: "❣️" },
+  { name: "베스트", slug: "best", emoji: "💝" },
+  { name: "산리오", slug: "sanrio", emoji: "❤️" },
   { name: "캐릭터", slug: "character", emoji: "🧡" },
   { name: "핸드폰줄", slug: "phone-strap", emoji: "💛" },
   { name: "키링,지비츠", slug: "keyring", emoji: "💚" },
@@ -49,51 +50,23 @@ export default function ShopHeader() {
 
   return (
     <header className="sticky top-0 z-50 w-full">
-      {/* 상단 바 - 연한 핑크 배경 */}
-      <div className="bg-[#ffeef5] border-b border-[#f5d5e3]">
-        <div className="shop-container">
-          <div className="flex justify-between items-center h-10 text-xs text-[#8b7d84]">
-            <div className="flex items-center gap-2">
-              <span className="font-bold text-[#ff6b9d]">또또앙스</span>
-              <span>캐릭터 굿즈 전문 쇼핑몰</span>
-            </div>
-            <div className="flex items-center gap-4">
-              <SignedOut>
-                <SignInButton mode="modal">
-                  <button className="hover:text-[#ff6b9d] transition-colors">
-                    로그인
-                  </button>
-                </SignInButton>
-              </SignedOut>
-              <SignedIn>
-                <Link
-                  href="/mypage"
-                  className="hover:text-[#ff6b9d] transition-colors"
-                >
-                  마이페이지
-                </Link>
-              </SignedIn>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* 메인 헤더 - 핑크 배경 */}
-      <div className="bg-[#fad2e6]">
+      <div className="bg-[#FF6B9D]">
         <div className="shop-container py-4">
           <div className="flex justify-between items-center gap-4">
             {/* 로고 영역 */}
             <Link href="/" className="flex items-center gap-3 shrink-0">
-              <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm">
-                <span className="text-2xl">🎀</span>
-              </div>
+              <Image
+                src="/character.png"
+                alt="또또앙스"
+                width={100}
+                height={100}
+                className="object-contain"
+              />
               <div className="hidden sm:block">
-                <h1 className="text-white text-lg font-bold drop-shadow-sm">
+                <h1 className="text-5xl font-bold drop-shadow-sm brand-text-logo text-white">
                   또또앙스
                 </h1>
-                <p className="text-white/80 text-xs">
-                  두근거리는 설렘 (*´v`*) Love
-                </p>
               </div>
             </Link>
 
@@ -109,7 +82,7 @@ export default function ShopHeader() {
                 />
                 <button
                   type="submit"
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#fad2e6] hover:text-[#ff6b9d] transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white hover:text-white/80 transition-colors"
                 >
                   <Search className="w-5 h-5" />
                 </button>
@@ -131,6 +104,12 @@ export default function ShopHeader() {
                 >
                   <ShoppingCart className="w-5 h-5" />
                   {/* TODO: 장바구니 아이템 개수 표시 */}
+                </Link>
+                <Link
+                  href="/mypage"
+                  className="p-2 text-white hover:bg-white/20 rounded-full transition-colors"
+                >
+                  <span className="text-sm">마이페이지</span>
                 </Link>
                 <div className="ml-2">
                   <UserButton
@@ -182,7 +161,17 @@ export default function ShopHeader() {
                 >
                   <span>
                     {category.name}
-                    {category.emoji}
+                    {category.slug === "best" ? (
+                      <Image
+                        src="/best.png"
+                        alt="베스트"
+                        width={20}
+                        height={20}
+                        className="inline-block ml-1"
+                      />
+                    ) : (
+                      category.emoji
+                    )}
                   </span>
                 </Link>
               </li>
@@ -207,9 +196,21 @@ export default function ShopHeader() {
                         : `/products/category/${category.slug}`
                     }
                     onClick={() => setIsMobileMenuOpen(false)}
-                    className="block text-center py-3 px-2 rounded-lg bg-[#ffeef5] text-[#4a3f48] hover:bg-[#fad2e6] transition-colors text-sm"
+                    className="block text-center py-3 px-2 rounded-lg bg-[#ffeef5] text-[#4a3f48] hover:bg-[#FF6B9D] hover:text-white transition-colors text-sm"
                   >
-                    <span className="text-lg">{category.emoji || "📦"}</span>
+                    {category.slug === "best" ? (
+                      <div className="flex justify-center mb-1">
+                        <Image
+                          src="/best.png"
+                          alt="베스트"
+                          width={32}
+                          height={32}
+                          className="rounded"
+                        />
+                      </div>
+                    ) : (
+                      <span className="text-lg">{category.emoji || "📦"}</span>
+                    )}
                     <p className="mt-1">{category.name}</p>
                   </Link>
                 </li>

@@ -4,20 +4,25 @@
  */
 
 import Link from "next/link";
+import Image from "next/image";
 
 export default function ShopFooter() {
   return (
-    <footer className="bg-[#4a3f48] text-white mt-16">
+    <footer className="bg-gray-500 text-white mt-16">
       <div className="shop-container py-12">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* 브랜드 정보 */}
           <div className="md:col-span-2">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-[#fad2e6] rounded-full flex items-center justify-center">
-                <span className="text-xl">🎀</span>
-              </div>
+              <Image
+                src="/character.png"
+                alt="또또앙스"
+                width={100}
+                height={100}
+                className="object-contain"
+              />
               <div>
-                <h3 className="text-lg font-bold">또또앙스</h3>
+                <h3 className="text-lg font-bold brand-text-logo">또또앙스</h3>
                 <p className="text-white/60 text-xs">
                   두근거리는 설렘 (*´v`*) Love
                 </p>

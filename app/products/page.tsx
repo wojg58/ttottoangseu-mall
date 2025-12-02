@@ -11,6 +11,7 @@
 
 import { Suspense } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Filter, Home } from "lucide-react";
 import { getProducts, getCategories } from "@/actions/products";
 import ProductCard from "@/components/product-card";
@@ -106,7 +107,16 @@ export default async function ProductsPage({
                         : "hover:bg-[#ffeef5] text-[#4a3f48]"
                     }`}
                   >
-                    🏆 베스트
+                    <span className="flex items-center gap-1">
+                      <Image
+                        src="/best.png"
+                        alt="베스트"
+                        width={20}
+                        height={20}
+                        className="rounded"
+                      />
+                      베스트
+                    </span>
                   </Link>
                 </li>
                 <li>

@@ -99,8 +99,18 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
         }
       } else {
         // 생성
+        // 폼 검증을 통과했으므로 모든 필수 필드가 존재함
         const result = await createProduct({
-          ...data,
+          category_id: data.category_id,
+          name: data.name,
+          slug: data.slug,
+          price: data.price,
+          discount_price: data.discount_price ?? null,
+          description: data.description ?? null,
+          status: data.status,
+          stock: data.stock,
+          is_featured: data.is_featured,
+          is_new: data.is_new,
           images: [], // TODO: 이미지 업로드 기능 추가
         });
 

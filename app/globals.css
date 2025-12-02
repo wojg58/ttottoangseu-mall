@@ -5,6 +5,27 @@
 
 /* 커스텀 폰트는 layout.tsx에서 로드됨 - Gowun Dodum (한글), Plus Jakarta Sans (영문) */
 
+@font-face {
+  font-family: 'TtangsBudaeJjigae';
+  src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2212@1.0/TTTtangsbudaejjigaeB.woff2') format('woff2');
+  font-weight: 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'KccSign';
+  src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2302@1.0/KCC-Ganpan.woff2') format('woff2');
+  font-weight: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'NexonBazzi';
+  src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_20-04@2.1/Bazzi.woff') format('woff');
+  font-weight: normal;
+  font-display: swap;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -182,6 +203,25 @@
 
   .shop-price-discount {
     @apply text-[#ff6b9d] font-bold;
+  }
+
+  .font-brand {
+    font-family: 'TtangsBudaeJjigae', 'Gowun Dodum', system-ui, sans-serif;
+  }
+
+  .brand-text {
+    font-family: 'KccSign', 'Gowun Dodum', system-ui, sans-serif;
+    font-weight: normal;
+    font-size: calc(1.125rem + 3px);
+  }
+
+  .brand-text-logo {
+    font-family: 'NexonBazzi', 'Gowun Dodum', system-ui, sans-serif;
+    font-weight: normal;
+  }
+
+  .cl-avatarImage {
+    filter: grayscale(100%);
   }
 }
 
