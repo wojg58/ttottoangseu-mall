@@ -112,10 +112,10 @@ export default function ProductCard({ product, rank }: ProductCardProps) {
       {/* 상품 정보 */}
       <div className="px-1">
         {/* 카테고리 */}
-        <p className="text-xs text-[#8b7d84] mb-1">{product.category.name}</p>
+        <p className="text-xs text-black mb-1">{product.category.name}</p>
 
         {/* 상품명 */}
-        <h3 className="text-sm text-[#4a3f48] leading-snug line-clamp-2 mb-2 group-hover:text-[#ff6b9d] transition-colors">
+        <h3 className="text-sm text-black leading-snug line-clamp-2 mb-2 group-hover:text-[#ff6b9d] transition-colors">
           {product.name}
         </h3>
 
@@ -135,7 +135,7 @@ export default function ProductCard({ product, rank }: ProductCardProps) {
         </div>
 
         {/* 리뷰 (TODO: 실제 리뷰 데이터 연동) */}
-        <div className="flex items-center gap-1 mt-2 text-xs text-[#8b7d84]">
+        <div className="flex items-center gap-1 mt-2 text-xs text-black">
           <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
           <span className="font-medium">4.8</span>
           <span>리뷰 12</span>

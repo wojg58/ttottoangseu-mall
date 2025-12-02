@@ -26,6 +26,27 @@
   font-display: swap;
 }
 
+@font-face {
+  font-family: 'LineSeed';
+  src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_11-01@1.0/LINESeedKR-Rg.woff2') format('woff2');
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'LineSeed';
+  src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_11-01@1.0/LINESeedKR-Bd.woff2') format('woff2');
+  font-weight: 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'NamyangjuGothic';
+  src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/2510-2@1.0/NYJGothicEB.woff2') format('woff2');
+  font-weight: 800;
+  font-display: swap;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -76,7 +97,7 @@
 
 :root {
   --radius: 0.625rem;
-  --font-shop: "Gowun Dodum", "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-shop: "LineSeed", "Gowun Dodum", system-ui, sans-serif;
 
   /* 또또앙스 화이트/핑크 테마 */
   --background: #fff9f7;
@@ -245,6 +266,7 @@
 /* 카테고리 네비게이션 스타일 */
 .category-nav-item {
   @apply relative py-3 px-2 text-sm font-medium transition-colors;
+  font-family: 'LineSeed', 'Gowun Dodum', system-ui, sans-serif;
 }
 
 .category-nav-item::after {

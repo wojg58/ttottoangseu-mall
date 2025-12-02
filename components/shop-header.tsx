@@ -144,7 +144,7 @@ export default function ShopHeader() {
       </div>
 
       {/* 카테고리 네비게이션 */}
-      <nav className="bg-white border-b border-[#f5d5e3] hidden lg:block">
+      <nav className="bg-[#fad2e6] border-b border-[#f5d5e3] hidden lg:block">
         <div className="shop-container">
           <ul className="flex items-center justify-center gap-1">
             {CATEGORIES.map((category) => (
@@ -157,7 +157,7 @@ export default function ShopHeader() {
                       ? "/products"
                       : `/products/category/${category.slug}`
                   }
-                  className="category-nav-item flex items-center gap-1 text-[#4a3f48] hover:text-[#ff6b9d]"
+                  className="category-nav-item flex items-center gap-1 text-black hover:text-[#ff6b9d]"
                 >
                   <span>
                     {category.name}

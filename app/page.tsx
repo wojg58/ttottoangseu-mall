@@ -177,22 +177,30 @@ export default async function HomePage() {
           <div className="shop-container">
             {/* 히어로 배너 */}
             <div className="flex flex-col md:flex-row items-center gap-8 mb-16">
-              <div className="flex-1 text-center md:text-left">
+              <div
+                className="flex-1 text-center md:text-left"
+                style={{ width: "700px", maxWidth: "700px", minWidth: "700px" }}
+              >
                 <div className="inline-flex items-center gap-2 bg-white/50 rounded-full px-4 py-2 mb-4">
                   <Sparkles className="w-4 h-4 text-[#ff6b9d]" />
-                  <span className="text-sm text-[#4a3f48] font-medium">
+                  <span className="text-sm text-black font-medium">
                     또또앙스 캐릭터 굿즈 전문 쇼핑몰
                   </span>
                 </div>
                 <h1 className="text-3xl md:text-5xl font-bold text-[#4a3f48] mb-4 leading-tight">
-                  두근거리는 설렘을
-                  <br />
+                  두근거리는 설렘을{" "}
                   <span className="text-[#ff6b9d]">선물하세요</span> 💕
                 </h1>
-                <p className="text-[#8b7d84] mb-6 text-lg">
-                  산리오, 디즈니 등 사랑스러운 캐릭터 굿즈를 만나보세요.
+                <p
+                  className="text-[#4a3f48] mb-6 text-lg"
+                  style={{
+                    fontFamily:
+                      "'NamyangjuGothic', 'Gowun Dodum', system-ui, sans-serif",
+                  }}
+                >
+                  산리오, 짱구, 유키오 등 사랑스러운 캐릭터 굿즈를 만나보세요.
                   <br />
-                  키링, 파우치, 핸드폰줄 등 다양한 아이템이 가득!
+                  인형 키링, 파우치, 핸드폰줄, 스티커 등 다양한 아이템이 가득!
                 </p>
                 <div className="flex flex-col sm:flex-row gap-3 justify-center md:justify-start">
                   <Link
@@ -205,6 +213,10 @@ export default async function HomePage() {
                   <Link
                     href="/products?featured=true"
                     className="shop-btn-primary inline-flex items-center justify-center gap-2"
+                    style={{
+                      fontFamily:
+                        "'NamyangjuGothic', 'Gowun Dodum', system-ui, sans-serif",
+                    }}
                   >
                     베스트 상품
                     <TrendingUp className="w-4 h-4" />
@@ -212,10 +224,21 @@ export default async function HomePage() {
                 </div>
               </div>
               <div className="flex-1 relative">
-                <div className="relative w-[600px] h-[600px] mx-auto">
+                <div
+                  className="relative w-[600px] h-[600px] mx-auto"
+                  style={{ marginLeft: "-100px" }}
+                >
                   {/* 장식적인 원들 */}
                   <div className="absolute -top-4 -left-4 w-24 h-24 bg-white/30 rounded-full" />
-                  <div className="absolute -bottom-4 -right-4 w-32 h-32 bg-[#ff6b9d]/20 rounded-full" />
+                  <div
+                    className="absolute w-32 h-32 bg-[#ff6b9d]/20 rounded-full"
+                    style={{
+                      left: "50%",
+                      top: "50%",
+                      transform:
+                        "translate(calc(50% - 300px), calc(50% + 70px))",
+                    }}
+                  />
                   <div className="relative w-full h-full flex items-center justify-center">
                     <Image
                       src="/g.png"
@@ -233,7 +256,7 @@ export default async function HomePage() {
             {categories.length > 0 && (
               <div className="py-12">
                 <div className="shop-container">
-                  <h2 className="text-2xl font-bold text-[#4a3f48] text-center mb-8">
+                  <h2 className="text-2xl font-bold text-black text-center mb-8">
                     카테고리
                   </h2>
                   <div className="grid grid-cols-4 md:grid-cols-8 gap-4">
@@ -258,7 +281,7 @@ export default async function HomePage() {
                             </span>
                           )}
                         </div>
-                        <span className="text-sm text-[#4a3f48] text-center font-medium">
+                        <span className="text-sm text-black text-center font-medium">
                           {category.name.replace(/[❤️🧡💛💚💙🤎💜]/g, "")}
                         </span>
                       </Link>
@@ -279,10 +302,8 @@ export default async function HomePage() {
                   <TrendingUp className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <h2 className="text-2xl font-bold text-[#4a3f48]">
-                    베스트 상품
-                  </h2>
-                  <p className="text-sm text-[#8b7d84]">가장 인기있는 상품들</p>
+                  <h2 className="text-2xl font-bold text-black">베스트 상품</h2>
+                  <p className="text-sm text-black">가장 인기있는 상품들</p>
                 </div>
               </div>
               <Link
@@ -322,8 +343,8 @@ export default async function HomePage() {
                   <Sparkles className="w-5 h-5 text-[#ff6b9d]" />
                 </div>
                 <div>
-                  <h2 className="text-2xl font-bold text-[#4a3f48]">신상품</h2>
-                  <p className="text-sm text-[#8b7d84]">
+                  <h2 className="text-2xl font-bold text-black">신상품</h2>
+                  <p className="text-sm text-black">
                     새로 입고된 상품들을 확인하세요
                   </p>
                 </div>
@@ -346,7 +367,7 @@ export default async function HomePage() {
             ) : (
               <div className="text-center py-12 bg-white rounded-xl">
                 <span className="text-4xl mb-4 block">✨</span>
-                <p className="text-[#8b7d84]">신상품을 준비 중이에요!</p>
+                <p className="text-black">신상품을 준비 중이에요!</p>
               </div>
             )}
           </div>
@@ -357,30 +378,30 @@ export default async function HomePage() {
           <div className="shop-container">
             <div className="bg-gradient-to-r from-[#fad2e6] to-[#ffc0cb] rounded-2xl p-8 md:p-12 text-center">
               <span className="text-5xl mb-4 block">💝</span>
-              <h2 className="text-2xl md:text-3xl font-bold text-[#4a3f48] mb-4">
+              <h2 className="text-2xl md:text-3xl font-bold text-black mb-4">
                 두근거리는 설렘을 선물하세요
               </h2>
-              <p className="text-[#4a3f48]/80 max-w-2xl mx-auto mb-6">
+              <p className="text-black max-w-2xl mx-auto mb-6">
                 또또앙스는 사랑스러운 캐릭터 굿즈로 일상에 작은 행복을
                 선사합니다.
                 <br />
                 소중한 사람에게, 또는 나 자신에게 설레는 선물을 해보세요!
               </p>
-              <div className="flex items-center justify-center gap-8 text-[#4a3f48]">
+              <div className="flex items-center justify-center gap-8 text-black">
                 <div className="text-center">
                   <Star className="w-6 h-6 mx-auto text-[#ff6b9d] mb-2" />
                   <p className="font-bold text-lg">1,751+</p>
-                  <p className="text-sm text-[#4a3f48]/60">관심 고객</p>
+                  <p className="text-sm text-black">관심 고객</p>
                 </div>
                 <div className="text-center">
                   <span className="text-2xl block mb-2">📦</span>
                   <p className="font-bold text-lg">100+</p>
-                  <p className="text-sm text-[#4a3f48]/60">상품</p>
+                  <p className="text-sm text-black">상품</p>
                 </div>
                 <div className="text-center">
                   <span className="text-2xl block mb-2">⭐</span>
                   <p className="font-bold text-lg">4.9</p>
-                  <p className="text-sm text-[#4a3f48]/60">평점</p>
+                  <p className="text-sm text-black">평점</p>
                 </div>
               </div>
             </div>
