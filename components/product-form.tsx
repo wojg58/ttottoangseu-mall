@@ -10,11 +10,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import {
-  createProduct,
-  updateProduct,
-  type CreateProductInput,
-} from "@/actions/admin-products";
+import { createProduct, updateProduct } from "@/actions/admin-products";
 import { uploadImageFile } from "@/actions/upload-image";
 import type { Category, ProductWithDetails } from "@/types/database";
 import { Button } from "@/components/ui/button";
@@ -74,6 +70,7 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
     product?.description || "",
   );
   const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
   const imageInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<ProductFormData>({
@@ -131,10 +128,15 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
       attributes: {
         class:
           "prose prose-pink max-w-none min-h-[300px] p-4 focus:outline-none [&_p]:text-[#4a3f48] [&_p]:leading-relaxed [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:text-[#4a3f48] [&_h2]:text-xl [&_h2]:font-bold [&_h2]:text-[#4a3f48] [&_h3]:text-lg [&_h3]:font-bold [&_h3]:text-[#4a3f48] [&_img]:max-w-full [&_img]:rounded-lg [&_img]:my-4",
-        spellcheck: "true",
+        spellcheck: "false",
       },
     },
   });
+
+  // 클라이언트 마운트 확인
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // 에디터에 초기 내용 설정
   useEffect(() => {
@@ -383,7 +385,7 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
           <FormField
             control={form.control}
             name="description"
-            render={({ field }) => (
+            render={() => (
               <FormItem>
                 <FormLabel className="text-[#4a3f48]">
                   상품 설명 (HTML 지원)
@@ -587,7 +589,7 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
                         }`}
                         title="인용구"
                       >
-                        "
+                        &quot;
                       </button>
                       {/* 구분선 */}
                       <button
@@ -732,7 +734,16 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
                     </div>
                     {/* 에디터 영역 - 스크롤 가능 */}
                     <div className="bg-white min-h-[300px] overflow-y-auto flex-1">
-                      <EditorContent editor={editor} />
+                      {isMounted && editor ? (
+                        <EditorContent
+                          editor={editor}
+                          suppressHydrationWarning
+                        />
+                      ) : (
+                        <div className="p-4 text-[#8b7d84]">
+                          에디터를 불러오는 중...
+                        </div>
+                      )}
                     </div>
                   </div>
                 </FormControl>

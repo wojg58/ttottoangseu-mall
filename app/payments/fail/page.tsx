@@ -3,55 +3,30 @@
  * @description 결제 실패 페이지
  */
 
-"use client";
+import { Suspense } from "react";
+import PaymentFailContent from "@/components/payment-fail-content";
 
-import { useSearchParams } from "next/navigation";
-import Link from "next/link";
-import { XCircle, Home, RefreshCw } from "lucide-react";
-import { Button } from "@/components/ui/button";
+// 동적 렌더링 강제 (useSearchParams 사용으로 인해 정적 생성 불가)
+export const dynamic = "force-dynamic";
 
 export default function PaymentFailPage() {
-  const searchParams = useSearchParams();
-  const message = searchParams.get("message") || "결제에 실패했습니다.";
-
   return (
     <main className="py-8">
       <div className="shop-container max-w-2xl mx-auto">
-        <div className="bg-white rounded-xl shadow-sm p-8 text-center">
-          <div className="flex justify-center mb-6">
-            <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center">
-              <XCircle className="w-12 h-12 text-red-500" />
+        <Suspense
+          fallback={
+            <div className="flex items-center justify-center py-12">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#ff6b9d] mx-auto mb-4"></div>
+                <p className="text-sm text-[#8b7d84]">
+                  결제 정보를 불러오는 중...
+                </p>
+              </div>
             </div>
-          </div>
-
-          <h1 className="text-2xl font-bold text-[#4a3f48] mb-2">결제에 실패했습니다</h1>
-          <p className="text-sm text-[#8b7d84] mb-4">{message}</p>
-          <p className="text-xs text-[#8b7d84] mb-8">
-            문제가 지속되면 고객센터로 문의해주세요.
-          </p>
-
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Button
-              asChild
-              variant="outline"
-              className="border-[#fad2e6] text-[#4a3f48] hover:bg-[#ffeef5]"
-            >
-              <Link href="/">
-                <Home className="w-4 h-4 mr-2" />
-                홈으로
-              </Link>
-            </Button>
-            <Button
-              asChild
-              className="bg-[#ff6b9d] hover:bg-[#ff5088] text-white"
-            >
-              <Link href="/cart">
-                <RefreshCw className="w-4 h-4 mr-2" />
-                다시 시도
-              </Link>
-            </Button>
-          </div>
-        </div>
+          }
+        >
+          <PaymentFailContent />
+        </Suspense>
       </div>
     </main>
   );

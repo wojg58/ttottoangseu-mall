@@ -52,7 +52,9 @@ export async function uploadImageFromUrl(
     });
 
     if (!response.ok) {
-      throw new Error(`이미지 다운로드 실패: ${response.status} ${response.statusText}`);
+      throw new Error(
+        `이미지 다운로드 실패: ${response.status} ${response.statusText}`,
+      );
     }
 
     const contentType = response.headers.get("content-type");
@@ -64,7 +66,9 @@ export async function uploadImageFromUrl(
     const fileSize = arrayBuffer.byteLength;
 
     if (fileSize > MAX_IMAGE_SIZE) {
-      throw new Error(`이미지 크기가 너무 큽니다. (최대 ${MAX_IMAGE_SIZE / 1024 / 1024}MB)`);
+      throw new Error(
+        `이미지 크기가 너무 큽니다. (최대 ${MAX_IMAGE_SIZE / 1024 / 1024}MB)`,
+      );
     }
 
     // 파일명 생성
@@ -79,12 +83,14 @@ export async function uploadImageFromUrl(
       throw new Error(`지원하지 않는 이미지 형식입니다: ${ext}`);
     }
 
-    const finalFileName = fileName || `product-${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`;
+    const finalFileName =
+      fileName ||
+      `product-${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`;
     const filePath = `products/${finalFileName}`;
 
     // Supabase Storage에 업로드
     console.log("Supabase Storage에 업로드 중...", filePath);
-    const { data, error } = await supabase.storage
+    const { error } = await supabase.storage
       .from(PRODUCT_IMAGES_BUCKET)
       .upload(filePath, arrayBuffer, {
         contentType: contentType,
@@ -113,7 +119,10 @@ export async function uploadImageFromUrl(
     console.groupEnd();
     return {
       success: false,
-      error: error instanceof Error ? error.message : "이미지 업로드에 실패했습니다.",
+      error:
+        error instanceof Error
+          ? error.message
+          : "이미지 업로드에 실패했습니다.",
     };
   }
 }
@@ -164,7 +173,9 @@ export async function uploadImagesFromUrls(
     }
   }
 
-  console.log(`업로드 완료: 성공 ${uploaded.length}개, 실패 ${failed.length}개`);
+  console.log(
+    `업로드 완료: 성공 ${uploaded.length}개, 실패 ${failed.length}개`,
+  );
   console.groupEnd();
 
   return {
@@ -173,4 +184,3 @@ export async function uploadImagesFromUrls(
     failed,
   };
 }
-

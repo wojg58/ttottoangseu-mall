@@ -14,8 +14,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
-import { PaymentWidgetInstance, loadPaymentWidget } from "@tosspayments/payment-widget-sdk";
+import {
+  PaymentWidgetInstance,
+  loadPaymentWidget,
+} from "@tosspayments/payment-widget-sdk";
 import { Button } from "@/components/ui/button";
 
 interface PaymentWidgetProps {
@@ -33,10 +35,13 @@ export default function PaymentWidget({
   customerName,
   customerEmail,
 }: PaymentWidgetProps) {
-  const router = useRouter();
   const paymentWidgetRef = useRef<PaymentWidgetInstance | null>(null);
-  const paymentMethodsWidgetRef = useRef<ReturnType<PaymentWidgetInstance["renderPaymentMethods"]> | null>(null);
-  const agreementWidgetRef = useRef<ReturnType<PaymentWidgetInstance["renderAgreement"]> | null>(null);
+  const paymentMethodsWidgetRef = useRef<ReturnType<
+    PaymentWidgetInstance["renderPaymentMethods"]
+  > | null>(null);
+  const agreementWidgetRef = useRef<ReturnType<
+    PaymentWidgetInstance["renderAgreement"]
+  > | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -62,7 +67,7 @@ export default function PaymentWidget({
         const paymentMethodsWidget = paymentWidget.renderPaymentMethods(
           "#payment-method",
           { value: amount },
-          { variantKey: "DEFAULT" }
+          { variantKey: "DEFAULT" },
         );
         paymentMethodsWidgetRef.current = paymentMethodsWidget;
 
@@ -77,7 +82,11 @@ export default function PaymentWidget({
         console.groupEnd();
       } catch (err) {
         console.error("결제 위젯 초기화 에러:", err);
-        setError(err instanceof Error ? err.message : "결제 위젯 초기화에 실패했습니다.");
+        setError(
+          err instanceof Error
+            ? err.message
+            : "결제 위젯 초기화에 실패했습니다.",
+        );
         setIsLoading(false);
         console.groupEnd();
       }
@@ -87,12 +96,9 @@ export default function PaymentWidget({
 
     // cleanup
     return () => {
-      if (paymentMethodsWidgetRef.current) {
-        paymentMethodsWidgetRef.current.unmount();
-      }
-      if (agreementWidgetRef.current) {
-        agreementWidgetRef.current.unmount();
-      }
+      // Payment widget cleanup is handled automatically
+      paymentMethodsWidgetRef.current = null;
+      agreementWidgetRef.current = null;
     };
   }, [orderId, orderNumber, amount, customerEmail]);
 
@@ -195,4 +201,3 @@ export default function PaymentWidget({
     </div>
   );
 }
-

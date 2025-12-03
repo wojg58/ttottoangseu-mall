@@ -17,7 +17,10 @@ import type { ProductVariant } from "@/types/database";
 interface ProductVariantSelectorProps {
   variants: ProductVariant[];
   basePrice: number;
-  onVariantChange?: (variantId: string | null, variant: ProductVariant | null) => void;
+  onVariantChange?: (
+    variantId: string | null,
+    variant: ProductVariant | null,
+  ) => void;
   required?: boolean;
 }
 
@@ -27,7 +30,9 @@ export default function ProductVariantSelector({
   onVariantChange,
   required = false,
 }: ProductVariantSelectorProps) {
-  const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null);
+  const [selectedVariantId, setSelectedVariantId] = useState<string | null>(
+    null,
+  );
 
   console.log("[ProductVariantSelector] 렌더링:", {
     variantsCount: variants.length,
@@ -38,12 +43,12 @@ export default function ProductVariantSelector({
   const availableVariants = variants.filter((v) => !v.deleted_at);
 
   // 선택된 variant 정보
-  const selectedVariant = availableVariants.find(
-    (v) => v.id === selectedVariantId,
-  ) || null;
+  const selectedVariant =
+    availableVariants.find((v) => v.id === selectedVariantId) || null;
 
   // 옵션이 필수이고 선택되지 않은 경우
-  const hasError = required && availableVariants.length > 0 && !selectedVariantId;
+  const hasError =
+    required && availableVariants.length > 0 && !selectedVariantId;
 
   // variant 변경 시 콜백 호출
   useEffect(() => {
@@ -58,21 +63,18 @@ export default function ProductVariantSelector({
   }
 
   // 옵션별 그룹화 (variant_name 기준)
-  const groupedVariants = availableVariants.reduce(
-    (acc, variant) => {
-      const groupName = variant.variant_name || "옵션";
-      if (!acc[groupName]) {
-        acc[groupName] = [];
-      }
-      acc[groupName].push(variant);
-      return acc;
-    },
-    {} as Record<string, ProductVariant[]>,
-  );
+  const groupedVariants = availableVariants.reduce((acc, variant) => {
+    const groupName = variant.variant_name || "옵션";
+    if (!acc[groupName]) {
+      acc[groupName] = [];
+    }
+    acc[groupName].push(variant);
+    return acc;
+  }, {} as Record<string, ProductVariant[]>);
 
   const handleVariantClick = (variantId: string) => {
     console.log("[ProductVariantSelector] 옵션 선택:", variantId);
-    
+
     // 이미 선택된 옵션을 다시 클릭하면 선택 해제
     if (selectedVariantId === variantId) {
       if (!required) {
@@ -96,7 +98,6 @@ export default function ProductVariantSelector({
               const isSelected = selectedVariantId === variant.id;
               const isOutOfStock = variant.stock === 0;
               const priceAdjustment = variant.price_adjustment || 0;
-              const finalPrice = basePrice + priceAdjustment;
 
               return (
                 <button
@@ -108,8 +109,8 @@ export default function ProductVariantSelector({
                     isOutOfStock
                       ? "border-gray-200 text-gray-400 cursor-not-allowed opacity-50"
                       : isSelected
-                        ? "border-[#ff6b9d] bg-[#ffeef5] text-[#ff6b9d] font-bold shadow-sm"
-                        : "border-[#f5d5e3] text-[#4a3f48] hover:border-[#ff6b9d] hover:bg-[#ffeef5]"
+                      ? "border-[#ff6b9d] bg-[#ffeef5] text-[#ff6b9d] font-bold shadow-sm"
+                      : "border-[#f5d5e3] text-[#4a3f48] hover:border-[#ff6b9d] hover:bg-[#ffeef5]"
                   }`}
                 >
                   <div className="flex items-center gap-2">
@@ -129,9 +130,7 @@ export default function ProductVariantSelector({
                     {isOutOfStock && (
                       <span className="ml-1 text-xs text-red-400">품절</span>
                     )}
-                    {isSelected && (
-                      <span className="ml-1 text-xs">✓</span>
-                    )}
+                    {isSelected && <span className="ml-1 text-xs">✓</span>}
                   </div>
                   {isSelected && variant.stock > 0 && (
                     <div className="mt-1 text-xs text-[#8b7d84]">
@@ -172,7 +171,10 @@ export default function ProductVariantSelector({
             <div className="text-right">
               <p className="text-xs text-[#8b7d84]">최종 가격</p>
               <p className="text-lg font-bold text-[#ff6b9d]">
-                {(basePrice + (selectedVariant.price_adjustment || 0)).toLocaleString()}원
+                {(
+                  basePrice + (selectedVariant.price_adjustment || 0)
+                ).toLocaleString()}
+                원
               </p>
             </div>
           </div>
@@ -181,11 +183,8 @@ export default function ProductVariantSelector({
 
       {/* 필수 옵션 미선택 에러 메시지 */}
       {hasError && (
-        <p className="text-sm text-red-500 mt-2">
-          옵션을 선택해주세요.
-        </p>
+        <p className="text-sm text-red-500 mt-2">옵션을 선택해주세요.</p>
       )}
     </div>
   );
 }
-

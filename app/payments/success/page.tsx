@@ -13,6 +13,9 @@ import { CheckCircle2, Home, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import PaymentSuccessContent from "@/components/payment-success-content";
 
+// 동적 렌더링 강제 (useSearchParams 사용으로 인해 정적 생성 불가)
+export const dynamic = "force-dynamic";
+
 export default function PaymentSuccessPage() {
   return (
     <main className="py-8">

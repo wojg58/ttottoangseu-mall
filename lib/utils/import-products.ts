@@ -415,8 +415,8 @@ function parseImageUrls(row: SmartStoreProductRow): string[] {
  */
 function parseVariants(
   row: SmartStoreProductRow,
-  rowNumber: number,
-  warnings: ParseResult["warnings"],
+  _rowNumber: number,
+  _warnings: ParseResult["warnings"],
 ): ParsedProductData["variants"] {
   if (!row.옵션명 || !row.옵션값) {
     return [];
