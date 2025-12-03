@@ -37,21 +37,38 @@ async function getProducts() {
 
   const supabase = await createClient();
 
-  // 베스트 상품 (is_featured = true)
-  const { data: featuredProducts, error: featuredError } = await supabase
-    .from("products")
-    .select(
-      `
-      *,
-      category:categories!fk_products_category_id(id, name, slug),
-      images:product_images(id, image_url, is_primary, alt_text)
-    `,
-    )
-    .eq("is_featured", true)
-    .eq("status", "active")
+  // 베스트 카테고리 ID 가져오기
+  const { data: bestCategory } = await supabase
+    .from("categories")
+    .select("id")
+    .eq("slug", "best")
+    .eq("is_active", true)
     .is("deleted_at", null)
-    .order("created_at", { ascending: false })
-    .limit(5);
+    .single();
+
+  // 베스트 상품 (카테고리가 "베스트"인 상품)
+  let featuredProducts = null;
+  let featuredError = null;
+
+  if (bestCategory?.id) {
+    const result = await supabase
+      .from("products")
+      .select(
+        `
+        *,
+        category:categories!fk_products_category_id(id, name, slug),
+        images:product_images(id, image_url, is_primary, alt_text)
+      `,
+      )
+      .eq("category_id", bestCategory.id)
+      .eq("status", "active")
+      .is("deleted_at", null)
+      .order("created_at", { ascending: false })
+      .limit(5);
+
+    featuredProducts = result.data;
+    featuredError = result.error;
+  }
 
   if (featuredError) {
     console.error("[HomePage] 베스트 상품 fetch 에러:", featuredError);
@@ -295,21 +312,24 @@ export default async function HomePage() {
         </section>
 
         {/* 베스트 상품 섹션 */}
-        <section className="py-12">
+        <section className="py-12 bg-white/30 relative overflow-hidden">
+          {/* 장식용 원형 요소 */}
+          <div className="absolute -top-4 -left-4 w-24 h-24 bg-white/30 rounded-full"></div>
+          <div className="absolute -bottom-4 -right-4 w-32 h-32 bg-white/30 rounded-full"></div>
           <div className="shop-container">
-            <div className="flex items-center justify-between mb-8">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-[#ff6b9d] rounded-full flex items-center justify-center">
-                  <TrendingUp className="w-5 h-5 text-white" />
+            <div className="flex flex-col items-center justify-center mb-8">
+              <div className="flex items-center gap-3 mb-4 justify-center">
+                <div className="w-10 h-10 bg-[#FFEB3B] rounded-full flex items-center justify-center">
+                  <TrendingUp className="w-5 h-5 text-[#F57F17]" />
                 </div>
-                <div>
-                  <h2 className="text-2xl font-bold text-black">베스트 상품</h2>
-                  <p className="text-sm text-black">가장 인기있는 상품들</p>
+                <div className="text-center">
+                  <h2 className="text-2xl font-bold text-[#ff6b9d]">베스트 상품</h2>
+                  <p className="text-sm text-pink-500">가장 인기있는 상품들</p>
                 </div>
               </div>
               <Link
                 href="/products?featured=true"
-                className="text-[#ff6b9d] hover:underline text-sm flex items-center gap-1"
+                className="text-[#ff6b9d] hover:text-pink-600 hover:underline text-sm flex items-center gap-1"
               >
                 전체보기
                 <ArrowRight className="w-4 h-4" />
@@ -317,8 +337,8 @@ export default async function HomePage() {
             </div>
 
             {featuredProducts.length > 0 ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
-                {featuredProducts.map((product, index) => (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-5 gap-4 md:gap-6">
+                {featuredProducts.slice(0, 5).map((product, index) => (
                   <ProductCard
                     key={product.id}
                     product={product}
@@ -338,21 +358,21 @@ export default async function HomePage() {
         {/* 전체상품 섹션 */}
         <section className="py-12 bg-[#ffeef5]">
           <div className="shop-container">
-            <div className="flex items-center justify-between mb-8">
-              <div className="flex items-center gap-3">
+            <div className="flex flex-col items-center justify-center mb-8">
+              <div className="flex items-center gap-3 mb-4 justify-center">
                 <div className="w-10 h-10 bg-[#fad2e6] rounded-full flex items-center justify-center">
                   <Sparkles className="w-5 h-5 text-[#ff6b9d]" />
                 </div>
-                <div>
-                  <h2 className="text-2xl font-bold text-black">전체상품</h2>
-                  <p className="text-sm text-black">
+                <div className="text-center">
+                  <h2 className="text-2xl font-bold text-[#ff6b9d]">전체상품</h2>
+                  <p className="text-sm text-pink-500">
                     모든 상품을 확인하세요
                   </p>
                 </div>
               </div>
               <Link
                 href="/products"
-                className="text-[#ff6b9d] hover:underline text-sm flex items-center gap-1"
+                className="text-[#ff6b9d] hover:text-pink-600 hover:underline text-sm flex items-center gap-1"
               >
                 전체보기
                 <ArrowRight className="w-4 h-4" />
