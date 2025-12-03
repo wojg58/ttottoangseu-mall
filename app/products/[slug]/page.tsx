@@ -27,7 +27,7 @@ import {
 } from "lucide-react";
 import { getProductBySlug } from "@/actions/products";
 import ProductImageGallery from "@/components/product-image-gallery";
-import AddToCartButton from "@/components/add-to-cart-button";
+import ProductDetailOptions from "@/components/product-detail-options";
 
 interface ProductDetailPageProps {
   params: Promise<{
@@ -171,64 +171,13 @@ export default async function ProductDetailPage({
               )}
             </div>
 
-            {/* 옵션 선택 (variants가 있는 경우) */}
-            {product.variants && product.variants.length > 0 && (
-              <div className="mb-6">
-                <h3 className="text-sm font-bold text-[#4a3f48] mb-3">
-                  옵션 선택
-                </h3>
-                <div className="flex flex-wrap gap-2">
-                  {product.variants
-                    .filter((v) => !v.deleted_at)
-                    .map((variant) => (
-                      <button
-                        key={variant.id}
-                        disabled={variant.stock === 0}
-                        className={`px-4 py-2 rounded-lg border text-sm transition-colors ${
-                          variant.stock === 0
-                            ? "border-gray-200 text-gray-400 cursor-not-allowed"
-                            : "border-[#f5d5e3] text-[#4a3f48] hover:border-[#ff6b9d] hover:bg-[#ffeef5]"
-                        }`}
-                      >
-                        {variant.variant_value}
-                        {variant.price_adjustment !== 0 && (
-                          <span className="ml-1 text-xs text-[#8b7d84]">
-                            ({variant.price_adjustment > 0 ? "+" : ""}
-                            {variant.price_adjustment.toLocaleString()}원)
-                          </span>
-                        )}
-                        {variant.stock === 0 && (
-                          <span className="ml-1 text-xs text-red-400">
-                            품절
-                          </span>
-                        )}
-                      </button>
-                    ))}
-                </div>
-              </div>
-            )}
-
-            {/* 재고 */}
-            <div className="mb-6">
-              <p className="text-sm text-[#8b7d84]">
-                {isSoldOut ? (
-                  <span className="text-red-500">품절된 상품입니다</span>
-                ) : product.stock <= 5 ? (
-                  <span className="text-orange-500">
-                    🔥 {product.stock}개 남음 - 품절 임박!
-                  </span>
-                ) : (
-                  <span>재고: {product.stock}개</span>
-                )}
-              </p>
-            </div>
-
-            {/* 장바구니/구매 버튼 */}
-            <AddToCartButton
+            {/* 옵션 선택 및 장바구니 버튼 */}
+            <ProductDetailOptions
               productId={product.id}
               productName={product.name}
-              price={displayPrice}
-              stock={product.stock}
+              basePrice={displayPrice}
+              baseStock={product.stock}
+              variants={product.variants || []}
               isSoldOut={isSoldOut}
             />
 

@@ -1,6 +1,6 @@
 import { clerkMiddleware } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
+import type { NextRequest, NextFetchEvent } from "next/server";
 
 // 환경 변수 체크 (빌드 타임에 확인)
 const hasClerkKeys =
@@ -13,7 +13,10 @@ const clerkMiddlewareHandler = hasClerkKeys
   : undefined;
 
 // 에러 핸들링이 포함된 미들웨어
-export default async function middleware(req: NextRequest) {
+export default async function middleware(
+  req: NextRequest,
+  event: NextFetchEvent
+) {
   try {
     // 환경 변수가 없으면 경고만 출력하고 계속 진행
     if (!hasClerkKeys) {
@@ -25,7 +28,7 @@ export default async function middleware(req: NextRequest) {
 
     // Clerk 미들웨어 실행
     if (clerkMiddlewareHandler) {
-      return await clerkMiddlewareHandler(req);
+      return await clerkMiddlewareHandler(req, event);
     }
 
     return NextResponse.next();

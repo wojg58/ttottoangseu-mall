@@ -11,6 +11,7 @@ import Image from "next/image";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { useUser } from "@clerk/nextjs";
 import { createOrder, CreateOrderInput } from "@/actions/orders";
 import type { CartItemWithProduct } from "@/types/database";
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import PaymentWidget from "@/components/payment-widget";
 
 // 폼 스키마
 const checkoutSchema = z.object({
@@ -53,7 +55,11 @@ export default function CheckoutForm({
   total,
 }: CheckoutFormProps) {
   const [isPending, startTransition] = useTransition();
+  const [orderId, setOrderId] = useState<string | null>(null);
+  const [orderNumber, setOrderNumber] = useState<string | null>(null);
+  const [showPaymentWidget, setShowPaymentWidget] = useState(false);
   const router = useRouter();
+  const { user, isLoaded } = useUser();
 
   const form = useForm<CheckoutFormData>({
     resolver: zodResolver(checkoutSchema),
@@ -78,11 +84,18 @@ export default function CheckoutForm({
         shippingMemo: data.shippingMemo,
       });
 
-      if (result.success && result.orderId) {
-        // TODO: TossPayments 결제 연동
-        // 현재는 주문 완료 페이지로 이동
-        alert("주문이 완료되었습니다!");
-        router.push(`/checkout/complete?orderId=${result.orderId}`);
+      if (result.success && result.orderId && result.orderNumber) {
+        console.log("[CheckoutForm] 주문 생성 성공, 결제 위젯 표시");
+        setOrderId(result.orderId);
+        setOrderNumber(result.orderNumber);
+        setShowPaymentWidget(true);
+        // 스크롤을 결제 위젯으로 이동
+        setTimeout(() => {
+          document.getElementById("payment-section")?.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+          });
+        }, 100);
       } else {
         alert(result.message);
       }
@@ -295,23 +308,45 @@ export default function CheckoutForm({
             </span>
           </div>
 
-          <p className="text-xs text-[#8b7d84] mb-4">
-            주문 내용을 확인했으며, 결제에 동의합니다.
-          </p>
+          {!showPaymentWidget ? (
+            <>
+              <p className="text-xs text-[#8b7d84] mb-4">
+                주문 내용을 확인했으며, 결제에 동의합니다.
+              </p>
 
-          <Button
-            onClick={form.handleSubmit(onSubmit)}
-            disabled={isPending}
-            className="w-full h-14 bg-[#ff6b9d] hover:bg-[#ff5088] text-white rounded-xl text-base font-bold disabled:opacity-50"
-          >
-            {isPending ? "처리 중..." : `${total.toLocaleString()}원 결제하기`}
-          </Button>
-
-          <p className="text-xs text-center text-[#8b7d84] mt-4">
-            * TossPayments 결제 연동 예정
-          </p>
+              <Button
+                onClick={form.handleSubmit(onSubmit)}
+                disabled={isPending}
+                className="w-full h-14 bg-[#ff6b9d] hover:bg-[#ff5088] text-white rounded-xl text-base font-bold disabled:opacity-50"
+              >
+                {isPending ? "처리 중..." : `${total.toLocaleString()}원 결제하기`}
+              </Button>
+            </>
+          ) : (
+            <div className="mt-4">
+              <p className="text-xs text-[#8b7d84] mb-4">
+                주문이 생성되었습니다. 아래에서 결제를 진행해주세요.
+              </p>
+            </div>
+          )}
         </div>
       </div>
+
+      {/* 결제 위젯 섹션 */}
+      {showPaymentWidget && orderId && orderNumber && isLoaded && user && (
+        <div id="payment-section" className="lg:col-span-3 mt-8">
+          <div className="bg-white rounded-xl shadow-sm p-6">
+            <h2 className="text-lg font-bold text-[#4a3f48] mb-6">결제</h2>
+            <PaymentWidget
+              orderId={orderId}
+              orderNumber={orderNumber}
+              amount={total}
+              customerName={form.getValues("shippingName")}
+              customerEmail={user.emailAddresses[0]?.emailAddress || ""}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
