@@ -5,7 +5,7 @@
 
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Plus, ChevronLeft, Edit, Trash2 } from "lucide-react";
+import { Plus, ChevronLeft, Edit, Trash2, FileText } from "lucide-react";
 import { isAdmin, getAdminProducts } from "@/actions/admin";
 import { deleteProduct } from "@/actions/admin-products";
 import DeleteProductButton from "@/components/delete-product-button";
@@ -44,12 +44,20 @@ export default async function AdminProductsPage({
             <h1 className="text-2xl font-bold text-[#4a3f48]">상품 관리</h1>
             <span className="text-sm text-[#8b7d84]">총 {total}개</span>
           </div>
-          <Link href="/admin/products/new">
-            <button className="flex items-center gap-2 px-4 py-2 bg-[#ff6b9d] text-white rounded-lg hover:bg-[#ff5088] transition-colors">
-              <Plus className="w-4 h-4" />
-              상품 등록
-            </button>
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link href="/admin/products/import">
+              <button className="flex items-center gap-2 px-4 py-2 bg-[#4a3f48] text-white rounded-lg hover:bg-[#3a3338] transition-colors">
+                <FileText className="w-4 h-4" />
+                상품 이관
+              </button>
+            </Link>
+            <Link href="/admin/products/new">
+              <button className="flex items-center gap-2 px-4 py-2 bg-[#ff6b9d] text-white rounded-lg hover:bg-[#ff5088] transition-colors">
+                <Plus className="w-4 h-4" />
+                상품 등록
+              </button>
+            </Link>
+          </div>
         </div>
 
         {/* 상품 목록 */}

@@ -101,10 +101,10 @@
 
 ### 스마트스토어 데이터 이관
 
-- [ ] CSV/엑셀 파싱 유틸리티
-- [ ] 상품 데이터 이관 스크립트/페이지
-- [ ] 상품 이미지 업로드 (Supabase Storage)
-- [ ] 카테고리 매핑 로직
+- [x] CSV/엑셀 파싱 유틸리티 - `lib/utils/import-products.ts`
+- [x] 상품 데이터 이관 스크립트/페이지 - `app/admin/products/import/page.tsx`
+- [x] 상품 이미지 업로드 (Supabase Storage) - `lib/utils/upload-image.ts`
+- [x] 카테고리 매핑 로직 - `lib/utils/import-products.ts` (`createCategoryMap`)
 - [ ] 초기 상품 10-30개 이관 완료
 
 ## Week 5-6: 주문 및 결제

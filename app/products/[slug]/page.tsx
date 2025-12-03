@@ -231,11 +231,10 @@ export default async function ProductDetailPage({
 
           <div className="py-8">
             {product.description ? (
-              <div className="prose prose-pink max-w-none">
-                <p className="text-[#4a3f48] whitespace-pre-line leading-relaxed">
-                  {product.description}
-                </p>
-              </div>
+              <div
+                className="product-description prose prose-pink max-w-none [&_img]:max-w-full [&_img]:h-auto [&_img]:rounded-lg [&_img]:my-4 [&_p]:text-[#4a3f48] [&_p]:leading-relaxed [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:text-[#4a3f48] [&_h1]:mt-6 [&_h1]:mb-4 [&_h2]:text-xl [&_h2]:font-bold [&_h2]:text-[#4a3f48] [&_h2]:mt-5 [&_h2]:mb-3 [&_h3]:text-lg [&_h3]:font-bold [&_h3]:text-[#4a3f48] [&_h3]:mt-4 [&_h3]:mb-2 [&_ul]:list-disc [&_ul]:ml-6 [&_ol]:list-decimal [&_ol]:ml-6 [&_li]:text-[#4a3f48] [&_li]:mb-1 [&_a]:text-[#ff6b9d] [&_a]:underline [&_a]:hover:text-[#ff5088]"
+                dangerouslySetInnerHTML={{ __html: product.description }}
+              />
             ) : (
               <p className="text-[#8b7d84] text-center py-8">
                 상품 설명이 없습니다.

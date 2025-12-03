@@ -1,11 +1,11 @@
+"use client";
+
 /**
  * @file components/product-form.tsx
  * @description 상품 등록/수정 폼 컴포넌트
  */
 
-"use client";
-
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -15,10 +15,10 @@ import {
   updateProduct,
   type CreateProductInput,
 } from "@/actions/admin-products";
+import { uploadImageFile } from "@/actions/upload-image";
 import type { Category, ProductWithDetails } from "@/types/database";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Form,
   FormControl,
@@ -34,15 +34,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useEditor, EditorContent } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
+import Image from "@tiptap/extension-image";
+import Link from "@tiptap/extension-link";
+import { TextStyle } from "@tiptap/extension-text-style";
+import { Color } from "@tiptap/extension-color";
+import TextAlign from "@tiptap/extension-text-align";
+import Blockquote from "@tiptap/extension-blockquote";
+import HorizontalRule from "@tiptap/extension-horizontal-rule";
+import Highlight from "@tiptap/extension-highlight";
 
 // 폼 스키마
 const productSchema = z.object({
   category_id: z.string().min(1, "카테고리를 선택해주세요."),
   name: z.string().min(2, "상품명을 입력해주세요."),
-  slug: z
-    .string()
-    .min(2, "slug를 입력해주세요.")
-    .regex(/^[a-z0-9-]+$/, "소문자, 숫자, 하이픈만 사용 가능합니다."),
+  slug: z.string().min(2, "slug를 입력해주세요."),
   price: z.number().min(0, "가격은 0원 이상이어야 합니다."),
   discount_price: z.number().min(0).nullable().optional(),
   description: z.string().optional(),
@@ -63,6 +70,11 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
   const isEdit = !!product;
+  const [descriptionHtml, setDescriptionHtml] = useState<string>(
+    product?.description || "",
+  );
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const imageInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
@@ -79,6 +91,58 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
       is_new: product?.is_new || false,
     },
   });
+
+  // TipTap 에디터 설정
+  const editor = useEditor({
+    extensions: [
+      StarterKit.configure({
+        // Blockquote는 별도 extension 사용
+        blockquote: false,
+      }),
+      TextStyle,
+      Color,
+      Highlight.configure({
+        multicolor: true,
+      }),
+      TextAlign.configure({
+        types: ["heading", "paragraph"],
+      }),
+      Blockquote,
+      HorizontalRule,
+      Image.configure({
+        inline: true,
+        allowBase64: true,
+      }),
+      Link.configure({
+        openOnClick: false,
+        HTMLAttributes: {
+          class: "text-[#ff6b9d] underline hover:text-[#ff5088]",
+        },
+      }),
+    ],
+    content: descriptionHtml,
+    immediatelyRender: false, // SSR 호환성
+    onUpdate: ({ editor }) => {
+      const html = editor.getHTML();
+      setDescriptionHtml(html);
+      form.setValue("description", html);
+    },
+    editorProps: {
+      attributes: {
+        class:
+          "prose prose-pink max-w-none min-h-[300px] p-4 focus:outline-none [&_p]:text-[#4a3f48] [&_p]:leading-relaxed [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:text-[#4a3f48] [&_h2]:text-xl [&_h2]:font-bold [&_h2]:text-[#4a3f48] [&_h3]:text-lg [&_h3]:font-bold [&_h3]:text-[#4a3f48] [&_img]:max-w-full [&_img]:rounded-lg [&_img]:my-4",
+        spellcheck: "true",
+      },
+    },
+  });
+
+  // 에디터에 초기 내용 설정
+  useEffect(() => {
+    if (editor && product?.description) {
+      editor.commands.setContent(product.description);
+      setDescriptionHtml(product.description);
+    }
+  }, [editor, product?.description]);
 
   const onSubmit = (data: ProductFormData) => {
     console.log("[ProductForm] 제출:", data);
@@ -234,7 +298,7 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
                   />
                 </FormControl>
                 <p className="text-xs text-[#8b7d84]">
-                  URL에 사용될 고유한 식별자 (소문자, 숫자, 하이픈만 사용)
+                  URL에 사용될 고유한 식별자 (URL 링크 모두 허용 가능)
                 </p>
                 <FormMessage />
               </FormItem>
@@ -321,15 +385,361 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
             name="description"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-[#4a3f48]">상품 설명</FormLabel>
+                <FormLabel className="text-[#4a3f48]">
+                  상품 설명 (HTML 지원)
+                </FormLabel>
                 <FormControl>
-                  <Textarea
-                    placeholder="상품에 대한 자세한 설명을 입력하세요"
-                    className="border-[#f5d5e3] focus:border-[#fad2e6] focus:ring-[#fad2e6] resize-none"
-                    rows={6}
-                    {...field}
-                  />
+                  <div className="border border-[#f5d5e3] rounded-lg overflow-hidden flex flex-col max-h-[600px]">
+                    {/* 툴바 - 스크롤 시 상단 고정 */}
+                    <div className="sticky top-0 z-20 border-b border-[#f5d5e3] bg-[#ffeef5] p-2 flex flex-wrap gap-2 shadow-sm shrink-0">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          editor?.chain().focus().toggleBold().run()
+                        }
+                        className={`px-3 py-1 rounded text-sm ${
+                          editor?.isActive("bold")
+                            ? "bg-[#ff6b9d] text-white"
+                            : "bg-white text-[#4a3f48] hover:bg-[#fad2e6]"
+                        }`}
+                      >
+                        <strong>B</strong>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          editor?.chain().focus().toggleItalic().run()
+                        }
+                        className={`px-3 py-1 rounded text-sm ${
+                          editor?.isActive("italic")
+                            ? "bg-[#ff6b9d] text-white"
+                            : "bg-white text-[#4a3f48] hover:bg-[#fad2e6]"
+                        }`}
+                      >
+                        <em>I</em>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          editor
+                            ?.chain()
+                            .focus()
+                            .toggleHeading({ level: 1 })
+                            .run()
+                        }
+                        className={`px-3 py-1 rounded text-sm ${
+                          editor?.isActive("heading", { level: 1 })
+                            ? "bg-[#ff6b9d] text-white"
+                            : "bg-white text-[#4a3f48] hover:bg-[#fad2e6]"
+                        }`}
+                      >
+                        H1
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          editor
+                            ?.chain()
+                            .focus()
+                            .toggleHeading({ level: 2 })
+                            .run()
+                        }
+                        className={`px-3 py-1 rounded text-sm ${
+                          editor?.isActive("heading", { level: 2 })
+                            ? "bg-[#ff6b9d] text-white"
+                            : "bg-white text-[#4a3f48] hover:bg-[#fad2e6]"
+                        }`}
+                      >
+                        H2
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          editor?.chain().focus().toggleBulletList().run()
+                        }
+                        className={`px-3 py-1 rounded text-sm ${
+                          editor?.isActive("bulletList")
+                            ? "bg-[#ff6b9d] text-white"
+                            : "bg-white text-[#4a3f48] hover:bg-[#fad2e6]"
+                        }`}
+                      >
+                        • 목록
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          editor?.chain().focus().toggleOrderedList().run()
+                        }
+                        className={`px-3 py-1 rounded text-sm ${
+                          editor?.isActive("orderedList")
+                            ? "bg-[#ff6b9d] text-white"
+                            : "bg-white text-[#4a3f48] hover:bg-[#fad2e6]"
+                        }`}
+                      >
+                        1. 목록
+                      </button>
+                      {/* 글씨 크기 (H3 추가) */}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          editor
+                            ?.chain()
+                            .focus()
+                            .toggleHeading({ level: 3 })
+                            .run()
+                        }
+                        className={`px-3 py-1 rounded text-sm ${
+                          editor?.isActive("heading", { level: 3 })
+                            ? "bg-[#ff6b9d] text-white"
+                            : "bg-white text-[#4a3f48] hover:bg-[#fad2e6]"
+                        }`}
+                        title="제목 3"
+                      >
+                        H3
+                      </button>
+                      {/* 텍스트 색상 */}
+                      <div className="relative">
+                        <input
+                          type="color"
+                          onChange={(e) => {
+                            editor
+                              ?.chain()
+                              .focus()
+                              .setColor(e.target.value)
+                              .run();
+                          }}
+                          className="w-10 h-8 rounded cursor-pointer border border-[#f5d5e3]"
+                          title="텍스트 색상"
+                          defaultValue="#4a3f48"
+                        />
+                      </div>
+                      {/* 배경 색상 */}
+                      <div className="relative">
+                        <input
+                          type="color"
+                          onChange={(e) => {
+                            editor
+                              ?.chain()
+                              .focus()
+                              .toggleHighlight({ color: e.target.value })
+                              .run();
+                          }}
+                          className="w-10 h-8 rounded cursor-pointer border border-[#f5d5e3]"
+                          title="배경 색상"
+                          defaultValue="#ffffff"
+                        />
+                      </div>
+                      {/* 정렬 - 왼쪽 */}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          editor?.chain().focus().setTextAlign("left").run()
+                        }
+                        className={`px-3 py-1 rounded text-sm ${
+                          editor?.isActive({ textAlign: "left" })
+                            ? "bg-[#ff6b9d] text-white"
+                            : "bg-white text-[#4a3f48] hover:bg-[#fad2e6]"
+                        }`}
+                        title="왼쪽 정렬"
+                      >
+                        ⬅
+                      </button>
+                      {/* 정렬 - 가운데 */}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          editor?.chain().focus().setTextAlign("center").run()
+                        }
+                        className={`px-3 py-1 rounded text-sm ${
+                          editor?.isActive({ textAlign: "center" })
+                            ? "bg-[#ff6b9d] text-white"
+                            : "bg-white text-[#4a3f48] hover:bg-[#fad2e6]"
+                        }`}
+                        title="가운데 정렬"
+                      >
+                        ⬌
+                      </button>
+                      {/* 정렬 - 오른쪽 */}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          editor?.chain().focus().setTextAlign("right").run()
+                        }
+                        className={`px-3 py-1 rounded text-sm ${
+                          editor?.isActive({ textAlign: "right" })
+                            ? "bg-[#ff6b9d] text-white"
+                            : "bg-white text-[#4a3f48] hover:bg-[#fad2e6]"
+                        }`}
+                        title="오른쪽 정렬"
+                      >
+                        ➡
+                      </button>
+                      {/* 인용구 */}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          editor?.chain().focus().toggleBlockquote().run()
+                        }
+                        className={`px-3 py-1 rounded text-sm ${
+                          editor?.isActive("blockquote")
+                            ? "bg-[#ff6b9d] text-white"
+                            : "bg-white text-[#4a3f48] hover:bg-[#fad2e6]"
+                        }`}
+                        title="인용구"
+                      >
+                        "
+                      </button>
+                      {/* 구분선 */}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          editor?.chain().focus().setHorizontalRule().run()
+                        }
+                        className="px-3 py-1 rounded text-sm bg-white text-[#4a3f48] hover:bg-[#fad2e6]"
+                        title="구분선"
+                      >
+                        ─
+                      </button>
+                      {/* 들여쓰기/내어쓰기 */}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          editor?.chain().focus().liftListItem("listItem").run()
+                        }
+                        className="px-3 py-1 rounded text-sm bg-white text-[#4a3f48] hover:bg-[#fad2e6]"
+                        title="내어쓰기"
+                      >
+                        ⬅
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          editor?.chain().focus().sinkListItem("listItem").run()
+                        }
+                        className="px-3 py-1 rounded text-sm bg-white text-[#4a3f48] hover:bg-[#fad2e6]"
+                        title="들여쓰기"
+                      >
+                        ➡
+                      </button>
+                      {/* 이미지 업로드 */}
+                      <input
+                        ref={imageInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file || !editor) return;
+
+                          setIsUploadingImage(true);
+                          try {
+                            const formData = new FormData();
+                            formData.append("file", file);
+
+                            const result = await uploadImageFile(formData);
+
+                            if (result.success && result.url) {
+                              editor
+                                .chain()
+                                .focus()
+                                .setImage({ src: result.url })
+                                .run();
+                            } else {
+                              alert(
+                                result.error || "이미지 업로드에 실패했습니다.",
+                              );
+                            }
+                          } catch (error) {
+                            console.error("이미지 업로드 에러:", error);
+                            alert("이미지 업로드 중 오류가 발생했습니다.");
+                          } finally {
+                            setIsUploadingImage(false);
+                            // input 초기화
+                            if (imageInputRef.current) {
+                              imageInputRef.current.value = "";
+                            }
+                          }
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          imageInputRef.current?.click();
+                        }}
+                        disabled={isUploadingImage}
+                        className={`px-3 py-1 rounded text-sm ${
+                          isUploadingImage
+                            ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                            : "bg-white text-[#4a3f48] hover:bg-[#fad2e6]"
+                        }`}
+                        title="이미지 업로드"
+                      >
+                        {isUploadingImage ? "업로드 중..." : "이미지"}
+                      </button>
+                      {/* 링크 */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const url = window.prompt("링크 URL을 입력하세요:");
+                          if (url) {
+                            editor
+                              ?.chain()
+                              .focus()
+                              .extendMarkRange("link")
+                              .setLink({ href: url })
+                              .run();
+                          }
+                        }}
+                        className={`px-3 py-1 rounded text-sm ${
+                          editor?.isActive("link")
+                            ? "bg-[#ff6b9d] text-white"
+                            : "bg-white text-[#4a3f48] hover:bg-[#fad2e6]"
+                        }`}
+                        title="링크 삽입"
+                      >
+                        링크
+                      </button>
+                      {/* 서식 지우기 */}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          editor?.chain().focus().unsetAllMarks().run()
+                        }
+                        className="px-3 py-1 rounded text-sm bg-white text-[#4a3f48] hover:bg-[#fad2e6]"
+                        title="서식 지우기"
+                      >
+                        ✕
+                      </button>
+                      {/* 맞춤법 (브라우저 기본 기능 사용) */}
+                      <button
+                        type="button"
+                        className="px-3 py-1 rounded text-sm bg-white text-[#4a3f48] hover:bg-[#fad2e6]"
+                        title="맞춤법 검사 (브라우저 기본 기능 - 자동 활성화)"
+                      >
+                        맞춤법
+                      </button>
+                      {/* 초기화 */}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          editor?.chain().focus().clearNodes().run()
+                        }
+                        className="px-3 py-1 rounded text-sm bg-white text-[#4a3f48] hover:bg-[#fad2e6]"
+                        title="초기화"
+                      >
+                        초기화
+                      </button>
+                    </div>
+                    {/* 에디터 영역 - 스크롤 가능 */}
+                    <div className="bg-white min-h-[300px] overflow-y-auto flex-1">
+                      <EditorContent editor={editor} />
+                    </div>
+                  </div>
                 </FormControl>
+                <p className="text-xs text-[#8b7d84]">
+                  스마트스토어에서 복사한 HTML을 그대로 붙여넣을 수 있습니다.
+                  (Ctrl+V 또는 Cmd+V)
+                </p>
                 <FormMessage />
               </FormItem>
             )}

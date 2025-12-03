@@ -44,6 +44,12 @@ export function useSyncUser() {
 
         if (!response.ok) {
           const errorText = await response.text();
+          // 401 Unauthorized는 로그인하지 않은 상태에서 정상적인 응답이므로 조용히 처리
+          if (response.status === 401) {
+            console.log("ℹ️ 로그인하지 않은 상태입니다. 동기화를 건너뜁니다.");
+            console.groupEnd();
+            return;
+          }
           console.error("❌ 동기화 실패:", errorText);
           console.groupEnd();
           return;

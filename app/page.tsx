@@ -17,6 +17,7 @@ import Image from "next/image";
 import { ArrowRight, Sparkles, TrendingUp, Star } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import ProductCard from "@/components/product-card";
+import AllProductsSection from "@/components/all-products-section";
 import type { ProductListItem, Category } from "@/types/database";
 
 // 카테고리별 이모지 매핑
@@ -56,8 +57,8 @@ async function getProducts() {
     console.error("[HomePage] 베스트 상품 fetch 에러:", featuredError);
   }
 
-  // 신상품 (is_new = true)
-  const { data: newProducts, error: newError } = await supabase
+  // 전체상품 (처음 5개만 로드, 나머지는 클라이언트에서 무한 스크롤로)
+  const { data: allProducts, error: allError } = await supabase
     .from("products")
     .select(
       `
@@ -66,13 +67,13 @@ async function getProducts() {
       images:product_images(id, image_url, is_primary, alt_text)
     `,
     )
-    .eq("is_new", true)
+    .eq("status", "active")
     .is("deleted_at", null)
     .order("created_at", { ascending: false })
-    .limit(4);
+    .limit(5);
 
-  if (newError) {
-    console.error("[HomePage] 신상품 fetch 에러:", newError);
+  if (allError) {
+    console.error("[HomePage] 전체상품 fetch 에러:", allError);
   }
 
   // 카테고리 목록
@@ -89,7 +90,7 @@ async function getProducts() {
 
   console.log("[HomePage] 데이터 fetching 완료:", {
     featuredCount: featuredProducts?.length ?? 0,
-    newCount: newProducts?.length ?? 0,
+    allCount: allProducts?.length ?? 0,
     categoryCount: categories?.length ?? 0,
   });
 
@@ -154,13 +155,13 @@ async function getProducts() {
 
   return {
     featuredProducts: (featuredProducts || []).map(transformProduct),
-    newProducts: (newProducts || []).map(transformProduct),
+    allProducts: (allProducts || []).map(transformProduct),
     categories: (categories || []) as Category[],
   };
 }
 
 export default async function HomePage() {
-  const { featuredProducts, newProducts, categories } = await getProducts();
+  const { featuredProducts, allProducts, categories } = await getProducts();
 
   return (
     <main
@@ -334,7 +335,7 @@ export default async function HomePage() {
           </div>
         </section>
 
-        {/* 신상품 섹션 */}
+        {/* 전체상품 섹션 */}
         <section className="py-12 bg-[#ffeef5]">
           <div className="shop-container">
             <div className="flex items-center justify-between mb-8">
@@ -343,14 +344,14 @@ export default async function HomePage() {
                   <Sparkles className="w-5 h-5 text-[#ff6b9d]" />
                 </div>
                 <div>
-                  <h2 className="text-2xl font-bold text-black">신상품</h2>
+                  <h2 className="text-2xl font-bold text-black">전체상품</h2>
                   <p className="text-sm text-black">
-                    새로 입고된 상품들을 확인하세요
+                    모든 상품을 확인하세요
                   </p>
                 </div>
               </div>
               <Link
-                href="/products?new=true"
+                href="/products"
                 className="text-[#ff6b9d] hover:underline text-sm flex items-center gap-1"
               >
                 전체보기
@@ -358,16 +359,12 @@ export default async function HomePage() {
               </Link>
             </div>
 
-            {newProducts.length > 0 ? (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
-                {newProducts.map((product) => (
-                  <ProductCard key={product.id} product={product} />
-                ))}
-              </div>
+            {allProducts.length > 0 ? (
+              <AllProductsSection initialProducts={allProducts} />
             ) : (
               <div className="text-center py-12 bg-white rounded-xl">
                 <span className="text-4xl mb-4 block">✨</span>
-                <p className="text-black">신상품을 준비 중이에요!</p>
+                <p className="text-black">상품을 준비 중이에요!</p>
               </div>
             )}
           </div>
