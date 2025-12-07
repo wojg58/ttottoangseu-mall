@@ -12,9 +12,15 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { createProduct, updateProduct } from "@/actions/admin-products";
 import { uploadImageFile } from "@/actions/upload-image";
-import type { Category, ProductWithDetails } from "@/types/database";
+import type {
+  Category,
+  ProductWithDetails,
+  ProductImage,
+} from "@/types/database";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import Image from "next/image";
+import { X, Upload, Star } from "lucide-react";
 import {
   Form,
   FormControl,
@@ -32,7 +38,7 @@ import {
 } from "@/components/ui/select";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import Image from "@tiptap/extension-image";
+import TiptapImage from "@tiptap/extension-image";
 import Link from "@tiptap/extension-link";
 import { TextStyle } from "@tiptap/extension-text-style";
 import { Color } from "@tiptap/extension-color";
@@ -73,6 +79,29 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
   const [isMounted, setIsMounted] = useState(false);
   const imageInputRef = useRef<HTMLInputElement>(null);
 
+  // 상품 이미지 갤러리 상태
+  const [productImages, setProductImages] = useState<
+    Array<{
+      id?: string; // 기존 이미지의 경우 id가 있음
+      image_url: string;
+      is_primary: boolean;
+      sort_order: number;
+      alt_text?: string | null;
+    }>
+  >(
+    product?.images
+      ? product.images.map((img) => ({
+          id: img.id,
+          image_url: img.image_url,
+          is_primary: img.is_primary,
+          sort_order: img.sort_order,
+          alt_text: img.alt_text,
+        }))
+      : [],
+  );
+  const [isUploadingGalleryImage, setIsUploadingGalleryImage] = useState(false);
+  const galleryImageInputRef = useRef<HTMLInputElement>(null);
+
   const form = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
     defaultValues: {
@@ -106,7 +135,7 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
       }),
       Blockquote,
       HorizontalRule,
-      Image.configure({
+      TiptapImage.configure({
         inline: true,
         allowBase64: true,
       }),
@@ -166,6 +195,14 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
       } else {
         // 생성
         // 폼 검증을 통과했으므로 모든 필수 필드가 존재함
+        // 상품 이미지 갤러리 데이터 준비
+        const imagesData = productImages.map((img, index) => ({
+          image_url: img.image_url,
+          is_primary: img.is_primary,
+          sort_order: img.sort_order,
+          alt_text: img.alt_text || data.name,
+        }));
+
         const result = await createProduct({
           category_id: data.category_id,
           name: data.name,
@@ -177,7 +214,7 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
           stock: data.stock,
           is_featured: data.is_featured,
           is_new: data.is_new,
-          images: [], // TODO: 이미지 업로드 기능 추가
+          images: imagesData,
         });
 
         if (result.success) {
@@ -755,6 +792,167 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
               </FormItem>
             )}
           />
+
+          {/* 상품 이미지 갤러리 */}
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium text-[#4a3f48] block mb-2">
+                상품 이미지 갤러리{" "}
+                <span className="text-[#8b7d84] text-xs font-normal">
+                  (상품 상세 페이지에 표시되는 이미지들)
+                </span>
+              </label>
+
+              {/* 이미지 업로드 버튼 */}
+              <input
+                ref={galleryImageInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={async (e) => {
+                  const files = e.target.files;
+                  if (!files || files.length === 0) return;
+
+                  setIsUploadingGalleryImage(true);
+                  try {
+                    const uploadPromises = Array.from(files).map(
+                      async (file) => {
+                        const formData = new FormData();
+                        formData.append("file", file);
+
+                        const result = await uploadImageFile(formData);
+                        if (result.success && result.url) {
+                          return {
+                            image_url: result.url,
+                            is_primary: productImages.length === 0, // 첫 번째 이미지가 대표 이미지
+                            sort_order: productImages.length,
+                            alt_text: file.name,
+                          };
+                        }
+                        return null;
+                      },
+                    );
+
+                    const uploadedImages = (
+                      await Promise.all(uploadPromises)
+                    ).filter(
+                      (img): img is NonNullable<typeof img> => img !== null,
+                    );
+
+                    if (uploadedImages.length > 0) {
+                      setProductImages((prev) => [...prev, ...uploadedImages]);
+                      console.log(
+                        "[ProductForm] 이미지 갤러리 업로드 성공:",
+                        uploadedImages.length,
+                      );
+                    } else {
+                      alert("이미지 업로드에 실패했습니다.");
+                    }
+                  } catch (error) {
+                    console.error("이미지 갤러리 업로드 에러:", error);
+                    alert("이미지 업로드 중 오류가 발생했습니다.");
+                  } finally {
+                    setIsUploadingGalleryImage(false);
+                    if (galleryImageInputRef.current) {
+                      galleryImageInputRef.current.value = "";
+                    }
+                  }
+                }}
+              />
+
+              <Button
+                type="button"
+                onClick={() => galleryImageInputRef.current?.click()}
+                disabled={isUploadingGalleryImage}
+                variant="outline"
+                className="border-[#fad2e6] text-[#4a3f48] hover:bg-[#ffeef5]"
+              >
+                <Upload className="w-4 h-4 mr-2" />
+                {isUploadingGalleryImage ? "업로드 중..." : "이미지 추가"}
+              </Button>
+            </div>
+
+            {/* 이미지 목록 */}
+            {productImages.length > 0 && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {productImages.map((img, index) => (
+                  <div
+                    key={img.id || `new-${index}`}
+                    className="relative group border border-[#f5d5e3] rounded-lg overflow-hidden aspect-square"
+                  >
+                    <Image
+                      src={img.image_url}
+                      alt={img.alt_text || `상품 이미지 ${index + 1}`}
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 768px) 50vw, 25vw"
+                    />
+
+                    {/* 대표 이미지 표시 */}
+                    {img.is_primary && (
+                      <div className="absolute top-2 left-2 bg-[#ff6b9d] text-white px-2 py-1 rounded text-xs flex items-center gap-1">
+                        <Star className="w-3 h-3 fill-current" />
+                        대표
+                      </div>
+                    )}
+
+                    {/* 삭제 버튼 */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setProductImages((prev) => {
+                          const newImages = prev.filter((_, i) => i !== index);
+                          // 첫 번째 이미지가 삭제되면 다음 이미지를 대표 이미지로 설정
+                          if (newImages.length > 0 && img.is_primary) {
+                            newImages[0].is_primary = true;
+                          }
+                          return newImages;
+                        });
+                        console.log("[ProductForm] 이미지 삭제:", index);
+                      }}
+                      className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+
+                    {/* 대표 이미지 설정 버튼 */}
+                    {!img.is_primary && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setProductImages((prev) =>
+                            prev.map((item, i) => ({
+                              ...item,
+                              is_primary: i === index,
+                            })),
+                          );
+                          console.log("[ProductForm] 대표 이미지 설정:", index);
+                        }}
+                        className="absolute bottom-2 left-2 right-2 bg-white/90 text-[#4a3f48] px-2 py-1 rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity text-center"
+                      >
+                        대표 이미지로 설정
+                      </button>
+                    )}
+
+                    {/* 순서 표시 */}
+                    <div className="absolute bottom-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
+                      {index + 1}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {productImages.length === 0 && (
+              <div className="border-2 border-dashed border-[#f5d5e3] rounded-lg p-8 text-center">
+                <p className="text-[#8b7d84]">상품 이미지를 추가해주세요.</p>
+                <p className="text-xs text-[#8b7d84] mt-2">
+                  첫 번째로 추가한 이미지가 대표 이미지로 설정됩니다.
+                </p>
+              </div>
+            )}
+          </div>
 
           <div className="flex gap-4">
             <FormField
