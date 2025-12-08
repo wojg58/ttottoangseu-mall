@@ -258,12 +258,16 @@ export async function importProducts(
           `[importProducts] ${errorMessage}: ${productData.name}`,
           productError,
         );
+        console.error(
+          `[importProducts] 상품 생성 실패로 인해 이관 작업을 중단합니다.`,
+        );
         errors.push({
           product_name: productData.name,
           message: errorMessage,
         });
         failed++;
-        continue;
+        // 상품 생성 실패 시 즉시 중단
+        break;
       }
 
       // 이미지 업로드 및 저장
@@ -316,7 +320,23 @@ export async function importProducts(
 
       // 다중 카테고리 저장 (product_categories 테이블)
       if (categoryIds.length > 0) {
-        const productCategoryData = categoryIds.map((catId, index) => ({
+        // 기존 카테고리 관계 삭제 (중복 방지)
+        const { error: deleteError } = await supabase
+          .from("product_categories")
+          .delete()
+          .eq("product_id", product.id);
+
+        if (deleteError) {
+          console.warn(
+            `기존 카테고리 삭제 실패 (무시): ${productData.name}`,
+            deleteError,
+          );
+        }
+
+        // 중복 제거 (이중 안전장치)
+        const uniqueCategoryIds = Array.from(new Set(categoryIds));
+
+        const productCategoryData = uniqueCategoryIds.map((catId, index) => ({
           product_id: product.id,
           category_id: catId,
           is_primary: index === 0, // 첫 번째 카테고리가 기본 카테고리
@@ -335,7 +355,7 @@ export async function importProducts(
           // 카테고리는 실패해도 상품은 생성됨
         } else {
           console.log(
-            `카테고리 저장 성공: ${productData.name} (${categoryIds.length}개)`,
+            `카테고리 저장 성공: ${productData.name} (${uniqueCategoryIds.length}개)`,
           );
         }
       }
@@ -373,25 +393,43 @@ export async function importProducts(
         `[importProducts] ${errorMessage}: ${productData.name}`,
         error,
       );
+      console.error(
+        `[importProducts] 예기치 않은 오류로 인해 이관 작업을 중단합니다.`,
+      );
       errors.push({
         product_name: productData.name,
         message: errorMessage,
       });
       failed++;
+      // 예기치 않은 오류 발생 시 즉시 중단
+      break;
     }
   }
 
   revalidatePath("/admin/products");
   revalidatePath("/products");
 
-  console.log(`이관 완료: 성공 ${imported}개, 실패 ${failed}개`);
+  // 중단된 경우 확인 (처리된 상품 수가 전체보다 적고 실패가 있는 경우)
+  const wasStopped = failed > 0 && imported + failed < products.length;
+
+  console.log(
+    `이관 완료: 성공 ${imported}개, 실패 ${failed}개${
+      wasStopped ? " (중단됨)" : ""
+    }`,
+  );
   console.groupEnd();
 
   return {
-    success: failed === 0,
-    message: `${imported}개 상품이 성공적으로 이관되었습니다.${
-      failed > 0 ? ` (${failed}개 실패)` : ""
-    }`,
+    success: failed === 0 && !wasStopped,
+    message: wasStopped
+      ? `${imported}개 상품이 이관되었으나, ${
+          errors.length > 0
+            ? errors[errors.length - 1]?.product_name
+            : "알 수 없는"
+        } 상품 처리 중 오류가 발생하여 작업이 중단되었습니다.`
+      : `${imported}개 상품이 성공적으로 이관되었습니다.${
+          failed > 0 ? ` (${failed}개 실패)` : ""
+        }`,
     imported,
     failed,
     errors,

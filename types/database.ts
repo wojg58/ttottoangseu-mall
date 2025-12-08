@@ -128,6 +128,11 @@ export interface ProductWithDetails extends Product {
   category: Category;
   images: ProductImage[];
   variants: ProductVariant[];
+  product_categories?: Array<{
+    category_id: string;
+    is_primary: boolean;
+    sort_order: number;
+  }>;
 }
 
 // 상품 리스트용 간소화된 타입 (이미지 1개만 포함)

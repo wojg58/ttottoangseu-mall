@@ -110,7 +110,24 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
     resolver: zodResolver(productSchema),
     defaultValues: {
       category_id: product?.category_id || "",
-      category_ids: product?.category_id ? [product.category_id] : [], // 수정 시에는 기존 카테고리만 표시 (나중에 product_categories에서 가져오도록 개선 필요)
+      category_ids: product?.product_categories
+        ? product.product_categories
+            .map((pc: { category_id: string }) => pc.category_id)
+            .sort((a: string, b: string) => {
+              // is_primary가 true인 것을 먼저, 그 다음 sort_order 순서로 정렬
+              const pcA = product.product_categories.find(
+                (pc: { category_id: string }) => pc.category_id === a,
+              );
+              const pcB = product.product_categories.find(
+                (pc: { category_id: string }) => pc.category_id === b,
+              );
+              if (pcA?.is_primary && !pcB?.is_primary) return -1;
+              if (!pcA?.is_primary && pcB?.is_primary) return 1;
+              return (pcA?.sort_order || 0) - (pcB?.sort_order || 0);
+            })
+        : product?.category_id
+          ? [product.category_id]
+          : [], // 수정 시에는 product_categories에서 가져온 다중 카테고리 사용
       name: product?.name || "",
       slug: product?.slug || "",
       price: product?.price || 0,

@@ -323,7 +323,8 @@ export async function getProductById(
       *,
       category:categories!fk_products_category_id(*),
       images:product_images(*),
-      variants:product_variants(*)
+      variants:product_variants(*),
+      product_categories:product_categories(category_id, is_primary, sort_order)
     `,
     )
     .eq("id", productId)

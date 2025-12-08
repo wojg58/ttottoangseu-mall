@@ -101,7 +101,8 @@ export async function getProducts(
     query = query.lte("price", filters.maxPrice);
   }
 
-  // 정렬
+  // 정렬 (기본 정렬이 slug 숫자 기준이므로, 먼저 전체 데이터를 가져온 후 정렬)
+  let shouldSortBySlugNumber = false;
   switch (filters.sortBy) {
     case "price_asc":
       query = query.order("price", { ascending: true });
@@ -114,15 +115,31 @@ export async function getProducts(
       break;
     case "newest":
     default:
-      query = query.order("created_at", { ascending: false });
+      // 기본 정렬: slug 숫자 기준 (PR_01, PR_02, ..., PR_403 순서)
+      // slug 문자열 정렬은 "PR_10"이 "PR_2"보다 앞에 올 수 있으므로
+      // 데이터를 가져온 후 숫자 부분을 추출해서 정렬
+      shouldSortBySlugNumber = true;
+      query = query.order("slug", { ascending: true }); // 임시로 slug 정렬 (나중에 재정렬)
   }
 
-  // 페이지네이션
-  const from = (page - 1) * pageSize;
-  const to = from + pageSize - 1;
-  query = query.range(from, to);
-
-  const { data, error, count } = await query;
+  // slug 숫자 기준 정렬인 경우, 페이지네이션 전에 전체 데이터를 가져와야 함
+  let data, error, count;
+  if (shouldSortBySlugNumber) {
+    // 전체 데이터 가져오기 (페이지네이션 없이)
+    const { data: allData, error: allError, count: allCount } = await query;
+    data = allData;
+    error = allError;
+    count = allCount;
+  } else {
+    // 페이지네이션 적용
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+    query = query.range(from, to);
+    const result = await query;
+    data = result.data;
+    error = result.error;
+    count = result.count;
+  }
 
   if (error) {
     console.error("에러:", error);
@@ -136,8 +153,38 @@ export async function getProducts(
     };
   }
 
+  // slug 숫자 기준 정렬인 경우, 숫자 부분을 추출하여 정렬
+  let sortedData = data || [];
+  if (shouldSortBySlugNumber && sortedData.length > 0) {
+    sortedData = [...sortedData].sort((a, b) => {
+      const slugA = a.slug || "";
+      const slugB = b.slug || "";
+
+      // slug에서 숫자 부분 추출 (예: "PR_01" -> 1, "PR_403" -> 403)
+      const extractNumber = (slug: string): number => {
+        const match = slug.match(/(\d+)$/);
+        return match ? parseInt(match[1], 10) : 0;
+      };
+
+      const numA = extractNumber(slugA);
+      const numB = extractNumber(slugB);
+
+      // 숫자가 같으면 slug 전체로 정렬
+      if (numA === numB) {
+        return slugA.localeCompare(slugB);
+      }
+
+      return numA - numB;
+    });
+
+    // 정렬 후 페이지네이션 적용
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize;
+    sortedData = sortedData.slice(from, to);
+  }
+
   // 데이터 변환
-  const products: ProductListItem[] = (data || []).map((product) => {
+  const products: ProductListItem[] = sortedData.map((product) => {
     const p = product as {
       id: string;
       category_id: string;
