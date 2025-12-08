@@ -37,45 +37,14 @@ async function getProducts() {
 
   const supabase = await createClient();
 
-  // 베스트 카테고리 ID 가져오기
-  const { data: bestCategory } = await supabase
-    .from("categories")
-    .select("id")
-    .eq("slug", "best")
-    .eq("is_active", true)
-    .is("deleted_at", null)
-    .single();
+  // 베스트 상품 (지정된 2개 상품을 번호순으로 표시)
+  const bestProductNames = [
+    "산리오 헬로키티 러블리 프릴 시리즈 블랙 로리타 하트카라비너 마스코트 키링",
+    "유키오 마스코트 인형 키링",
+  ];
 
-  // 베스트 상품 (카테고리가 "베스트"인 상품)
-  let featuredProducts = null;
-  let featuredError = null;
-
-  if (bestCategory?.id) {
-    const result = await supabase
-      .from("products")
-      .select(
-        `
-        *,
-        category:categories!fk_products_category_id(id, name, slug),
-        images:product_images(id, image_url, is_primary, alt_text)
-      `,
-      )
-      .eq("category_id", bestCategory.id)
-      .eq("status", "active")
-      .is("deleted_at", null)
-      .order("created_at", { ascending: false })
-      .limit(5);
-
-    featuredProducts = result.data;
-    featuredError = result.error;
-  }
-
-  if (featuredError) {
-    console.error("[HomePage] 베스트 상품 fetch 에러:", featuredError);
-  }
-
-  // 전체상품 (처음 5개만 로드, 나머지는 클라이언트에서 무한 스크롤로)
-  const { data: allProducts, error: allError } = await supabase
+  // 모든 활성 상품 가져오기 (베스트 상품 매칭용)
+  const { data: allProductsForBest, error: bestError } = await supabase
     .from("products")
     .select(
       `
@@ -85,9 +54,261 @@ async function getProducts() {
     `,
     )
     .eq("status", "active")
-    .is("deleted_at", null)
-    .order("created_at", { ascending: false })
-    .limit(5);
+    .is("deleted_at", null);
+
+  // 지정된 상품명과 매칭하여 순서대로 정렬
+  let featuredProducts: typeof allProductsForBest = [];
+  if (allProductsForBest && allProductsForBest.length > 0) {
+    // 상품명 정규화 함수
+    const normalize = (str: string): string => {
+      return str
+        .trim()
+        .replace(/\s+/g, " ")
+        .replace(/[&]/g, "&")
+        .toLowerCase();
+    };
+
+    // 상품명 매칭 함수 (정확한 매칭 우선)
+    const matchProduct = (productName: string, targetName: string): number => {
+      const normalizedProduct = normalize(productName);
+      const normalizedTarget = normalize(targetName);
+
+      // 1. 완전 일치 (최우선)
+      if (normalizedProduct === normalizedTarget) {
+        return 100;
+      }
+
+      // 2. 공백 제거 후 완전 일치
+      const noSpaceProduct = normalizedProduct.replace(/\s+/g, "");
+      const noSpaceTarget = normalizedTarget.replace(/\s+/g, "");
+      if (noSpaceProduct === noSpaceTarget) {
+        return 95;
+      }
+
+      // 3. 한쪽이 다른 쪽을 포함하는 경우
+      if (normalizedProduct.includes(normalizedTarget)) {
+        return 80;
+      }
+      if (normalizedTarget.includes(normalizedProduct)) {
+        return 80;
+      }
+
+      // 4. 주요 키워드 매칭 점수 계산
+      const targetWords = normalizedTarget
+        .split(/\s+/)
+        .filter((word) => word.length > 1 && !["산리오", "헬로키티", "마스코트", "인형", "키링"].includes(word));
+      
+      if (targetWords.length > 0) {
+        const matchedWords = targetWords.filter((word) => normalizedProduct.includes(word));
+        const matchRatio = matchedWords.length / targetWords.length;
+        
+        if (matchRatio >= 0.8) {
+          return 70 + matchRatio * 10;
+        }
+        if (matchRatio >= 0.6) {
+          return 50 + matchRatio * 10;
+        }
+      }
+
+      // 5. 공통 단어 개수 기반 점수
+      const productWords = new Set(normalizedProduct.split(/\s+/));
+      const targetWordsSet = new Set(normalizedTarget.split(/\s+/));
+      const commonWords = [...productWords].filter((word) => targetWordsSet.has(word));
+      const commonRatio = commonWords.length / Math.max(productWords.size, targetWordsSet.size);
+      
+      return commonRatio * 40;
+    };
+
+    // 지정된 순서대로 상품 찾기
+    featuredProducts = bestProductNames
+      .map((targetName, index) => {
+        const scoredProducts = allProductsForBest
+          .map((product) => {
+            const productName = (product as { name: string }).name || "";
+            const score = matchProduct(productName, targetName);
+            return { product, score, productName };
+          })
+          .filter((item) => item.score >= 50)
+          .sort((a, b) => b.score - a.score);
+
+        const bestMatch = scoredProducts[0];
+
+        if (bestMatch && bestMatch.score >= 50) {
+          console.log(`[HomePage] 베스트 상품 ${index + 1}번 매칭 (점수: ${bestMatch.score.toFixed(1)}):`, {
+            target: targetName,
+            found: bestMatch.productName,
+            slug: (bestMatch.product as { slug: string }).slug,
+          });
+          return bestMatch.product;
+        } else {
+          console.warn(`[HomePage] 베스트 상품 ${index + 1}번 매칭 실패:`, {
+            target: targetName,
+            candidates: scoredProducts.slice(0, 3).map((p) => ({
+              name: p.productName,
+              score: p.score.toFixed(1),
+            })),
+          });
+          return null;
+        }
+      })
+      .filter((product): product is NonNullable<typeof product> => product !== null);
+
+    console.log("[HomePage] 베스트 상품 필터링 결과:", {
+      total: allProductsForBest.length,
+      matched: featuredProducts.length,
+      expected: bestProductNames.length,
+    });
+  }
+
+  if (bestError) {
+    console.error("[HomePage] 베스트 상품 fetch 에러:", bestError);
+  }
+
+  // 전체상품 (지정된 21개 상품을 번호순으로 표시)
+  // 지정된 상품명 목록 (1번부터 21번까지)
+  const targetProductNames = [
+    "산리오 헬로키티 블랙엔젤 스타일업 롱다리 마스코트 인형 키링 그레이 드레스",
+    "산리오 헬로키티 판타지 스타일업 시리즈 롱다리 태닝 코갸류 마스코트 인형 키링",
+    "산리오 헬로키티 고고걸 갸류 스타일업 마스코트 호피 태닝 롱다리 인형 키링",
+    "산리오 헬로키티 MC컬렉션 마스코트 스탠다드 인형 키링",
+    "산리오 헬로키티 MC컬렉션 마스코트 바니 토끼 인형 키링",
+    "산리오 MC컬렉션 마스코트 머메이드 인어 인형 키링",
+    "산리오 헬로키티 MC컬렉션 마스코트 애니멀 호피 인형 키링",
+    "산리오 헬로키티 MC컬렉션 마스코트 타이니참 인형 키링",
+    "산리오 헬로키티 MC컬렉션 마스코트 베이비 아기 인형 키링 키홀더",
+    "산리오 헬로키티 블랙엔젤 마스코트 인형 키링 실버",
+    "산리오 헬로키티 블랙엔젤 하트 카라비너 마스코트 인형 키링 그레이",
+    "산리오 헬로키티 판타지 마스코트 태닝 머메이드 인어 키링",
+    "산리오 헬로키티 판타지 요정 마스코트 홀더 하트 카라비너 인형 키링",
+    "헬로키티 블랙엔젤 퀼팅 하트 파우치 동전지갑 실버",
+    "헬로키티&타이니참 나카요시 마스코트 파우치 세트",
+    "산리오 헬로키티 90s 고고걸 갸류 글리터 반짝이 파우치",
+    "헬로키티 포치비 실리콘 동전지갑 키링 똑딱이 레드 민트 미니 파우치",
+    "키티 한교동 카피바라 피그 팬더 동물 털 파우치 겨울 퍼 화장품 파우치 필통",
+    "반다이 배스킨라빈스 아이스크림 키링 2탄",
+    "산리오 헬로키티 십이간지 띠별 동물 신년 운세 봅기 피규어",
+    "K푸드 미니어처 간식 초코 과자 봉지 가방꾸미기 열쇠고리 키링",
+  ];
+
+  // 모든 활성 상품 가져오기
+  const { data: allProductsRaw, error: allError } = await supabase
+    .from("products")
+    .select(
+      `
+      *,
+      category:categories!fk_products_category_id(id, name, slug),
+      images:product_images(id, image_url, is_primary, alt_text)
+    `,
+    )
+    .eq("status", "active")
+    .is("deleted_at", null);
+
+  // 지정된 상품명과 매칭하여 순서대로 정렬
+  let allProducts: typeof allProductsRaw = [];
+  if (allProductsRaw && allProductsRaw.length > 0) {
+    // 상품명 정규화 함수 (공백, 특수문자 정리)
+    const normalize = (str: string): string => {
+      return str
+        .trim()
+        .replace(/\s+/g, " ") // 여러 공백을 하나로
+        .replace(/[&]/g, "&") // & 기호 유지
+        .toLowerCase();
+    };
+
+    // 상품명 매칭 함수 (정확한 매칭 우선)
+    const matchProduct = (productName: string, targetName: string): number => {
+      const normalizedProduct = normalize(productName);
+      const normalizedTarget = normalize(targetName);
+
+      // 1. 완전 일치 (최우선)
+      if (normalizedProduct === normalizedTarget) {
+        return 100;
+      }
+
+      // 2. 공백 제거 후 완전 일치
+      const noSpaceProduct = normalizedProduct.replace(/\s+/g, "");
+      const noSpaceTarget = normalizedTarget.replace(/\s+/g, "");
+      if (noSpaceProduct === noSpaceTarget) {
+        return 95;
+      }
+
+      // 3. 한쪽이 다른 쪽을 포함하는 경우
+      if (normalizedProduct.includes(normalizedTarget)) {
+        return 80;
+      }
+      if (normalizedTarget.includes(normalizedProduct)) {
+        return 80;
+      }
+
+      // 4. 주요 키워드 매칭 점수 계산
+      const targetWords = normalizedTarget
+        .split(/\s+/)
+        .filter((word) => word.length > 1 && !["산리오", "헬로키티", "마스코트", "인형", "키링"].includes(word));
+      
+      if (targetWords.length > 0) {
+        const matchedWords = targetWords.filter((word) => normalizedProduct.includes(word));
+        const matchRatio = matchedWords.length / targetWords.length;
+        
+        // 주요 키워드가 모두 포함되면 높은 점수
+        if (matchRatio >= 0.8) {
+          return 70 + matchRatio * 10;
+        }
+        if (matchRatio >= 0.6) {
+          return 50 + matchRatio * 10;
+        }
+      }
+
+      // 5. 공통 단어 개수 기반 점수
+      const productWords = new Set(normalizedProduct.split(/\s+/));
+      const targetWordsSet = new Set(normalizedTarget.split(/\s+/));
+      const commonWords = [...productWords].filter((word) => targetWordsSet.has(word));
+      const commonRatio = commonWords.length / Math.max(productWords.size, targetWordsSet.size);
+      
+      return commonRatio * 40;
+    };
+
+    // 지정된 순서대로 상품 찾기 (가장 높은 점수의 상품 선택)
+    allProducts = targetProductNames
+      .map((targetName, index) => {
+        // 모든 상품에 대해 매칭 점수 계산
+        const scoredProducts = allProductsRaw
+          .map((product) => {
+            const productName = (product as { name: string }).name || "";
+            const score = matchProduct(productName, targetName);
+            return { product, score, productName };
+          })
+          .filter((item) => item.score >= 50) // 최소 50점 이상만 고려
+          .sort((a, b) => b.score - a.score); // 점수 높은 순으로 정렬
+
+        const bestMatch = scoredProducts[0];
+
+        if (bestMatch && bestMatch.score >= 50) {
+          console.log(`[HomePage] 상품 ${index + 1}번 매칭 (점수: ${bestMatch.score.toFixed(1)}):`, {
+            target: targetName,
+            found: bestMatch.productName,
+            slug: (bestMatch.product as { slug: string }).slug,
+          });
+          return bestMatch.product;
+        } else {
+          console.warn(`[HomePage] 상품 ${index + 1}번 매칭 실패:`, {
+            target: targetName,
+            candidates: scoredProducts.slice(0, 3).map((p) => ({
+              name: p.productName,
+              score: p.score.toFixed(1),
+            })),
+          });
+          return null;
+        }
+      })
+      .filter((product): product is NonNullable<typeof product> => product !== null);
+
+    console.log("[HomePage] 전체상품 필터링 결과:", {
+      total: allProductsRaw.length,
+      matched: allProducts.length,
+      expected: targetProductNames.length,
+      missing: targetProductNames.length - allProducts.length,
+    });
+  }
 
   if (allError) {
     console.error("[HomePage] 전체상품 fetch 에러:", allError);
@@ -337,8 +558,8 @@ export default async function HomePage() {
             </div>
 
             {featuredProducts.length > 0 ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-5 gap-4 md:gap-6">
-                {featuredProducts.slice(0, 5).map((product, index) => (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-2 xl:grid-cols-2 gap-4 md:gap-6">
+                {featuredProducts.map((product, index) => (
                   <ProductCard
                     key={product.id}
                     product={product}
