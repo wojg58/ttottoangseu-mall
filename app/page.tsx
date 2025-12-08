@@ -218,7 +218,7 @@ export default async function HomePage() {
                 >
                   산리오, 짱구, 유키오 등 사랑스러운 캐릭터 굿즈를 만나보세요.
                   <br />
-                  인형 키링, 파우치, 핸드폰줄, 스티커 등 다양한 아이템이 가득!
+                  인형 키링, 파우치, 완구, 스티커 등 다양한 아이템이 가득!
                 </p>
                 <div className="flex flex-col sm:flex-row gap-3 justify-center md:justify-start">
                   <Link

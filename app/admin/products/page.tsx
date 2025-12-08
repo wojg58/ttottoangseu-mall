@@ -5,7 +5,14 @@
 
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Plus, ChevronLeft, Edit, Trash2, FileText } from "lucide-react";
+import {
+  Plus,
+  ChevronLeft,
+  Edit,
+  Trash2,
+  FileText,
+  Image as ImageIcon,
+} from "lucide-react";
 import { isAdmin, getAdminProducts } from "@/actions/admin";
 import { deleteProduct } from "@/actions/admin-products";
 import DeleteProductButton from "@/components/delete-product-button";
@@ -45,6 +52,12 @@ export default async function AdminProductsPage({
             <span className="text-sm text-[#8b7d84]">총 {total}개</span>
           </div>
           <div className="flex items-center gap-3">
+            <Link href="/admin/products/batch-upload">
+              <button className="flex items-center gap-2 px-4 py-2 bg-[#8b7d84] text-white rounded-lg hover:bg-[#7a6d74] transition-colors">
+                <ImageIcon className="w-4 h-4" />
+                이미지 일괄 업로드
+              </button>
+            </Link>
             <Link href="/admin/products/import">
               <button className="flex items-center gap-2 px-4 py-2 bg-[#4a3f48] text-white rounded-lg hover:bg-[#3a3338] transition-colors">
                 <FileText className="w-4 h-4" />

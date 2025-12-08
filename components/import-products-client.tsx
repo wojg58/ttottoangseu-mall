@@ -11,7 +11,7 @@
 
 "use client";
 
-import { useState, useTransition, useRef } from "react";
+import { useState, useTransition, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -49,6 +49,10 @@ export default function ImportProductsClient({
   const [categoryMap, setCategoryMap] = useState<Map<string, string>>(
     new Map(),
   );
+  // 다중 카테고리 매핑 (상품 인덱스 -> 카테고리 slug 배열)
+  const [categorySlugsMap, setCategorySlugsMap] = useState<
+    Map<number, string[]>
+  >(new Map());
   const [isImporting, setIsImporting] = useState(false);
   const [importResult, setImportResult] = useState<{
     success: boolean;
@@ -57,6 +61,12 @@ export default function ImportProductsClient({
     failed: number;
     errors: Array<{ product_name: string; message: string }>;
   } | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
+
+  // 클라이언트 사이드 마운트 확인 (hydration 에러 방지)
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   console.log("[ImportProductsClient] 렌더링");
 
@@ -76,6 +86,7 @@ export default function ImportProductsClient({
     setFile(selectedFile);
     setParseResult(null);
     setImportResult(null);
+    setCategorySlugsMap(new Map()); // 다중 카테고리 매핑 초기화
 
     // 카테고리 매핑 초기화
     const map = initializeCategoryMap();
@@ -102,7 +113,7 @@ export default function ImportProductsClient({
     }
   };
 
-  // 카테고리 매핑 변경
+  // 카테고리 매핑 변경 (단일 - 하위 호환성)
   const handleCategoryMappingChange = (
     productIndex: number,
     categorySlug: string,
@@ -118,11 +129,52 @@ export default function ImportProductsClient({
     }
     setCategoryMap(newMap);
 
-    // 해당 상품의 category_slug 업데이트
+    // 해당 상품의 category_slug 업데이트 (하위 호환성)
     const updatedProducts = [...parseResult.products];
     updatedProducts[productIndex] = {
       ...product,
       category_slug: categorySlug,
+      category_slugs: categorySlug ? [categorySlug] : [], // 다중 카테고리도 업데이트
+    };
+    setParseResult({
+      ...parseResult,
+      products: updatedProducts,
+    });
+  };
+
+  // 다중 카테고리 매핑 변경
+  const handleCategorySlugsChange = (
+    productIndex: number,
+    categorySlug: string,
+    checked: boolean,
+  ) => {
+    if (!parseResult) return;
+
+    const product = parseResult.products[productIndex];
+    if (!product) return;
+
+    const currentSlugs = categorySlugsMap.get(productIndex) || product.category_slugs || [];
+    let newSlugs: string[];
+
+    if (checked) {
+      // 체크박스 선택 시 배열에 추가
+      newSlugs = [...currentSlugs, categorySlug];
+    } else {
+      // 체크박스 해제 시 배열에서 제거
+      newSlugs = currentSlugs.filter((slug) => slug !== categorySlug);
+    }
+
+    // categorySlugsMap 업데이트
+    const newCategorySlugsMap = new Map(categorySlugsMap);
+    newCategorySlugsMap.set(productIndex, newSlugs);
+    setCategorySlugsMap(newCategorySlugsMap);
+
+    // 해당 상품의 category_slugs 업데이트
+    const updatedProducts = [...parseResult.products];
+    updatedProducts[productIndex] = {
+      ...product,
+      category_slugs: newSlugs,
+      category_slug: newSlugs.length > 0 ? newSlugs[0] : undefined, // 첫 번째가 기본 카테고리
     };
     setParseResult({
       ...parseResult,
@@ -151,12 +203,28 @@ export default function ImportProductsClient({
 
     startTransition(async () => {
       try {
-        // 카테고리 매핑 적용
-        const mappedProducts = parseResult.products.map((product) => {
+        // 카테고리 매핑 적용 (다중 카테고리 우선)
+        const mappedProducts = parseResult.products.map((product, index) => {
+          // categorySlugsMap에서 다중 카테고리 가져오기
+          const categorySlugs = categorySlugsMap.get(index) || product.category_slugs;
+          
+          if (categorySlugs && categorySlugs.length > 0) {
+            return {
+              ...product,
+              category_slugs: categorySlugs,
+              category_slug: categorySlugs[0], // 첫 번째가 기본 카테고리
+            };
+          }
+
+          // 기존 단일 카테고리 매핑 (하위 호환성)
           if (product.raw_data?.카테고리) {
             const mappedSlug = categoryMap.get(product.raw_data.카테고리);
             if (mappedSlug) {
-              return { ...product, category_slug: mappedSlug };
+              return {
+                ...product,
+                category_slug: mappedSlug,
+                category_slugs: [mappedSlug],
+              };
             }
           }
           return product;
@@ -330,7 +398,7 @@ export default function ImportProductsClient({
                         <th className="p-3 text-left text-[#4a3f48] font-bold">
                           상품명
                         </th>
-                        <th className="p-3 text-left text-[#4a3f48] font-bold">
+                        <th className="p-3 text-left text-[#4a3f48] font-bold min-w-[200px]">
                           카테고리
                         </th>
                         <th className="p-3 text-right text-[#4a3f48] font-bold">
@@ -354,30 +422,81 @@ export default function ImportProductsClient({
                             {product.name}
                           </td>
                           <td className="p-3">
-                            <select
-                              value={product.category_slug || ""}
-                              onChange={(e) =>
-                                handleCategoryMappingChange(
-                                  index,
-                                  e.target.value,
-                                )
-                              }
-                              className="text-sm border border-[#f5d5e3] rounded px-2 py-1 text-[#4a3f48] focus:border-[#ff6b9d] focus:outline-none"
-                              disabled={isImporting}
-                            >
-                              <option value="">카테고리 선택</option>
-                              {categories.map((cat) => (
-                                <option key={cat.id} value={cat.slug}>
-                                  {cat.name}
-                                </option>
-                              ))}
-                            </select>
+                            <div className="border border-[#f5d5e3] rounded-lg p-2 max-h-32 overflow-y-auto bg-white">
+                              {categories.length === 0 ? (
+                                <p className="text-xs text-[#8b7d84] text-center py-2">
+                                  카테고리가 없습니다.
+                                </p>
+                              ) : (
+                                <div className="grid grid-cols-1 gap-2">
+                                  {categories.map((cat) => {
+                                    // 서버와 클라이언트 간 일관성 유지를 위해 안정적인 초기값 사용
+                                    const defaultSlugs =
+                                      product.category_slugs ||
+                                      (product.category_slug ? [product.category_slug] : []);
+                                    // 클라이언트 마운트 전에는 기본값만 사용
+                                    const mappedSlugs = isMounted
+                                      ? categorySlugsMap.get(index) || defaultSlugs
+                                      : defaultSlugs;
+                                    const isChecked = Array.isArray(mappedSlugs)
+                                      ? mappedSlugs.includes(cat.slug)
+                                      : false;
+                                    
+                                    // 클라이언트 마운트 전에는 플레이스홀더만 렌더링
+                                    if (!isMounted) {
+                                      return (
+                                        <div
+                                          key={cat.id}
+                                          className="flex items-center gap-2 p-1"
+                                        >
+                                          <div className="w-3.5 h-3.5 border border-[#f5d5e3] rounded bg-white" />
+                                          <span className="text-xs text-[#4a3f48]">
+                                            {cat.name}
+                                          </span>
+                                        </div>
+                                      );
+                                    }
+                                    
+                                    return (
+                                      <div
+                                        key={cat.id}
+                                        className="flex items-center gap-2 p-1 hover:bg-[#ffeef5] rounded transition-colors"
+                                      >
+                                        <input
+                                          type="checkbox"
+                                          id={`product-${index}-category-${cat.id}`}
+                                          checked={isChecked}
+                                          onChange={(e) =>
+                                            handleCategorySlugsChange(
+                                              index,
+                                              cat.slug,
+                                              e.target.checked,
+                                            )
+                                          }
+                                          className="w-3.5 h-3.5 text-[#ff6b9d] border-[#f5d5e3] rounded focus:ring-1 focus:ring-[#fad2e6] cursor-pointer"
+                                          disabled={isImporting}
+                                        />
+                                        <label
+                                          htmlFor={`product-${index}-category-${cat.id}`}
+                                          className="text-xs text-[#4a3f48] cursor-pointer flex-1 select-none"
+                                        >
+                                          {cat.name}
+                                        </label>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                            <p className="text-xs text-[#8b7d84] mt-1">
+                              여러 카테고리 선택 가능
+                            </p>
                           </td>
                           <td className="p-3 text-right text-[#4a3f48]">
-                            {product.price.toLocaleString()}원
+                            {product.price.toLocaleString("ko-KR")}원
                             {product.discount_price && (
                               <span className="text-[#ff6b9d] ml-2">
-                                (할인: {product.discount_price.toLocaleString()}원)
+                                (할인: {product.discount_price.toLocaleString("ko-KR")}원)
                               </span>
                             )}
                           </td>
@@ -454,15 +573,25 @@ export default function ImportProductsClient({
                   {importResult.errors.length > 0 && (
                     <div className="mt-3">
                       <p className="text-sm font-bold text-red-600 mb-2">
-                        실패한 상품:
+                        실패한 상품 ({importResult.errors.length}개):
                       </p>
-                      <ul className="text-sm text-red-600 space-y-1">
-                        {importResult.errors.map((error, index) => (
-                          <li key={index}>
-                            {error.product_name}: {error.message}
-                          </li>
-                        ))}
-                      </ul>
+                      <div className="bg-red-50 rounded-lg p-4 max-h-96 overflow-y-auto border border-red-200">
+                        <ul className="text-sm text-red-600 space-y-2">
+                          {importResult.errors.map((error, index) => (
+                            <li
+                              key={index}
+                              className="p-2 bg-white rounded border border-red-100"
+                            >
+                              <span className="font-medium">
+                                {error.product_name}
+                              </span>
+                              <span className="text-red-500 ml-2">
+                                {error.message}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -483,7 +612,11 @@ export default function ImportProductsClient({
                 isPending ||
                 isImporting ||
                 parseResult.products.length === 0 ||
-                parseResult.products.some((p) => !p.category_slug)
+                parseResult.products.some(
+                  (p) =>
+                    !p.category_slug &&
+                    (!p.category_slugs || p.category_slugs.length === 0),
+                )
               }
               className="bg-[#ff6b9d] hover:bg-[#ff5088] text-white"
             >
@@ -510,9 +643,13 @@ export default function ImportProductsClient({
             </Link>
           </div>
 
-          {parseResult.products.some((p) => !p.category_slug) && (
+          {parseResult.products.some(
+            (p) =>
+              !p.category_slug &&
+              (!p.category_slugs || p.category_slugs.length === 0),
+          ) && (
             <p className="text-sm text-red-500 mt-2">
-              모든 상품의 카테고리를 선택해주세요.
+              모든 상품의 카테고리를 최소 1개 이상 선택해주세요.
             </p>
           )}
         </div>

@@ -56,7 +56,8 @@ export interface ParsedProductData {
   // 기본 정보
   name: string;
   slug: string;
-  category_slug?: string; // 카테고리 매핑용
+  category_slug?: string; // 카테고리 매핑용 (하위 호환성, 단일 카테고리)
+  category_slugs?: string[]; // 다중 카테고리 매핑용
   price: number;
   discount_price: number | null;
   stock: number;

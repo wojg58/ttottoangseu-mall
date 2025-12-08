@@ -28,11 +28,11 @@ const CATEGORIES = [
   { name: "베스트", slug: "best", emoji: "💝" },
   { name: "산리오", slug: "sanrio", emoji: "❤️" },
   { name: "캐릭터", slug: "character", emoji: "🧡" },
-  { name: "핸드폰줄", slug: "phone-strap", emoji: "💛" },
+  { name: "완구,스티커", slug: "phone-strap", emoji: "💛" },
   { name: "키링,지비츠", slug: "keyring", emoji: "💚" },
   { name: "패션잡화", slug: "fashion", emoji: "💙" },
   { name: "곰돌이", slug: "bear", emoji: "🤎" },
-  { name: "완구문구", slug: "stationery", emoji: "💜" },
+  { name: "스마일", slug: "stationery", emoji: "💜" },
   { name: "전체상품", slug: "all", emoji: "" },
 ];
 

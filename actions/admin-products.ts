@@ -18,7 +18,8 @@ import type { Product, ProductImage } from "@/types/database";
 
 // 상품 생성 입력 타입
 export interface CreateProductInput {
-  category_id: string;
+  category_id: string; // 기본 카테고리 (하위 호환성)
+  category_ids?: string[]; // 다중 카테고리
   name: string;
   slug: string;
   price: number;
@@ -111,6 +112,31 @@ export async function createProduct(
       }
     }
 
+    // 다중 카테고리 추가 (product_categories 테이블)
+    const categoryIds = input.category_ids && input.category_ids.length > 0
+      ? input.category_ids
+      : [input.category_id]; // category_ids가 없으면 기본 category_id 사용
+
+    if (categoryIds.length > 0) {
+      const productCategoryData = categoryIds.map((categoryId, index) => ({
+        product_id: product.id,
+        category_id: categoryId,
+        is_primary: index === 0, // 첫 번째 카테고리가 기본 카테고리
+        sort_order: index,
+      }));
+
+      const { error: categoryError } = await supabase
+        .from("product_categories")
+        .insert(productCategoryData);
+
+      if (categoryError) {
+        console.error("카테고리 추가 에러:", categoryError);
+        // 상품은 생성되었으므로 경고만 출력
+      } else {
+        console.log(`카테고리 ${categoryIds.length}개 추가 완료`);
+      }
+    }
+
     revalidatePath("/admin/products");
     revalidatePath("/products");
 
@@ -131,7 +157,8 @@ export async function createProduct(
 // 상품 수정 입력 타입
 export interface UpdateProductInput {
   id: string;
-  category_id?: string;
+  category_id?: string; // 기본 카테고리 (하위 호환성)
+  category_ids?: string[]; // 다중 카테고리
   name?: string;
   slug?: string;
   price?: number;
@@ -204,6 +231,39 @@ export async function updateProduct(
       console.error("상품 수정 에러:", error);
       console.groupEnd();
       return { success: false, message: "상품 수정에 실패했습니다." };
+    }
+
+    // 다중 카테고리 업데이트 (category_ids가 제공된 경우)
+    if (input.category_ids !== undefined) {
+      // 기존 카테고리 관계 삭제
+      const { error: deleteError } = await supabase
+        .from("product_categories")
+        .delete()
+        .eq("product_id", input.id);
+
+      if (deleteError) {
+        console.error("기존 카테고리 삭제 에러:", deleteError);
+      }
+
+      // 새로운 카테고리 관계 추가
+      if (input.category_ids.length > 0) {
+        const productCategoryData = input.category_ids.map((categoryId, index) => ({
+          product_id: input.id,
+          category_id: categoryId,
+          is_primary: index === 0, // 첫 번째 카테고리가 기본 카테고리
+          sort_order: index,
+        }));
+
+        const { error: categoryError } = await supabase
+          .from("product_categories")
+          .insert(productCategoryData);
+
+        if (categoryError) {
+          console.error("카테고리 업데이트 에러:", categoryError);
+        } else {
+          console.log(`카테고리 ${input.category_ids.length}개 업데이트 완료`);
+        }
+      }
     }
 
     revalidatePath("/admin/products");

@@ -49,7 +49,8 @@ import Highlight from "@tiptap/extension-highlight";
 
 // 폼 스키마
 const productSchema = z.object({
-  category_id: z.string().min(1, "카테고리를 선택해주세요."),
+  category_id: z.string().min(1, "기본 카테고리를 선택해주세요."), // 기본 카테고리 (하위 호환성)
+  category_ids: z.array(z.string()).min(1, "최소 1개 이상의 카테고리를 선택해주세요."), // 다중 카테고리
   name: z.string().min(2, "상품명을 입력해주세요."),
   slug: z.string().min(2, "slug를 입력해주세요."),
   price: z.number().min(0, "가격은 0원 이상이어야 합니다."),
@@ -72,6 +73,9 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
   const isEdit = !!product;
+
+  console.log("[ProductForm] 카테고리 개수:", categories.length);
+  console.log("[ProductForm] 카테고리 목록:", categories.map((c) => c.name));
   const [descriptionHtml, setDescriptionHtml] = useState<string>(
     product?.description || "",
   );
@@ -106,6 +110,7 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
     resolver: zodResolver(productSchema),
     defaultValues: {
       category_id: product?.category_id || "",
+      category_ids: product?.category_id ? [product.category_id] : [], // 수정 시에는 기존 카테고리만 표시 (나중에 product_categories에서 가져오도록 개선 필요)
       name: product?.name || "",
       slug: product?.slug || "",
       price: product?.price || 0,
@@ -183,6 +188,8 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
         // 수정
         const result = await updateProduct({
           id: product.id,
+          category_id: data.category_id,
+          category_ids: data.category_ids, // 다중 카테고리
           ...data,
         });
 
@@ -204,7 +211,8 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
         }));
 
         const result = await createProduct({
-          category_id: data.category_id,
+          category_id: data.category_id, // 기본 카테고리 (하위 호환성)
+          category_ids: data.category_ids, // 다중 카테고리
           name: data.name,
           slug: data.slug,
           price: data.price,
@@ -246,26 +254,90 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormField
               control={form.control}
-              name="category_id"
+              name="category_ids"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-[#4a3f48]">
                     카테고리 <span className="text-[#ff6b9d]">*</span>
                   </FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger className="w-full border-[#f5d5e3] focus:border-[#fad2e6] focus:ring-[#fad2e6]">
-                        <SelectValue placeholder="카테고리 선택" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {categories.map((category) => (
-                        <SelectItem key={category.id} value={category.id}>
-                          {category.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <FormControl>
+                    <div className="border border-[#f5d5e3] rounded-lg p-4 max-h-48 overflow-y-auto bg-white">
+                      {categories.length === 0 ? (
+                        <p className="text-sm text-[#8b7d84] text-center py-4">
+                          카테고리가 없습니다.
+                        </p>
+                      ) : (
+                        <div className="grid grid-cols-2 gap-3">
+                          {categories.map((category) => {
+                            const currentValue = Array.isArray(field.value) ? field.value : [];
+                            const isChecked = currentValue.includes(category.id);
+                            
+                            // 클라이언트 마운트 전에는 플레이스홀더만 렌더링
+                            if (!isMounted) {
+                              return (
+                                <div
+                                  key={category.id}
+                                  className="flex items-center gap-2 p-2"
+                                >
+                                  <div className="w-4 h-4 border border-[#f5d5e3] rounded bg-white" />
+                                  <span className="text-sm text-[#4a3f48]">
+                                    {category.name}
+                                  </span>
+                                </div>
+                              );
+                            }
+                            
+                            return (
+                              <div
+                                key={category.id}
+                                className="flex items-center gap-2 p-2 hover:bg-[#ffeef5] rounded transition-colors"
+                              >
+                                <input
+                                  type="checkbox"
+                                  id={`category-${category.id}`}
+                                  checked={isChecked}
+                                  onChange={(e) => {
+                                    const currentValue = Array.isArray(field.value) ? field.value : [];
+                                    if (e.target.checked) {
+                                      // 체크박스 선택 시 배열에 추가
+                                      const newValue = [...currentValue, category.id];
+                                      field.onChange(newValue);
+                                      // 기본 카테고리도 동기화 (첫 번째 선택된 카테고리)
+                                      if (currentValue.length === 0) {
+                                        form.setValue("category_id", category.id);
+                                      }
+                                    } else {
+                                      // 체크박스 해제 시 배열에서 제거
+                                      const newValue = currentValue.filter(
+                                        (id) => id !== category.id,
+                                      );
+                                      field.onChange(newValue);
+                                      // 기본 카테고리도 동기화
+                                      if (newValue.length > 0) {
+                                        form.setValue("category_id", newValue[0]);
+                                      } else {
+                                        form.setValue("category_id", "");
+                                      }
+                                    }
+                                  }}
+                                  className="w-4 h-4 text-[#ff6b9d] border-[#f5d5e3] rounded focus:ring-2 focus:ring-[#fad2e6] cursor-pointer"
+                                />
+                                <label
+                                  htmlFor={`category-${category.id}`}
+                                  className="text-sm text-[#4a3f48] cursor-pointer flex-1 select-none"
+                                >
+                                  {category.name}
+                                </label>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </FormControl>
+                  <p className="text-xs text-[#8b7d84] mt-1">
+                    여러 카테고리를 선택할 수 있습니다. 첫 번째 선택된 카테고리가 기본 카테고리로 설정됩니다.
+                  </p>
                   <FormMessage />
                 </FormItem>
               )}
