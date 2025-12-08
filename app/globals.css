@@ -265,8 +265,9 @@
 
 /* 카테고리 네비게이션 스타일 */
 .category-nav-item {
-  @apply relative py-3 px-2 text-sm font-medium transition-colors;
-  font-family: 'LineSeed', 'Gowun Dodum', system-ui, sans-serif;
+  @apply relative py-3 px-2 text-sm transition-colors;
+  font-family: "돋움", Dotum, "Apple SD Gothic Neo", sans-serif;
+  font-weight: 700;
 }
 
 .category-nav-item::after {

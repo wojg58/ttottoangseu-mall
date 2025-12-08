@@ -146,7 +146,7 @@ export default function ShopHeader() {
       {/* 카테고리 네비게이션 */}
       <nav className="bg-[#fad2e6] border-b border-[#f5d5e3] hidden lg:block">
         <div className="shop-container">
-          <ul className="flex items-center justify-center gap-1">
+          <ul className="flex items-center justify-center gap-8">
             {CATEGORIES.map((category) => (
               <li key={category.slug}>
                 <Link
@@ -157,20 +157,25 @@ export default function ShopHeader() {
                       ? "/products"
                       : `/products/category/${category.slug}`
                   }
-                  className="category-nav-item flex items-center gap-1 text-black hover:text-[#ff6b9d]"
+                  className="category-nav-item flex items-center gap-1 text-black hover:text-[#ff6b9d] text-[20px] px-8"
                 >
                   <span>
-                    {category.name}
                     {category.slug === "best" ? (
-                      <Image
-                        src="/best.png"
-                        alt="베스트"
-                        width={20}
-                        height={20}
-                        className="inline-block ml-1"
-                      />
+                      <>
+                        <Image
+                          src="/best.png"
+                          alt="베스트"
+                          width={20}
+                          height={20}
+                          className="inline-block mr-1"
+                        />
+                        {category.name}
+                      </>
                     ) : (
-                      category.emoji
+                      <>
+                        {category.emoji}
+                        {category.name}
+                      </>
                     )}
                   </span>
                 </Link>

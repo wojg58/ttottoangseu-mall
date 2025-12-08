@@ -11,9 +11,8 @@
 
 import { Suspense } from "react";
 import Link from "next/link";
-import Image from "next/image";
-import { Filter, Home } from "lucide-react";
-import { getProducts, getCategories } from "@/actions/products";
+import { Home } from "lucide-react";
+import { getProducts } from "@/actions/products";
 import ProductCard from "@/components/product-card";
 import ProductSortSelect from "@/components/product-sort-select";
 
@@ -49,10 +48,7 @@ export default async function ProductsPage({
   const page = parseInt(params.page || "1", 10);
 
   // 데이터 로드
-  const [productsResult, categories] = await Promise.all([
-    getProducts(filters, page, 12),
-    getCategories(),
-  ]);
+  const productsResult = await getProducts(filters, page, 12);
 
   // 페이지 타이틀 결정
   let pageTitle = "전체 상품";
@@ -77,97 +73,8 @@ export default async function ProductsPage({
           <span className="ml-auto text-xs">총 {productsResult.total}개</span>
         </nav>
 
-        <div className="flex flex-col lg:flex-row gap-8">
-          {/* 사이드바 - 카테고리 */}
-          <aside className="lg:w-64 shrink-0">
-            <div className="bg-white rounded-xl p-6 shadow-sm sticky top-24">
-              <h2 className="font-bold text-[#4a3f48] mb-4 flex items-center gap-2">
-                <Filter className="w-4 h-4" />
-                카테고리
-              </h2>
-              <ul className="space-y-2">
-                <li>
-                  <Link
-                    href="/products"
-                    className={`block py-2 px-3 rounded-lg transition-colors ${
-                      !params.featured && !params.new && !params.sale
-                        ? "bg-[#ffeef5] text-[#ff6b9d] font-medium"
-                        : "hover:bg-[#ffeef5] text-[#4a3f48]"
-                    }`}
-                  >
-                    전체 상품
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="/products?featured=true"
-                    className={`block py-2 px-3 rounded-lg transition-colors ${
-                      params.featured === "true"
-                        ? "bg-[#ffeef5] text-[#ff6b9d] font-medium"
-                        : "hover:bg-[#ffeef5] text-[#4a3f48]"
-                    }`}
-                  >
-                    <span className="flex items-center gap-1">
-                      <Image
-                        src="/best.png"
-                        alt="베스트"
-                        width={20}
-                        height={20}
-                        className="rounded"
-                      />
-                      베스트
-                    </span>
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="/products?new=true"
-                    className={`block py-2 px-3 rounded-lg transition-colors ${
-                      params.new === "true"
-                        ? "bg-[#ffeef5] text-[#ff6b9d] font-medium"
-                        : "hover:bg-[#ffeef5] text-[#4a3f48]"
-                    }`}
-                  >
-                    ✨ 신상품
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href="/products?sale=true"
-                    className={`block py-2 px-3 rounded-lg transition-colors ${
-                      params.sale === "true"
-                        ? "bg-[#ffeef5] text-[#ff6b9d] font-medium"
-                        : "hover:bg-[#ffeef5] text-[#4a3f48]"
-                    }`}
-                  >
-                    🏷️ 할인
-                  </Link>
-                </li>
-              </ul>
-
-              {/* 카테고리 목록 */}
-              {categories.length > 0 && (
-                <>
-                  <hr className="my-4 border-[#f5d5e3]" />
-                  <ul className="space-y-2">
-                    {categories.map((category) => (
-                      <li key={category.id}>
-                        <Link
-                          href={`/products/category/${category.slug}`}
-                          className="block py-2 px-3 rounded-lg hover:bg-[#ffeef5] text-[#4a3f48] transition-colors"
-                        >
-                          {category.name}
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                </>
-              )}
-            </div>
-          </aside>
-
-          {/* 메인 컨텐츠 */}
-          <div className="flex-1">
+        {/* 메인 컨텐츠 */}
+        <div>
             {/* 헤더 */}
             <div className="flex items-center justify-between mb-6">
               <h1 className="text-2xl font-bold text-[#4a3f48]">{pageTitle}</h1>
@@ -229,7 +136,6 @@ export default async function ProductsPage({
                 </Link>
               </div>
             )}
-          </div>
         </div>
       </div>
     </main>
