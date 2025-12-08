@@ -8,7 +8,6 @@ import { Home } from "lucide-react";
 import { notFound } from "next/navigation";
 import {
   getProducts,
-  getCategories,
   getCategoryBySlug,
 } from "@/actions/products";
 import ProductCard from "@/components/product-card";
@@ -50,10 +49,7 @@ export default async function CategoryPage({
   const page = parseInt(search.page || "1", 10);
 
   // 데이터 로드
-  const [productsResult, categories] = await Promise.all([
-    getProducts(filters, page, 12),
-    getCategories(),
-  ]);
+  const productsResult = await getProducts(filters, page, 12);
 
   return (
     <main className="py-8">
@@ -85,40 +81,8 @@ export default async function CategoryPage({
           )}
         </div>
 
-        <div className="flex flex-col lg:flex-row gap-8">
-          {/* 사이드바 - 카테고리 */}
-          <aside className="lg:w-64 shrink-0">
-            <div className="bg-white rounded-xl p-6 shadow-sm sticky top-24">
-              <h2 className="font-bold text-[#4a3f48] mb-4">카테고리</h2>
-              <ul className="space-y-2">
-                <li>
-                  <Link
-                    href="/products"
-                    className="block py-2 px-3 rounded-lg hover:bg-[#ffeef5] text-[#4a3f48] transition-colors"
-                  >
-                    전체 상품
-                  </Link>
-                </li>
-                {categories.map((cat) => (
-                  <li key={cat.id}>
-                    <Link
-                      href={`/products/category/${cat.slug}`}
-                      className={`block py-2 px-3 rounded-lg transition-colors ${
-                        cat.slug === slug
-                          ? "bg-[#ffeef5] text-[#ff6b9d] font-medium"
-                          : "hover:bg-[#ffeef5] text-[#4a3f48]"
-                      }`}
-                    >
-                      {cat.name}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </aside>
-
-          {/* 메인 컨텐츠 */}
-          <div className="flex-1">
+        {/* 메인 컨텐츠 */}
+        <div>
             {/* 정렬 */}
             <div className="flex items-center justify-end mb-6">
               <ProductSortSelect defaultValue={filters.sortBy} />
@@ -177,7 +141,6 @@ export default async function CategoryPage({
                 </Link>
               </div>
             )}
-          </div>
         </div>
       </div>
     </main>

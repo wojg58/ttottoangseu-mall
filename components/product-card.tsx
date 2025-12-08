@@ -126,10 +126,10 @@ export default function ProductCard({ product, rank }: ProductCardProps) {
               {discountRate}%
             </span>
           )}
-          <span className="shop-price">{displayPrice.toLocaleString()}원</span>
+          <span className="shop-price">{displayPrice.toLocaleString("ko-KR")}원</span>
           {discountRate > 0 && (
             <span className="shop-price-original">
-              {product.price.toLocaleString()}원
+              {product.price.toLocaleString("ko-KR")}원
             </span>
           )}
         </div>

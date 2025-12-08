@@ -45,7 +45,7 @@ export default async function AdminDashboardPage() {
               <span className="text-xs text-[#8b7d84]">전체</span>
             </div>
             <p className="text-2xl font-bold text-[#4a3f48]">
-              {stats.totalOrders.toLocaleString()}
+              {stats.totalOrders.toLocaleString("ko-KR")}
             </p>
             <p className="text-sm text-[#8b7d84]">총 주문</p>
           </div>
@@ -58,7 +58,7 @@ export default async function AdminDashboardPage() {
               <span className="text-xs text-orange-500">처리 필요</span>
             </div>
             <p className="text-2xl font-bold text-[#4a3f48]">
-              {stats.pendingOrders.toLocaleString()}
+              {stats.pendingOrders.toLocaleString("ko-KR")}
             </p>
             <p className="text-sm text-[#8b7d84]">대기 중인 주문</p>
           </div>
@@ -71,7 +71,7 @@ export default async function AdminDashboardPage() {
               <span className="text-xs text-green-500">수익</span>
             </div>
             <p className="text-2xl font-bold text-[#4a3f48]">
-              {stats.totalRevenue.toLocaleString()}원
+              {stats.totalRevenue.toLocaleString("ko-KR")}원
             </p>
             <p className="text-sm text-[#8b7d84]">총 매출</p>
           </div>
@@ -84,7 +84,7 @@ export default async function AdminDashboardPage() {
               <span className="text-xs text-blue-500">활성</span>
             </div>
             <p className="text-2xl font-bold text-[#4a3f48]">
-              {stats.totalProducts.toLocaleString()}
+              {stats.totalProducts.toLocaleString("ko-KR")}
             </p>
             <p className="text-sm text-[#8b7d84]">등록 상품</p>
           </div>
@@ -173,7 +173,7 @@ export default async function AdminDashboardPage() {
                             {order.shipping_name}
                           </td>
                           <td className="py-3 px-2 text-[#4a3f48] font-medium">
-                            {order.total_amount.toLocaleString()}원
+                            {order.total_amount.toLocaleString("ko-KR")}원
                           </td>
                           <td className="py-3 px-2">
                             <span

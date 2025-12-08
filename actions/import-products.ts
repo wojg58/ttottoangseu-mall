@@ -12,7 +12,7 @@
 "use server";
 
 import { isAdmin } from "./admin";
-import { createClient } from "@/lib/supabase/server";
+import { getServiceRoleClient } from "@/lib/supabase/service-role";
 import { revalidatePath } from "next/cache";
 import type { ParsedProductData } from "@/lib/utils/import-products";
 import type { CreateProductInput } from "./admin-products";
@@ -53,7 +53,8 @@ export async function importProducts(
     };
   }
 
-  const supabase = await createClient();
+  // 대량 이관 작업은 Service Role 클라이언트 사용 (JWT 만료 방지)
+  const supabase = getServiceRoleClient();
   let imported = 0;
   let failed = 0;
   const errors: ImportResult["errors"] = [];
@@ -87,9 +88,28 @@ export async function importProducts(
 
       // 다중 카테고리 처리
       if (productData.category_slugs && productData.category_slugs.length > 0) {
-        categoryIds = productData.category_slugs
+        // 각 slug를 처리 (쉼표로 구분된 경우 분리)
+        const allSlugs: string[] = [];
+        productData.category_slugs.forEach((slug) => {
+          // 쉼표로 구분된 경우 분리
+          if (slug.includes(",")) {
+            const parts = slug
+              .split(",")
+              .map((s) => s.trim())
+              .filter((s) => s);
+            allSlugs.push(...parts);
+          } else {
+            allSlugs.push(slug);
+          }
+        });
+
+        // 각 slug를 카테고리 ID로 매핑
+        categoryIds = allSlugs
           .map((slug) => categoryMap.get(slug))
           .filter((id): id is string => id !== undefined);
+
+        // 중복 제거
+        categoryIds = Array.from(new Set(categoryIds));
 
         if (categoryIds.length > 0) {
           categoryId = categoryIds[0]; // 첫 번째가 기본 카테고리
@@ -102,7 +122,12 @@ export async function importProducts(
         }
       } else if (productData.category_slug) {
         // 단일 카테고리 (하위 호환성)
-        const singleCategoryId = categoryMap.get(productData.category_slug);
+        // 쉼표로 구분된 경우 첫 번째만 사용
+        const slug = productData.category_slug.includes(",")
+          ? productData.category_slug.split(",")[0].trim()
+          : productData.category_slug;
+
+        const singleCategoryId = categoryMap.get(slug);
         if (singleCategoryId) {
           categoryId = singleCategoryId;
           categoryIds = [singleCategoryId];

@@ -124,7 +124,7 @@ export default function ProductVariantSelector({
                         }`}
                       >
                         {priceAdjustment > 0 ? "+" : ""}
-                        {priceAdjustment.toLocaleString()}원
+                        {priceAdjustment.toLocaleString("ko-KR")}원
                       </span>
                     )}
                     {isOutOfStock && (
@@ -163,7 +163,7 @@ export default function ProductVariantSelector({
                     }
                   >
                     {selectedVariant.price_adjustment > 0 ? "+" : ""}
-                    {selectedVariant.price_adjustment.toLocaleString()}원
+                    {selectedVariant.price_adjustment.toLocaleString("ko-KR")}원
                   </span>
                 </p>
               )}
@@ -173,7 +173,7 @@ export default function ProductVariantSelector({
               <p className="text-lg font-bold text-[#ff6b9d]">
                 {(
                   basePrice + (selectedVariant.price_adjustment || 0)
-                ).toLocaleString()}
+                ).toLocaleString("ko-KR")}
                 원
               </p>
             </div>

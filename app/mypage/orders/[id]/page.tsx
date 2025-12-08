@@ -100,11 +100,11 @@ export default async function OrderDetailPage({
                         </p>
                       )}
                       <p className="text-sm text-[#8b7d84]">
-                        {item.price.toLocaleString()}원 × {item.quantity}개
+                        {item.price.toLocaleString("ko-KR")}원 × {item.quantity}개
                       </p>
                     </div>
                     <p className="font-bold text-[#4a3f48]">
-                      {(item.price * item.quantity).toLocaleString()}원
+                      {(item.price * item.quantity).toLocaleString("ko-KR")}원
                     </p>
                   </div>
                 ))}
@@ -135,7 +135,7 @@ export default async function OrderDetailPage({
                 <div className="flex justify-between font-bold">
                   <span className="text-[#4a3f48]">결제금액</span>
                   <span className="text-[#ff6b9d]">
-                    {order.total_amount.toLocaleString()}원
+                    {order.total_amount.toLocaleString("ko-KR")}원
                   </span>
                 </div>
               </div>

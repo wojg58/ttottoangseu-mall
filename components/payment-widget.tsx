@@ -196,7 +196,7 @@ export default function PaymentWidget({
         onClick={handlePayment}
         className="w-full h-14 bg-[#ff6b9d] hover:bg-[#ff5088] text-white rounded-xl text-base font-bold"
       >
-        {amount.toLocaleString()}원 결제하기
+        {amount.toLocaleString("ko-KR")}원 결제하기
       </Button>
     </div>
   );

@@ -131,7 +131,7 @@ export default function AddToCartButton({
           </button>
         </div>
         <span className="ml-auto text-lg font-bold text-[#4a3f48]">
-          {totalPrice.toLocaleString()}원
+          {totalPrice.toLocaleString("ko-KR")}원
         </span>
       </div>
 

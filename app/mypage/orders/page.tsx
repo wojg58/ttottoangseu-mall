@@ -92,7 +92,7 @@ export default async function OrdersPage() {
                     <div className="text-right">
                       <p className="text-sm text-[#8b7d84]">결제금액</p>
                       <p className="text-lg font-bold text-[#ff6b9d]">
-                        {order.total_amount.toLocaleString()}원
+                        {order.total_amount.toLocaleString("ko-KR")}원
                       </p>
                     </div>
                     <ChevronRight className="w-5 h-5 text-[#8b7d84]" />

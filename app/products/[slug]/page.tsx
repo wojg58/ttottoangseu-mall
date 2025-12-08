@@ -156,17 +156,17 @@ export default async function ProductDetailPage({
                   </span>
                 )}
                 <span className="text-3xl font-bold text-[#4a3f48]">
-                  {displayPrice.toLocaleString()}원
+                  {displayPrice.toLocaleString("ko-KR")}원
                 </span>
                 {discountRate > 0 && (
                   <span className="text-lg text-[#8b7d84] line-through">
-                    {product.price.toLocaleString()}원
+                    {product.price.toLocaleString("ko-KR")}원
                   </span>
                 )}
               </div>
               {discountRate > 0 && (
                 <p className="text-sm text-[#ff6b9d] mt-2">
-                  🎉 {(product.price - displayPrice).toLocaleString()}원 할인!
+                  🎉 {(product.price - displayPrice).toLocaleString("ko-KR")}원 할인!
                 </p>
               )}
             </div>

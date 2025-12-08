@@ -159,7 +159,7 @@ export default async function MyPage() {
                           )}
                         </span>
                         <span className="font-bold text-[#4a3f48]">
-                          {order.total_amount.toLocaleString()}원
+                          {order.total_amount.toLocaleString("ko-KR")}원
                         </span>
                       </div>
                     </Link>

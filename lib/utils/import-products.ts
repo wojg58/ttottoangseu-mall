@@ -546,6 +546,26 @@ export function createCategoryMap(
     // 카테고리 이름으로도 매핑
     map.set(category.name, category.slug);
     map.set(category.slug, category.slug);
+
+    // 쉼표 포함 카테고리 이름 처리 (예: "키링,지비츠" -> "keyring")
+    if (category.name.includes(",")) {
+      const parts = category.name.split(",").map((s) => s.trim());
+      parts.forEach((part) => {
+        if (part) {
+          map.set(part, category.slug);
+        }
+      });
+    }
+
+    // 카테고리 이름의 부분 문자열도 매핑 (예: "키링/지비츠" -> "keyring")
+    if (category.name.includes("/")) {
+      const parts = category.name.split("/").map((s) => s.trim());
+      parts.forEach((part) => {
+        if (part) {
+          map.set(part, category.slug);
+        }
+      });
+    }
   });
 
   return map;

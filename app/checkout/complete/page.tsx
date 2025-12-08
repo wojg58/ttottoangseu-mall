@@ -69,7 +69,7 @@ export default async function CompletePage({
               <div className="flex justify-between">
                 <span className="text-[#8b7d84]">결제금액</span>
                 <span className="text-[#ff6b9d] font-bold">
-                  {order.total_amount.toLocaleString()}원
+                  {order.total_amount.toLocaleString("ko-KR")}원
                 </span>
               </div>
               <div className="flex justify-between">

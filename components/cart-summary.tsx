@@ -35,7 +35,7 @@ export default function CartSummary({
           <div className="flex items-center gap-2 text-[#ff6b9d]">
             <Truck className="w-5 h-5" />
             <span className="text-sm font-medium">
-              {amountToFreeShipping.toLocaleString()}원 더 담으면 무료배송!
+              {amountToFreeShipping.toLocaleString("ko-KR")}원 더 담으면 무료배송!
             </span>
           </div>
           <div className="mt-2 h-2 bg-[#fad2e6] rounded-full overflow-hidden">
@@ -56,7 +56,7 @@ export default function CartSummary({
       <div className="space-y-3 pb-4 border-b border-[#f5d5e3]">
         <div className="flex justify-between text-sm">
           <span className="text-[#8b7d84]">상품 금액 ({itemCount}개)</span>
-          <span className="text-[#4a3f48]">{subtotal.toLocaleString()}원</span>
+          <span className="text-[#4a3f48]">{subtotal.toLocaleString("ko-KR")}원</span>
         </div>
         <div className="flex justify-between text-sm">
           <span className="text-[#8b7d84]">배송비</span>
@@ -64,7 +64,7 @@ export default function CartSummary({
             {shippingFee === 0 ? (
               <span className="text-[#ff6b9d]">무료</span>
             ) : (
-              `${shippingFee.toLocaleString()}원`
+              `${shippingFee.toLocaleString("ko-KR")}원`
             )}
           </span>
         </div>
@@ -74,7 +74,7 @@ export default function CartSummary({
       <div className="flex justify-between items-center py-4">
         <span className="text-base font-bold text-[#4a3f48]">총 결제 금액</span>
         <span className="text-xl font-bold text-[#ff6b9d]">
-          {total.toLocaleString()}원
+          {total.toLocaleString("ko-KR")}원
         </span>
       </div>
 

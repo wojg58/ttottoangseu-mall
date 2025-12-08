@@ -258,11 +258,11 @@ export default function CheckoutForm({
                           </p>
                         )}
                         <p className="text-xs text-[#8b7d84]">
-                          {item.price.toLocaleString()}원 × {item.quantity}개
+                          {item.price.toLocaleString("ko-KR")}원 × {item.quantity}개
                         </p>
                       </div>
                       <p className="text-sm font-bold text-[#4a3f48] shrink-0">
-                        {(item.price * item.quantity).toLocaleString()}원
+                        {(item.price * item.quantity).toLocaleString("ko-KR")}원
                       </p>
                     </div>
                   ))}
@@ -284,7 +284,7 @@ export default function CheckoutForm({
                 상품 금액 ({cartItems.length}개)
               </span>
               <span className="text-[#4a3f48]">
-                {subtotal.toLocaleString()}원
+                {subtotal.toLocaleString("ko-KR")}원
               </span>
             </div>
             <div className="flex justify-between text-sm">
@@ -293,7 +293,7 @@ export default function CheckoutForm({
                 {shippingFee === 0 ? (
                   <span className="text-[#ff6b9d]">무료</span>
                 ) : (
-                  `${shippingFee.toLocaleString()}원`
+                  `${shippingFee.toLocaleString("ko-KR")}원`
                 )}
               </span>
             </div>
@@ -304,7 +304,7 @@ export default function CheckoutForm({
               총 결제 금액
             </span>
             <span className="text-xl font-bold text-[#ff6b9d]">
-              {total.toLocaleString()}원
+              {total.toLocaleString("ko-KR")}원
             </span>
           </div>
 
@@ -319,7 +319,7 @@ export default function CheckoutForm({
                 disabled={isPending}
                 className="w-full h-14 bg-[#ff6b9d] hover:bg-[#ff5088] text-white rounded-xl text-base font-bold disabled:opacity-50"
               >
-                {isPending ? "처리 중..." : `${total.toLocaleString()}원 결제하기`}
+                {isPending ? "처리 중..." : `${total.toLocaleString("ko-KR")}원 결제하기`}
               </Button>
             </>
           ) : (

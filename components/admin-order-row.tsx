@@ -54,7 +54,7 @@ export default function AdminOrderRow({ order }: AdminOrderRowProps) {
       <td className="py-4 px-4 text-[#4a3f48]">{order.shipping_name}</td>
       <td className="py-4 px-4 text-[#4a3f48]">{order.shipping_phone}</td>
       <td className="py-4 px-4 text-[#4a3f48] font-medium">
-        {order.total_amount.toLocaleString()}원
+        {order.total_amount.toLocaleString("ko-KR")}원
       </td>
       <td className="py-4 px-4">
         <select
@@ -80,7 +80,7 @@ export default function AdminOrderRow({ order }: AdminOrderRowProps) {
           ))}
         </select>
       </td>
-      <td className="py-4 px-4 text-[#8b7d84]">
+      <td className="py-4 px-4 text-[#8b7d84]" suppressHydrationWarning>
         {new Date(order.created_at).toLocaleDateString("ko-KR", {
           month: "short",
           day: "numeric",
