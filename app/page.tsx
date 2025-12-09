@@ -37,10 +37,12 @@ async function getProducts() {
 
   const supabase = await createClient();
 
-  // 베스트 상품 (지정된 2개 상품을 번호순으로 표시)
+  // 베스트 상품 (지정된 4개 상품을 번호순으로 표시)
   const bestProductNames = [
-    "산리오 헬로키티 러블리 프릴 시리즈 블랙 로리타 하트카라비너 마스코트 키링",
+    "산리오 헬로키티 블랙엔젤 스타일업 롱다리 마스코트 인형 키링 그레이 드레스",
+    "산리오 헬로키티 판타지 스타일업 시리즈 롱다리 태닝 코갸류 마스코트 인형 키링",
     "유키오 마스코트 인형 키링",
+    "모프샌드 산리오 마스코트 인형 키링 귀여운 가방 장식 열쇠고리",
   ];
 
   // 모든 활성 상품 가져오기 (베스트 상품 매칭용)
@@ -164,11 +166,9 @@ async function getProducts() {
     console.error("[HomePage] 베스트 상품 fetch 에러:", bestError);
   }
 
-  // 전체상품 (지정된 21개 상품을 번호순으로 표시)
-  // 지정된 상품명 목록 (1번부터 21번까지)
+  // 전체상품 (지정된 20개 상품을 번호순으로 표시)
+  // 지정된 상품명 목록 (1번부터 20번까지)
   const targetProductNames = [
-    "산리오 헬로키티 블랙엔젤 스타일업 롱다리 마스코트 인형 키링 그레이 드레스",
-    "산리오 헬로키티 판타지 스타일업 시리즈 롱다리 태닝 코갸류 마스코트 인형 키링",
     "산리오 헬로키티 고고걸 갸류 스타일업 마스코트 호피 태닝 롱다리 인형 키링",
     "산리오 헬로키티 MC컬렉션 마스코트 스탠다드 인형 키링",
     "산리오 헬로키티 MC컬렉션 마스코트 바니 토끼 인형 키링",
@@ -188,6 +188,7 @@ async function getProducts() {
     "반다이 배스킨라빈스 아이스크림 키링 2탄",
     "산리오 헬로키티 십이간지 띠별 동물 신년 운세 봅기 피규어",
     "K푸드 미니어처 간식 초코 과자 봉지 가방꾸미기 열쇠고리 키링",
+    "치이카와 인테리어 미니 피규어 2탄 먼작귀 가차 미니어처",
   ];
 
   // 모든 활성 상품 가져오기
@@ -558,7 +559,7 @@ export default async function HomePage() {
             </div>
 
             {featuredProducts.length > 0 ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-2 xl:grid-cols-2 gap-4 md:gap-6">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-4 gap-4 md:gap-6">
                 {featuredProducts.map((product, index) => (
                   <ProductCard
                     key={product.id}
