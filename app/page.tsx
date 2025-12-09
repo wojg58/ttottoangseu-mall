@@ -582,7 +582,7 @@ export default async function HomePage() {
           <div className="shop-container">
             <div className="flex flex-col items-center justify-center mb-8">
               <div className="flex items-center gap-3 mb-4 justify-center">
-                <div className="w-10 h-10 bg-[#fad2e6] rounded-full flex items-center justify-center">
+                <div className="w-10 h-10 bg-[#FFEB3B] rounded-full flex items-center justify-center">
                   <Sparkles className="w-5 h-5 text-[#ff6b9d]" />
                 </div>
                 <div className="text-center">
