@@ -18,6 +18,7 @@ import { ArrowRight, Sparkles, TrendingUp, Star } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import ProductCard from "@/components/product-card";
 import AllProductsSection from "@/components/all-products-section";
+import CategorySection from "@/components/category-section";
 import type { ProductListItem, Category } from "@/types/database";
 
 // 카테고리별 이모지 매핑
@@ -481,7 +482,7 @@ export default async function HomePage() {
                   />
                   <div className="relative w-full h-full flex items-center justify-center">
                     <Image
-                      src="/g.png"
+                      src="/kity.png"
                       alt="또또앙스"
                       width={600}
                       height={600}
@@ -493,43 +494,7 @@ export default async function HomePage() {
             </div>
 
             {/* 카테고리 섹션 */}
-            {categories.length > 0 && (
-              <div className="py-12">
-                <div className="shop-container">
-                  <h2 className="text-2xl font-bold text-black text-center mb-8">
-                    카테고리
-                  </h2>
-                  <div className="grid grid-cols-4 md:grid-cols-8 gap-4">
-                    {categories.map((category) => (
-                      <Link
-                        key={category.id}
-                        href={`/products/category/${category.slug}`}
-                        className="flex flex-col items-center gap-2 p-4 rounded-xl bg-white/90 backdrop-blur-sm border border-white/50 shadow-md hover:shadow-lg hover:scale-105 transition-all duration-300 group"
-                      >
-                        <div className="w-16 h-16 bg-[#ffeef5] group-hover:bg-[#fad2e6] rounded-full flex items-center justify-center transition-colors shadow-sm">
-                          {category.slug === "best" ? (
-                            <Image
-                              src="/best.png"
-                              alt="베스트"
-                              width={40}
-                              height={40}
-                              className="rounded-full object-cover"
-                            />
-                          ) : (
-                            <span className="text-2xl">
-                              {CATEGORY_EMOJI[category.slug] || "📦"}
-                            </span>
-                          )}
-                        </div>
-                        <span className="text-sm text-black text-center font-medium">
-                          {category.name.replace(/[❤️🧡💛💚💙🤎💜]/g, "")}
-                        </span>
-                      </Link>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
+            <CategorySection categories={categories} />
           </div>
         </section>
 

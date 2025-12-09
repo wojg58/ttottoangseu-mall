@@ -8,7 +8,7 @@ import Image from "next/image";
 
 export default function ShopFooter() {
   return (
-    <footer className="bg-gray-500 text-white mt-16">
+    <footer className="bg-white text-[#4a3f48] mt-16 border-t border-gray-200">
       <div className="shop-container py-12">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* 브랜드 정보 */}
@@ -22,13 +22,13 @@ export default function ShopFooter() {
                 className="object-contain"
               />
               <div>
-                <h3 className="text-lg font-bold brand-text-logo">또또앙스</h3>
-                <p className="text-white/60 text-xs">
+                <h3 className="text-lg font-bold brand-text-logo text-[#4a3f48]">또또앙스</h3>
+                <p className="text-[#8b7d84] text-xs">
                   두근거리는 설렘 (*´v`*) Love
                 </p>
               </div>
             </div>
-            <p className="text-white/70 text-sm leading-relaxed">
+            <p className="text-[#4a3f48] text-sm leading-relaxed">
               또또앙스는 산리오, 디즈니 등 다양한 캐릭터 굿즈를 판매하는 전문
               쇼핑몰입니다. 귀여운 아이템들로 일상에 설렘을 더해보세요! 💕
             </p>
@@ -37,7 +37,7 @@ export default function ShopFooter() {
           {/* 고객 서비스 */}
           <div>
             <h4 className="font-bold mb-4 text-[#fad2e6]">고객 서비스</h4>
-            <ul className="space-y-2 text-sm text-white/70">
+            <ul className="space-y-2 text-sm text-[#4a3f48]">
               <li>
                 <Link href="/faq" className="hover:text-[#fad2e6]">
                   자주 묻는 질문
@@ -64,7 +64,7 @@ export default function ShopFooter() {
           {/* 쇼핑 정보 */}
           <div>
             <h4 className="font-bold mb-4 text-[#fad2e6]">쇼핑 정보</h4>
-            <ul className="space-y-2 text-sm text-white/70">
+            <ul className="space-y-2 text-sm text-[#4a3f48]">
               <li>
                 <Link href="/products" className="hover:text-[#fad2e6]">
                   전체 상품
@@ -99,8 +99,8 @@ export default function ShopFooter() {
         </div>
 
         {/* 하단 정보 */}
-        <div className="border-t border-white/10 mt-8 pt-8">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-white/50">
+        <div className="border-t border-gray-200 mt-8 pt-8">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-gray-600">
             <div className="text-center md:text-left">
               <p>
                 상호명: 또또앙스 | 대표: 홍길동 | 사업자등록번호: 123-45-67890
@@ -111,15 +111,21 @@ export default function ShopFooter() {
               </p>
             </div>
             <div className="flex gap-4">
-              <Link href="/terms" className="hover:text-white">
+              <Link href="/terms" className="hover:text-[#ff6b9d]">
                 이용약관
               </Link>
-              <Link href="/privacy" className="hover:text-white">
+              <Link href="/privacy" className="hover:text-[#ff6b9d]">
                 개인정보처리방침
               </Link>
             </div>
           </div>
-          <p className="text-center text-xs text-white/30 mt-4">
+        </div>
+      </div>
+
+      {/* 저작권 섹션 (검정색 배경) */}
+      <div className="bg-black text-white py-4">
+        <div className="shop-container">
+          <p className="text-center text-[15px] text-white whitespace-nowrap">
             © 2024 또또앙스. All rights reserved.
           </p>
         </div>

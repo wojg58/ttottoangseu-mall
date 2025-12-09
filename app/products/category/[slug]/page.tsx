@@ -48,8 +48,8 @@ export default async function CategoryPage({
 
   const page = parseInt(search.page || "1", 10);
 
-  // 데이터 로드
-  const productsResult = await getProducts(filters, page, 12);
+  // 데이터 로드 (한 줄에 4개씩 10줄 = 40개)
+  const productsResult = await getProducts(filters, page, 40);
 
   return (
     <main className="py-8">
@@ -88,18 +88,34 @@ export default async function CategoryPage({
               <ProductSortSelect defaultValue={filters.sortBy} />
             </div>
 
-            {/* 상품 그리드 */}
+            {/* 상품 그리드 (한 줄에 4개씩, 최대 10줄, 스크롤 가능) */}
             {productsResult.data.length > 0 ? (
               <>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-                  {productsResult.data.map((product) => (
-                    <ProductCard key={product.id} product={product} />
-                  ))}
+                <div className="max-h-[1200px] overflow-y-auto">
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6 pb-4">
+                    {productsResult.data.map((product) => (
+                      <ProductCard key={product.id} product={product} />
+                    ))}
+                  </div>
                 </div>
 
-                {/* 페이지네이션 */}
+                {/* 페이지네이션 (40개씩) */}
                 {productsResult.totalPages > 1 && (
                   <div className="flex items-center justify-center gap-2 mt-12">
+                    {/* 이전 페이지 */}
+                    {page > 1 && (
+                      <Link
+                        href={`/products/category/${slug}?${new URLSearchParams({
+                          ...search,
+                          page: (page - 1).toString(),
+                        }).toString()}`}
+                        className="w-10 h-10 rounded-full flex items-center justify-center text-sm bg-white text-[#4a3f48] hover:bg-[#ffeef5] transition-colors"
+                      >
+                        ‹
+                      </Link>
+                    )}
+
+                    {/* 페이지 번호 (모든 페이지 표시) */}
                     {Array.from(
                       { length: productsResult.totalPages },
                       (_, i) => i + 1,
@@ -121,6 +137,19 @@ export default async function CategoryPage({
                         {pageNum}
                       </Link>
                     ))}
+
+                    {/* 다음 페이지 */}
+                    {page < productsResult.totalPages && (
+                      <Link
+                        href={`/products/category/${slug}?${new URLSearchParams({
+                          ...search,
+                          page: (page + 1).toString(),
+                        }).toString()}`}
+                        className="w-10 h-10 rounded-full flex items-center justify-center text-sm bg-white text-[#4a3f48] hover:bg-[#ffeef5] transition-colors"
+                      >
+                        ›
+                      </Link>
+                    )}
                   </div>
                 )}
               </>
