@@ -82,6 +82,7 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const [showSymbolMenu, setShowSymbolMenu] = useState(false);
 
   // 상품 이미지 갤러리 상태
   const [productImages, setProductImages] = useState<
@@ -296,6 +297,23 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
       setDescriptionHtml(product.description);
     }
   }, [editor, product?.description]);
+
+  // 기호 메뉴 외부 클릭 시 닫기
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (showSymbolMenu && !target.closest(".symbol-menu-container")) {
+        setShowSymbolMenu(false);
+      }
+    };
+
+    if (showSymbolMenu) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => {
+        document.removeEventListener("mousedown", handleClickOutside);
+      };
+    }
+  }, [showSymbolMenu]);
 
   const onSubmit = (data: ProductFormData) => {
     console.log("[ProductForm] 제출:", data);
@@ -870,6 +888,366 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
                       >
                         ─
                       </button>
+                      {/* 기호 삽입 */}
+                      <div className="relative symbol-menu-container">
+                        <button
+                          type="button"
+                          onClick={() => setShowSymbolMenu(!showSymbolMenu)}
+                          className={`px-3 py-1 rounded text-sm ${
+                            showSymbolMenu
+                              ? "bg-[#ff6b9d] text-white"
+                              : "bg-white text-[#4a3f48] hover:bg-[#fad2e6]"
+                          }`}
+                          title="기호 삽입"
+                        >
+                          기호
+                        </button>
+                        {showSymbolMenu && (
+                          <div className="absolute top-full right-0 mt-1 bg-white border border-[#f5d5e3] rounded-lg shadow-lg p-3 z-50 w-64 max-h-80 overflow-y-auto">
+                            <div className="grid grid-cols-6 gap-2">
+                              {/* 저작권 관련 */}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  editor?.chain().focus().insertContent("©").run();
+                                  setShowSymbolMenu(false);
+                                }}
+                                className="px-2 py-2 rounded text-sm bg-white text-[#4a3f48] hover:bg-[#ffeef5] border border-[#f5d5e3]"
+                                title="저작권"
+                              >
+                                ©
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  editor?.chain().focus().insertContent("®").run();
+                                  setShowSymbolMenu(false);
+                                }}
+                                className="px-2 py-2 rounded text-sm bg-white text-[#4a3f48] hover:bg-[#ffeef5] border border-[#f5d5e3]"
+                                title="등록상표"
+                              >
+                                ®
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  editor?.chain().focus().insertContent("™").run();
+                                  setShowSymbolMenu(false);
+                                }}
+                                className="px-2 py-2 rounded text-sm bg-white text-[#4a3f48] hover:bg-[#ffeef5] border border-[#f5d5e3]"
+                                title="상표"
+                              >
+                                ™
+                              </button>
+                              {/* 온도 */}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  editor?.chain().focus().insertContent("℃").run();
+                                  setShowSymbolMenu(false);
+                                }}
+                                className="px-2 py-2 rounded text-sm bg-white text-[#4a3f48] hover:bg-[#ffeef5] border border-[#f5d5e3]"
+                                title="섭씨"
+                              >
+                                ℃
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  editor?.chain().focus().insertContent("℉").run();
+                                  setShowSymbolMenu(false);
+                                }}
+                                className="px-2 py-2 rounded text-sm bg-white text-[#4a3f48] hover:bg-[#ffeef5] border border-[#f5d5e3]"
+                                title="화씨"
+                              >
+                                ℉
+                              </button>
+                              {/* 수학 기호 */}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  editor?.chain().focus().insertContent("×").run();
+                                  setShowSymbolMenu(false);
+                                }}
+                                className="px-2 py-2 rounded text-sm bg-white text-[#4a3f48] hover:bg-[#ffeef5] border border-[#f5d5e3]"
+                                title="곱하기"
+                              >
+                                ×
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  editor?.chain().focus().insertContent("÷").run();
+                                  setShowSymbolMenu(false);
+                                }}
+                                className="px-2 py-2 rounded text-sm bg-white text-[#4a3f48] hover:bg-[#ffeef5] border border-[#f5d5e3]"
+                                title="나누기"
+                              >
+                                ÷
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  editor?.chain().focus().insertContent("±").run();
+                                  setShowSymbolMenu(false);
+                                }}
+                                className="px-2 py-2 rounded text-sm bg-white text-[#4a3f48] hover:bg-[#ffeef5] border border-[#f5d5e3]"
+                                title="플러스마이너스"
+                              >
+                                ±
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  editor?.chain().focus().insertContent("≈").run();
+                                  setShowSymbolMenu(false);
+                                }}
+                                className="px-2 py-2 rounded text-sm bg-white text-[#4a3f48] hover:bg-[#ffeef5] border border-[#f5d5e3]"
+                                title="거의 같음"
+                              >
+                                ≈
+                              </button>
+                              {/* 화살표 */}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  editor?.chain().focus().insertContent("→").run();
+                                  setShowSymbolMenu(false);
+                                }}
+                                className="px-2 py-2 rounded text-sm bg-white text-[#4a3f48] hover:bg-[#ffeef5] border border-[#f5d5e3]"
+                                title="오른쪽 화살표"
+                              >
+                                →
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  editor?.chain().focus().insertContent("←").run();
+                                  setShowSymbolMenu(false);
+                                }}
+                                className="px-2 py-2 rounded text-sm bg-white text-[#4a3f48] hover:bg-[#ffeef5] border border-[#f5d5e3]"
+                                title="왼쪽 화살표"
+                              >
+                                ←
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  editor?.chain().focus().insertContent("↑").run();
+                                  setShowSymbolMenu(false);
+                                }}
+                                className="px-2 py-2 rounded text-sm bg-white text-[#4a3f48] hover:bg-[#ffeef5] border border-[#f5d5e3]"
+                                title="위 화살표"
+                              >
+                                ↑
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  editor?.chain().focus().insertContent("↓").run();
+                                  setShowSymbolMenu(false);
+                                }}
+                                className="px-2 py-2 rounded text-sm bg-white text-[#4a3f48] hover:bg-[#ffeef5] border border-[#f5d5e3]"
+                                title="아래 화살표"
+                              >
+                                ↓
+                              </button>
+                              {/* 체크마크 */}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  editor?.chain().focus().insertContent("✓").run();
+                                  setShowSymbolMenu(false);
+                                }}
+                                className="px-2 py-2 rounded text-sm bg-white text-[#4a3f48] hover:bg-[#ffeef5] border border-[#f5d5e3]"
+                                title="체크"
+                              >
+                                ✓
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  editor?.chain().focus().insertContent("✗").run();
+                                  setShowSymbolMenu(false);
+                                }}
+                                className="px-2 py-2 rounded text-sm bg-white text-[#4a3f48] hover:bg-[#ffeef5] border border-[#f5d5e3]"
+                                title="엑스"
+                              >
+                                ✗
+                              </button>
+                              {/* 하트, 별 */}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  editor?.chain().focus().insertContent("♥").run();
+                                  setShowSymbolMenu(false);
+                                }}
+                                className="px-2 py-2 rounded text-sm bg-white text-[#4a3f48] hover:bg-[#ffeef5] border border-[#f5d5e3]"
+                                title="하트"
+                              >
+                                ♥
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  editor?.chain().focus().insertContent("★").run();
+                                  setShowSymbolMenu(false);
+                                }}
+                                className="px-2 py-2 rounded text-sm bg-white text-[#4a3f48] hover:bg-[#ffeef5] border border-[#f5d5e3]"
+                                title="별"
+                              >
+                                ★
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  editor?.chain().focus().insertContent("☆").run();
+                                  setShowSymbolMenu(false);
+                                }}
+                                className="px-2 py-2 rounded text-sm bg-white text-[#4a3f48] hover:bg-[#ffeef5] border border-[#f5d5e3]"
+                                title="빈 별"
+                              >
+                                ☆
+                              </button>
+                              {/* 통화 */}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  editor?.chain().focus().insertContent("€").run();
+                                  setShowSymbolMenu(false);
+                                }}
+                                className="px-2 py-2 rounded text-sm bg-white text-[#4a3f48] hover:bg-[#ffeef5] border border-[#f5d5e3]"
+                                title="유로"
+                              >
+                                €
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  editor?.chain().focus().insertContent("$").run();
+                                  setShowSymbolMenu(false);
+                                }}
+                                className="px-2 py-2 rounded text-sm bg-white text-[#4a3f48] hover:bg-[#ffeef5] border border-[#f5d5e3]"
+                                title="달러"
+                              >
+                                $
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  editor?.chain().focus().insertContent("¥").run();
+                                  setShowSymbolMenu(false);
+                                }}
+                                className="px-2 py-2 rounded text-sm bg-white text-[#4a3f48] hover:bg-[#ffeef5] border border-[#f5d5e3]"
+                                title="엔"
+                              >
+                                ¥
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  editor?.chain().focus().insertContent("£").run();
+                                  setShowSymbolMenu(false);
+                                }}
+                                className="px-2 py-2 rounded text-sm bg-white text-[#4a3f48] hover:bg-[#ffeef5] border border-[#f5d5e3]"
+                                title="파운드"
+                              >
+                                £
+                              </button>
+                              {/* 원문자 */}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  editor?.chain().focus().insertContent("①").run();
+                                  setShowSymbolMenu(false);
+                                }}
+                                className="px-2 py-2 rounded text-sm bg-white text-[#4a3f48] hover:bg-[#ffeef5] border border-[#f5d5e3]"
+                                title="원문자 1"
+                              >
+                                ①
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  editor?.chain().focus().insertContent("②").run();
+                                  setShowSymbolMenu(false);
+                                }}
+                                className="px-2 py-2 rounded text-sm bg-white text-[#4a3f48] hover:bg-[#ffeef5] border border-[#f5d5e3]"
+                                title="원문자 2"
+                              >
+                                ②
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  editor?.chain().focus().insertContent("③").run();
+                                  setShowSymbolMenu(false);
+                                }}
+                                className="px-2 py-2 rounded text-sm bg-white text-[#4a3f48] hover:bg-[#ffeef5] border border-[#f5d5e3]"
+                                title="원문자 3"
+                              >
+                                ③
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  editor?.chain().focus().insertContent("④").run();
+                                  setShowSymbolMenu(false);
+                                }}
+                                className="px-2 py-2 rounded text-sm bg-white text-[#4a3f48] hover:bg-[#ffeef5] border border-[#f5d5e3]"
+                                title="원문자 4"
+                              >
+                                ④
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  editor?.chain().focus().insertContent("⑤").run();
+                                  setShowSymbolMenu(false);
+                                }}
+                                className="px-2 py-2 rounded text-sm bg-white text-[#4a3f48] hover:bg-[#ffeef5] border border-[#f5d5e3]"
+                                title="원문자 5"
+                              >
+                                ⑤
+                              </button>
+                              {/* 기타 */}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  editor?.chain().focus().insertContent("…").run();
+                                  setShowSymbolMenu(false);
+                                }}
+                                className="px-2 py-2 rounded text-sm bg-white text-[#4a3f48] hover:bg-[#ffeef5] border border-[#f5d5e3]"
+                                title="말줄임표"
+                              >
+                                …
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  editor?.chain().focus().insertContent("—").run();
+                                  setShowSymbolMenu(false);
+                                }}
+                                className="px-2 py-2 rounded text-sm bg-white text-[#4a3f48] hover:bg-[#ffeef5] border border-[#f5d5e3]"
+                                title="대시"
+                              >
+                                —
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  editor?.chain().focus().insertContent("•").run();
+                                  setShowSymbolMenu(false);
+                                }}
+                                className="px-2 py-2 rounded text-sm bg-white text-[#4a3f48] hover:bg-[#ffeef5] border border-[#f5d5e3]"
+                                title="불릿"
+                              >
+                                •
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                       {/* 들여쓰기/내어쓰기 */}
                       <button
                         type="button"

@@ -194,12 +194,25 @@ export default function ProductDetailOptions({
         </div>
       )}
 
+      {/* 재고 표시 (옵션이 없는 상품의 경우) */}
+      {!hasVariants && baseStock === 1 && !isSoldOut && (
+        <div className="mb-6">
+          <p className="text-sm text-[#8b7d84]">
+            <span className="text-orange-500">
+              🔥 1개 남음 - 품절 임박!
+            </span>
+          </p>
+        </div>
+      )}
+
       {/* 선택한 옵션 목록 */}
       {selectedOptions.length > 0 && (
         <div className="space-y-3 mb-6">
           {selectedOptions.map((option) => {
             const optionPrice = basePrice + (option.variant.price_adjustment || 0);
             const optionTotal = optionPrice * option.quantity;
+            const optionStock = option.variant.stock;
+            const isOptionLowStock = optionStock === 1 && optionStock > 0;
 
             return (
               <div
@@ -210,6 +223,12 @@ export default function ProductDetailOptions({
                   <p className="text-sm text-[#4a3f48] font-medium">
                     {option.variant.variant_value}
                   </p>
+                  {/* 옵션별 재고 표시 (1개일 때만) */}
+                  {isOptionLowStock && (
+                    <p className="text-xs text-orange-500 mt-1">
+                      🔥 1개 남음 - 품절 임박!
+                    </p>
+                  )}
                 </div>
                 <div className="flex items-center gap-4">
                   {/* 수량 조절 */}

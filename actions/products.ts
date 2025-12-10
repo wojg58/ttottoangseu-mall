@@ -45,6 +45,44 @@ export async function getProducts(
 
   const supabase = await createClient();
 
+  // 카테고리 필터 (다중 카테고리 지원)
+  let categoryFilteredProductIds: string[] | null = null;
+  if (filters.categorySlug) {
+    console.log("카테고리 필터 적용 (다중 카테고리 지원):", filters.categorySlug);
+    
+    // 먼저 카테고리 ID 조회
+    const { data: category } = await supabase
+      .from("categories")
+      .select("id")
+      .eq("slug", filters.categorySlug)
+      .single();
+
+    if (category) {
+      // product_categories 테이블에서 해당 카테고리에 속한 모든 상품 ID 조회
+      const { data: productCategories } = await supabase
+        .from("product_categories")
+        .select("product_id")
+        .eq("category_id", category.id);
+
+      if (productCategories && productCategories.length > 0) {
+        categoryFilteredProductIds = productCategories.map((pc) => pc.product_id);
+        console.log(
+          `카테고리 "${filters.categorySlug}"에 속한 상품 ${categoryFilteredProductIds.length}개 발견`,
+        );
+      } else {
+        // 해당 카테고리에 속한 상품이 없으면 빈 배열 반환
+        console.log(`카테고리 "${filters.categorySlug}"에 속한 상품 없음`);
+        return {
+          data: [],
+          total: 0,
+          page: 1,
+          pageSize,
+          totalPages: 0,
+        };
+      }
+    }
+  }
+
   // 기본 쿼리 빌드
   let query = supabase
     .from("products")
@@ -58,19 +96,19 @@ export async function getProducts(
     )
     .is("deleted_at", null);
 
-  // 카테고리 필터
-  if (filters.categorySlug) {
-    console.log("카테고리 필터 적용:", filters.categorySlug);
-    // 먼저 카테고리 ID 조회
-    const { data: category } = await supabase
-      .from("categories")
-      .select("id")
-      .eq("slug", filters.categorySlug)
-      .single();
-
-    if (category) {
-      query = query.eq("category_id", category.id);
+  // 카테고리 필터 적용 (다중 카테고리 지원)
+  if (categoryFilteredProductIds !== null) {
+    if (categoryFilteredProductIds.length === 0) {
+      // 해당 카테고리에 속한 상품이 없으면 빈 결과 반환
+      return {
+        data: [],
+        total: 0,
+        page: 1,
+        pageSize,
+        totalPages: 0,
+      };
     }
+    query = query.in("id", categoryFilteredProductIds);
   }
 
   // 베스트 상품 필터
