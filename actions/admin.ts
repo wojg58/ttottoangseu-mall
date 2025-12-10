@@ -199,6 +199,7 @@ export async function getAdminProducts(
   pageSize: number = 20,
 ): Promise<{ products: ProductListItem[]; total: number; totalPages: number }> {
   console.group("[getAdminProducts] 관리자 상품 조회");
+  console.log("페이지:", page, "페이지 크기:", pageSize);
 
   const isAdminUser = await isAdmin();
   if (!isAdminUser) {
@@ -209,10 +210,8 @@ export async function getAdminProducts(
 
   const supabase = await createClient();
 
-  const from = (page - 1) * pageSize;
-  const to = from + pageSize - 1;
-
-  const { data, error, count } = await supabase
+  // 전체 데이터 가져오기 (정렬을 위해)
+  const { data: allData, error, count } = await supabase
     .from("products")
     .select(
       `
@@ -222,9 +221,7 @@ export async function getAdminProducts(
     `,
       { count: "exact" },
     )
-    .is("deleted_at", null)
-    .order("created_at", { ascending: false })
-    .range(from, to);
+    .is("deleted_at", null);
 
   if (error) {
     console.error("에러:", error);
@@ -235,8 +232,42 @@ export async function getAdminProducts(
   const total = count ?? 0;
   const totalPages = Math.ceil(total / pageSize);
 
+  // 정렬 로직: ttotto_pr_001을 맨 앞으로, ttotto_pr_316을 맨 뒤로
+  const sortedData = (allData || []).sort((a, b) => {
+    const idA = a.id as string;
+    const idB = b.id as string;
+
+    // ttotto_pr_001을 항상 맨 앞으로
+    if (idA === "ttotto_pr_001") return -1;
+    if (idB === "ttotto_pr_001") return 1;
+
+    // ttotto_pr_316을 항상 맨 뒤로
+    if (idA === "ttotto_pr_316") return 1;
+    if (idB === "ttotto_pr_316") return -1;
+
+    // 나머지는 id 기준으로 정렬 (숫자 부분 추출하여 비교)
+    const extractNumber = (id: string): number => {
+      const match = id.match(/(\d+)$/);
+      return match ? parseInt(match[1], 10) : 0;
+    };
+
+    const numA = extractNumber(idA);
+    const numB = extractNumber(idB);
+
+    return numA - numB;
+  });
+
+  console.log(
+    `정렬 완료: 총 ${sortedData.length}개, 첫 번째: ${sortedData[0]?.id}, 마지막: ${sortedData[sortedData.length - 1]?.id}`,
+  );
+
+  // 페이지네이션 적용
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+  const paginatedData = sortedData.slice(from, to + 1);
+
   // 데이터 변환
-  const products = (data || []).map((product) => {
+  const products = (paginatedData || []).map((product) => {
     const p = product as {
       id: string;
       category_id: string;

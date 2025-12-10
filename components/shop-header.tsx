@@ -20,6 +20,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Search, ShoppingCart, Heart, Menu, X } from "lucide-react";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -39,13 +40,25 @@ const CATEGORIES = [
 export default function ShopHeader() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const router = useRouter();
 
   console.log("[ShopHeader] 렌더링");
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("[ShopHeader] 검색:", searchQuery);
-    // TODO: 검색 기능 구현
+    console.log("[ShopHeader] 검색 실행, 검색어:", searchQuery);
+    
+    // 검색어가 비어있으면 검색하지 않음
+    if (!searchQuery.trim()) {
+      console.log("[ShopHeader] 검색어가 비어있어 검색을 실행하지 않습니다.");
+      return;
+    }
+
+    // 검색어를 URL 파라미터로 전달하여 상품 페이지로 이동
+    const searchParams = new URLSearchParams({ search: searchQuery.trim() });
+    const searchUrl = `/products?${searchParams.toString()}`;
+    console.log("[ShopHeader] 검색 URL로 이동:", searchUrl);
+    router.push(searchUrl);
   };
 
   return (

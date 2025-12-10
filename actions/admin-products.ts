@@ -35,6 +35,13 @@ export interface CreateProductInput {
     sort_order: number;
     alt_text?: string | null;
   }>;
+  variants?: Array<{
+    variant_name: string;
+    variant_value: string;
+    stock: number;
+    price_adjustment: number;
+    sku?: string | null;
+  }>;
 }
 
 // 상품 생성
@@ -137,6 +144,29 @@ export async function createProduct(
       }
     }
 
+    // 옵션 추가 (variants가 제공된 경우)
+    if (input.variants && input.variants.length > 0) {
+      console.log("[createProduct] 옵션 추가 시작");
+      const variantData = input.variants.map((variant) => ({
+        product_id: product.id,
+        variant_name: variant.variant_name,
+        variant_value: variant.variant_value,
+        stock: variant.stock,
+        price_adjustment: variant.price_adjustment,
+        sku: variant.sku ?? null,
+      }));
+
+      const { error: variantError } = await supabase
+        .from("product_variants")
+        .insert(variantData);
+
+      if (variantError) {
+        console.error("옵션 추가 에러:", variantError);
+      } else {
+        console.log(`옵션 ${input.variants.length}개 추가 완료`);
+      }
+    }
+
     revalidatePath("/admin/products");
     revalidatePath("/products");
 
@@ -168,6 +198,21 @@ export interface UpdateProductInput {
   stock?: number;
   is_featured?: boolean;
   is_new?: boolean;
+  images?: Array<{
+    id?: string; // 기존 이미지의 경우 id가 있음
+    image_url: string;
+    is_primary: boolean;
+    sort_order: number;
+    alt_text?: string | null;
+  }>;
+  variants?: Array<{
+    id?: string; // 기존 옵션의 경우 id가 있음
+    variant_name: string;
+    variant_value: string;
+    stock: number;
+    price_adjustment: number;
+    sku?: string | null;
+  }>;
 }
 
 // 상품 수정
@@ -266,7 +311,240 @@ export async function updateProduct(
       }
     }
 
+    // 이미지 업데이트 (images가 제공된 경우)
+    if (input.images !== undefined) {
+      console.log("[updateProduct] 이미지 업데이트 시작");
+      
+      // 기존 이미지 목록 가져오기
+      const { data: existingImages } = await supabase
+        .from("product_images")
+        .select("id")
+        .eq("product_id", input.id);
+
+      // 전달된 이미지 중 기존 이미지 ID 추출
+      const existingImageIds = input.images
+        .map((img) => img.id)
+        .filter((id): id is string => !!id);
+
+      // 삭제할 이미지 ID (기존에 있지만 전달되지 않은 이미지)
+      const imagesToDelete =
+        existingImages?.filter((img) => !existingImageIds.includes(img.id)) || [];
+
+      // 삭제할 이미지가 있으면 삭제
+      if (imagesToDelete.length > 0) {
+        const deleteIds = imagesToDelete.map((img) => img.id);
+        const { error: deleteImageError } = await supabase
+          .from("product_images")
+          .delete()
+          .in("id", deleteIds);
+
+        if (deleteImageError) {
+          console.error("이미지 삭제 에러:", deleteImageError);
+        } else {
+          console.log(`기존 이미지 ${deleteIds.length}개 삭제 완료`);
+        }
+      }
+
+      // 대표 이미지로 설정하는 경우, 기존 대표 이미지 해제
+      const hasPrimaryImage = input.images.some((img) => img.is_primary);
+      if (hasPrimaryImage) {
+        await supabase
+          .from("product_images")
+          .update({ is_primary: false })
+          .eq("product_id", input.id)
+          .eq("is_primary", true);
+      }
+
+      // 새로 추가할 이미지와 업데이트할 이미지 분리
+      const imagesToInsert: Array<{
+        product_id: string;
+        image_url: string;
+        is_primary: boolean;
+        sort_order: number;
+        alt_text: string | null;
+      }> = [];
+      const imagesToUpdate: Array<{
+        id: string;
+        image_url?: string;
+        is_primary?: boolean;
+        sort_order?: number;
+        alt_text?: string | null;
+      }> = [];
+
+      input.images.forEach((img) => {
+        if (img.id) {
+          // 기존 이미지 업데이트
+          imagesToUpdate.push({
+            id: img.id,
+            is_primary: img.is_primary,
+            sort_order: img.sort_order,
+            alt_text: img.alt_text ?? null,
+          });
+        } else {
+          // 새 이미지 추가
+          imagesToInsert.push({
+            product_id: input.id,
+            image_url: img.image_url,
+            is_primary: img.is_primary,
+            sort_order: img.sort_order,
+            alt_text: img.alt_text ?? null,
+          });
+        }
+      });
+
+      // 기존 이미지 업데이트
+      if (imagesToUpdate.length > 0) {
+        for (const img of imagesToUpdate) {
+          const { error: updateError } = await supabase
+            .from("product_images")
+            .update({
+              is_primary: img.is_primary,
+              sort_order: img.sort_order,
+              alt_text: img.alt_text,
+            })
+            .eq("id", img.id);
+
+          if (updateError) {
+            console.error(`이미지 ${img.id} 업데이트 에러:`, updateError);
+          }
+        }
+        console.log(`기존 이미지 ${imagesToUpdate.length}개 업데이트 완료`);
+      }
+
+      // 새 이미지 추가
+      if (imagesToInsert.length > 0) {
+        const { error: insertImageError } = await supabase
+          .from("product_images")
+          .insert(imagesToInsert);
+
+        if (insertImageError) {
+          console.error("이미지 추가 에러:", insertImageError);
+        } else {
+          console.log(`새 이미지 ${imagesToInsert.length}개 추가 완료`);
+        }
+      }
+
+      console.log("[updateProduct] 이미지 업데이트 완료");
+    }
+
+    // 옵션 업데이트 (variants가 제공된 경우)
+    if (input.variants !== undefined) {
+      console.log("[updateProduct] 옵션 업데이트 시작");
+
+      // 기존 옵션 목록 가져오기
+      const { data: existingVariants } = await supabase
+        .from("product_variants")
+        .select("id")
+        .eq("product_id", input.id)
+        .is("deleted_at", null);
+
+      // 전달된 옵션 중 기존 옵션 ID 추출
+      const existingVariantIds = input.variants
+        .map((v) => v.id)
+        .filter((id): id is string => !!id);
+
+      // 삭제할 옵션 ID (기존에 있지만 전달되지 않은 옵션)
+      const variantsToDelete =
+        existingVariants?.filter((v) => !existingVariantIds.includes(v.id)) ||
+        [];
+
+      // 삭제할 옵션이 있으면 삭제 (soft delete)
+      if (variantsToDelete.length > 0) {
+        const deleteIds = variantsToDelete.map((v) => v.id);
+        const { error: deleteVariantError } = await supabase
+          .from("product_variants")
+          .update({ deleted_at: new Date().toISOString() })
+          .in("id", deleteIds);
+
+        if (deleteVariantError) {
+          console.error("옵션 삭제 에러:", deleteVariantError);
+        } else {
+          console.log(`기존 옵션 ${deleteIds.length}개 삭제 완료`);
+        }
+      }
+
+      // 새로 추가할 옵션과 업데이트할 옵션 분리
+      const variantsToInsert: Array<{
+        product_id: string;
+        variant_name: string;
+        variant_value: string;
+        stock: number;
+        price_adjustment: number;
+        sku: string | null;
+      }> = [];
+      const variantsToUpdate: Array<{
+        id: string;
+        variant_name?: string;
+        variant_value?: string;
+        stock?: number;
+        price_adjustment?: number;
+        sku?: string | null;
+      }> = [];
+
+      input.variants.forEach((variant) => {
+        if (variant.id) {
+          // 기존 옵션 업데이트
+          variantsToUpdate.push({
+            id: variant.id,
+            variant_name: variant.variant_name,
+            variant_value: variant.variant_value,
+            stock: variant.stock,
+            price_adjustment: variant.price_adjustment,
+            sku: variant.sku ?? null,
+          });
+        } else {
+          // 새 옵션 추가
+          variantsToInsert.push({
+            product_id: input.id,
+            variant_name: variant.variant_name,
+            variant_value: variant.variant_value,
+            stock: variant.stock,
+            price_adjustment: variant.price_adjustment,
+            sku: variant.sku ?? null,
+          });
+        }
+      });
+
+      // 기존 옵션 업데이트
+      if (variantsToUpdate.length > 0) {
+        for (const variant of variantsToUpdate) {
+          const { error: updateError } = await supabase
+            .from("product_variants")
+            .update({
+              variant_name: variant.variant_name,
+              variant_value: variant.variant_value,
+              stock: variant.stock,
+              price_adjustment: variant.price_adjustment,
+              sku: variant.sku,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", variant.id);
+
+          if (updateError) {
+            console.error(`옵션 ${variant.id} 업데이트 에러:`, updateError);
+          }
+        }
+        console.log(`기존 옵션 ${variantsToUpdate.length}개 업데이트 완료`);
+      }
+
+      // 새 옵션 추가
+      if (variantsToInsert.length > 0) {
+        const { error: insertVariantError } = await supabase
+          .from("product_variants")
+          .insert(variantsToInsert);
+
+        if (insertVariantError) {
+          console.error("옵션 추가 에러:", insertVariantError);
+        } else {
+          console.log(`새 옵션 ${variantsToInsert.length}개 추가 완료`);
+        }
+      }
+
+      console.log("[updateProduct] 옵션 업데이트 완료");
+    }
+
     revalidatePath("/admin/products");
+    revalidatePath(`/admin/products/${input.id}`);
     revalidatePath(`/products/${input.slug || ""}`);
     revalidatePath("/products");
 

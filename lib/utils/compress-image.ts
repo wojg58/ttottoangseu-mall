@@ -19,6 +19,12 @@ export interface CompressImageOptions {
   quality?: number;
   /** 최대 너비 (px, 기본값: 2000) */
   maxWidth?: number;
+  /** 고정 너비 (px, 지정 시 정확히 이 크기로 리사이즈) */
+  width?: number;
+  /** 고정 높이 (px, 지정 시 정확히 이 크기로 리사이즈) */
+  height?: number;
+  /** 리사이즈 모드 (기본값: "inside") */
+  fit?: "cover" | "contain" | "fill" | "inside" | "outside";
   /** WebP로 변환할지 여부 (기본값: true) */
   convertToWebP?: boolean;
   /** 원본 포맷 유지 여부 (기본값: false) */
@@ -56,6 +62,9 @@ export async function compressImage(
   const {
     quality = 90,
     maxWidth = 2000,
+    width,
+    height,
+    fit = "inside",
     convertToWebP = true,
     keepOriginalFormat = false,
   } = options;
@@ -79,8 +88,18 @@ export async function compressImage(
       `원본 이미지 정보: ${metadata.width}x${metadata.height}, 포맷: ${metadata.format}`,
     );
 
-    // 리사이즈 (너비가 maxWidth보다 크면 리사이즈)
-    if (metadata.width && metadata.width > maxWidth) {
+    // 리사이즈 처리
+    if (width && height) {
+      // 고정 크기로 리사이즈 (800x800 등)
+      console.log(
+        `이미지 리사이즈: ${metadata.width}x${metadata.height}px → ${width}x${height}px (fit: ${fit})`,
+      );
+      sharpInstance = sharpInstance.resize(width, height, {
+        fit: fit as "cover" | "contain" | "fill" | "inside" | "outside",
+        position: "center", // cover 모드일 때 중앙에서 자르기
+      });
+    } else if (metadata.width && metadata.width > maxWidth) {
+      // 최대 너비만 지정된 경우 (기존 로직)
       console.log(`이미지 리사이즈: ${metadata.width}px → ${maxWidth}px`);
       sharpInstance = sharpInstance.resize(maxWidth, null, {
         withoutEnlargement: true,

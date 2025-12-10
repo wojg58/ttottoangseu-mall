@@ -20,7 +20,7 @@ import type {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Image from "next/image";
-import { X, Upload, Star } from "lucide-react";
+import { X, Upload, Star, ChevronUp, ChevronDown, Plus } from "lucide-react";
 import {
   Form,
   FormControl,
@@ -106,6 +106,31 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
   const [isUploadingGalleryImage, setIsUploadingGalleryImage] = useState(false);
   const galleryImageInputRef = useRef<HTMLInputElement>(null);
 
+  // 상품 옵션 상태
+  const [productVariants, setProductVariants] = useState<
+    Array<{
+      id?: string; // 기존 옵션의 경우 id가 있음
+      variant_name: string;
+      variant_value: string;
+      stock: number;
+      price_adjustment: number;
+      sku?: string | null;
+    }>
+  >(
+    product?.variants
+      ? product.variants
+          .filter((v) => !v.deleted_at)
+          .map((v) => ({
+            id: v.id,
+            variant_name: v.variant_name,
+            variant_value: v.variant_value,
+            stock: v.stock,
+            price_adjustment: v.price_adjustment,
+            sku: v.sku,
+          }))
+      : [],
+  );
+
   const form = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
     defaultValues: {
@@ -178,8 +203,26 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
     editorProps: {
       attributes: {
         class:
-          "prose prose-pink max-w-none min-h-[300px] p-4 focus:outline-none [&_p]:text-[#4a3f48] [&_p]:leading-relaxed [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:text-[#4a3f48] [&_h2]:text-xl [&_h2]:font-bold [&_h2]:text-[#4a3f48] [&_h3]:text-lg [&_h3]:font-bold [&_h3]:text-[#4a3f48] [&_img]:max-w-full [&_img]:rounded-lg [&_img]:my-4",
+          "prose prose-pink max-w-none min-h-[300px] p-4 focus:outline-none [&_p]:text-[#4a3f48] [&_p]:leading-relaxed [&_p]:mb-4 [&_p]:mt-0 [&_p]:first:mt-0 [&_p]:last:mb-0 [&_p:empty]:mb-4 [&_p:empty]:min-h-[1rem] [&_br]:block [&_br]:my-2 [&_br+br]:my-4 [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:text-[#4a3f48] [&_h1]:mt-6 [&_h1]:mb-4 [&_h2]:text-xl [&_h2]:font-bold [&_h2]:text-[#4a3f48] [&_h2]:mt-5 [&_h2]:mb-3 [&_h3]:text-lg [&_h3]:font-bold [&_h3]:text-[#4a3f48] [&_h3]:mt-4 [&_h3]:mb-2 [&_ul]:list-disc [&_ul]:ml-6 [&_ul]:mb-4 [&_ol]:list-decimal [&_ol]:ml-6 [&_ol]:mb-4 [&_li]:text-[#4a3f48] [&_li]:mb-2 [&_img]:max-w-full [&_img]:rounded-lg [&_img]:my-4 [&_img]:relative [&_img]:inline-block [&_div]:mb-4 [&_div]:last:mb-0",
         spellcheck: "false",
+      },
+      handleDOMEvents: {
+        click: (view, event) => {
+          const target = event.target as HTMLElement;
+          // 삭제 버튼 클릭 처리
+          if (target.classList.contains("tiptap-image-delete-btn")) {
+            event.preventDefault();
+            const imgElement = target.closest("img");
+            if (imgElement && editor) {
+              const pos = view.posAtDOM(imgElement, 0);
+              if (pos !== null) {
+                editor.chain().focus().setTextSelection(pos).deleteSelection().run();
+              }
+            }
+            return true;
+          }
+          return false;
+        },
       },
     },
   });
@@ -188,6 +231,63 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  // 이미지 삭제 기능을 위한 이벤트 리스너
+  useEffect(() => {
+    if (!editor || !isMounted) return;
+
+    const handleImageClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName === "IMG" && target.closest(".ProseMirror")) {
+        const rect = target.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        // 우측 상단 삭제 버튼 영역 클릭 확인 (40x40px 영역)
+        if (x > rect.width - 40 && y < 40) {
+          e.preventDefault();
+          e.stopPropagation();
+
+          // TipTap 에디터에서 이미지 찾기 및 삭제
+          const view = editor.view;
+          const pos = view.posAtDOM(target, 0);
+          
+          if (pos !== null && pos >= 0) {
+            // 이미지 노드 찾기
+            const $pos = view.state.doc.resolve(pos);
+            const node = $pos.node();
+            
+            if (node && node.type.name === "image") {
+              editor
+                .chain()
+                .focus()
+                .setTextSelection(pos)
+                .deleteSelection()
+                .run();
+              console.log("[ProductForm] 에디터 이미지 삭제 완료");
+            } else {
+              // 이미지가 paragraph 안에 있는 경우
+              const imagePos = $pos.before();
+              editor
+                .chain()
+                .focus()
+                .setTextSelection(imagePos)
+                .deleteSelection()
+                .run();
+              console.log("[ProductForm] 에디터 이미지 삭제 완료 (paragraph 내)");
+            }
+          }
+        }
+      }
+    };
+
+    const editorElement = editor.view.dom;
+    editorElement.addEventListener("click", handleImageClick);
+
+    return () => {
+      editorElement.removeEventListener("click", handleImageClick);
+    };
+  }, [editor, isMounted]);
 
   // 에디터에 초기 내용 설정
   useEffect(() => {
@@ -203,11 +303,38 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
     startTransition(async () => {
       if (isEdit && product) {
         // 수정
+        // 상품 이미지 갤러리 데이터 준비
+        // sort_order를 현재 인덱스로 설정하여 순서 보장
+        const imagesData = productImages.map((img, index) => ({
+          id: img.id, // 기존 이미지의 경우 id가 있음
+          image_url: img.image_url,
+          is_primary: img.is_primary,
+          sort_order: index, // 현재 순서를 sort_order로 설정
+          alt_text: img.alt_text || data.name,
+        }));
+
+        console.log("[ProductForm] 수정 시 이미지 데이터:", imagesData);
+        console.log("[ProductForm] 수정 시 옵션 데이터:", productVariants);
+
+        // 옵션 데이터 준비 (빈 값 필터링)
+        const variantsData = productVariants
+          .filter((v) => v.variant_value.trim() !== "") // 옵션값이 있는 것만
+          .map((v) => ({
+            id: v.id, // 기존 옵션의 경우 id가 있음
+            variant_name: v.variant_name || "옵션",
+            variant_value: v.variant_value,
+            stock: v.stock,
+            price_adjustment: v.price_adjustment,
+            sku: v.sku ?? null,
+          }));
+
         const result = await updateProduct({
           id: product.id,
           category_id: data.category_id,
           category_ids: data.category_ids, // 다중 카테고리
           ...data,
+          images: imagesData, // 이미지 데이터 추가
+          variants: variantsData.length > 0 ? variantsData : undefined, // 옵션 데이터 추가
         });
 
         if (result.success) {
@@ -220,12 +347,26 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
         // 생성
         // 폼 검증을 통과했으므로 모든 필수 필드가 존재함
         // 상품 이미지 갤러리 데이터 준비
+        // sort_order를 현재 인덱스로 설정하여 순서 보장
         const imagesData = productImages.map((img, index) => ({
           image_url: img.image_url,
           is_primary: img.is_primary,
-          sort_order: img.sort_order,
+          sort_order: index, // 현재 순서를 sort_order로 설정
           alt_text: img.alt_text || data.name,
         }));
+
+        // 옵션 데이터 준비 (빈 값 필터링)
+        const variantsData = productVariants
+          .filter((v) => v.variant_value.trim() !== "") // 옵션값이 있는 것만
+          .map((v) => ({
+            variant_name: v.variant_name || "옵션",
+            variant_value: v.variant_value,
+            stock: v.stock,
+            price_adjustment: v.price_adjustment,
+            sku: v.sku ?? null,
+          }));
+
+        console.log("[ProductForm] 생성 시 옵션 데이터:", variantsData);
 
         const result = await createProduct({
           category_id: data.category_id, // 기본 카테고리 (하위 호환성)
@@ -240,6 +381,7 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
           is_featured: data.is_featured,
           is_new: data.is_new,
           images: imagesData,
+          variants: variantsData.length > 0 ? variantsData : undefined, // 옵션 데이터 추가
         });
 
         if (result.success) {
@@ -754,31 +896,75 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
                         ref={imageInputRef}
                         type="file"
                         accept="image/*"
+                        multiple
                         className="hidden"
                         onChange={async (e) => {
-                          const file = e.target.files?.[0];
-                          if (!file || !editor) return;
+                          const files = e.target.files;
+                          if (!files || files.length === 0 || !editor) return;
+
+                          console.log(
+                            `[ProductForm] 상품 설명 에디터 이미지 업로드 시작: ${files.length}개`,
+                          );
 
                           setIsUploadingImage(true);
                           try {
-                            const formData = new FormData();
-                            formData.append("file", file);
-
-                            const result = await uploadImageFile(formData);
-
-                            if (result.success && result.url) {
-                              editor
-                                .chain()
-                                .focus()
-                                .setImage({ src: result.url })
-                                .run();
-                            } else {
-                              alert(
-                                result.error || "이미지 업로드에 실패했습니다.",
+                            // 여러 이미지를 순차적으로 업로드
+                            for (let i = 0; i < files.length; i++) {
+                              const file = files[i];
+                              console.log(
+                                `[ProductForm] 이미지 ${i + 1}/${files.length} 업로드 중:`,
+                                file.name,
+                                `(${(file.size / 1024).toFixed(2)} KB)`,
                               );
+
+                              const formData = new FormData();
+                              formData.append("file", file);
+
+                              console.log(
+                                `[ProductForm] 이미지 ${i + 1} 압축 및 업로드 중... (800x800으로 통일)`,
+                              );
+                              // 상품 설명 에디터용: 800x800으로 통일
+                              const result = await uploadImageFile(formData, {
+                                width: 800,
+                                height: 800,
+                                fit: "cover", // 정사각형으로 자르기
+                              });
+
+                              if (result.success && result.url) {
+                                console.log(
+                                  `[ProductForm] 이미지 ${i + 1} 업로드 및 압축 완료:`,
+                                  result.url,
+                                );
+                                // 에디터에 이미지 삽입
+                                editor
+                                  .chain()
+                                  .focus()
+                                  .setImage({ src: result.url })
+                                  .run();
+                                
+                                // 마지막 이미지가 아니면 줄바꿈 추가
+                                if (i < files.length - 1) {
+                                  editor.chain().focus().insertContent("<br>").run();
+                                }
+                              } else {
+                                console.error(
+                                  `[ProductForm] 이미지 ${i + 1} 업로드 실패:`,
+                                  result.error,
+                                );
+                                alert(
+                                  `이미지 ${i + 1} 업로드 실패: ${result.error || "이미지 업로드에 실패했습니다."}`,
+                                );
+                              }
                             }
+
+                            console.log(
+                              `[ProductForm] 모든 이미지 업로드 완료: ${files.length}개`,
+                            );
                           } catch (error) {
-                            console.error("이미지 업로드 에러:", error);
+                            console.error(
+                              "[ProductForm] 이미지 업로드 에러:",
+                              error,
+                            );
                             alert("이미지 업로드 중 오류가 발생했습니다.");
                           } finally {
                             setIsUploadingImage(false);
@@ -859,12 +1045,55 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
                       </button>
                     </div>
                     {/* 에디터 영역 - 스크롤 가능 */}
-                    <div className="bg-white min-h-[300px] overflow-y-auto flex-1">
+                    <div className="bg-white min-h-[300px] overflow-y-auto flex-1 relative">
                       {isMounted && editor ? (
-                        <EditorContent
-                          editor={editor}
-                          suppressHydrationWarning
-                        />
+                        <>
+                          <EditorContent
+                            editor={editor}
+                            suppressHydrationWarning
+                          />
+                          {/* 이미지 삭제 버튼을 위한 스타일 */}
+                          <style jsx global>{`
+                            .ProseMirror img {
+                              position: relative;
+                              display: inline-block;
+                              cursor: pointer;
+                            }
+                            .ProseMirror img:hover::after {
+                              content: '';
+                              position: absolute;
+                              top: 8px;
+                              right: 8px;
+                              width: 24px;
+                              height: 24px;
+                              background-color: #ef4444;
+                              border-radius: 50%;
+                              display: flex;
+                              align-items: center;
+                              justify-content: center;
+                              cursor: pointer;
+                              z-index: 10;
+                              box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+                            }
+                            .ProseMirror img:hover::before {
+                              content: '×';
+                              position: absolute;
+                              top: 8px;
+                              right: 8px;
+                              width: 24px;
+                              height: 24px;
+                              color: white;
+                              font-size: 18px;
+                              font-weight: bold;
+                              display: flex;
+                              align-items: center;
+                              justify-content: center;
+                              cursor: pointer;
+                              z-index: 11;
+                              pointer-events: none;
+                            }
+                          `}</style>
+                        </>
                       ) : (
                         <div className="p-4 text-[#8b7d84]">
                           에디터를 불러오는 중...
@@ -905,35 +1134,45 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
 
                   setIsUploadingGalleryImage(true);
                   try {
-                    const uploadPromises = Array.from(files).map(
-                      async (file) => {
-                        const formData = new FormData();
-                        formData.append("file", file);
+                    const currentImageCount = productImages.length;
+                    let uploadedCount = 0;
 
-                        const result = await uploadImageFile(formData);
-                        if (result.success && result.url) {
-                          return {
-                            image_url: result.url,
-                            is_primary: productImages.length === 0, // 첫 번째 이미지가 대표 이미지
-                            sort_order: productImages.length,
-                            alt_text: file.name,
-                          };
-                        }
-                        return null;
-                      },
-                    );
+                    // 순차적으로 업로드하여 sort_order를 정확하게 설정
+                    const uploadedImages = [];
+                    for (let i = 0; i < files.length; i++) {
+                      const file = files[i];
+                      const formData = new FormData();
+                      formData.append("file", file);
 
-                    const uploadedImages = (
-                      await Promise.all(uploadPromises)
-                    ).filter(
-                      (img): img is NonNullable<typeof img> => img !== null,
-                    );
+                      console.log(
+                        `[ProductForm] 이미지 ${i + 1}/${files.length} 업로드 중...`,
+                      );
+
+                      const result = await uploadImageFile(formData);
+                      if (result.success && result.url) {
+                        uploadedImages.push({
+                          image_url: result.url,
+                          is_primary:
+                            currentImageCount === 0 && uploadedCount === 0, // 첫 번째 이미지가 대표 이미지
+                          sort_order: currentImageCount + uploadedCount,
+                          alt_text: file.name,
+                        });
+                        uploadedCount++;
+                        console.log(
+                          `[ProductForm] 이미지 ${i + 1} 업로드 완료 (sort_order: ${currentImageCount + uploadedCount - 1})`,
+                        );
+                      } else {
+                        console.error(
+                          `[ProductForm] 이미지 ${i + 1} 업로드 실패:`,
+                          result.error,
+                        );
+                      }
+                    }
 
                     if (uploadedImages.length > 0) {
                       setProductImages((prev) => [...prev, ...uploadedImages]);
                       console.log(
-                        "[ProductForm] 이미지 갤러리 업로드 성공:",
-                        uploadedImages.length,
+                        `[ProductForm] 이미지 갤러리 업로드 성공: ${uploadedImages.length}개`,
                       );
                     } else {
                       alert("이미지 업로드에 실패했습니다.");
@@ -964,7 +1203,11 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
 
             {/* 이미지 목록 */}
             {productImages.length > 0 && (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="space-y-2">
+                <p className="text-xs text-[#8b7d84] mb-2">
+                  💡 이미지에 마우스를 올리면 순서 변경 버튼이 나타납니다.
+                </p>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {productImages.map((img, index) => (
                   <div
                     key={img.id || `new-${index}`}
@@ -1024,12 +1267,74 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
                       </button>
                     )}
 
-                    {/* 순서 표시 */}
-                    <div className="absolute bottom-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
-                      {index + 1}
+                    {/* 순서 표시 및 순서 변경 버튼 */}
+                    <div className="absolute bottom-2 right-2 flex items-center gap-1">
+                      {/* 위로 이동 버튼 */}
+                      {index > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setProductImages((prev) => {
+                              const newImages = [...prev];
+                              // 현재 이미지와 이전 이미지 위치 교환
+                              [newImages[index - 1], newImages[index]] = [
+                                newImages[index],
+                                newImages[index - 1],
+                              ];
+                              // sort_order 업데이트
+                              newImages.forEach((img, i) => {
+                                img.sort_order = i;
+                              });
+                              console.log(
+                                `[ProductForm] 이미지 ${index + 1}을 위로 이동`,
+                              );
+                              return newImages;
+                            });
+                          }}
+                          className="bg-[#ff6b9d] text-white rounded p-1 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[#ff5088]"
+                          title="위로 이동"
+                        >
+                          <ChevronUp className="w-3 h-3" />
+                        </button>
+                      )}
+
+                      {/* 순서 표시 */}
+                      <div className="bg-black/50 text-white text-xs px-2 py-1 rounded">
+                        {index + 1}
+                      </div>
+
+                      {/* 아래로 이동 버튼 */}
+                      {index < productImages.length - 1 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setProductImages((prev) => {
+                              const newImages = [...prev];
+                              // 현재 이미지와 다음 이미지 위치 교환
+                              [newImages[index], newImages[index + 1]] = [
+                                newImages[index + 1],
+                                newImages[index],
+                              ];
+                              // sort_order 업데이트
+                              newImages.forEach((img, i) => {
+                                img.sort_order = i;
+                              });
+                              console.log(
+                                `[ProductForm] 이미지 ${index + 1}을 아래로 이동`,
+                              );
+                              return newImages;
+                            });
+                          }}
+                          className="bg-[#ff6b9d] text-white rounded p-1 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[#ff5088]"
+                          title="아래로 이동"
+                        >
+                          <ChevronDown className="w-3 h-3" />
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))}
+                </div>
               </div>
             )}
 
@@ -1038,6 +1343,172 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
                 <p className="text-[#8b7d84]">상품 이미지를 추가해주세요.</p>
                 <p className="text-xs text-[#8b7d84] mt-2">
                   첫 번째로 추가한 이미지가 대표 이미지로 설정됩니다.
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* 상품 옵션 관리 */}
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium text-[#4a3f48] block mb-2">
+                상품 옵션{" "}
+                <span className="text-[#8b7d84] text-xs font-normal">
+                  (옵션이 있는 상품만 추가하세요. 예: 사이즈, 색상 등)
+                </span>
+              </label>
+
+              <Button
+                type="button"
+                onClick={() => {
+                  setProductVariants((prev) => [
+                    ...prev,
+                    {
+                      variant_name: "옵션",
+                      variant_value: "",
+                      stock: 0,
+                      price_adjustment: 0,
+                      sku: null,
+                    },
+                  ]);
+                  console.log("[ProductForm] 옵션 추가");
+                }}
+                variant="outline"
+                className="border-[#fad2e6] text-[#4a3f48] hover:bg-[#ffeef5]"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                옵션 추가
+              </Button>
+            </div>
+
+            {/* 옵션 목록 */}
+            {productVariants.length > 0 && (
+              <div className="space-y-3">
+                {productVariants.map((variant, index) => (
+                  <div
+                    key={variant.id || `new-${index}`}
+                    className="border border-[#f5d5e3] rounded-lg p-4 bg-white"
+                  >
+                    <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                      {/* 옵션명 (예: 사이즈, 색상) */}
+                      <div>
+                        <label className="text-xs text-[#8b7d84] block mb-1">
+                          옵션명
+                        </label>
+                        <Input
+                          placeholder="예: 사이즈"
+                          value={variant.variant_name}
+                          onChange={(e) => {
+                            setProductVariants((prev) =>
+                              prev.map((v, i) =>
+                                i === index
+                                  ? { ...v, variant_name: e.target.value }
+                                  : v,
+                              ),
+                            );
+                          }}
+                          className="border-[#f5d5e3] focus:border-[#fad2e6] focus:ring-[#fad2e6]"
+                        />
+                      </div>
+
+                      {/* 옵션값 (예: 핫핑크, 살구핑크) */}
+                      <div>
+                        <label className="text-xs text-[#8b7d84] block mb-1">
+                          옵션값 <span className="text-[#ff6b9d]">*</span>
+                        </label>
+                        <Input
+                          placeholder="예: 핫핑크"
+                          value={variant.variant_value}
+                          onChange={(e) => {
+                            setProductVariants((prev) =>
+                              prev.map((v, i) =>
+                                i === index
+                                  ? { ...v, variant_value: e.target.value }
+                                  : v,
+                              ),
+                            );
+                          }}
+                          className="border-[#f5d5e3] focus:border-[#fad2e6] focus:ring-[#fad2e6]"
+                        />
+                      </div>
+
+                      {/* 재고 */}
+                      <div>
+                        <label className="text-xs text-[#8b7d84] block mb-1">
+                          재고 <span className="text-[#ff6b9d]">*</span>
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder="0"
+                          value={variant.stock}
+                          onChange={(e) => {
+                            setProductVariants((prev) =>
+                              prev.map((v, i) =>
+                                i === index
+                                  ? { ...v, stock: parseInt(e.target.value) || 0 }
+                                  : v,
+                              ),
+                            );
+                          }}
+                          className="border-[#f5d5e3] focus:border-[#fad2e6] focus:ring-[#fad2e6]"
+                        />
+                      </div>
+
+                      {/* 가격 조정 */}
+                      <div>
+                        <label className="text-xs text-[#8b7d84] block mb-1">
+                          가격 조정
+                        </label>
+                        <Input
+                          type="number"
+                          placeholder="0"
+                          value={variant.price_adjustment}
+                          onChange={(e) => {
+                            setProductVariants((prev) =>
+                              prev.map((v, i) =>
+                                i === index
+                                  ? {
+                                      ...v,
+                                      price_adjustment:
+                                        parseInt(e.target.value) || 0,
+                                    }
+                                  : v,
+                              ),
+                            );
+                          }}
+                          className="border-[#f5d5e3] focus:border-[#fad2e6] focus:ring-[#fad2e6]"
+                        />
+                        <p className="text-xs text-[#8b7d84] mt-1">
+                          기본가격 기준 추가/할인 금액
+                        </p>
+                      </div>
+
+                      {/* 삭제 버튼 */}
+                      <div className="flex items-end">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setProductVariants((prev) =>
+                              prev.filter((_, i) => i !== index),
+                            );
+                            console.log("[ProductForm] 옵션 삭제:", index);
+                          }}
+                          className="w-full h-9 bg-red-500 text-white rounded hover:bg-red-600 transition-colors flex items-center justify-center"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {productVariants.length === 0 && (
+              <div className="border-2 border-dashed border-[#f5d5e3] rounded-lg p-8 text-center">
+                <p className="text-[#8b7d84]">옵션이 없는 상품입니다.</p>
+                <p className="text-xs text-[#8b7d84] mt-2">
+                  옵션이 있는 상품만 "옵션 추가" 버튼을 클릭하여 추가하세요.
                 </p>
               </div>
             )}

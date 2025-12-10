@@ -132,11 +132,6 @@ export default function ProductVariantSelector({
                     )}
                     {isSelected && <span className="ml-1 text-xs">✓</span>}
                   </div>
-                  {isSelected && variant.stock > 0 && (
-                    <div className="mt-1 text-xs text-[#8b7d84]">
-                      재고: {variant.stock}개
-                    </div>
-                  )}
                 </button>
               );
             })}
