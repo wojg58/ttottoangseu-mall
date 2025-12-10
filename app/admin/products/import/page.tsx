@@ -14,6 +14,9 @@ import { isAdmin } from "@/actions/admin";
 import { getCategories } from "@/actions/products";
 import ImportProductsClient from "@/components/import-products-client";
 
+// Next.js 15: Server Action 타임아웃 설정 (5분)
+export const maxDuration = 300; // 5분 (기본 10초에서 증가)
+
 export default async function ImportProductsPage() {
   const isAdminUser = await isAdmin();
 

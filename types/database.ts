@@ -82,9 +82,10 @@ export interface Category {
 // =============================================
 // 상품 (Products)
 // =============================================
+// 주의: Product.id는 TEXT 타입이며 ttotto_01, ttotto_02 형식으로 자동 생성됩니다.
 
 export interface Product {
-  id: string;
+  id: string; // ttotto_01, ttotto_02 형식 (자동 생성)
   category_id: string;
   name: string;
   slug: string;

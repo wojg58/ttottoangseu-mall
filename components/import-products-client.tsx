@@ -434,7 +434,7 @@ export default function ImportProductsClient({
                                     const defaultSlugs =
                                       product.category_slugs ||
                                       (product.category_slug ? [product.category_slug] : []);
-                                    // 클라이언트 마운트 전에는 기본값만 사용
+                                    // 클라이언트 마운트 전에는 기본값만 사용 (hydration 에러 방지)
                                     const mappedSlugs = isMounted
                                       ? categorySlugsMap.get(index) || defaultSlugs
                                       : defaultSlugs;
@@ -442,21 +442,7 @@ export default function ImportProductsClient({
                                       ? mappedSlugs.includes(cat.slug)
                                       : false;
                                     
-                                    // 클라이언트 마운트 전에는 플레이스홀더만 렌더링
-                                    if (!isMounted) {
-                                      return (
-                                        <div
-                                          key={cat.id}
-                                          className="flex items-center gap-2 p-1"
-                                        >
-                                          <div className="w-3.5 h-3.5 border border-[#f5d5e3] rounded bg-white" />
-                                          <span className="text-xs text-[#4a3f48]">
-                                            {cat.name}
-                                          </span>
-                                        </div>
-                                      );
-                                    }
-                                    
+                                    // 항상 동일한 구조를 렌더링하여 hydration 에러 방지
                                     return (
                                       <div
                                         key={cat.id}
@@ -474,7 +460,8 @@ export default function ImportProductsClient({
                                             )
                                           }
                                           className="w-3.5 h-3.5 text-[#ff6b9d] border-[#f5d5e3] rounded focus:ring-1 focus:ring-[#fad2e6] cursor-pointer"
-                                          disabled={isImporting}
+                                          disabled={isImporting || !isMounted}
+                                          suppressHydrationWarning
                                         />
                                         <label
                                           htmlFor={`product-${index}-category-${cat.id}`}

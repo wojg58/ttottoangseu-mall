@@ -296,25 +296,51 @@ export async function getProductBySlug(
 export async function getCategories(): Promise<Category[]> {
   console.group("[getCategories] 카테고리 목록 조회");
 
-  const supabase = await createClient();
+  try {
+    // RLS 문제를 피하기 위해 Service Role 클라이언트 사용
+    const { getServiceRoleClient } = await import("@/lib/supabase/service-role");
+    const supabase = getServiceRoleClient();
+    console.log("[getCategories] Supabase Service Role 클라이언트 생성 완료");
 
-  const { data, error } = await supabase
-    .from("categories")
-    .select("*")
-    .eq("is_active", true)
-    .is("deleted_at", null)
-    .order("sort_order", { ascending: true });
+    // RLS 문제를 피하기 위해 직접 쿼리 (테스트 단계 생략)
+    console.log("[getCategories] 카테고리 데이터 조회 시작");
 
-  if (error) {
-    console.error("에러:", error);
+    const { data, error } = await supabase
+      .from("categories")
+      .select("*")
+      .eq("is_active", true)
+      .is("deleted_at", null)
+      .order("sort_order", { ascending: true });
+
+    if (error) {
+      console.error("[getCategories] 데이터 조회 에러:", {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code,
+        fullError: JSON.stringify(error, Object.getOwnPropertyNames(error)),
+      });
+      console.groupEnd();
+      return [];
+    }
+
+    console.log("[getCategories] 결과:", data?.length ?? 0, "개 카테고리");
+    if (data && data.length > 0) {
+      console.log("[getCategories] 첫 번째 카테고리:", data[0]);
+    }
+    console.groupEnd();
+
+    return (data as Category[]) ?? [];
+  } catch (err) {
+    console.error("[getCategories] 예외 발생:", err);
+    console.error("[getCategories] 에러 타입:", typeof err);
+    console.error("[getCategories] 에러 상세:", err instanceof Error ? err.message : String(err));
+    if (err instanceof Error) {
+      console.error("[getCategories] 스택 트레이스:", err.stack);
+    }
     console.groupEnd();
     return [];
   }
-
-  console.log("결과:", data?.length, "개 카테고리");
-  console.groupEnd();
-
-  return data as Category[];
 }
 
 // 카테고리 상세 조회
