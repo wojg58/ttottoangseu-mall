@@ -17,10 +17,12 @@ import { isAdmin, getAdminProducts } from "@/actions/admin";
 import { deleteProduct } from "@/actions/admin-products";
 import DeleteProductButton from "@/components/delete-product-button";
 import BulkDeleteProductsButton from "@/components/bulk-delete-products-button";
+import ProductSearch from "@/components/admin/product-search";
 
 interface AdminProductsPageProps {
   searchParams: Promise<{
     page?: string;
+    search?: string;
   }>;
 }
 
@@ -35,8 +37,13 @@ export default async function AdminProductsPage({
 
   const params = await searchParams;
   const page = parseInt(params.page || "1", 10);
+  const searchQuery = params.search || undefined;
 
-  const { products, total, totalPages } = await getAdminProducts(page);
+  const { products, total, totalPages } = await getAdminProducts(
+    page,
+    20,
+    searchQuery,
+  );
 
   return (
     <main className="py-8 bg-gray-50 min-h-screen">
@@ -74,6 +81,9 @@ export default async function AdminProductsPage({
             {total > 0 && <BulkDeleteProductsButton />}
           </div>
         </div>
+
+        {/* 검색창 */}
+        <ProductSearch />
 
         {/* 상품 목록 */}
         {products.length > 0 ? (
@@ -217,19 +227,26 @@ export default async function AdminProductsPage({
         {totalPages > 1 && (
           <div className="flex items-center justify-center gap-2 mt-8">
             {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-              (pageNum) => (
-                <Link
-                  key={pageNum}
-                  href={`/admin/products?page=${pageNum}`}
-                  className={`w-10 h-10 rounded-full flex items-center justify-center text-sm transition-colors ${
-                    pageNum === page
-                      ? "bg-[#ff6b9d] text-white"
-                      : "bg-white text-[#4a3f48] hover:bg-[#ffeef5]"
-                  }`}
-                >
-                  {pageNum}
-                </Link>
-              ),
+              (pageNum) => {
+                const params = new URLSearchParams();
+                params.set("page", pageNum.toString());
+                if (searchQuery) {
+                  params.set("search", searchQuery);
+                }
+                return (
+                  <Link
+                    key={pageNum}
+                    href={`/admin/products?${params.toString()}`}
+                    className={`w-10 h-10 rounded-full flex items-center justify-center text-sm transition-colors ${
+                      pageNum === page
+                        ? "bg-[#ff6b9d] text-white"
+                        : "bg-white text-[#4a3f48] hover:bg-[#ffeef5]"
+                    }`}
+                  >
+                    {pageNum}
+                  </Link>
+                );
+              },
             )}
           </div>
         )}

@@ -197,9 +197,10 @@ export async function updateOrderStatus(
 export async function getAdminProducts(
   page: number = 1,
   pageSize: number = 20,
+  searchQuery?: string,
 ): Promise<{ products: ProductListItem[]; total: number; totalPages: number }> {
   console.group("[getAdminProducts] 관리자 상품 조회");
-  console.log("페이지:", page, "페이지 크기:", pageSize);
+  console.log("페이지:", page, "페이지 크기:", pageSize, "검색어:", searchQuery || "(없음)");
 
   const isAdminUser = await isAdmin();
   if (!isAdminUser) {
@@ -210,8 +211,8 @@ export async function getAdminProducts(
 
   const supabase = await createClient();
 
-  // 전체 데이터 가져오기 (정렬을 위해)
-  const { data: allData, error, count } = await supabase
+  // 쿼리 빌더 생성
+  let query = supabase
     .from("products")
     .select(
       `
@@ -222,6 +223,15 @@ export async function getAdminProducts(
       { count: "exact" },
     )
     .is("deleted_at", null);
+
+  // 검색어가 있으면 상품명으로 필터링
+  if (searchQuery && searchQuery.trim()) {
+    console.log("[getAdminProducts] 검색 필터 적용:", searchQuery.trim());
+    query = query.ilike("name", `%${searchQuery.trim()}%`);
+  }
+
+  // 전체 데이터 가져오기 (정렬을 위해)
+  const { data: allData, error, count } = await query;
 
   if (error) {
     console.error("에러:", error);
@@ -258,7 +268,7 @@ export async function getAdminProducts(
   });
 
   console.log(
-    `정렬 완료: 총 ${sortedData.length}개, 첫 번째: ${sortedData[0]?.id}, 마지막: ${sortedData[sortedData.length - 1]?.id}`,
+    `정렬 완료: 총 ${sortedData.length}개${sortedData.length > 0 ? `, 첫 번째: ${sortedData[0]?.id}, 마지막: ${sortedData[sortedData.length - 1]?.id}` : ""}`,
   );
 
   // 페이지네이션 적용
