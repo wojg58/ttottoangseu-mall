@@ -8,6 +8,7 @@ import { auth } from "@clerk/nextjs/server";
 import { redirect, notFound } from "next/navigation";
 import { Home, Package, MapPin, CreditCard, Phone } from "lucide-react";
 import { getOrderById } from "@/actions/orders";
+import DateDisplay from "@/components/date-display";
 
 interface OrderDetailPageProps {
   params: Promise<{
@@ -127,9 +128,11 @@ export default async function OrderDetailPage({
                 </div>
                 <div className="flex justify-between">
                   <span className="text-[#8b7d84]">주문일시</span>
-                  <span className="text-[#4a3f48]">
-                    {new Date(order.created_at).toLocaleDateString("ko-KR")}
-                  </span>
+                  <DateDisplay
+                    date={order.created_at}
+                    format="date"
+                    className="text-[#4a3f48]"
+                  />
                 </div>
                 <hr className="border-[#f5d5e3]" />
                 <div className="flex justify-between font-bold">

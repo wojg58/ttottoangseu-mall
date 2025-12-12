@@ -14,6 +14,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { isAdmin, getDashboardStats } from "@/actions/admin";
+import DateDisplay from "@/components/date-display";
 
 export default async function AdminDashboardPage() {
   const isAdminUser = await isAdmin();
@@ -196,9 +197,7 @@ export default async function AdminDashboardPage() {
                             </span>
                           </td>
                           <td className="py-3 px-2 text-[#8b7d84]">
-                            {new Date(order.created_at).toLocaleDateString(
-                              "ko-KR",
-                            )}
+                            <DateDisplay date={order.created_at} format="date" />
                           </td>
                         </tr>
                       ))}

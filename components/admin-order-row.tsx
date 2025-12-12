@@ -10,6 +10,7 @@ import Link from "next/link";
 import { updateOrderStatus } from "@/actions/admin";
 import type { Order } from "@/types/database";
 import { Button } from "@/components/ui/button";
+import DateDisplay from "@/components/date-display";
 
 interface AdminOrderRowProps {
   order: Order;
@@ -80,13 +81,8 @@ export default function AdminOrderRow({ order }: AdminOrderRowProps) {
           ))}
         </select>
       </td>
-      <td className="py-4 px-4 text-[#8b7d84]" suppressHydrationWarning>
-        {new Date(order.created_at).toLocaleDateString("ko-KR", {
-          month: "short",
-          day: "numeric",
-          hour: "2-digit",
-          minute: "2-digit",
-        })}
+      <td className="py-4 px-4 text-[#8b7d84]">
+        <DateDisplay date={order.created_at} format="short" />
       </td>
       <td className="py-4 px-4">
         <Link href={`/admin/orders/${order.id}`}>

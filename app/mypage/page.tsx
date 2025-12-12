@@ -15,6 +15,7 @@ import {
   Home,
 } from "lucide-react";
 import { getOrders } from "@/actions/orders";
+import DateDisplay from "@/components/date-display";
 
 export default async function MyPage() {
   const { userId } = await auth();
@@ -153,11 +154,11 @@ export default async function MyPage() {
                         </span>
                       </div>
                       <div className="flex items-center justify-between text-sm">
-                        <span className="text-[#8b7d84]">
-                          {new Date(order.created_at).toLocaleDateString(
-                            "ko-KR",
-                          )}
-                        </span>
+                        <DateDisplay
+                          date={order.created_at}
+                          format="date"
+                          className="text-[#8b7d84]"
+                        />
                         <span className="font-bold text-[#4a3f48]">
                           {order.total_amount.toLocaleString("ko-KR")}원
                         </span>

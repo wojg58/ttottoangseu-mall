@@ -8,6 +8,7 @@ import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { Home, Package, ChevronRight } from "lucide-react";
 import { getOrders } from "@/actions/orders";
+import DateDisplay from "@/components/date-display";
 
 export default async function OrdersPage() {
   const { userId } = await auth();
@@ -51,15 +52,11 @@ export default async function OrdersPage() {
                     <span className="text-lg font-bold text-[#4a3f48]">
                       {order.order_number}
                     </span>
-                    <p className="text-sm text-[#8b7d84]">
-                      {new Date(order.created_at).toLocaleDateString("ko-KR", {
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </p>
+                    <DateDisplay
+                      date={order.created_at}
+                      format="datetime"
+                      className="text-sm text-[#8b7d84]"
+                    />
                   </div>
                   <span
                     className={`px-3 py-1 rounded-full text-sm font-medium ${
