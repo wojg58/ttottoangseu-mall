@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { getOrders } from "@/actions/orders";
 import DateDisplay from "@/components/date-display";
+import NumberDisplay from "@/components/number-display";
 
 export default async function MyPage() {
   const { userId } = await auth();
@@ -159,9 +160,11 @@ export default async function MyPage() {
                           format="date"
                           className="text-[#8b7d84]"
                         />
-                        <span className="font-bold text-[#4a3f48]">
-                          {order.total_amount.toLocaleString("ko-KR")}원
-                        </span>
+                        <NumberDisplay
+                          value={order.total_amount}
+                          suffix="원"
+                          className="font-bold text-[#4a3f48]"
+                        />
                       </div>
                     </Link>
                   ))}

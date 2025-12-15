@@ -18,6 +18,7 @@ import { deleteProduct } from "@/actions/admin-products";
 import DeleteProductButton from "@/components/delete-product-button";
 import BulkDeleteProductsButton from "@/components/bulk-delete-products-button";
 import ProductSearch from "@/components/admin/product-search";
+import NumberDisplay from "@/components/number-display";
 
 interface AdminProductsPageProps {
   searchParams: Promise<{
@@ -151,17 +152,21 @@ export default async function AdminProductsPage({
                         <div>
                           {product.discount_price ? (
                             <>
-                              <p className="text-[#ff6b9d] font-medium">
-                                {product.discount_price.toLocaleString("ko-KR")}원
-                              </p>
+                              <NumberDisplay
+                                value={product.discount_price}
+                                suffix="원"
+                                className="text-[#ff6b9d] font-medium"
+                              />
                               <p className="text-xs text-gray-400 line-through">
-                                {product.price.toLocaleString("ko-KR")}원
+                                <NumberDisplay value={product.price} suffix="원" />
                               </p>
                             </>
                           ) : (
-                            <p className="text-[#4a3f48] font-medium">
-                              {product.price.toLocaleString("ko-KR")}원
-                            </p>
+                            <NumberDisplay
+                              value={product.price}
+                              suffix="원"
+                              className="text-[#4a3f48] font-medium"
+                            />
                           )}
                         </div>
                       </td>

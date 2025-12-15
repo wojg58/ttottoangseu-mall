@@ -9,6 +9,7 @@ import { redirect } from "next/navigation";
 import { Home, Package, ChevronRight } from "lucide-react";
 import { getOrders } from "@/actions/orders";
 import DateDisplay from "@/components/date-display";
+import NumberDisplay from "@/components/number-display";
 
 export default async function OrdersPage() {
   const { userId } = await auth();
@@ -88,9 +89,11 @@ export default async function OrdersPage() {
                   <div className="flex items-center gap-4">
                     <div className="text-right">
                       <p className="text-sm text-[#8b7d84]">결제금액</p>
-                      <p className="text-lg font-bold text-[#ff6b9d]">
-                        {order.total_amount.toLocaleString("ko-KR")}원
-                      </p>
+                      <NumberDisplay
+                        value={order.total_amount}
+                        suffix="원"
+                        className="text-lg font-bold text-[#ff6b9d]"
+                      />
                     </div>
                     <ChevronRight className="w-5 h-5 text-[#8b7d84]" />
                   </div>

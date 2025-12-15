@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { isAdmin, getDashboardStats } from "@/actions/admin";
 import DateDisplay from "@/components/date-display";
+import NumberDisplay from "@/components/number-display";
 
 export default async function AdminDashboardPage() {
   const isAdminUser = await isAdmin();
@@ -45,9 +46,10 @@ export default async function AdminDashboardPage() {
               </div>
               <span className="text-xs text-[#8b7d84]">전체</span>
             </div>
-            <p className="text-2xl font-bold text-[#4a3f48]">
-              {stats.totalOrders.toLocaleString("ko-KR")}
-            </p>
+            <NumberDisplay
+              value={stats.totalOrders}
+              className="text-2xl font-bold text-[#4a3f48]"
+            />
             <p className="text-sm text-[#8b7d84]">총 주문</p>
           </div>
 
@@ -58,9 +60,10 @@ export default async function AdminDashboardPage() {
               </div>
               <span className="text-xs text-orange-500">처리 필요</span>
             </div>
-            <p className="text-2xl font-bold text-[#4a3f48]">
-              {stats.pendingOrders.toLocaleString("ko-KR")}
-            </p>
+            <NumberDisplay
+              value={stats.pendingOrders}
+              className="text-2xl font-bold text-[#4a3f48]"
+            />
             <p className="text-sm text-[#8b7d84]">대기 중인 주문</p>
           </div>
 
@@ -71,9 +74,11 @@ export default async function AdminDashboardPage() {
               </div>
               <span className="text-xs text-green-500">수익</span>
             </div>
-            <p className="text-2xl font-bold text-[#4a3f48]">
-              {stats.totalRevenue.toLocaleString("ko-KR")}원
-            </p>
+            <NumberDisplay
+              value={stats.totalRevenue}
+              suffix="원"
+              className="text-2xl font-bold text-[#4a3f48]"
+            />
             <p className="text-sm text-[#8b7d84]">총 매출</p>
           </div>
 
@@ -84,9 +89,10 @@ export default async function AdminDashboardPage() {
               </div>
               <span className="text-xs text-blue-500">활성</span>
             </div>
-            <p className="text-2xl font-bold text-[#4a3f48]">
-              {stats.totalProducts.toLocaleString("ko-KR")}
-            </p>
+            <NumberDisplay
+              value={stats.totalProducts}
+              className="text-2xl font-bold text-[#4a3f48]"
+            />
             <p className="text-sm text-[#8b7d84]">등록 상품</p>
           </div>
         </div>
@@ -174,7 +180,7 @@ export default async function AdminDashboardPage() {
                             {order.shipping_name}
                           </td>
                           <td className="py-3 px-2 text-[#4a3f48] font-medium">
-                            {order.total_amount.toLocaleString("ko-KR")}원
+                            <NumberDisplay value={order.total_amount} suffix="원" />
                           </td>
                           <td className="py-3 px-2">
                             <span

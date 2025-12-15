@@ -9,6 +9,7 @@ import { redirect, notFound } from "next/navigation";
 import { Home, Package, MapPin, CreditCard, Phone } from "lucide-react";
 import { getOrderById } from "@/actions/orders";
 import DateDisplay from "@/components/date-display";
+import NumberDisplay from "@/components/number-display";
 
 interface OrderDetailPageProps {
   params: Promise<{
@@ -101,12 +102,14 @@ export default async function OrderDetailPage({
                         </p>
                       )}
                       <p className="text-sm text-[#8b7d84]">
-                        {item.price.toLocaleString("ko-KR")}원 × {item.quantity}개
+                        <NumberDisplay value={item.price} suffix="원" /> × {item.quantity}개
                       </p>
                     </div>
-                    <p className="font-bold text-[#4a3f48]">
-                      {(item.price * item.quantity).toLocaleString("ko-KR")}원
-                    </p>
+                    <NumberDisplay
+                      value={item.price * item.quantity}
+                      suffix="원"
+                      className="font-bold text-[#4a3f48]"
+                    />
                   </div>
                 ))}
               </div>
@@ -137,9 +140,11 @@ export default async function OrderDetailPage({
                 <hr className="border-[#f5d5e3]" />
                 <div className="flex justify-between font-bold">
                   <span className="text-[#4a3f48]">결제금액</span>
-                  <span className="text-[#ff6b9d]">
-                    {order.total_amount.toLocaleString("ko-KR")}원
-                  </span>
+                  <NumberDisplay
+                    value={order.total_amount}
+                    suffix="원"
+                    className="text-[#ff6b9d]"
+                  />
                 </div>
               </div>
             </div>
