@@ -416,7 +416,9 @@ function parseImageUrls(row: SmartStoreProductRow): string[] {
  */
 function parseVariants(
   row: SmartStoreProductRow,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _rowNumber: number,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _warnings: ParseResult["warnings"],
 ): ParsedProductData["variants"] {
   if (!row.옵션명 || !row.옵션값) {

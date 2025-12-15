@@ -65,16 +65,19 @@ export async function compressImage(
     width,
     height,
     fit = "inside",
-    convertToWebP = true,
     keepOriginalFormat = false,
   } = options;
 
   try {
     // 입력 데이터를 Buffer로 변환
-    const inputBuffer =
-      input instanceof Buffer
-        ? input
-        : Buffer.from(input instanceof ArrayBuffer ? input : input);
+    let inputBuffer: Buffer;
+    if (input instanceof Buffer) {
+      inputBuffer = input;
+    } else if (input instanceof ArrayBuffer) {
+      inputBuffer = Buffer.from(new Uint8Array(input));
+    } else {
+      inputBuffer = Buffer.from(input);
+    }
 
     const originalSize = inputBuffer.length;
     console.log(`원본 크기: ${(originalSize / 1024).toFixed(2)} KB`);
@@ -109,15 +112,12 @@ export async function compressImage(
 
     // 포맷 결정
     let outputFormat: "jpeg" | "png" | "webp" = "webp";
-    let mimeType = "image/webp";
 
     if (keepOriginalFormat && metadata.format) {
       if (metadata.format === "jpeg" || metadata.format === "jpg") {
         outputFormat = "jpeg";
-        mimeType = "image/jpeg";
       } else if (metadata.format === "png") {
         outputFormat = "png";
-        mimeType = "image/png";
       }
     }
 

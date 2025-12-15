@@ -68,3 +68,4 @@ export function getCompressionStats(original: File[], compressed: File[]) {
     compressedMB: (compressedSize / 1024 / 1024).toFixed(2),
   };
 }
+

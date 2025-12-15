@@ -73,12 +73,14 @@ export default async function CategoryPage({
 
         {/* 카테고리 헤더 */}
         <div className="bg-gradient-to-r from-[#ffeef5] to-[#fad2e6] rounded-2xl p-8 mb-8">
-          <h1 className="text-3xl font-bold text-[#4a3f48] mb-2">
-            {category.name}
-          </h1>
-          {category.description && (
-            <p className="text-[#8b7d84]">{category.description}</p>
-          )}
+          <div className="flex items-center gap-3 flex-wrap">
+            <h1 className="text-3xl font-bold text-[#4a3f48] whitespace-nowrap">
+              {category.name}
+            </h1>
+            {category.description && (
+              <p className="text-[#8b7d84] whitespace-nowrap">{category.description}</p>
+            )}
+          </div>
         </div>
 
         {/* 메인 컨텐츠 */}

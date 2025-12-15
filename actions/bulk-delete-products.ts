@@ -44,14 +44,16 @@ export async function deleteAllProducts(): Promise<{
     console.log(`삭제 전 활성 상품 수: ${beforeCount}`);
 
     // 모든 활성 상품 소프트 삭제 처리
-    const { error, count } = await supabase
+    const { data, error } = await supabase
       .from("products")
       .update({
         deleted_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       })
       .is("deleted_at", null)
-      .select("*", { count: "exact", head: true });
+      .select("*");
+    
+    const count = data?.length || 0;
 
     if (error) {
       console.error("상품 삭제 에러:", error);

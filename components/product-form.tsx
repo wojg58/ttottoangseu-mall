@@ -15,7 +15,6 @@ import { uploadImageFile } from "@/actions/upload-image";
 import type {
   Category,
   ProductWithDetails,
-  ProductImage,
 } from "@/types/database";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -1886,7 +1885,7 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
               <div className="border-2 border-dashed border-[#f5d5e3] rounded-lg p-8 text-center">
                 <p className="text-[#8b7d84]">옵션이 없는 상품입니다.</p>
                 <p className="text-xs text-[#8b7d84] mt-2">
-                  옵션이 있는 상품만 "옵션 추가" 버튼을 클릭하여 추가하세요.
+                  옵션이 있는 상품만 &quot;옵션 추가&quot; 버튼을 클릭하여 추가하세요.
                 </p>
               </div>
             )}

@@ -66,7 +66,7 @@ export async function importProducts(
   // 카테고리 목록 조회 (slug로 매핑) - RLS 문제 방지
   const { data: categories, error: categoryError } = await supabase
     .from("categories")
-    .select("id, slug")
+    .select("id, slug, name")
     .is("deleted_at", null);
 
   if (categoryError) {

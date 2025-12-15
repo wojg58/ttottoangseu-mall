@@ -425,7 +425,7 @@ export default async function HomePage() {
                 <div className="inline-flex items-center gap-2 bg-white/50 rounded-full px-4 py-2 mb-4">
                   <Sparkles className="w-4 h-4 text-[#ff6b9d]" />
                   <span className="text-sm text-black font-medium">
-                    또또앙스 캐릭터 굿즈 전문 쇼핑몰
+                    귀여운 정품 캐릭터 키덜트 소품샵
                   </span>
                 </div>
                 <h1 className="text-3xl md:text-5xl font-bold text-[#4a3f48] mb-4 leading-tight">

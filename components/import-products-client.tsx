@@ -27,12 +27,10 @@ import {
   parseProductFile,
   createCategoryMap,
   type ParseResult,
-  type ParsedProductData,
 } from "@/lib/utils/import-products";
 import { importProducts } from "@/actions/import-products";
 import type { Category } from "@/types/database";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 
 interface ImportProductsClientProps {
   categories: Category[];
@@ -114,6 +112,7 @@ export default function ImportProductsClient({
   };
 
   // 카테고리 매핑 변경 (단일 - 하위 호환성)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleCategoryMappingChange = (
     productIndex: number,
     categorySlug: string,

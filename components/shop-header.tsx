@@ -28,12 +28,12 @@ import { Input } from "@/components/ui/input";
 const CATEGORIES = [
   { name: "베스트", slug: "best", emoji: "💝" },
   { name: "산리오", slug: "sanrio", emoji: "❤️" },
-  { name: "캐릭터", slug: "character", emoji: "🧡" },
-  { name: "완구,스티커", slug: "phone-strap", emoji: "💛" },
-  { name: "키링,지비츠", slug: "keyring", emoji: "💚" },
-  { name: "패션잡화", slug: "fashion", emoji: "💙" },
-  { name: "곰돌이", slug: "bear", emoji: "🤎" },
-  { name: "스마일", slug: "stationery", emoji: "💜" },
+  { name: "치이카와", slug: "character", emoji: "🧡" },
+  { name: "모프샌드", slug: "phone-strap", emoji: "💛" },
+  { name: "유키오", slug: "keyring", emoji: "💚" },
+  { name: "짱구", slug: "fashion", emoji: "💙" },
+  { name: "반다이", slug: "bear", emoji: "🤎" },
+  { name: "가차,리멘트", slug: "stationery", emoji: "💜" },
   { name: "전체상품", slug: "all", emoji: "" },
 ];
 
