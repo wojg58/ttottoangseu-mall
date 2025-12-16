@@ -262,14 +262,21 @@ export function ChatWidget() {
       {/* Floating Button */}
       <button
         type="button"
-        className="fixed bottom-6 right-6 z-50 w-[150px] h-[150px] transition flex items-center justify-center bg-transparent hover:opacity-80"
+        className="fixed bottom-6 right-6 z-50 w-[150px] h-[150px] transition-all duration-300 ease-out flex items-center justify-center bg-transparent hover:opacity-90 hover:scale-110 hover:rotate-12 active:scale-95"
         onClick={() => {
           console.log("[ChatWidget] open");
           setOpen(true);
         }}
         aria-label="또또앙스 챗봇 열기"
       >
-        <Image src="/chatbot.png" alt="또또앙스 챗봇" width={150} height={150} priority />
+        <Image 
+          src="/chatbot.png" 
+          alt="또또앙스 챗봇" 
+          width={150} 
+          height={150} 
+          priority 
+          className="transition-transform duration-300"
+        />
       </button>
 
       <Dialog open={open} onOpenChange={setOpen}>
