@@ -1,0 +1,231 @@
+import { NextResponse } from "next/server";
+import { auth } from "@clerk/nextjs/server";
+import { getServiceRoleClient } from "@/lib/supabase/service-role";
+import { streamGeminiText, type ChatMessageForModel } from "@/lib/gemini/server";
+import { SYSTEM_PROMPT } from "@/lib/gemini/system-prompt";
+
+/**
+ * @file app/api/chat/stream/route.ts
+ * @description 챗봇 스트리밍 응답 API (로그인 필수, SSE)
+ *
+ * 클라이언트는 이 API를 호출하고 response.body 스트림을 읽어 토큰을 실시간으로 렌더링합니다.
+ *
+ * 서버 처리:
+ * 1) Clerk auth()로 로그인 확인
+ * 2) session 소유자 검증
+ * 3) user 메시지 저장
+ * 4) 최근 메시지 히스토리 로드 후 Gemini 스트리밍 호출
+ * 5) 토큰을 SSE로 흘리고, 최종 assistant 메시지 저장
+ */
+
+export const runtime = "nodejs";
+
+interface RequestBody {
+  sessionId: string;
+  message: string;
+}
+
+function sseEvent(event: string, data: unknown): string {
+  return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+}
+
+export async function POST(req: Request) {
+  console.group("[ChatStreamAPI] POST /api/chat/stream");
+
+  const encoder = new TextEncoder();
+
+  try {
+    const { userId } = await auth();
+    console.log("auth:", { userId });
+
+    if (!userId) {
+      console.warn("Unauthorized: userId is missing");
+      return new NextResponse("Unauthorized", { status: 401 });
+    }
+
+    const body = (await req.json()) as Partial<RequestBody>;
+    const sessionId = (body.sessionId ?? "").trim();
+    const message = (body.message ?? "").trim();
+
+    console.log("requestBody:", {
+      sessionId,
+      messageLength: message.length,
+    });
+
+    if (!sessionId || !message) {
+      return NextResponse.json(
+        { error: "sessionId and message are required" },
+        { status: 400 },
+      );
+    }
+
+    const supabase = getServiceRoleClient();
+
+    // 1) users.id 조회
+    const { data: userRow, error: userFetchError } = await supabase
+      .from("users")
+      .select("id")
+      .eq("clerk_user_id", userId)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (userFetchError) {
+      console.error("Failed to fetch user:", userFetchError);
+      return NextResponse.json(
+        { error: "Failed to fetch user", details: userFetchError.message },
+        { status: 500 },
+      );
+    }
+
+    if (!userRow) {
+      console.warn("User not synced yet. Ask client to retry after sync-user.");
+      return NextResponse.json(
+        { error: "User not found. Please sign out/in again." },
+        { status: 404 },
+      );
+    }
+
+    // 2) session 소유자 검증
+    const { data: session, error: sessionError } = await supabase
+      .from("chat_sessions")
+      .select("id,user_id")
+      .eq("id", sessionId)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (sessionError) {
+      console.error("Failed to fetch session:", sessionError);
+      return NextResponse.json(
+        { error: "Failed to fetch session", details: sessionError.message },
+        { status: 500 },
+      );
+    }
+
+    if (!session || session.user_id !== userRow.id) {
+      console.warn("Forbidden: session owner mismatch", {
+        sessionUserId: session?.user_id,
+        userId: userRow.id,
+      });
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    // 3) user 메시지 저장
+    const { error: insertUserMsgError } = await supabase
+      .from("chat_messages")
+      .insert({ session_id: sessionId, role: "user", content: message });
+
+    if (insertUserMsgError) {
+      console.error("Failed to insert user message:", insertUserMsgError);
+      return NextResponse.json(
+        { error: "Failed to insert message", details: insertUserMsgError.message },
+        { status: 500 },
+      );
+    }
+
+    // 4) 히스토리 로드 (최근 N개)
+    const HISTORY_LIMIT = 20;
+    const { data: history, error: historyError } = await supabase
+      .from("chat_messages")
+      .select("role,content,created_at")
+      .eq("session_id", sessionId)
+      .order("created_at", { ascending: true })
+      .limit(HISTORY_LIMIT);
+
+    if (historyError) {
+      console.error("Failed to load history:", historyError);
+      return NextResponse.json(
+        { error: "Failed to load history", details: historyError.message },
+        { status: 500 },
+      );
+    }
+
+    // 히스토리를 모델 메시지 형식으로 변환
+    const historyMessages: ChatMessageForModel[] = (history ?? []).map((m) => ({
+      role: m.role as ChatMessageForModel["role"],
+      content: m.content as string,
+    }));
+
+    // 시스템 프롬프트를 맨 앞에 추가 (챗봇이 또또앙스 쇼핑몰 역할을 제대로 하도록)
+    const modelMessages: ChatMessageForModel[] = [
+      { role: "system", content: SYSTEM_PROMPT },
+      ...historyMessages,
+    ];
+
+    const MODEL_NAME = "gemini-2.5-flash";
+    console.log("Gemini call start:", {
+      MODEL_NAME,
+      modelMessagesCount: modelMessages.length,
+      hasSystemPrompt: true,
+    });
+
+    // 5) SSE 스트리밍 응답
+    let assistantText = "";
+
+    const stream = new ReadableStream<Uint8Array>({
+      async start(controller) {
+        try {
+          controller.enqueue(encoder.encode(sseEvent("start", { ok: true })));
+
+          for await (const delta of streamGeminiText({
+            model: MODEL_NAME,
+            messages: modelMessages,
+          })) {
+            assistantText += delta;
+            controller.enqueue(encoder.encode(sseEvent("token", { delta })));
+          }
+
+          // 6) assistant 메시지 저장 (스트리밍 완료 후)
+          if (assistantText.trim()) {
+            const { error: insertAssistantError } = await supabase
+              .from("chat_messages")
+              .insert({ session_id: sessionId, role: "assistant", content: assistantText });
+
+            if (insertAssistantError) {
+              console.error("Failed to insert assistant message:", insertAssistantError);
+            } else {
+              console.log("Inserted assistant message:", { length: assistantText.length });
+            }
+          }
+
+          controller.enqueue(
+            encoder.encode(sseEvent("done", { message: assistantText })),
+          );
+          controller.close();
+        } catch (err) {
+          console.error("Streaming error:", err);
+          controller.enqueue(
+            encoder.encode(
+              sseEvent("error", {
+                error: "stream_failed",
+                message: err instanceof Error ? err.message : String(err),
+              }),
+            ),
+          );
+          controller.close();
+        } finally {
+          // assistant 저장은 스트림 종료 직전/직후에 하되,
+          // start() 내부에서 await insert를 하면 응답 종료가 지연될 수 있어 최소화합니다.
+        }
+      },
+      async cancel(reason) {
+        console.warn("Client cancelled stream:", reason);
+      },
+    });
+
+    return new NextResponse(stream, {
+      headers: {
+        "Content-Type": "text/event-stream; charset=utf-8",
+        "Cache-Control": "no-cache, no-transform",
+        Connection: "keep-alive",
+        "X-Accel-Buffering": "no",
+      },
+    });
+  } catch (e) {
+    console.error("Unexpected error:", e);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  } finally {
+    console.groupEnd();
+  }
+}
+
+

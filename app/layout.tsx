@@ -5,6 +5,7 @@ import { koKR } from "@clerk/localizations";
 import ShopHeader from "@/components/shop-header";
 import ShopFooter from "@/components/shop-footer";
 import { SyncUserProvider } from "@/components/providers/sync-user-provider";
+import { ChatWidget } from "@/components/chatbot/chat-widget";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -49,6 +50,7 @@ export default function RootLayout({
             <ShopHeader />
             <div className="flex-1">{children}</div>
             <ShopFooter />
+            <ChatWidget />
           </SyncUserProvider>
         </body>
       </html>

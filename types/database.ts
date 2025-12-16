@@ -263,6 +263,29 @@ export interface Refund {
 }
 
 // =============================================
+// 챗봇 (Chatbot)
+// =============================================
+
+export type ChatMessageRole = "user" | "assistant" | "system";
+
+export interface ChatSession {
+  id: string;
+  user_id: string;
+  title: string | null;
+  deleted_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ChatMessage {
+  id: string;
+  session_id: string;
+  role: ChatMessageRole;
+  content: string;
+  created_at: string;
+}
+
+// =============================================
 // API 응답 타입
 // =============================================
 
