@@ -28,15 +28,16 @@ export default function ShopFooter() {
                 </p>
               </div>
             </div>
-            <p className="text-[#4a3f48] text-sm leading-relaxed">
-              또또앙스는 산리오, 디즈니 등 다양한 캐릭터 굿즈를 판매하는 전문
-              쇼핑몰입니다. 귀여운 아이템들로 일상에 설렘을 더해보세요! 💕
+            <p className="text-[#4a3f48] text-sm leading-relaxed whitespace-pre-line">
+              또또앙스는 산리오, 짱구 등 다양한 캐릭터 상품을 판매하는 소품샵입니다.
+{'\n'}
+귀여운 아이템들로 일상에 두근거리는 설렘을 더해보세요! 💕
             </p>
           </div>
 
           {/* 고객 서비스 */}
           <div>
-            <h4 className="font-bold mb-4 text-[#fad2e6]">고객 서비스</h4>
+            <h4 className="font-bold mb-4 text-black">고객 서비스</h4>
             <ul className="space-y-2 text-sm text-[#4a3f48]">
               <li>
                 <Link href="/faq" className="hover:text-[#fad2e6]">
@@ -63,7 +64,7 @@ export default function ShopFooter() {
 
           {/* 쇼핑 정보 */}
           <div>
-            <h4 className="font-bold mb-4 text-[#fad2e6]">쇼핑 정보</h4>
+            <h4 className="font-bold mb-4 text-black">쇼핑 정보</h4>
             <ul className="space-y-2 text-sm text-[#4a3f48]">
               <li>
                 <Link href="/products" className="hover:text-[#fad2e6]">

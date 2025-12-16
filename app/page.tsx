@@ -65,11 +65,7 @@ async function getProducts() {
   if (allProductsForBest && allProductsForBest.length > 0) {
     // 상품명 정규화 함수
     const normalize = (str: string): string => {
-      return str
-        .trim()
-        .replace(/\s+/g, " ")
-        .replace(/[&]/g, "&")
-        .toLowerCase();
+      return str.trim().replace(/\s+/g, " ").replace(/[&]/g, "&").toLowerCase();
     };
 
     // 상품명 매칭 함수 (정확한 매칭 우선)
@@ -100,12 +96,18 @@ async function getProducts() {
       // 4. 주요 키워드 매칭 점수 계산
       const targetWords = normalizedTarget
         .split(/\s+/)
-        .filter((word) => word.length > 1 && !["산리오", "헬로키티", "마스코트", "인형", "키링"].includes(word));
-      
+        .filter(
+          (word) =>
+            word.length > 1 &&
+            !["산리오", "헬로키티", "마스코트", "인형", "키링"].includes(word),
+        );
+
       if (targetWords.length > 0) {
-        const matchedWords = targetWords.filter((word) => normalizedProduct.includes(word));
+        const matchedWords = targetWords.filter((word) =>
+          normalizedProduct.includes(word),
+        );
         const matchRatio = matchedWords.length / targetWords.length;
-        
+
         if (matchRatio >= 0.8) {
           return 70 + matchRatio * 10;
         }
@@ -117,9 +119,12 @@ async function getProducts() {
       // 5. 공통 단어 개수 기반 점수
       const productWords = new Set(normalizedProduct.split(/\s+/));
       const targetWordsSet = new Set(normalizedTarget.split(/\s+/));
-      const commonWords = [...productWords].filter((word) => targetWordsSet.has(word));
-      const commonRatio = commonWords.length / Math.max(productWords.size, targetWordsSet.size);
-      
+      const commonWords = [...productWords].filter((word) =>
+        targetWordsSet.has(word),
+      );
+      const commonRatio =
+        commonWords.length / Math.max(productWords.size, targetWordsSet.size);
+
       return commonRatio * 40;
     };
 
@@ -138,11 +143,16 @@ async function getProducts() {
         const bestMatch = scoredProducts[0];
 
         if (bestMatch && bestMatch.score >= 50) {
-          console.log(`[HomePage] 베스트 상품 ${index + 1}번 매칭 (점수: ${bestMatch.score.toFixed(1)}):`, {
-            target: targetName,
-            found: bestMatch.productName,
-            slug: (bestMatch.product as { slug: string }).slug,
-          });
+          console.log(
+            `[HomePage] 베스트 상품 ${
+              index + 1
+            }번 매칭 (점수: ${bestMatch.score.toFixed(1)}):`,
+            {
+              target: targetName,
+              found: bestMatch.productName,
+              slug: (bestMatch.product as { slug: string }).slug,
+            },
+          );
           return bestMatch.product;
         } else {
           console.warn(`[HomePage] 베스트 상품 ${index + 1}번 매칭 실패:`, {
@@ -155,7 +165,9 @@ async function getProducts() {
           return null;
         }
       })
-      .filter((product): product is NonNullable<typeof product> => product !== null);
+      .filter(
+        (product): product is NonNullable<typeof product> => product !== null,
+      );
 
     console.log("[HomePage] 베스트 상품 필터링 결과:", {
       total: allProductsForBest.length,
@@ -248,12 +260,18 @@ async function getProducts() {
       // 4. 주요 키워드 매칭 점수 계산
       const targetWords = normalizedTarget
         .split(/\s+/)
-        .filter((word) => word.length > 1 && !["산리오", "헬로키티", "마스코트", "인형", "키링"].includes(word));
-      
+        .filter(
+          (word) =>
+            word.length > 1 &&
+            !["산리오", "헬로키티", "마스코트", "인형", "키링"].includes(word),
+        );
+
       if (targetWords.length > 0) {
-        const matchedWords = targetWords.filter((word) => normalizedProduct.includes(word));
+        const matchedWords = targetWords.filter((word) =>
+          normalizedProduct.includes(word),
+        );
         const matchRatio = matchedWords.length / targetWords.length;
-        
+
         // 주요 키워드가 모두 포함되면 높은 점수
         if (matchRatio >= 0.8) {
           return 70 + matchRatio * 10;
@@ -266,9 +284,12 @@ async function getProducts() {
       // 5. 공통 단어 개수 기반 점수
       const productWords = new Set(normalizedProduct.split(/\s+/));
       const targetWordsSet = new Set(normalizedTarget.split(/\s+/));
-      const commonWords = [...productWords].filter((word) => targetWordsSet.has(word));
-      const commonRatio = commonWords.length / Math.max(productWords.size, targetWordsSet.size);
-      
+      const commonWords = [...productWords].filter((word) =>
+        targetWordsSet.has(word),
+      );
+      const commonRatio =
+        commonWords.length / Math.max(productWords.size, targetWordsSet.size);
+
       return commonRatio * 40;
     };
 
@@ -288,11 +309,16 @@ async function getProducts() {
         const bestMatch = scoredProducts[0];
 
         if (bestMatch && bestMatch.score >= 50) {
-          console.log(`[HomePage] 상품 ${index + 1}번 매칭 (점수: ${bestMatch.score.toFixed(1)}):`, {
-            target: targetName,
-            found: bestMatch.productName,
-            slug: (bestMatch.product as { slug: string }).slug,
-          });
+          console.log(
+            `[HomePage] 상품 ${
+              index + 1
+            }번 매칭 (점수: ${bestMatch.score.toFixed(1)}):`,
+            {
+              target: targetName,
+              found: bestMatch.productName,
+              slug: (bestMatch.product as { slug: string }).slug,
+            },
+          );
           return bestMatch.product;
         } else {
           console.warn(`[HomePage] 상품 ${index + 1}번 매칭 실패:`, {
@@ -305,7 +331,9 @@ async function getProducts() {
           return null;
         }
       })
-      .filter((product): product is NonNullable<typeof product> => product !== null);
+      .filter(
+        (product): product is NonNullable<typeof product> => product !== null,
+      );
 
     console.log("[HomePage] 전체상품 필터링 결과:", {
       total: allProductsRaw.length,
@@ -473,7 +501,6 @@ export default async function HomePage() {
                   style={{ marginLeft: "-100px" }}
                 >
                   {/* 장식적인 원들 */}
-                  <div className="absolute -top-4 -left-4 w-24 h-24 bg-white/30 rounded-full" />
                   <div
                     className="absolute w-32 h-32 bg-[#ff6b9d]/20 rounded-full"
                     style={{
@@ -502,9 +529,8 @@ export default async function HomePage() {
         </section>
 
         {/* 베스트 상품 섹션 */}
-        <section className="py-12 bg-white/30 relative overflow-hidden">
+        <section className="py-12 bg-white/70 relative overflow-hidden">
           {/* 장식용 원형 요소 */}
-          <div className="absolute -top-4 -left-4 w-24 h-24 bg-white/30 rounded-full"></div>
           <div className="absolute -bottom-4 -right-4 w-32 h-32 bg-white/30 rounded-full"></div>
           <div className="shop-container">
             <div className="flex flex-col items-center justify-center mb-8">
@@ -513,7 +539,9 @@ export default async function HomePage() {
                   <TrendingUp className="w-5 h-5 text-[#F57F17]" />
                 </div>
                 <div className="text-center">
-                  <h2 className="text-2xl font-bold text-[#ff6b9d]">베스트 상품</h2>
+                  <h2 className="text-2xl font-bold text-[#ff6b9d]">
+                    베스트 상품
+                  </h2>
                   <p className="text-sm text-pink-500">가장 인기있는 상품들</p>
                 </div>
               </div>
@@ -546,7 +574,7 @@ export default async function HomePage() {
         </section>
 
         {/* 전체상품 섹션 */}
-        <section className="py-12 bg-[#ffeef5]">
+        <section className="py-12 bg-[#fff9f7]">
           <div className="shop-container">
             <div className="flex flex-col items-center justify-center mb-8">
               <div className="flex items-center gap-3 mb-4 justify-center">
@@ -554,7 +582,9 @@ export default async function HomePage() {
                   <Sparkles className="w-5 h-5 text-[#ff6b9d]" />
                 </div>
                 <div className="text-center">
-                  <h2 className="text-2xl font-bold text-[#ff6b9d]">전체상품</h2>
+                  <h2 className="text-2xl font-bold text-[#ff6b9d]">
+                    전체상품
+                  </h2>
                   <p className="text-sm text-pink-500">
                     모든 상품을 확인하세요
                   </p>
