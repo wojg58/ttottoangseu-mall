@@ -454,9 +454,14 @@ export default async function HomePage() {
                 className="flex-1 text-center md:text-left"
                 style={{ width: "700px", maxWidth: "700px", minWidth: "700px" }}
               >
-                <div className="inline-flex items-center gap-2 bg-white/50 rounded-full px-4 py-2 mb-4">
+                <div
+                  className="inline-flex items-center gap-2 rounded-full px-4 py-2 mb-4"
+                  style={{
+                    backgroundColor: "color-mix(in srgb, var(--color-white) 60%, transparent)",
+                  }}
+                >
                   <Sparkles className="w-4 h-4 text-[#ff6b9d]" />
-                  <span className="text-sm text-black font-medium">
+                  <span className="text-[18px] text-black font-medium">
                     귀여운 정품 캐릭터 키덜트 소품샵
                   </span>
                 </div>

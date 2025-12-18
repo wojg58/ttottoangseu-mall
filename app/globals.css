@@ -105,6 +105,9 @@
   --radius: 0.625rem;
   --font-shop: "LineSeed", "Gowun Dodum", system-ui, sans-serif;
 
+  /* 색상 변수 */
+  --color-white: #ffffff;
+
   /* 또또앙스 화이트/핑크 테마 */
   --background: #fff9f7;
   --foreground: #4a3f48;
