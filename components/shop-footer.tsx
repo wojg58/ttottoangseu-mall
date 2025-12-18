@@ -8,7 +8,7 @@ import Image from "next/image";
 
 export default function ShopFooter() {
   return (
-    <footer className="bg-white text-[#4a3f48] mt-16 border-t border-gray-200">
+    <footer className="bg-white text-[#4a3f48] mt-0 border-t border-gray-200">
       <div className="shop-container py-12">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* 브랜드 정보 */}
