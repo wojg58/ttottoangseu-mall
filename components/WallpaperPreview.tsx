@@ -14,7 +14,8 @@
 import Link from "next/link";
 
 type Props = {
-  src: string; // 배경화면 이미지 URL (모바일용)
+  src: string; // 배경화면 이미지 URL (모바일용 - 폰 화면에 표시)
+  bgSrc?: string; // 바탕 배경 이미지 URL (블러 배경용, 선택)
   pcSrc?: string; // PC용 배경화면 이미지 URL (선택)
   alt?: string;
   title?: string; // 제목 (기본: "배경화면")
@@ -23,15 +24,22 @@ type Props = {
 
 export default function WallpaperPreview({
   src,
+  bgSrc,
   pcSrc,
   alt = "wallpaper",
   title = "배경화면",
   description = "스마트폰에 저장해서 예쁘게 써보세요 💗",
 }: Props) {
+  // bgSrc가 없으면 src를 사용
+  const backgroundImage = bgSrc || src;
+
   return (
     <section className="wp">
       {/* 블러 배경 */}
-      <div className="wp__bg" style={{ backgroundImage: `url(${src})` }} />
+      <div
+        className="wp__bg"
+        style={{ backgroundImage: `url(${backgroundImage})` }}
+      />
 
       {/* 콘텐츠 */}
       <div className="wp__inner">
