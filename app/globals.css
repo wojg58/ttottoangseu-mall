@@ -333,14 +333,12 @@
   border-radius: 24px;
 }
 
-/* 뒤 배경: cover + blur */
+/* 뒤 배경: cover */
 .wp__bg {
   position: absolute;
   inset: 0;
   background-size: cover;
   background-position: center;
-  transform: scale(1.08); /* blur 가장자리 티 안 나게 */
-  filter: blur(18px);
 }
 
 /* 배경 위에 살짝 어둡게 + 파스텔 느낌 */
