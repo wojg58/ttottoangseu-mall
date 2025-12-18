@@ -531,25 +531,29 @@ export default async function HomePage() {
                   <p className="text-sm text-pink-500">가장 인기있는 상품들</p>
                 </div>
               </div>
-              <Link
-                href="/products?featured=true"
-                className="text-[#ff6b9d] hover:text-pink-600 hover:underline text-sm flex items-center gap-1"
-              >
-                전체보기
-                <ArrowRight className="w-4 h-4" />
-              </Link>
             </div>
 
             {featuredProducts.length > 0 ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-4 gap-4 md:gap-6">
-                {featuredProducts.map((product, index) => (
-                  <ProductCard
-                    key={product.id}
-                    product={product}
-                    rank={index + 1}
-                  />
-                ))}
-              </div>
+              <>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-4 gap-4 md:gap-6">
+                  {featuredProducts.map((product, index) => (
+                    <ProductCard
+                      key={product.id}
+                      product={product}
+                      rank={index + 1}
+                    />
+                  ))}
+                </div>
+                <div className="flex justify-center mt-8">
+                  <Link
+                    href="/products?featured=true"
+                    className="text-[#ff6b9d] hover:text-pink-600 hover:underline text-sm flex items-center gap-1"
+                  >
+                    전체보기
+                    <ArrowRight className="w-4 h-4" />
+                  </Link>
+                </div>
+              </>
             ) : (
               <div className="text-center py-12 bg-[#ffeef5] rounded-xl">
                 <span className="text-4xl mb-4 block">🎀</span>
@@ -576,17 +580,21 @@ export default async function HomePage() {
                   </p>
                 </div>
               </div>
-              <Link
-                href="/products"
-                className="text-[#ff6b9d] hover:text-pink-600 hover:underline text-sm flex items-center gap-1"
-              >
-                전체보기
-                <ArrowRight className="w-4 h-4" />
-              </Link>
             </div>
 
             {allProducts.length > 0 ? (
-              <AllProductsSection initialProducts={allProducts} />
+              <>
+                <AllProductsSection initialProducts={allProducts} />
+                <div className="flex justify-center mt-8">
+                  <Link
+                    href="/products"
+                    className="text-[#ff6b9d] hover:text-pink-600 hover:underline text-sm flex items-center gap-1"
+                  >
+                    전체보기
+                    <ArrowRight className="w-4 h-4" />
+                  </Link>
+                </div>
+              </>
             ) : (
               <div className="text-center py-12 bg-white rounded-xl">
                 <span className="text-4xl mb-4 block">✨</span>
