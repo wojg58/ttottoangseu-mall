@@ -614,17 +614,6 @@ export default async function HomePage() {
         <section className="py-16">
           <div className="shop-container">
             <div className="text-center">
-              {/* 2026 이미지 */}
-              <div className="relative w-full max-w-4xl mx-auto mb-6">
-                <Image
-                  src="/image/2026.png"
-                  alt="2026 새해 축하"
-                  width={800}
-                  height={600}
-                  className="w-full h-auto object-contain floating-animation"
-                  priority
-                />
-              </div>
               {/* 캘린더 이미지 */}
               <div className="relative w-full max-w-4xl mx-auto">
                 <Image
@@ -632,7 +621,7 @@ export default async function HomePage() {
                   alt="캘린더"
                   width={800}
                   height={600}
-                  className="w-full h-auto object-contain"
+                  className="w-full h-auto object-contain floating-animation"
                   priority
                 />
               </div>
