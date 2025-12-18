@@ -442,3 +442,134 @@ export async function savePaymentInfo(
     return { success: false, message: "결제 처리에 실패했습니다." };
   }
 }
+
+/**
+ * 주문 취소
+ * - pending, confirmed 상태의 주문만 취소 가능
+ * - 재고 복구
+ * - 쿠폰 복구 (사용된 쿠폰이 있다면)
+ */
+export async function cancelOrder(
+  orderId: string,
+): Promise<{ success: boolean; message: string }> {
+  console.group("[cancelOrder] 주문 취소 요청");
+  console.log("주문 ID:", orderId);
+
+  try {
+    const userId = await getCurrentUserId();
+    if (!userId) {
+      console.log("로그인 필요");
+      console.groupEnd();
+      return { success: false, message: "로그인이 필요합니다." };
+    }
+
+    const supabase = await createClient();
+
+    // 주문 조회
+    const { data: order, error: orderError } = await supabase
+      .from("orders")
+      .select("*")
+      .eq("id", orderId)
+      .eq("user_id", userId)
+      .single();
+
+    if (orderError || !order) {
+      console.error("주문 조회 에러:", orderError);
+      console.groupEnd();
+      return { success: false, message: "주문을 찾을 수 없습니다." };
+    }
+
+    // 취소 가능한 상태 확인
+    if (order.status === "cancelled") {
+      console.log("이미 취소된 주문");
+      console.groupEnd();
+      return { success: false, message: "이미 취소된 주문입니다." };
+    }
+
+    if (order.status === "shipped" || order.status === "delivered") {
+      console.log("배송 중이거나 완료된 주문은 취소 불가");
+      console.groupEnd();
+      return {
+        success: false,
+        message: "배송 중이거나 배송 완료된 주문은 취소할 수 없습니다.",
+      };
+    }
+
+    // 주문 아이템 조회
+    const { data: orderItems, error: itemsError } = await supabase
+      .from("order_items")
+      .select("*")
+      .eq("order_id", orderId);
+
+    if (itemsError) {
+      console.error("주문 아이템 조회 에러:", itemsError);
+      console.groupEnd();
+      return { success: false, message: "주문 정보 조회에 실패했습니다." };
+    }
+
+    // 재고 복구
+    if (orderItems && orderItems.length > 0) {
+      console.log("재고 복구 중...");
+      for (const item of orderItems) {
+        // 상품 재고 조회
+        const { data: product } = await supabase
+          .from("products")
+          .select("stock")
+          .eq("id", item.product_id)
+          .single();
+
+        if (product) {
+          await supabase
+            .from("products")
+            .update({ stock: product.stock + item.quantity })
+            .eq("id", item.product_id);
+          console.log(
+            `재고 복구: ${item.product_name} +${item.quantity}개`,
+          );
+        }
+      }
+    }
+
+    // 쿠폰 복구 (사용된 쿠폰이 있다면)
+    if (order.coupon_id) {
+      console.log("쿠폰 복구 중...", order.coupon_id);
+      const { error: couponError } = await supabase
+        .from("coupons")
+        .update({
+          status: "active",
+          used_at: null,
+          order_id: null,
+        })
+        .eq("id", order.coupon_id);
+
+      if (couponError) {
+        console.error("쿠폰 복구 에러:", couponError);
+      } else {
+        console.log("쿠폰 복구 완료");
+      }
+    }
+
+    // 주문 상태를 cancelled로 변경
+    const { error: updateError } = await supabase
+      .from("orders")
+      .update({ status: "cancelled" })
+      .eq("id", orderId);
+
+    if (updateError) {
+      console.error("주문 취소 에러:", updateError);
+      console.groupEnd();
+      return { success: false, message: "주문 취소에 실패했습니다." };
+    }
+
+    revalidatePath("/mypage/orders");
+    revalidatePath(`/mypage/orders/${orderId}`);
+
+    console.log("✅ 주문 취소 완료:", order.order_number);
+    console.groupEnd();
+    return { success: true, message: "주문이 취소되었습니다." };
+  } catch (error) {
+    console.error("❌ 주문 취소 중 예외 발생:", error);
+    console.groupEnd();
+    return { success: false, message: "주문 취소 중 오류가 발생했습니다." };
+  }
+}

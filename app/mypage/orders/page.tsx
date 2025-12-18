@@ -10,6 +10,7 @@ import { Home, Package, ChevronRight } from "lucide-react";
 import { getOrders } from "@/actions/orders";
 import DateDisplay from "@/components/date-display";
 import NumberDisplay from "@/components/number-display";
+import OrderCancelButton from "@/components/order-cancel-button";
 
 export default async function OrdersPage() {
   const { userId } = await auth();
@@ -43,62 +44,71 @@ export default async function OrdersPage() {
         {orders.length > 0 ? (
           <div className="space-y-4">
             {orders.map((order) => (
-              <Link
+              <div
                 key={order.id}
-                href={`/mypage/orders/${order.id}`}
-                className="block bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition-shadow"
+                className="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition-shadow"
               >
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <span className="text-lg font-bold text-[#4a3f48]">
-                      {order.order_number}
-                    </span>
-                    <DateDisplay
-                      date={order.created_at}
-                      format="datetime"
-                      className="text-sm text-[#8b7d84]"
-                    />
-                  </div>
-                  <span
-                    className={`px-3 py-1 rounded-full text-sm font-medium ${
-                      order.status === "delivered"
-                        ? "bg-green-100 text-green-600"
-                        : order.status === "shipped"
-                        ? "bg-blue-100 text-blue-600"
-                        : order.status === "cancelled"
-                        ? "bg-gray-100 text-gray-600"
-                        : "bg-[#ffeef5] text-[#ff6b9d]"
-                    }`}
-                  >
-                    {order.status === "pending" && "결제 대기"}
-                    {order.status === "confirmed" && "결제 완료"}
-                    {order.status === "preparing" && "상품 준비중"}
-                    {order.status === "shipped" && "배송중"}
-                    {order.status === "delivered" && "배송 완료"}
-                    {order.status === "cancelled" && "주문 취소"}
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-between pt-4 border-t border-[#f5d5e3]">
-                  <div>
-                    <p className="text-sm text-[#8b7d84]">배송지</p>
-                    <p className="text-[#4a3f48]">
-                      {order.shipping_name} · {order.shipping_address}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div className="text-right">
-                      <p className="text-sm text-[#8b7d84]">결제금액</p>
-                      <NumberDisplay
-                        value={order.total_amount}
-                        suffix="원"
-                        className="text-lg font-bold text-[#ff6b9d]"
+                <Link
+                  href={`/mypage/orders/${order.id}`}
+                  className="block"
+                >
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <span className="text-lg font-bold text-[#4a3f48]">
+                        {order.order_number}
+                      </span>
+                      <DateDisplay
+                        date={order.created_at}
+                        format="datetime"
+                        className="text-sm text-[#8b7d84]"
                       />
                     </div>
-                    <ChevronRight className="w-5 h-5 text-[#8b7d84]" />
+                    <span
+                      className={`px-3 py-1 rounded-full text-sm font-medium ${
+                        order.status === "delivered"
+                          ? "bg-green-100 text-green-600"
+                          : order.status === "shipped"
+                          ? "bg-blue-100 text-blue-600"
+                          : order.status === "cancelled"
+                          ? "bg-gray-100 text-gray-600"
+                          : "bg-[#ffeef5] text-[#ff6b9d]"
+                      }`}
+                    >
+                      {order.status === "pending" && "결제 대기"}
+                      {order.status === "confirmed" && "결제 완료"}
+                      {order.status === "preparing" && "상품 준비중"}
+                      {order.status === "shipped" && "배송중"}
+                      {order.status === "delivered" && "배송 완료"}
+                      {order.status === "cancelled" && "주문 취소"}
+                    </span>
                   </div>
+
+                  <div className="flex items-center justify-between pt-4 border-t border-[#f5d5e3]">
+                    <div>
+                      <p className="text-sm text-[#8b7d84]">배송지</p>
+                      <p className="text-[#4a3f48]">
+                        {order.shipping_name} · {order.shipping_address}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <div className="text-right">
+                        <p className="text-sm text-[#8b7d84]">결제금액</p>
+                        <NumberDisplay
+                          value={order.total_amount}
+                          suffix="원"
+                          className="text-lg font-bold text-[#ff6b9d]"
+                        />
+                      </div>
+                      <ChevronRight className="w-5 h-5 text-[#8b7d84]" />
+                    </div>
+                  </div>
+                </Link>
+                
+                {/* 취소 버튼 */}
+                <div className="mt-4 pt-4 border-t border-[#f5d5e3]">
+                  <OrderCancelButton orderId={order.id} orderStatus={order.status} />
                 </div>
-              </Link>
+              </div>
             ))}
           </div>
         ) : (

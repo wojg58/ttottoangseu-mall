@@ -10,6 +10,7 @@ import { Home, Package, MapPin, CreditCard, Phone } from "lucide-react";
 import { getOrderById } from "@/actions/orders";
 import DateDisplay from "@/components/date-display";
 import NumberDisplay from "@/components/number-display";
+import OrderCancelButton from "@/components/order-cancel-button";
 
 interface OrderDetailPageProps {
   params: Promise<{
@@ -185,6 +186,11 @@ export default async function OrderDetailPage({
                   </div>
                 )}
               </div>
+            </div>
+
+            {/* 주문 취소 버튼 */}
+            <div className="bg-white rounded-xl shadow-sm p-6">
+              <OrderCancelButton orderId={order.id} orderStatus={order.status} />
             </div>
           </div>
         </div>
