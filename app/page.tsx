@@ -612,23 +612,18 @@ export default async function HomePage() {
         </section>
 
         {/* 브랜드 스토리 배너 */}
-        <section className="py-16">
-          <div className="w-full">
-            <div className="text-center">
-              {/* 캘린더 이미지 */}
-              <div className="relative w-full">
-                <FloatingImage
-                  src="/image/calendar_01.png"
-                  alt="캘린더"
-                  width={1920}
-                  height={1080}
-                  className="w-full h-auto object-cover"
-                  priority
-                  quality={90}
-                  sizes="100vw"
-                />
-              </div>
-            </div>
+        <section className="w-full">
+          <div className="relative w-full">
+            <FloatingImage
+              src="/image/calendar_01.png"
+              alt="캘린더"
+              width={1920}
+              height={1080}
+              className="w-full h-auto object-cover"
+              priority
+              quality={90}
+              sizes="100vw"
+            />
           </div>
         </section>
       </div>
