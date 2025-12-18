@@ -52,7 +52,7 @@ export default async function CategoryPage({
   const productsResult = await getProducts(filters, page, 40);
 
   return (
-    <main className="py-8">
+    <main className="py-8 bg-white min-h-screen">
       <div className="shop-container">
         {/* 브레드크럼 */}
         <nav className="flex items-center gap-2 text-sm text-[#8b7d84] mb-6">
@@ -72,7 +72,7 @@ export default async function CategoryPage({
         </nav>
 
         {/* 카테고리 헤더 */}
-        <div className="bg-gradient-to-r from-[#ffeef5] to-[#fad2e6] rounded-2xl p-8 mb-8">
+        <div className="bg-white rounded-2xl p-8 mb-8 border border-gray-200">
           <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-3xl font-bold text-[#4a3f48] whitespace-nowrap">
               {category.name}
@@ -156,7 +156,7 @@ export default async function CategoryPage({
                 )}
               </>
             ) : (
-              <div className="text-center py-16 bg-[#ffeef5] rounded-xl">
+              <div className="text-center py-16 bg-white rounded-xl border border-gray-200">
                 <span className="text-6xl mb-4 block">🎀</span>
                 <h3 className="text-lg font-bold text-[#4a3f48] mb-2">
                   상품이 없습니다

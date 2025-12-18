@@ -58,7 +58,7 @@ export default async function ProductsPage({
   if (filters.search) pageTitle = `"${filters.search}" 검색 결과`;
 
   return (
-    <main className="py-8">
+    <main className="py-8 bg-white min-h-screen">
       <div className="shop-container">
         {/* 브레드크럼 */}
         <nav className="flex items-center gap-2 text-sm text-[#8b7d84] mb-6">
@@ -147,7 +147,7 @@ export default async function ProductsPage({
                 )}
               </>
             ) : (
-              <div className="text-center py-16 bg-[#ffeef5] rounded-xl">
+              <div className="text-center py-16 bg-white rounded-xl border border-gray-200">
                 <span className="text-6xl mb-4 block">🎀</span>
                 <h3 className="text-lg font-bold text-[#4a3f48] mb-2">
                   상품이 없습니다
