@@ -341,14 +341,7 @@
   background-position: center;
 }
 
-/* 배경 위에 살짝 어둡게 + 파스텔 느낌 */
-.wp::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: rgba(20, 18, 25, 0.28);
-  backdrop-filter: saturate(1.1);
-}
+/* 배경 오버레이 제거 - 원본 이미지 색상 그대로 표시 */
 
 /* 중앙 정렬 */
 .wp__inner {
