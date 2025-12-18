@@ -134,16 +134,14 @@ export default function ProductCard({ product, rank }: ProductCardProps) {
           )}
           <span className="shop-price">
             {mounted
-              ? displayPrice.toLocaleString("ko-KR")
-              : displayPrice.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
-            }원
+              ? `${displayPrice.toLocaleString("ko-KR")}원`
+              : `${displayPrice.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}원`}
           </span>
           {discountRate > 0 && (
             <span className="shop-price-original">
               {mounted
-                ? product.price.toLocaleString("ko-KR")
-                : product.price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")
-              }원
+                ? `${product.price.toLocaleString("ko-KR")}원`
+                : `${product.price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}원`}
             </span>
           )}
         </div>
