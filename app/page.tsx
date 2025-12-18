@@ -528,7 +528,6 @@ export default async function HomePage() {
                   <h2 className="text-2xl font-bold text-[#ff6b9d]">
                     베스트 상품
                   </h2>
-                  <p className="text-sm text-pink-500">가장 인기있는 상품들</p>
                 </div>
               </div>
             </div>
