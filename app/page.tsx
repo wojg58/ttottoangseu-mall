@@ -437,7 +437,7 @@ export default async function HomePage() {
 
   return (
     <main
-      className="pb-16 relative min-h-screen bg-cover bg-center bg-fixed bg-no-repeat"
+      className="relative min-h-screen bg-cover bg-center bg-fixed bg-no-repeat"
       style={{
         backgroundImage: "url('/f.jpg')",
       }}
@@ -597,7 +597,7 @@ export default async function HomePage() {
         </section>
 
         {/* 브랜드 스토리 배너 */}
-        <section className="w-full py-16 relative bg-white">
+        <section className="w-full pt-16 pb-0 relative bg-white">
           <div className="w-full max-w-[1216px] mx-auto px-4 relative z-10">
             <WallpaperPreview
               src="/image/calendar_mobile_02.png"
