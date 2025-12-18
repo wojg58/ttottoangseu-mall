@@ -34,7 +34,7 @@
 
 /* 핑크 (리뷰 이벤트) */
 .event-banner.pink {
-  background: linear-gradient(90deg, #86efac, #4ade80);
+  background: linear-gradient(90deg, #ffd6e8, #ffb6d5);
 }
 
 /* 블루 (신규가입) - green-200 배경 */
@@ -59,6 +59,11 @@
 .event-banner strong {
   color: #ff5c9a;
   font-weight: 700;
+}
+
+/* 핑크 배너의 strong 태그만 #86efac로 변경 */
+.event-banner.pink strong {
+  color: #86efac;
 }
 
 /* 쿠폰 */
@@ -91,6 +96,11 @@
   margin-top: 4px;
 }
 
+/* 핑크 배너의 쿠폰 strong 태그도 #86efac로 변경 */
+.event-banner.pink .coupon strong {
+  color: #86efac;
+}
+
 /* 쿠폰 찢김 효과 */
 .coupon::before,
 .coupon::after {
@@ -106,7 +116,7 @@
 
 .event-banner.pink .coupon::before,
 .event-banner.pink .coupon::after {
-  background: #86efac;
+  background: #ffd6e8;
 }
 
 .event-banner.blue .coupon::before,
