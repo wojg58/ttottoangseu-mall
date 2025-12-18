@@ -19,8 +19,7 @@ import { createClient } from "@/lib/supabase/server";
 import ProductCard from "@/components/product-card";
 import AllProductsSection from "@/components/all-products-section";
 import EventBanner from "@/components/event-banner";
-import FloatingImage from "@/components/floating-image";
-import CalendarDownloadButtons from "@/components/calendar-download-buttons";
+import WallpaperPreview from "@/components/WallpaperPreview";
 import type { ProductListItem, Category } from "@/types/database";
 
 // 카테고리별 이모지 매핑
@@ -614,20 +613,14 @@ export default async function HomePage() {
 
         {/* 브랜드 스토리 배너 */}
         <section className="w-full py-16">
-          <div className="relative w-full max-w-[1216px] mx-auto px-4">
-            {/* 캘린더 이미지 */}
-            <FloatingImage
-              src="/image/calendar_01.png"
-              alt="캘린더"
-              width={1216}
-              height={684}
-              className="w-full h-auto object-contain"
-              priority
-              quality={90}
-              sizes="(max-width: 1216px) 100vw, 1216px"
+          <div className="w-full max-w-[1216px] mx-auto px-4">
+            <WallpaperPreview
+              src="/image/calendar_mobile_02.png"
+              pcSrc="/image/calendar_01.png"
+              alt="1월 캘린더 배경화면"
+              title="1월 배경화면"
+              description="스마트폰에 저장해서 예쁘게 써보세요 💗"
             />
-            {/* 다운로드 버튼 오버레이 */}
-            <CalendarDownloadButtons />
           </div>
         </section>
       </div>

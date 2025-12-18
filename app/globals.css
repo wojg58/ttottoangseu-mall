@@ -323,3 +323,147 @@
 .floating-animation {
   animation: floatUp 6s ease-in-out infinite;
 }
+
+/* 배경화면 미리보기 컴포넌트 */
+.wp {
+  position: relative;
+  width: 100%;
+  min-height: 520px;
+  overflow: hidden;
+  border-radius: 24px;
+}
+
+/* 뒤 배경: cover + blur */
+.wp__bg {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  transform: scale(1.08); /* blur 가장자리 티 안 나게 */
+  filter: blur(18px);
+}
+
+/* 배경 위에 살짝 어둡게 + 파스텔 느낌 */
+.wp::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(20, 18, 25, 0.28);
+  backdrop-filter: saturate(1.1);
+}
+
+/* 중앙 정렬 */
+.wp__inner {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  gap: 28px;
+  align-items: center;
+  padding: 36px;
+}
+
+/* 폰 목업 */
+.wp__phone {
+  position: relative;
+  width: 320px;
+  aspect-ratio: 9 / 19.5; /* 요즘 폰 비율 느낌 */
+  border-radius: 44px;
+  background: #0b0b10;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+  padding: 10px;
+}
+
+/* 폰 화면 */
+.wp__screen {
+  width: 100%;
+  height: 100%;
+  border-radius: 36px;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+/* 노치 */
+.wp__notch {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  width: 42%;
+  height: 18px;
+  transform: translateX(-50%);
+  border-radius: 999px;
+  background: #0b0b10;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+/* 텍스트/버튼 */
+.wp__actions {
+  color: #fff;
+  max-width: 520px;
+}
+
+.wp__title {
+  margin: 0 0 8px;
+  font-size: 26px;
+  letter-spacing: -0.02em;
+  font-weight: 700;
+}
+
+.wp__desc {
+  margin: 0 0 18px;
+  opacity: 0.9;
+  font-size: 15px;
+}
+
+.wp__btns {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.wp__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 44px;
+  padding: 0 16px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #111;
+  text-decoration: none;
+  font-weight: 700;
+  transition: background 0.2s ease;
+}
+
+.wp__btn:hover {
+  background: #fff;
+}
+
+.wp__btn--ghost {
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+}
+
+.wp__btn--ghost:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* 모바일 반응형 */
+@media (max-width: 860px) {
+  .wp__inner {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    text-align: center;
+    padding: 24px;
+  }
+
+  .wp__actions {
+    max-width: 560px;
+  }
+
+  .wp__phone {
+    width: 280px;
+  }
+}
