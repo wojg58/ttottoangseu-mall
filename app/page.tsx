@@ -619,7 +619,7 @@ export default async function HomePage() {
               alt="캘린더"
               width={1920}
               height={1080}
-              className="w-full h-auto object-cover"
+              className="w-full h-auto object-contain"
               priority
               quality={90}
               sizes="100vw"
