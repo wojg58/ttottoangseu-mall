@@ -49,7 +49,7 @@ export default function WallpaperDownloadPage() {
               />
             </div>
             <a
-              href="/image/calendar_mobile_02.png"
+              href="/image/calendar_mobile_jp.jpg"
               download
               className="inline-flex items-center justify-center gap-2 w-full px-4 py-3 bg-[#ff6b9d] text-white rounded-lg font-bold hover:bg-[#ff5088] transition-colors"
             >
