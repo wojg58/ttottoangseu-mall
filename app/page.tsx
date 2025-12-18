@@ -620,12 +620,12 @@ export default async function HomePage() {
                 <FloatingImage
                   src="/image/calendar.png"
                   alt="캘린더"
-                  width={1200}
-                  height={900}
+                  width={800}
+                  height={600}
                   className="w-full h-auto object-contain"
                   priority
-                  quality={60}
-                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1200px"
+                  quality={90}
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 800px"
                 />
               </div>
             </div>
