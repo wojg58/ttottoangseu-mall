@@ -26,7 +26,7 @@ export default function SignupEventPage() {
         </Link>
 
         {/* 이벤트 헤더 */}
-        <div className="bg-gradient-to-r from-[#fef9c3] to-[#fde68a] rounded-2xl p-8 md:p-12 text-center mb-8">
+        <div className="bg-gradient-to-r from-[#bbf7d0] to-[#86efac] rounded-2xl p-8 md:p-12 text-center mb-8">
           <div className="inline-flex items-center justify-center w-20 h-20 bg-white rounded-full mb-4">
             <Gift className="w-10 h-10 text-[#ff6b9d]" />
           </div>
@@ -45,7 +45,7 @@ export default function SignupEventPage() {
           </h2>
           <ol className="space-y-4 mb-8">
             <li className="flex gap-4">
-              <span className="flex-shrink-0 w-8 h-8 bg-[#fef9c3] text-[#4a3f48] rounded-full flex items-center justify-center font-bold">
+              <span className="flex-shrink-0 w-8 h-8 bg-[#bbf7d0] text-[#4a3f48] rounded-full flex items-center justify-center font-bold">
                 1
               </span>
               <div>
@@ -58,7 +58,7 @@ export default function SignupEventPage() {
               </div>
             </li>
             <li className="flex gap-4">
-              <span className="flex-shrink-0 w-8 h-8 bg-[#fef9c3] text-[#4a3f48] rounded-full flex items-center justify-center font-bold">
+              <span className="flex-shrink-0 w-8 h-8 bg-[#bbf7d0] text-[#4a3f48] rounded-full flex items-center justify-center font-bold">
                 2
               </span>
               <div>
@@ -71,7 +71,7 @@ export default function SignupEventPage() {
               </div>
             </li>
             <li className="flex gap-4">
-              <span className="flex-shrink-0 w-8 h-8 bg-[#fef9c3] text-[#4a3f48] rounded-full flex items-center justify-center font-bold">
+              <span className="flex-shrink-0 w-8 h-8 bg-[#bbf7d0] text-[#4a3f48] rounded-full flex items-center justify-center font-bold">
                 3
               </span>
               <div>
@@ -85,7 +85,7 @@ export default function SignupEventPage() {
             </li>
           </ol>
 
-          <div className="bg-[#fef9c3] rounded-xl p-6 mb-8">
+          <div className="bg-[#bbf7d0] rounded-xl p-6 mb-8">
             <h3 className="text-lg font-bold text-[#4a3f48] mb-2">
               이벤트 안내
             </h3>
