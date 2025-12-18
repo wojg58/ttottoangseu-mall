@@ -22,10 +22,7 @@ export default function ShopFooter() {
                 className="object-contain"
               />
               <div>
-                <h3 className="text-lg font-bold brand-text-logo text-[#4a3f48]">또또앙스</h3>
-                <p className="text-[#8b7d84] text-xs">
-                  두근거리는 설렘 (*´v`*) Love
-                </p>
+                <h3 className="text-[45px] font-bold brand-text-logo text-[#4a3f48]">또또앙스</h3>
               </div>
             </div>
             <div className="text-[#4a3f48] text-sm leading-relaxed whitespace-pre-line">
