@@ -340,7 +340,7 @@
 .wp__bg {
   position: absolute;
   inset: 0;
-  background-size: contain;
+  background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
 }
@@ -351,22 +351,26 @@
 .wp__inner {
   position: relative;
   z-index: 1;
-  display: grid;
-  grid-template-columns: 360px 1fr;
-  gap: 28px;
+  display: flex;
+  flex-direction: column;
   align-items: center;
+  justify-content: center;
+  min-height: 520px;
   padding: 36px;
+  gap: 28px;
 }
 
 /* 폰 목업 */
 .wp__phone {
   position: relative;
   width: 320px;
+  max-width: 100%;
   aspect-ratio: 9 / 19.5; /* 요즘 폰 비율 느낌 */
   border-radius: 44px;
   background: #0b0b10;
   box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
   padding: 10px;
+  flex-shrink: 0;
 }
 
 /* 폰 화면 */
@@ -396,7 +400,8 @@
 .wp__actions {
   color: #000;
   max-width: 520px;
-  transform: translate(70px, 250px);
+  width: 100%;
+  text-align: center;
 }
 
 .wp__title {
@@ -449,14 +454,12 @@
 /* 모바일 반응형 */
 @media (max-width: 860px) {
   .wp__inner {
-    grid-template-columns: 1fr;
-    justify-items: center;
-    text-align: center;
     padding: 24px;
+    gap: 20px;
   }
 
   .wp__actions {
-    max-width: 560px;
+    max-width: 100%;
   }
 
   .wp__phone {

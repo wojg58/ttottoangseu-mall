@@ -436,12 +436,7 @@ export default async function HomePage() {
   const { featuredProducts, allProducts } = await getProducts();
 
   return (
-    <main
-      className="pb-16 relative min-h-screen bg-cover bg-center bg-fixed bg-no-repeat"
-      style={{
-        backgroundImage: "url('/f.jpg')",
-      }}
-    >
+    <main className="pb-16 relative min-h-screen">
       {/* 배경 오버레이 (텍스트 가독성을 위해) */}
       <div className="absolute inset-0 bg-white/30 backdrop-blur-[2px] pointer-events-none"></div>
       <div className="relative z-10">
