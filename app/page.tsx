@@ -610,24 +610,6 @@ export default async function HomePage() {
           </div>
         </section>
 
-        {/* 브랜드 스토리 배너 */}
-        <section className="py-16">
-          <div className="shop-container">
-            <div className="bg-gradient-to-r from-[#fad2e6] to-[#ffc0cb] rounded-2xl p-8 md:p-12 text-center relative overflow-hidden">
-              {/* 2026 이미지 */}
-              <div className="relative w-full max-w-4xl mx-auto">
-                <Image
-                  src="/image/2026.png"
-                  alt="2026 새해 축하"
-                  width={800}
-                  height={600}
-                  className="w-full h-auto object-contain"
-                  priority
-                />
-              </div>
-            </div>
-          </div>
-        </section>
       </div>
     </main>
   );
