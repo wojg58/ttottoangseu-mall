@@ -60,20 +60,18 @@ export default function ProductCard({ product, rank }: ProductCardProps) {
   return (
     <Link href={`/products/${product.slug}`} className="product-card group">
       {/* 이미지 영역 */}
-      <div className="relative aspect-square mb-3 rounded-xl overflow-hidden bg-[#f5f5f5]">
+      <div className="relative aspect-square mb-3 rounded-xl overflow-hidden bg-[#f5f5f5] border border-gray-300">
         {/* 상품 이미지 */}
-        <div className="absolute inset-8">
-          <Image
-            src={
-              product.primary_image?.image_url ||
-              "https://placehold.co/600x600/fad2e6/333333?text=No+Image"
-            }
-            alt={product.primary_image?.alt_text || product.name}
-            fill
-            className="product-image"
-            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
-          />
-        </div>
+        <Image
+          src={
+            product.primary_image?.image_url ||
+            "https://placehold.co/600x600/fad2e6/333333?text=No+Image"
+          }
+          alt={product.primary_image?.alt_text || product.name}
+          fill
+          className="product-image"
+          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
+        />
 
         {/* 순위 뱃지 (베스트 상품인 경우) */}
         {rank && (
