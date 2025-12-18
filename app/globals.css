@@ -341,7 +341,7 @@
 .wp__bg {
   position: absolute;
   inset: 0;
-  background-size: cover;
+  background-size: 100% auto;
   background-position: center;
   background-repeat: no-repeat;
 }
@@ -403,6 +403,7 @@
   max-width: 520px;
   width: 100%;
   text-align: left;
+  transform: translate(300px, 500px);
 }
 
 .wp__title {
