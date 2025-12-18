@@ -30,22 +30,20 @@ export default function ShopFooter() {
             </div>
             <div className="text-[#4a3f48] text-sm leading-relaxed whitespace-pre-line">
               <p className="mb-2">
-                상호명 <span className="text-black font-bold">또또앙스</span>{" "}
-                대표자명 <span className="text-black font-bold">우수정</span>
+                <span className="text-black font-bold">상호명</span> 또또앙스{" "}
+                <span className="text-black font-bold">대표자명</span> 우수정
               </p>
               <p className="mb-2">
-                대표전화 <span className="text-black font-bold">010-4112-6168</span>{" "}
-                이메일 <span className="text-black font-bold">ttottoangseu@naver.com</span>
+                <span className="text-black font-bold">대표전화</span> 010-4112-6168{" "}
+                <span className="text-black font-bold">이메일</span> ttottoangseu@naver.com
               </p>
               <p className="mb-2">
-                사업자 등록번호 <span className="text-black font-bold">561-14-02359</span>{" "}
-                통신판매업 신고번호 <span className="text-black font-bold">2023-경기안성-0595</span>
+                <span className="text-black font-bold">사업자 등록번호</span> 561-14-02359{" "}
+                <span className="text-black font-bold">통신판매업 신고번호</span> 2023-경기안성-0595
               </p>
               <p>
-                사업장 주소{" "}
-                <span className="text-black font-bold">
-                  경기도 안성시 공도읍 공도로 51-17, 104동 1502호(공도우미린더퍼스트)
-                </span>
+                <span className="text-black font-bold">사업장 주소</span>{" "}
+                경기도 안성시 공도읍 공도로 51-17, 104동 1502호(공도우미린더퍼스트)
               </p>
             </div>
           </div>
