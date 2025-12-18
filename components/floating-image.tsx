@@ -39,16 +39,18 @@ export default function FloatingImage({
   }, []);
 
   return (
-    <Image
-      src={src}
-      alt={alt}
-      width={width}
-      height={height}
-      className={`${className} ${mounted ? "floating-animation" : ""}`}
-      priority={priority}
-      quality={quality}
-      sizes={sizes}
-    />
+    <div className="relative w-full">
+      <Image
+        src={src}
+        alt={alt}
+        width={width}
+        height={height}
+        className={`${className} ${mounted ? "floating-animation" : ""}`}
+        priority={priority}
+        quality={quality}
+        sizes={sizes}
+      />
+    </div>
   );
 }
 
