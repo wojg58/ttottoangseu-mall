@@ -601,7 +601,7 @@ export default async function HomePage() {
         </section>
 
         {/* 브랜드 스토리 배너 */}
-        <section className="w-full pt-16 pb-0 relative bg-white">
+        <section className="w-full pt-16 pb-0 relative bg-white border-t border-gray-200">
           <div className="w-full max-w-[1216px] mx-auto relative z-10">
             <WallpaperPreview
               src="/image/calendar_mobile_02.png"
