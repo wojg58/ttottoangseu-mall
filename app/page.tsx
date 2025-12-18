@@ -19,6 +19,7 @@ import { createClient } from "@/lib/supabase/server";
 import ProductCard from "@/components/product-card";
 import AllProductsSection from "@/components/all-products-section";
 import EventBanner from "@/components/event-banner";
+import FloatingImage from "@/components/floating-image";
 import type { ProductListItem, Category } from "@/types/database";
 
 // 카테고리별 이모지 매핑
@@ -616,12 +617,12 @@ export default async function HomePage() {
             <div className="text-center">
               {/* 캘린더 이미지 */}
               <div className="relative w-full max-w-4xl mx-auto">
-                <Image
+                <FloatingImage
                   src="/image/calendar.png"
                   alt="캘린더"
                   width={800}
                   height={600}
-                  className="w-full h-auto object-contain floating-animation"
+                  className="w-full h-auto object-contain"
                   priority
                   quality={75}
                   sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 800px"
