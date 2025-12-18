@@ -30,7 +30,7 @@ export default function ProductImageGallery({
   // 이미지가 없는 경우
   if (!images || images.length === 0) {
     return (
-      <div className="aspect-square bg-[#ffeef5] rounded-xl flex items-center justify-center">
+      <div className="aspect-square bg-[#f5f5f5] rounded-xl flex items-center justify-center">
         <div className="text-center">
           <span className="text-6xl block mb-4">🎀</span>
           <p className="text-[#8b7d84]">이미지 준비 중</p>
@@ -44,12 +44,13 @@ export default function ProductImageGallery({
   return (
     <div className="space-y-4">
       {/* 메인 이미지 */}
-      <div className="relative aspect-square bg-[#ffeef5] rounded-xl overflow-hidden">
+      <div className="relative aspect-square bg-[#f5f5f5] rounded-xl overflow-hidden p-4">
         <Image
           src={currentImage.image_url}
           alt={currentImage.alt_text || productName}
           fill
-          className="object-cover"
+          className="object-contain"
+          style={{ objectFit: "contain" }}
           sizes="(max-width: 1024px) 100vw, 50vw"
           priority
         />
@@ -65,7 +66,7 @@ export default function ProductImageGallery({
                 setSelectedIndex(index);
                 console.log("[ProductImageGallery] 이미지 선택:", index);
               }}
-              className={`relative w-20 h-20 shrink-0 rounded-lg overflow-hidden border-2 transition-colors ${
+              className={`relative w-20 h-20 shrink-0 rounded-lg overflow-hidden border-2 bg-[#f5f5f5] p-1 transition-colors ${
                 selectedIndex === index
                   ? "border-[#ff6b9d]"
                   : "border-transparent hover:border-[#fad2e6]"
@@ -75,7 +76,8 @@ export default function ProductImageGallery({
                 src={image.image_url}
                 alt={image.alt_text || `${productName} ${index + 1}`}
                 fill
-                className="object-cover"
+                className="object-contain"
+                style={{ objectFit: "contain" }}
                 sizes="80px"
               />
             </button>

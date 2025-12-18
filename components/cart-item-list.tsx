@@ -89,7 +89,7 @@ export default function CartItemList({ items }: CartItemListProps) {
                 href={`/products/${item.product.slug}`}
                 className="shrink-0"
               >
-                <div className="relative w-24 h-24 rounded-lg overflow-hidden bg-[#ffeef5]">
+                <div className="relative w-24 h-24 rounded-lg overflow-hidden bg-[#f5f5f5] p-2">
                   <Image
                     src={
                       item.primary_image?.image_url ||
@@ -97,7 +97,8 @@ export default function CartItemList({ items }: CartItemListProps) {
                     }
                     alt={item.product.name}
                     fill
-                    className="object-cover"
+                    className="object-contain"
+                    style={{ objectFit: "contain" }}
                     sizes="96px"
                   />
                   {isSoldOut && (

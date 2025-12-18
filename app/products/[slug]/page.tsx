@@ -252,7 +252,7 @@ export default async function ProductDetailPage({
                 {detailImages.map((image, index) => (
                   <div
                     key={image.id}
-                    className="relative w-full max-w-4xl mx-auto rounded-xl overflow-hidden bg-[#ffeef5]"
+                    className="relative w-full max-w-4xl mx-auto rounded-xl overflow-hidden bg-[#f5f5f5]"
                   >
                     <div className="relative aspect-video w-full">
                       <Image
