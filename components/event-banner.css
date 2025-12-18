@@ -37,9 +37,9 @@
   background: linear-gradient(90deg, #ffd6e8, #ffb6d5);
 }
 
-/* 블루 (신규가입) - 노란색 배경 */
+/* 블루 (신규가입) - 흐린 초록색 배경 */
 .event-banner.blue {
-  background: linear-gradient(90deg, #fef9c3, #fde68a);
+  background: linear-gradient(90deg, #dcfce7, #bbf7d0);
 }
 
 /* 텍스트 */
@@ -111,7 +111,7 @@
 
 .event-banner.blue .coupon::before,
 .event-banner.blue .coupon::after {
-  background: #fef9c3;
+  background: #dcfce7;
 }
 
 .coupon::before {
