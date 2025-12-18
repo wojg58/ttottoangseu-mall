@@ -597,9 +597,7 @@ export default async function HomePage() {
         </section>
 
         {/* 브랜드 스토리 배너 */}
-        <section className="w-full py-16 relative">
-          {/* 하단 흰색 배경 오버레이 */}
-          <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-white z-0"></div>
+        <section className="w-full py-16 relative bg-white">
           <div className="w-full max-w-[1216px] mx-auto px-4 relative z-10">
             <WallpaperPreview
               src="/image/calendar_mobile_02.png"
