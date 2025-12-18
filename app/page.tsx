@@ -574,9 +574,6 @@ export default async function HomePage() {
                   <h2 className="text-2xl font-bold text-[#ff6b9d]">
                     전체상품
                   </h2>
-                  <p className="text-sm text-pink-500">
-                    모든 상품을 확인하세요
-                  </p>
                 </div>
               </div>
             </div>
