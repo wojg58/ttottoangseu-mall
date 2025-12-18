@@ -267,6 +267,7 @@
 
 .product-image {
   @apply transition-transform duration-300 ease-out;
+  object-fit: contain;
 }
 
 /* 카테고리 네비게이션 스타일 */
