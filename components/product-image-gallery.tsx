@@ -50,7 +50,6 @@ export default function ProductImageGallery({
           alt={currentImage.alt_text || productName}
           fill
           className="object-contain"
-          style={{ objectFit: "contain" }}
           sizes="(max-width: 1024px) 100vw, 50vw"
           priority
         />
@@ -77,7 +76,6 @@ export default function ProductImageGallery({
                 alt={image.alt_text || `${productName} ${index + 1}`}
                 fill
                 className="object-contain"
-                style={{ objectFit: "contain" }}
                 sizes="80px"
               />
             </button>

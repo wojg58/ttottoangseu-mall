@@ -70,7 +70,6 @@ export default function ProductCard({ product, rank }: ProductCardProps) {
           alt={product.primary_image?.alt_text || product.name}
           fill
           className="product-image"
-          style={{ objectFit: "contain" }}
           sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
         />
 

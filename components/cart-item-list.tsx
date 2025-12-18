@@ -8,7 +8,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Minus, Plus, Trash2 } from "lucide-react";
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import {
   updateCartItemQuantity,
   removeFromCart,
@@ -23,6 +23,11 @@ interface CartItemListProps {
 
 export default function CartItemList({ items }: CartItemListProps) {
   const [isPending, startTransition] = useTransition();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleQuantityChange = (itemId: string, newQuantity: number) => {
     if (newQuantity < 1) return;
@@ -98,7 +103,6 @@ export default function CartItemList({ items }: CartItemListProps) {
                     alt={item.product.name}
                     fill
                     className="object-contain"
-                    style={{ objectFit: "contain" }}
                     sizes="96px"
                   />
                   {isSoldOut && (
@@ -129,7 +133,9 @@ export default function CartItemList({ items }: CartItemListProps) {
 
                 {/* 가격 */}
                 <p className="text-base font-bold text-[#4a3f48] mt-2">
-                  {(displayPrice * item.quantity).toLocaleString("ko-KR")}원
+                  {mounted
+                    ? `${(displayPrice * item.quantity).toLocaleString("ko-KR")}원`
+                    : `${(displayPrice * item.quantity).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}원`}
                 </p>
 
                 {/* 수량 조절 */}
