@@ -623,6 +623,8 @@ export default async function HomePage() {
                   height={600}
                   className="w-full h-auto object-contain floating-animation"
                   priority
+                  quality={75}
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 800px"
                 />
               </div>
             </div>
