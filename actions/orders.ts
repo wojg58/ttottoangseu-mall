@@ -47,6 +47,7 @@ export interface CreateOrderInput {
   shippingAddress: string;
   shippingZipCode: string;
   shippingMemo?: string;
+  couponId?: string | null;
 }
 
 // 주문 생성
@@ -165,7 +166,47 @@ export async function createOrder(input: CreateOrderInput): Promise<{
 
     // 배송비 계산
     const shippingFee = totalAmount >= 50000 ? 0 : 3000;
+    const subtotal = totalAmount;
     totalAmount += shippingFee;
+
+    // 쿠폰 할인 적용
+    let couponDiscount = 0;
+    if (input.couponId) {
+      console.log("쿠폰 적용 중:", input.couponId);
+      const { data: coupon, error: couponError } = await supabase
+        .from("coupons")
+        .select("*")
+        .eq("id", input.couponId)
+        .eq("user_id", userId)
+        .eq("status", "active")
+        .single();
+
+      if (!couponError && coupon) {
+        // 만료 확인
+        if (new Date(coupon.expires_at) >= new Date()) {
+          // 최소 주문 금액 확인
+          if (subtotal >= coupon.min_order_amount) {
+            if (coupon.discount_type === "fixed") {
+              couponDiscount = coupon.discount_amount;
+            } else if (coupon.discount_type === "percentage") {
+              couponDiscount = (subtotal * coupon.discount_amount) / 100;
+              if (coupon.max_discount_amount && couponDiscount > coupon.max_discount_amount) {
+                couponDiscount = coupon.max_discount_amount;
+              }
+            }
+            couponDiscount = Math.floor(couponDiscount);
+            totalAmount = Math.max(0, totalAmount - couponDiscount);
+            console.log("쿠폰 할인 적용:", couponDiscount, "원");
+          } else {
+            console.log("최소 주문 금액 미달");
+          }
+        } else {
+          console.log("쿠폰 만료됨");
+        }
+      } else {
+        console.log("쿠폰 조회 실패:", couponError);
+      }
+    }
 
     // 주문 생성
     const orderNumber = generateOrderNumber();
@@ -181,6 +222,7 @@ export async function createOrder(input: CreateOrderInput): Promise<{
         shipping_address: input.shippingAddress,
         shipping_zip_code: input.shippingZipCode,
         shipping_memo: input.shippingMemo ?? null,
+        coupon_id: input.couponId || null,
       })
       .select("id")
       .single();
@@ -220,6 +262,19 @@ export async function createOrder(input: CreateOrderInput): Promise<{
 
     // 장바구니 비우기
     await supabase.from("cart_items").delete().eq("cart_id", cart.id);
+
+    // 쿠폰 사용 처리
+    if (input.couponId && couponDiscount > 0) {
+      console.log("쿠폰 사용 처리:", input.couponId);
+      await supabase
+        .from("coupons")
+        .update({
+          status: "used",
+          used_at: new Date().toISOString(),
+          order_id: order.id,
+        })
+        .eq("id", input.couponId);
+    }
 
     revalidatePath("/cart");
     revalidatePath("/mypage/orders");

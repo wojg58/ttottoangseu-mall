@@ -18,7 +18,7 @@ import { ArrowRight, Sparkles, TrendingUp, Star } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import ProductCard from "@/components/product-card";
 import AllProductsSection from "@/components/all-products-section";
-import CategorySection from "@/components/category-section";
+import EventBanner from "@/components/event-banner";
 import type { ProductListItem, Category } from "@/types/database";
 
 // 카테고리별 이모지 매핑
@@ -432,7 +432,7 @@ async function getProducts() {
 }
 
 export default async function HomePage() {
-  const { featuredProducts, allProducts, categories } = await getProducts();
+  const { featuredProducts, allProducts } = await getProducts();
 
   return (
     <main
@@ -523,8 +523,10 @@ export default async function HomePage() {
               </div>
             </div>
 
-            {/* 카테고리 섹션 */}
-            <CategorySection categories={categories} />
+            {/* 이벤트 배너 */}
+            <div className="shop-container">
+              <EventBanner />
+            </div>
           </div>
         </section>
 

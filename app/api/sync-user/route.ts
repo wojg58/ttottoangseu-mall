@@ -132,6 +132,30 @@ export async function POST(request: Request) {
         );
       }
       result = data;
+
+      // 신규 가입 시 1,000원 쿠폰 발급
+      console.log("🎁 신규 가입 쿠폰 발급 중...");
+      const couponCode = `WELCOME-${result.id.toString().substring(0, 8).toUpperCase()}`;
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 30); // 30일 후 만료
+
+      const { error: couponError } = await supabase.from("coupons").insert({
+        user_id: result.id,
+        code: couponCode,
+        name: "신규가입 환영 쿠폰",
+        discount_type: "fixed",
+        discount_amount: 1000,
+        min_order_amount: 0,
+        status: "active",
+        expires_at: expiresAt.toISOString(),
+      });
+
+      if (couponError) {
+        console.error("❌ 쿠폰 발급 에러:", couponError);
+        // 쿠폰 발급 실패해도 사용자 생성은 성공한 것으로 처리
+      } else {
+        console.log("✅ 쿠폰 발급 완료:", couponCode);
+      }
     }
 
     console.log("✅ Supabase 동기화 완료:", result);

@@ -20,14 +20,71 @@ import type { CartItemWithProduct } from "@/types/database";
 // 현재 사용자의 Supabase user ID 조회
 async function getCurrentUserId(): Promise<string | null> {
   const { userId: clerkUserId } = await auth();
-  if (!clerkUserId) return null;
+  if (!clerkUserId) {
+    console.log("[getCurrentUserId] Clerk 인증 없음");
+    return null;
+  }
 
   const supabase = await createClient();
-  const { data: user } = await supabase
+  let { data: user, error } = await supabase
     .from("users")
     .select("id")
     .eq("clerk_user_id", clerkUserId)
-    .single();
+    .is("deleted_at", null)
+    .maybeSingle();
+
+  // 사용자가 없으면 동기화 시도
+  if (!user && !error) {
+    console.log("[getCurrentUserId] 사용자 없음, 동기화 시도:", clerkUserId);
+    try {
+      // 동기화 로직 직접 실행
+      const { clerkClient } = await import("@clerk/nextjs/server");
+      const { getServiceRoleClient } = await import("@/lib/supabase/service-role");
+      
+      const client = await clerkClient();
+      const clerkUser = await client.users.getUser(clerkUserId);
+      
+      if (clerkUser) {
+        const serviceSupabase = getServiceRoleClient();
+        const userData = {
+          clerk_user_id: clerkUser.id,
+          name: clerkUser.fullName || clerkUser.username || clerkUser.emailAddresses[0]?.emailAddress || "Unknown",
+          email: clerkUser.emailAddresses[0]?.emailAddress || "",
+          role: "customer",
+        };
+
+        const { data: newUser, error: insertError } = await serviceSupabase
+          .from("users")
+          .insert(userData)
+          .select("id")
+          .single();
+
+        if (!insertError && newUser) {
+          console.log("[getCurrentUserId] 동기화 성공, 사용자 ID:", newUser.id);
+          return newUser.id;
+        } else {
+          console.error("[getCurrentUserId] 동기화 실패:", insertError);
+        }
+      }
+    } catch (syncError) {
+      console.error("[getCurrentUserId] 동기화 중 예외:", syncError);
+    }
+    
+    // 동기화 후 다시 조회
+    const { data: retryUser } = await supabase
+      .from("users")
+      .select("id")
+      .eq("clerk_user_id", clerkUserId)
+      .is("deleted_at", null)
+      .maybeSingle();
+    
+    user = retryUser;
+  }
+
+  if (error) {
+    console.error("[getCurrentUserId] 사용자 조회 에러:", error);
+    return null;
+  }
 
   return user?.id ?? null;
 }

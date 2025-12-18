@@ -5,7 +5,7 @@
 
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useForm } from "react-hook-form";
@@ -13,6 +13,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useUser } from "@clerk/nextjs";
 import { createOrder, CreateOrderInput } from "@/actions/orders";
+import { getAvailableCoupons, type Coupon } from "@/actions/coupons";
+import { calculateCouponDiscount } from "@/lib/coupon-utils";
 import type { CartItemWithProduct } from "@/types/database";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -58,8 +60,34 @@ export default function CheckoutForm({
   const [orderId, setOrderId] = useState<string | null>(null);
   const [orderNumber, setOrderNumber] = useState<string | null>(null);
   const [showPaymentWidget, setShowPaymentWidget] = useState(false);
+  const [coupons, setCoupons] = useState<Coupon[]>([]);
+  const [selectedCoupon, setSelectedCoupon] = useState<Coupon | null>(null);
   const router = useRouter();
   const { user, isLoaded } = useUser();
+
+  // 쿠폰 목록 가져오기
+  useEffect(() => {
+    if (isLoaded && user) {
+      console.log("[CheckoutForm] 쿠폰 목록 조회 시작", { userId: user.id });
+      getAvailableCoupons()
+        .then((couponList) => {
+          console.log(`[CheckoutForm] ${couponList.length}개의 쿠폰 조회 완료`, couponList);
+          setCoupons(couponList);
+        })
+        .catch((error) => {
+          console.error("[CheckoutForm] 쿠폰 조회 실패:", error);
+          setCoupons([]);
+        });
+    }
+  }, [isLoaded, user]);
+
+  // 쿠폰 할인 금액 계산
+  const couponDiscount = selectedCoupon
+    ? calculateCouponDiscount(selectedCoupon, subtotal)
+    : 0;
+
+  // 최종 결제 금액 계산 (쿠폰 할인 적용)
+  const finalTotal = Math.max(0, total - couponDiscount);
 
   const form = useForm<CheckoutFormData>({
     resolver: zodResolver(checkoutSchema),
@@ -82,6 +110,7 @@ export default function CheckoutForm({
         shippingAddress: data.shippingAddress,
         shippingZipCode: data.shippingZipCode,
         shippingMemo: data.shippingMemo,
+        couponId: selectedCoupon?.id || null,
       });
 
       if (result.success && result.orderId && result.orderNumber) {
@@ -333,6 +362,44 @@ export default function CheckoutForm({
         <div className="bg-white rounded-xl shadow-sm p-6 sticky top-24">
           <h2 className="text-lg font-bold text-[#4a3f48] mb-6">결제 금액</h2>
 
+          {/* 쿠폰 선택 */}
+          <div className="mb-4 pb-4 border-b border-[#f5d5e3]">
+            <h3 className="text-sm font-bold text-[#4a3f48] mb-2">쿠폰</h3>
+            {coupons.length > 0 ? (
+              <>
+                <select
+                  value={selectedCoupon?.id || ""}
+                  onChange={(e) => {
+                    const coupon = coupons.find((c) => c.id === e.target.value);
+                    setSelectedCoupon(coupon || null);
+                    console.log("[CheckoutForm] 쿠폰 선택:", coupon);
+                  }}
+                  className="w-full px-3 py-2 border border-[#f5d5e3] rounded-lg text-sm focus:border-[#ff6b9d] focus:ring-[#ff6b9d] focus:outline-none"
+                >
+                  <option value="">쿠폰 선택 안함</option>
+                  {coupons.map((coupon) => (
+                    <option key={coupon.id} value={coupon.id}>
+                      {coupon.name} (
+                      {coupon.discount_type === "fixed"
+                        ? `${coupon.discount_amount.toLocaleString("ko-KR")}원 할인`
+                        : `${coupon.discount_amount}% 할인`}
+                      )
+                    </option>
+                  ))}
+                </select>
+                {selectedCoupon && (
+                  <p className="text-xs text-[#ff6b9d] mt-1">
+                    {selectedCoupon.name} 적용됨
+                  </p>
+                )}
+              </>
+            ) : (
+              <p className="text-xs text-[#8b7d84]">
+                사용 가능한 쿠폰이 없습니다.
+              </p>
+            )}
+          </div>
+
           <div className="space-y-3 pb-4 border-b border-[#f5d5e3]">
             <div className="flex justify-between text-sm">
               <span className="text-[#8b7d84]">
@@ -342,6 +409,14 @@ export default function CheckoutForm({
                 {subtotal.toLocaleString("ko-KR")}원
               </span>
             </div>
+            {selectedCoupon && couponDiscount > 0 && (
+              <div className="flex justify-between text-sm">
+                <span className="text-[#8b7d84]">쿠폰 할인</span>
+                <span className="text-[#ff6b9d] font-bold">
+                  -{couponDiscount.toLocaleString("ko-KR")}원
+                </span>
+              </div>
+            )}
             <div className="flex justify-between text-sm">
               <span className="text-[#8b7d84]">배송비</span>
               <span className="text-[#4a3f48]">
@@ -359,7 +434,7 @@ export default function CheckoutForm({
               총 결제 금액
             </span>
             <span className="text-xl font-bold text-[#ff6b9d]">
-              {total.toLocaleString("ko-KR")}원
+              {finalTotal.toLocaleString("ko-KR")}원
             </span>
           </div>
 
@@ -374,7 +449,7 @@ export default function CheckoutForm({
                 disabled={isPending}
                 className="w-full h-14 bg-[#ff6b9d] hover:bg-[#ff5088] text-white rounded-xl text-base font-bold disabled:opacity-50"
               >
-                {isPending ? "처리 중..." : `${total.toLocaleString("ko-KR")}원 결제하기`}
+                {isPending ? "처리 중..." : `${finalTotal.toLocaleString("ko-KR")}원 결제하기`}
               </Button>
             </>
           ) : (
@@ -395,7 +470,7 @@ export default function CheckoutForm({
             <PaymentWidget
               orderId={orderId}
               orderNumber={orderNumber}
-              amount={total}
+              amount={finalTotal}
               customerName={form.getValues("shippingName")}
               customerEmail={user.emailAddresses[0]?.emailAddress || ""}
             />

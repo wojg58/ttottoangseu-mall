@@ -1,0 +1,155 @@
+/* 이벤트 배너 래퍼 */
+.event-wrapper {
+  display: flex;
+  flex-direction: row;
+  gap: 14px;
+  margin: 24px 0;
+}
+
+/* 링크 스타일 제거 */
+.event-banner-link {
+  text-decoration: none;
+  color: inherit;
+  display: block;
+  flex: 1;
+}
+
+/* 공통 배너 */
+.event-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 28px;
+  border-radius: 18px;
+  font-family: Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, sans-serif;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  cursor: pointer;
+}
+
+.event-banner:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+}
+
+/* 핑크 (리뷰 이벤트) */
+.event-banner.pink {
+  background: linear-gradient(90deg, #ffd6e8, #ffb6d5);
+}
+
+/* 블루 (신규가입) - 노란색 배경 */
+.event-banner.blue {
+  background: linear-gradient(90deg, #fef9c3, #fde68a);
+}
+
+/* 텍스트 */
+.event-banner h3 {
+  margin: 0 0 6px;
+  font-size: 18px;
+  color: #000000;
+  font-weight: 700;
+}
+
+.event-banner p {
+  margin: 0;
+  font-size: 14px;
+  color: #000000;
+}
+
+.event-banner strong {
+  color: #ff5c9a;
+  font-weight: 700;
+}
+
+/* 쿠폰 */
+.coupon {
+  position: relative;
+  background: #ffffff;
+  padding: 14px 20px;
+  border-radius: 16px;
+  text-align: center;
+  box-shadow: 0 6px 16px rgba(255, 92, 154, 0.25);
+  min-width: 110px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.coupon span {
+  display: block;
+  font-size: 12px;
+  color: #ff8fb8;
+  font-weight: 500;
+}
+
+.coupon strong {
+  display: block;
+  font-size: 22px;
+  color: #ff5c9a;
+  font-weight: 700;
+  margin-top: 4px;
+}
+
+/* 쿠폰 찢김 효과 */
+.coupon::before,
+.coupon::after {
+  content: "";
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background: transparent;
+  border-radius: 50%;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.event-banner.pink .coupon::before,
+.event-banner.pink .coupon::after {
+  background: #ffd6e8;
+}
+
+.event-banner.blue .coupon::before,
+.event-banner.blue .coupon::after {
+  background: #fef9c3;
+}
+
+.coupon::before {
+  left: -6px;
+}
+
+.coupon::after {
+  right: -6px;
+}
+
+/* 모바일 대응 */
+@media (max-width: 640px) {
+  .event-wrapper {
+    flex-direction: column;
+  }
+
+  .event-banner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 16px 20px;
+  }
+
+  .coupon {
+    align-self: flex-end;
+    padding: 10px 16px;
+  }
+
+  .coupon strong {
+    font-size: 20px;
+  }
+
+  .event-banner h3 {
+    font-size: 16px;
+  }
+
+  .event-banner p {
+    font-size: 13px;
+  }
+}
+
