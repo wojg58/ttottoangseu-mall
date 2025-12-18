@@ -60,7 +60,7 @@ export default function ProductCard({ product, rank }: ProductCardProps) {
   return (
     <Link href={`/products/${product.slug}`} className="product-card group">
       {/* 이미지 영역 */}
-      <div className="relative aspect-square mb-3 rounded-xl overflow-hidden bg-[#f5f5f5] p-4">
+      <div className="relative aspect-square mb-3 rounded-xl overflow-hidden bg-[#f5f5f5] p-6">
         {/* 상품 이미지 */}
         <Image
           src={

@@ -134,8 +134,12 @@ export default function CartItemList({ items }: CartItemListProps) {
                 {/* 가격 */}
                 <p className="text-base font-bold text-[#4a3f48] mt-2">
                   {mounted
-                    ? `${(displayPrice * item.quantity).toLocaleString("ko-KR")}원`
-                    : `${(displayPrice * item.quantity).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}원`}
+                    ? `${(displayPrice * item.quantity).toLocaleString(
+                        "ko-KR",
+                      )}원`
+                    : `${(displayPrice * item.quantity)
+                        .toString()
+                        .replace(/\B(?=(\d{3})+(?!\d))/g, ",")}원`}
                 </p>
 
                 {/* 수량 조절 */}
