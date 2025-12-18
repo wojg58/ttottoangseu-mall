@@ -61,11 +61,6 @@
   font-weight: 700;
 }
 
-/* 핑크 배너의 강조 텍스트 색상 */
-.event-banner.pink strong {
-  color: #86efac;
-}
-
 /* 쿠폰 */
 .coupon {
   position: relative;
@@ -85,7 +80,7 @@
   display: block;
   font-size: 12px;
   color: #ff8fb8;
-  font-weight: 500;
+  font-weight: 700;
 }
 
 .coupon strong {
@@ -94,15 +89,6 @@
   color: #ff5c9a;
   font-weight: 700;
   margin-top: 4px;
-}
-
-/* 핑크 배너의 쿠폰 텍스트 색상 */
-.event-banner.pink .coupon span {
-  color: #86efac;
-}
-
-.event-banner.pink .coupon strong {
-  color: #86efac;
 }
 
 /* 쿠폰 찢김 효과 */
