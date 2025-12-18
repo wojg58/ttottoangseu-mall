@@ -33,7 +33,7 @@ export default function WallpaperDownloadPage() {
         </div>
 
         {/* 다운로드 섹션 */}
-        <div className="grid md:grid-cols-2 gap-6">
+        <div className="grid md:grid-cols-3 gap-6">
           {/* 모바일용 */}
           <div className="bg-white rounded-xl shadow-md p-6">
             <h2 className="text-xl font-bold text-[#4a3f48] mb-4">
@@ -45,7 +45,7 @@ export default function WallpaperDownloadPage() {
                 alt="모바일용 배경화면"
                 fill
                 className="object-contain"
-                sizes="(max-width: 768px) 100vw, 50vw"
+                sizes="(max-width: 768px) 100vw, 33vw"
               />
             </div>
             <a
@@ -58,22 +58,22 @@ export default function WallpaperDownloadPage() {
             </a>
           </div>
 
-          {/* PC용 */}
-          <div className="bg-white rounded-xl shadow-md p-6">
+          {/* PC용 - 넓게 구현 */}
+          <div className="bg-white rounded-xl shadow-md p-6 md:col-span-2">
             <h2 className="text-xl font-bold text-[#4a3f48] mb-4">
               PC용 배경화면
             </h2>
             <div className="relative aspect-video mb-4 rounded-lg overflow-hidden bg-gray-100">
               <Image
-                src="/image/calendar_01.png"
+                src="/image/calendar_pc_jp.jpg"
                 alt="PC용 배경화면"
                 fill
                 className="object-contain"
-                sizes="(max-width: 768px) 100vw, 50vw"
+                sizes="(max-width: 768px) 100vw, 66vw"
               />
             </div>
             <a
-              href="/image/calendar_01.png"
+              href="/image/calendar_pc_jp.jpg"
               download
               className="inline-flex items-center justify-center gap-2 w-full px-4 py-3 bg-[#ff6b9d] text-white rounded-lg font-bold hover:bg-[#ff5088] transition-colors"
             >
