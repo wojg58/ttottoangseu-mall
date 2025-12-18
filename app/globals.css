@@ -347,14 +347,14 @@
 
 /* 배경 오버레이 제거 - 원본 이미지 색상 그대로 표시 */
 
-/* 중앙 정렬 */
+/* 좌측 정렬 - 폰 케이스를 좌측에 배치 */
 .wp__inner {
   position: relative;
   z-index: 1;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   min-height: 520px;
   padding: 36px;
   gap: 28px;
@@ -401,7 +401,7 @@
   color: #000;
   max-width: 520px;
   width: 100%;
-  text-align: center;
+  text-align: left;
 }
 
 .wp__title {
@@ -454,12 +454,16 @@
 /* 모바일 반응형 */
 @media (max-width: 860px) {
   .wp__inner {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
     padding: 24px;
     gap: 20px;
   }
 
   .wp__actions {
     max-width: 100%;
+    text-align: center;
   }
 
   .wp__phone {

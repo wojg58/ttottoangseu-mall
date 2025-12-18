@@ -436,7 +436,12 @@ export default async function HomePage() {
   const { featuredProducts, allProducts } = await getProducts();
 
   return (
-    <main className="pb-16 relative min-h-screen">
+    <main
+      className="pb-16 relative min-h-screen bg-cover bg-center bg-fixed bg-no-repeat"
+      style={{
+        backgroundImage: "url('/f.jpg')",
+      }}
+    >
       {/* 배경 오버레이 (텍스트 가독성을 위해) */}
       <div className="absolute inset-0 bg-white/30 backdrop-blur-[2px] pointer-events-none"></div>
       <div className="relative z-10">
@@ -592,8 +597,10 @@ export default async function HomePage() {
         </section>
 
         {/* 브랜드 스토리 배너 */}
-        <section className="w-full py-16">
-          <div className="w-full max-w-[1216px] mx-auto px-4">
+        <section className="w-full py-16 relative">
+          {/* 하단 흰색 배경 오버레이 */}
+          <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-white z-0"></div>
+          <div className="w-full max-w-[1216px] mx-auto px-4 relative z-10">
             <WallpaperPreview
               src="/image/calendar_mobile_02.png"
               bgSrc="/image/calendar_main.png"
