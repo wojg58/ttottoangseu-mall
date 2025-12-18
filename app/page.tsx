@@ -546,7 +546,7 @@ export default async function HomePage() {
                 <div className="flex justify-center mt-8">
                   <Link
                     href="/products?featured=true"
-                    className="text-black hover:text-gray-700 hover:underline text-sm flex items-center gap-1"
+                    className="text-[#ff6b9d] hover:text-pink-600 hover:underline text-sm flex items-center gap-1"
                   >
                     전체보기
                     <ArrowRight className="w-4 h-4" />
@@ -584,7 +584,7 @@ export default async function HomePage() {
                 <div className="flex justify-center mt-8">
                   <Link
                     href="/products"
-                    className="text-black hover:text-gray-700 hover:underline text-sm flex items-center gap-1"
+                    className="text-[#ff6b9d] hover:text-pink-600 hover:underline text-sm flex items-center gap-1"
                   >
                     전체보기
                     <ArrowRight className="w-4 h-4" />
@@ -602,7 +602,7 @@ export default async function HomePage() {
 
         {/* 브랜드 스토리 배너 */}
         <section className="w-full pt-16 pb-0 relative bg-white">
-          <div className="w-full max-w-[1216px] mx-auto px-4 relative z-10">
+          <div className="w-full max-w-[1216px] mx-auto relative z-10">
             <WallpaperPreview
               src="/image/calendar_mobile_02.png"
               bgSrc="/image/calendar_main.png"

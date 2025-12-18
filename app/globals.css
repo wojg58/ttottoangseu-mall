@@ -331,6 +331,7 @@
 .wp {
   position: relative;
   width: 100%;
+  max-width: 1216px;
   min-height: 520px;
   overflow: hidden;
   border-radius: 24px;
