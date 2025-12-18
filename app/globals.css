@@ -306,3 +306,20 @@
 ::-webkit-scrollbar-thumb:hover {
   @apply bg-[#f5b8d4];
 }
+
+/* 2026 이미지 둥둥 떠다니는 애니메이션 */
+@keyframes floatUp {
+  0% {
+    transform: translateY(20px);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+  100% {
+    transform: translateY(20px);
+  }
+}
+
+.floating-animation {
+  animation: floatUp 6s ease-in-out infinite;
+}

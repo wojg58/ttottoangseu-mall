@@ -621,7 +621,7 @@ export default async function HomePage() {
                   alt="2026 새해 축하"
                   width={800}
                   height={600}
-                  className="w-full h-auto object-contain"
+                  className="w-full h-auto object-contain floating-animation"
                   priority
                 />
               </div>
