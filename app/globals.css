@@ -392,8 +392,7 @@
 .wp__actions {
   color: #fff;
   max-width: 520px;
-  margin-left: auto; /* 우측으로 이동 */
-  margin-top: 40px; /* 아래로 이동 */
+  transform: translate(20px, 50px);
 }
 
 .wp__title {
