@@ -522,10 +522,10 @@ export default async function HomePage() {
                 </div>
               </div>
             </div>
-
-            {/* 이벤트 배너 */}
-            <EventBanner />
           </div>
+
+          {/* 이벤트 배너 */}
+          <EventBanner />
         </section>
 
         {/* 베스트 상품 섹션 */}
