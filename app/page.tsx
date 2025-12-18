@@ -515,7 +515,7 @@ export default async function HomePage() {
         </section>
 
         {/* 베스트 상품 섹션 */}
-        <section className="py-12 bg-white/70 relative overflow-hidden">
+        <section className="py-12 bg-white relative overflow-hidden">
           {/* 장식용 원형 요소 */}
           <div className="absolute -bottom-4 -right-4 w-32 h-32 bg-white/30 rounded-full"></div>
           <div className="shop-container">
