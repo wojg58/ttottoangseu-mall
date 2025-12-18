@@ -613,19 +613,19 @@ export default async function HomePage() {
 
         {/* 브랜드 스토리 배너 */}
         <section className="py-16">
-          <div className="shop-container">
+          <div className="w-full">
             <div className="text-center">
               {/* 캘린더 이미지 */}
-              <div className="relative w-full max-w-4xl mx-auto">
+              <div className="relative w-full">
                 <FloatingImage
-                  src="/image/calendar.png"
+                  src="/image/calendar_01.png"
                   alt="캘린더"
-                  width={1200}
-                  height={900}
-                  className="w-full h-auto object-contain"
+                  width={1920}
+                  height={1080}
+                  className="w-full h-auto object-cover"
                   priority
                   quality={90}
-                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1200px"
+                  sizes="100vw"
                 />
               </div>
             </div>
