@@ -28,14 +28,17 @@ export default function ShopFooter() {
             <div className="text-[#4a3f48] text-sm leading-relaxed whitespace-pre-line">
               <p className="mb-2">
                 <span className="text-black font-bold">상호명</span> 또또앙스{" "}
+                {"\u00A0".repeat(10)}
                 <span className="text-black font-bold">대표자명</span> 우수정
               </p>
               <p className="mb-2">
                 <span className="text-black font-bold">대표전화</span> 010-4112-6168{" "}
+                {"\u00A0".repeat(5)}
                 <span className="text-black font-bold">이메일</span> ttottoangseu@naver.com
               </p>
               <p className="mb-2">
                 <span className="text-black font-bold">사업자 등록번호</span> 561-14-02359{" "}
+                {"\u00A0".repeat(3)}
                 <span className="text-black font-bold">통신판매업 신고번호</span> 2023-경기안성-0595
               </p>
               <p>
