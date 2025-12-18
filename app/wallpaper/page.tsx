@@ -95,8 +95,8 @@ export default function WallpaperDownloadPage() {
               />
             </div>
             <a
-              href="/image/ChatGPT_01_jp.jpg"
-              download
+              href="/image/calendar_pc.jpg"
+              download="calendar_pc.jpg"
               className="inline-flex items-center justify-center gap-2 w-full px-4 py-3 bg-[#ff6b9d] text-white rounded-lg font-bold hover:bg-[#ff5088] transition-colors"
             >
               <Download className="w-5 h-5" />
