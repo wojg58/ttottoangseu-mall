@@ -560,7 +560,7 @@ export default async function HomePage() {
         </section>
 
         {/* 전체상품 섹션 */}
-        <section className="py-12 bg-white">
+        <section className="py-12 bg-white border-t border-gray-200">
           <div className="shop-container">
             <div className="flex flex-col items-center justify-center mb-8">
               <div className="flex items-center gap-3 mb-4 justify-center">
