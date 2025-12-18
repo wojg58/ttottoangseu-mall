@@ -337,11 +337,11 @@
   border-radius: 24px;
 }
 
-/* 뒤 배경: 위 아래 비율에 맞게 조정 - 배경 이미지 안에 요소들이 항상 배치되도록 */
+/* 뒤 배경: 좌우 공간 없이 꽉 차게 표시 */
 .wp__bg {
   position: absolute;
   inset: 0;
-  background-size: contain;
+  background-size: 100% auto;
   background-position: center;
   background-repeat: no-repeat;
 }
@@ -357,7 +357,7 @@
   align-items: center;
   justify-content: flex-start;
   min-height: 520px;
-  padding: 36px 0;
+  padding: 36px;
   gap: 28px;
 }
 
@@ -458,7 +458,7 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 24px 0;
+    padding: 24px;
     gap: 20px;
   }
 
