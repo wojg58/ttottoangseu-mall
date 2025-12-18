@@ -19,7 +19,7 @@ type Props = {
   pcSrc?: string; // PC용 배경화면 이미지 URL (선택)
   alt?: string;
   title?: string; // 제목 (기본: "배경화면")
-  description?: string; // 설명 (기본: "스마트폰에 저장해서 예쁘게 써보세요 💗")
+  description?: string; // 설명 (기본: "스마트폰/PC에 저장해서 예쁘게 써보세요 💗")
 };
 
 export default function WallpaperPreview({
@@ -28,7 +28,7 @@ export default function WallpaperPreview({
   pcSrc,
   alt = "wallpaper",
   title = "배경화면",
-  description = "스마트폰에 저장해서 예쁘게 써보세요 💗",
+  description = "스마트폰/PC에 저장해서 예쁘게 써보세요 💗",
 }: Props) {
   // bgSrc가 없으면 src를 사용
   const backgroundImage = bgSrc || src;
