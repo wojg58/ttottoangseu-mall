@@ -111,6 +111,7 @@ export interface Coupon {
 
 /**
  * 사용 가능한 쿠폰 목록 조회
+ * 기존 사용자도 쿠폰이 없으면 자동으로 발급
  */
 export async function getAvailableCoupons(): Promise<Coupon[]> {
   console.group("[getAvailableCoupons] 사용 가능한 쿠폰 조회");
@@ -125,6 +126,7 @@ export async function getAvailableCoupons(): Promise<Coupon[]> {
 
     const supabase = await createClient();
 
+    // 사용 가능한 쿠폰 조회
     const { data: coupons, error } = await supabase
       .from("coupons")
       .select("*")
@@ -142,11 +144,60 @@ export async function getAvailableCoupons(): Promise<Coupon[]> {
       return [];
     }
 
+    // 쿠폰이 없으면 자동 발급
+    if (!coupons || coupons.length === 0) {
+      console.log("⚠️ 사용 가능한 쿠폰이 없습니다. 자동 발급 시도...");
+      
+      // 기존에 "신규가입 환영 쿠폰"이 있는지 확인 (사용됨/만료 포함)
+      const { data: existingCoupon } = await supabase
+        .from("coupons")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("name", "신규가입 환영 쿠폰")
+        .maybeSingle();
+
+      // 기존 쿠폰이 없으면 새로 발급
+      if (!existingCoupon) {
+        console.log("🎁 신규가입 환영 쿠폰 자동 발급 중...");
+        const { getServiceRoleClient } = await import("@/lib/supabase/service-role");
+        const serviceSupabase = getServiceRoleClient();
+        
+        const couponCode = `WELCOME-${userId.toString().substring(0, 8).toUpperCase()}`;
+        const expiresAt = new Date();
+        expiresAt.setDate(expiresAt.getDate() + 30); // 30일 후 만료
+
+        const { data: newCoupon, error: couponError } = await serviceSupabase
+          .from("coupons")
+          .insert({
+            user_id: userId,
+            code: couponCode,
+            name: "신규가입 환영 쿠폰",
+            discount_type: "fixed",
+            discount_amount: 1000,
+            min_order_amount: 0,
+            status: "active",
+            expires_at: expiresAt.toISOString(),
+          })
+          .select()
+          .single();
+
+        if (couponError) {
+          console.error("❌ 쿠폰 발급 에러:", couponError);
+        } else {
+          console.log("✅ 신규가입 환영 쿠폰 발급 완료:", newCoupon);
+          // 발급된 쿠폰을 반환
+          console.log(`✅ 1개의 쿠폰 조회 완료 (자동 발급)`);
+          console.groupEnd();
+          return [newCoupon as Coupon];
+        }
+      } else {
+        console.log("ℹ️ 이미 발급된 쿠폰이 있지만 사용됨/만료됨");
+      }
+    }
+
     console.log(`✅ ${coupons?.length || 0}개의 사용 가능한 쿠폰 조회 완료`);
     if (coupons && coupons.length > 0) {
       console.log("쿠폰 목록:", coupons.map(c => ({ name: c.name, discount: c.discount_amount })));
-    } else {
-      console.log("⚠️ 사용 가능한 쿠폰이 없습니다. userId:", userId);
     }
     console.groupEnd();
 
