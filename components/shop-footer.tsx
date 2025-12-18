@@ -109,12 +109,10 @@ export default function ShopFooter() {
               </li>
             </ul>
           </div>
-        </div>
 
-        {/* 하단 정보 */}
-        <div className="border-t border-gray-200 mt-8 pt-8">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-gray-600">
-            <div className="flex gap-4">
+          {/* 이용약관 및 개인정보처리방침 */}
+          <div className="flex flex-col justify-end">
+            <div className="flex flex-col gap-2 text-xs text-[#4a3f48]">
               <Link href="/terms" className="hover:text-[#ff6b9d]">
                 이용약관
               </Link>
