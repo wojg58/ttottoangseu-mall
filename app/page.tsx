@@ -454,9 +454,9 @@ export default async function HomePage() {
                 className="flex-1 text-center md:text-left"
                 style={{ width: "700px", maxWidth: "700px", minWidth: "700px" }}
               >
-                <div className="inline-flex items-center gap-2 bg-[#ff6b9d] rounded-full px-4 py-2 mb-4">
-                  <Sparkles className="w-4 h-4 text-white" />
-                  <span className="text-sm text-white font-medium">
+                <div className="inline-flex items-center gap-2 bg-white/50 rounded-full px-4 py-2 mb-4">
+                  <Sparkles className="w-4 h-4 text-[#ff6b9d]" />
+                  <span className="text-sm text-black font-medium">
                     귀여운 정품 캐릭터 키덜트 소품샵
                   </span>
                 </div>
@@ -475,26 +475,6 @@ export default async function HomePage() {
                   <br />
                   인형 키링, 파우치, 완구, 스티커 등 다양한 아이템이 가득!
                 </p>
-                <div className="flex flex-col sm:flex-row gap-3 justify-center md:justify-start">
-                  <Link
-                    href="/products"
-                    className="shop-btn-accent inline-flex items-center justify-center gap-2"
-                  >
-                    전체 상품 보기
-                    <ArrowRight className="w-4 h-4" />
-                  </Link>
-                  <Link
-                    href="/products?featured=true"
-                    className="shop-btn-primary inline-flex items-center justify-center gap-2"
-                    style={{
-                      fontFamily:
-                        "'NamyangjuGothic', 'Gowun Dodum', system-ui, sans-serif",
-                    }}
-                  >
-                    베스트 상품
-                    <TrendingUp className="w-4 h-4" />
-                  </Link>
-                </div>
               </div>
               <div className="flex-1 relative">
                 <div
