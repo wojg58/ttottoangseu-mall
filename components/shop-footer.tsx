@@ -25,34 +25,24 @@ export default function ShopFooter() {
                 <h3 className="text-[45px] font-bold brand-text-logo text-[#4a3f48]">또또앙스</h3>
               </div>
             </div>
-            <div className="text-[#4a3f48] text-sm leading-relaxed">
-              <p className="mb-2 flex flex-wrap gap-x-4">
-                <span className="flex-shrink-0">
-                  <span className="inline-block w-20">상호명</span> 또또앙스
-                </span>
-                <span className="flex-shrink-0">
-                  <span className="inline-block w-20">대표자명</span> 우수정
-                </span>
+            <div className="text-[#4a3f48] text-sm leading-relaxed whitespace-pre-line">
+              <p className="mb-2">
+                상호명 또또앙스{" "}
+                {"\u00A0".repeat(25)}
+                대표자명 우수정
               </p>
-              <p className="mb-2 flex flex-wrap gap-x-4">
-                <span className="flex-shrink-0">
-                  <span className="inline-block w-20">대표전화</span> 010-4112-6168
-                </span>
-                <span className="flex-shrink-0">
-                  <span className="inline-block w-20">이메일</span> ttottoangseu@naver.com
-                </span>
+              <p className="mb-2">
+                대표전화 010-4112-6168{" "}
+                {"\u00A0".repeat(12)}
+                이메일 ttottoangseu@naver.com
               </p>
-              <p className="mb-2 flex flex-wrap gap-x-4">
-                <span className="flex-shrink-0">
-                  <span className="inline-block w-28">사업자 등록번호</span> 561-14-02359
-                </span>
-                <span className="flex-shrink-0">
-                  <span className="inline-block w-32">통신판매업 신고번호</span> 제 2023-경기안성-0595 호
-                </span>
+              <p className="mb-2">
+                사업자 등록번호 561-14-02359{" "}
+                {"\u00A0".repeat(3)}
+                통신판매업 신고번호 제 2023-경기안성-0595 호
               </p>
               <p>
-                <span className="inline-block w-20">사업장 주소</span>{" "}
-                경기도 안성시 공도읍 공도로 51-17, 104동 1502호(공도우미린더퍼스트)
+                사업장 주소 경기도 안성시 공도읍 공도로 51-17, 104동 1502호(공도우미린더퍼스트)
               </p>
             </div>
           </div>
