@@ -114,15 +114,6 @@ export default function ShopFooter() {
         {/* 하단 정보 */}
         <div className="border-t border-gray-200 mt-8 pt-8">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-gray-600">
-            <div className="text-center md:text-left">
-              <p>
-                상호명: 또또앙스 | 대표: 홍길동 | 사업자등록번호: 123-45-67890
-              </p>
-              <p>
-                주소: 서울특별시 강남구 테헤란로 123 | 전화: 02-1234-5678 |
-                이메일: hello@ttottoangs.com
-              </p>
-            </div>
             <div className="flex gap-4">
               <Link href="/terms" className="hover:text-[#ff6b9d]">
                 이용약관
