@@ -34,7 +34,7 @@
 
 /* 핑크 (리뷰 이벤트) */
 .event-banner.pink {
-  background: linear-gradient(90deg, #ffd6e8, #ffb6d5);
+  background: linear-gradient(90deg, #86efac, #4ade80);
 }
 
 /* 블루 (신규가입) - green-200 배경 */
@@ -106,7 +106,7 @@
 
 .event-banner.pink .coupon::before,
 .event-banner.pink .coupon::after {
-  background: #ffd6e8;
+  background: #86efac;
 }
 
 .event-banner.blue .coupon::before,
