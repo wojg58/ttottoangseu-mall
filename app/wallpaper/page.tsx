@@ -14,7 +14,7 @@ import { Download, ArrowLeft } from "lucide-react";
 export default function WallpaperDownloadPage() {
   return (
     <main className="min-h-screen bg-gradient-to-br from-pink-50 to-blue-50 py-12 px-4">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-[1221px] mx-auto">
         {/* 헤더 */}
         <div className="mb-8">
           <Link
@@ -33,9 +33,9 @@ export default function WallpaperDownloadPage() {
         </div>
 
         {/* 다운로드 섹션 */}
-        <div className="grid md:grid-cols-3 gap-6">
-          {/* 모바일용 */}
-          <div className="bg-white rounded-xl shadow-md p-6">
+        <div className="grid md:grid-cols-5 gap-6">
+          {/* 모바일용 - 세로로 길게 */}
+          <div className="bg-white rounded-xl shadow-md p-6 md:col-span-2">
             <h2 className="text-xl font-bold text-[#4a3f48] mb-4">
               모바일용 배경화면
             </h2>
@@ -45,7 +45,7 @@ export default function WallpaperDownloadPage() {
                 alt="모바일용 배경화면"
                 fill
                 className="object-contain"
-                sizes="(max-width: 768px) 100vw, 33vw"
+                sizes="(max-width: 768px) 100vw, 40vw"
               />
             </div>
             <a
@@ -59,7 +59,7 @@ export default function WallpaperDownloadPage() {
           </div>
 
           {/* PC용 - 넓게 구현 */}
-          <div className="bg-white rounded-xl shadow-md p-6 md:col-span-2">
+          <div className="bg-white rounded-xl shadow-md p-6 md:col-span-3">
             <h2 className="text-xl font-bold text-[#4a3f48] mb-4">
               PC용 배경화면
             </h2>
@@ -69,7 +69,7 @@ export default function WallpaperDownloadPage() {
                 alt="PC용 배경화면"
                 fill
                 className="object-contain"
-                sizes="(max-width: 768px) 100vw, 66vw"
+                sizes="(max-width: 768px) 100vw, 60vw"
               />
             </div>
             <a
