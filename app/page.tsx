@@ -546,7 +546,7 @@ export default async function HomePage() {
                 <div className="flex justify-center mt-8">
                   <Link
                     href="/products?featured=true"
-                    className="text-[#ff6b9d] hover:text-pink-600 hover:underline text-sm flex items-center gap-1"
+                    className="text-black hover:text-gray-700 hover:underline text-sm flex items-center gap-1"
                   >
                     전체보기
                     <ArrowRight className="w-4 h-4" />
@@ -584,7 +584,7 @@ export default async function HomePage() {
                 <div className="flex justify-center mt-8">
                   <Link
                     href="/products"
-                    className="text-[#ff6b9d] hover:text-pink-600 hover:underline text-sm flex items-center gap-1"
+                    className="text-black hover:text-gray-700 hover:underline text-sm flex items-center gap-1"
                   >
                     전체보기
                     <ArrowRight className="w-4 h-4" />
