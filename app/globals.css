@@ -390,7 +390,7 @@
 
 /* 텍스트/버튼 */
 .wp__actions {
-  color: #fff;
+  color: #000;
   max-width: 520px;
   transform: translate(70px, 250px);
 }
