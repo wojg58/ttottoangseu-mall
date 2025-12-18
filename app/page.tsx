@@ -524,9 +524,7 @@ export default async function HomePage() {
             </div>
 
             {/* 이벤트 배너 */}
-            <div className="shop-container">
-              <EventBanner />
-            </div>
+            <EventBanner />
           </div>
         </section>
 

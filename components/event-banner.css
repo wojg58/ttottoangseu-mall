@@ -3,11 +3,11 @@
   display: flex;
   flex-direction: row;
   gap: 14px;
-  margin: 24px 0;
+  margin: 24px auto;
   width: 100%;
   max-width: 1216px;
-  margin-left: auto;
-  margin-right: auto;
+  padding: 0 16px;
+  box-sizing: border-box;
 }
 
 /* 링크 스타일 제거 */
