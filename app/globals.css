@@ -333,12 +333,13 @@
   border-radius: 24px;
 }
 
-/* 뒤 배경: cover */
+/* 뒤 배경: 위 아래 비율에 맞게 조정 */
 .wp__bg {
   position: absolute;
   inset: 0;
-  background-size: cover;
+  background-size: contain;
   background-position: center;
+  background-repeat: no-repeat;
 }
 
 /* 배경 오버레이 제거 - 원본 이미지 색상 그대로 표시 */
