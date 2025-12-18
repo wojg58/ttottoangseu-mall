@@ -79,8 +79,8 @@
 .coupon span {
   display: block;
   font-size: 12px;
-  color: #ff8fb8;
-  font-weight: 700;
+  color: #000000;
+  font-weight: 500;
 }
 
 .coupon strong {
