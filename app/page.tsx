@@ -616,7 +616,7 @@ export default async function HomePage() {
           <div className="w-full max-w-[1216px] mx-auto px-4">
             <WallpaperPreview
               src="/image/calendar_mobile_02.png"
-              bgSrc="/image/calendar.png"
+              bgSrc="/image/calendar_main.png"
               pcSrc="/image/calendar_01.png"
               alt="1월 캘린더 배경화면"
               title="1월 배경화면"
