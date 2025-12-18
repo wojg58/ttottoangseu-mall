@@ -612,11 +612,11 @@ export default async function HomePage() {
         </section>
 
         {/* 브랜드 스토리 배너 */}
-        <section className="w-full py-16 bg-white pb-0">
+        <section className="w-full py-16">
           <div className="w-full max-w-[1216px] mx-auto px-4">
             <WallpaperPreview
               src="/image/calendar_mobile_02.png"
-              bgSrc="/image/calendar_01.png"
+              bgSrc="/image/calendar.png"
               pcSrc="/image/calendar_01.png"
               alt="1월 캘린더 배경화면"
               title="1월 배경화면"
