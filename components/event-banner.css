@@ -61,7 +61,7 @@
   font-weight: 700;
 }
 
-/* 핑크 배너의 strong 태그만 #86efac로 변경 */
+/* 핑크 배너의 강조 텍스트 색상 */
 .event-banner.pink strong {
   color: #86efac;
 }
@@ -96,7 +96,11 @@
   margin-top: 4px;
 }
 
-/* 핑크 배너의 쿠폰 strong 태그도 #86efac로 변경 */
+/* 핑크 배너의 쿠폰 텍스트 색상 */
+.event-banner.pink .coupon span {
+  color: #86efac;
+}
+
 .event-banner.pink .coupon strong {
   color: #86efac;
 }
