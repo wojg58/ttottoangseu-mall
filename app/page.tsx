@@ -615,7 +615,7 @@ export default async function HomePage() {
           <div className="shop-container">
             <div className="bg-gradient-to-r from-[#fad2e6] to-[#ffc0cb] rounded-2xl p-8 md:p-12 text-center relative overflow-hidden">
               {/* 2026 이미지 */}
-              <div className="relative w-full max-w-4xl mx-auto mb-6">
+              <div className="relative w-full max-w-4xl mx-auto">
                 <Image
                   src="/image/2026.png"
                   alt="2026 새해 축하"
@@ -624,32 +624,6 @@ export default async function HomePage() {
                   className="w-full h-auto object-contain"
                   priority
                 />
-              </div>
-              <h2 className="text-2xl md:text-3xl font-bold text-black mb-4">
-                두근거리는 설렘을 선물하세요
-              </h2>
-              <p className="text-black max-w-2xl mx-auto mb-6">
-                또또앙스는 사랑스러운 캐릭터 굿즈로 일상에 작은 행복을
-                선사합니다.
-                <br />
-                소중한 사람에게, 또는 나 자신에게 설레는 선물을 해보세요!
-              </p>
-              <div className="flex items-center justify-center gap-8 text-black">
-                <div className="text-center">
-                  <Star className="w-6 h-6 mx-auto text-[#ff6b9d] mb-2" />
-                  <p className="font-bold text-lg">1,751+</p>
-                  <p className="text-sm text-black">관심 고객</p>
-                </div>
-                <div className="text-center">
-                  <span className="text-2xl block mb-2">📦</span>
-                  <p className="font-bold text-lg">100+</p>
-                  <p className="text-sm text-black">상품</p>
-                </div>
-                <div className="text-center">
-                  <span className="text-2xl block mb-2">⭐</span>
-                  <p className="font-bold text-lg">4.9</p>
-                  <p className="text-sm text-black">평점</p>
-                </div>
               </div>
             </div>
           </div>
