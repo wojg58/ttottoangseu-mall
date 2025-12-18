@@ -613,7 +613,7 @@ export default async function HomePage() {
         {/* 브랜드 스토리 배너 */}
         <section className="py-16">
           <div className="shop-container">
-            <div className="bg-gradient-to-r from-[#fad2e6] to-[#ffc0cb] rounded-2xl p-8 md:p-12 text-center relative overflow-hidden">
+            <div className="text-center">
               {/* 2026 이미지 */}
               <div className="relative w-full max-w-4xl mx-auto">
                 <Image
