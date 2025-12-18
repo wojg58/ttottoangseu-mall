@@ -59,9 +59,9 @@ export default function WallpaperPreview({
           <p className="wp__desc">{description}</p>
 
           <div className="wp__btns">
-            <a className="wp__btn" href={src} download>
+            <Link href="/wallpaper" className="wp__btn">
               배경화면 다운로드
-            </a>
+            </Link>
           </div>
         </div>
       </div>
