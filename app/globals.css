@@ -351,7 +351,11 @@
   grid-template-columns: 360px 1fr;
   gap: 28px;
   align-items: center;
+  justify-items: center;
+  justify-content: center;
   padding: 36px;
+  max-width: 1000px;
+  margin: 0 auto;
 }
 
 /* 폰 목업 */
