@@ -28,11 +28,32 @@ export default function ShopFooter() {
                 </p>
               </div>
             </div>
-            <p className="text-[#4a3f48] text-sm leading-relaxed whitespace-pre-line">
-              또또앙스는 산리오, 짱구 등 다양한 캐릭터 상품을 판매하는 소품샵입니다.
-{'\n'}
-귀여운 아이템들로 일상에 두근거리는 설렘을 더해보세요! 💕
-            </p>
+            <div className="text-[#4a3f48] text-sm leading-relaxed whitespace-pre-line">
+              <p className="mb-2">
+                <span className="text-black font-bold">상호명</span>{" "}
+                <span className="text-black font-bold">또또앙스</span>{" "}
+                <span className="text-black font-bold">대표자명</span>{" "}
+                <span className="text-black font-bold">우수정</span>
+              </p>
+              <p className="mb-2">
+                <span className="text-black font-bold">대표전화</span>{" "}
+                <span className="text-black font-bold">010-4112-6168</span>{" "}
+                <span className="text-black font-bold">이메일</span>{" "}
+                <span className="text-black font-bold">ttottoangseu@naver.com</span>
+              </p>
+              <p className="mb-2">
+                <span className="text-black font-bold">사업자 등록번호</span>{" "}
+                <span className="text-black font-bold">561-14-02359</span>{" "}
+                <span className="text-black font-bold">통신판매업 신고번호</span>{" "}
+                <span className="text-black font-bold">2023-경기안성-0595</span>
+              </p>
+              <p>
+                <span className="text-black font-bold">사업장 주소</span>{" "}
+                <span className="text-black font-bold">
+                  경기도 안성시 공도읍 공도로 51-17, 104동 1502호(공도우미린더퍼스트)
+                </span>
+              </p>
+            </div>
           </div>
 
           {/* 고객 서비스 */}
