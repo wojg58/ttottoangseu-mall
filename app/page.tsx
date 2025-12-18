@@ -20,6 +20,7 @@ import ProductCard from "@/components/product-card";
 import AllProductsSection from "@/components/all-products-section";
 import EventBanner from "@/components/event-banner";
 import FloatingImage from "@/components/floating-image";
+import CalendarDownloadButtons from "@/components/calendar-download-buttons";
 import type { ProductListItem, Category } from "@/types/database";
 
 // 카테고리별 이모지 매핑
@@ -614,6 +615,7 @@ export default async function HomePage() {
         {/* 브랜드 스토리 배너 */}
         <section className="w-full py-16">
           <div className="relative w-full max-w-[1216px] mx-auto px-4">
+            {/* 캘린더 이미지 */}
             <FloatingImage
               src="/image/calendar_01.png"
               alt="캘린더"
@@ -624,6 +626,8 @@ export default async function HomePage() {
               quality={90}
               sizes="(max-width: 1216px) 100vw, 1216px"
             />
+            {/* 다운로드 버튼 오버레이 */}
+            <CalendarDownloadButtons />
           </div>
         </section>
       </div>
