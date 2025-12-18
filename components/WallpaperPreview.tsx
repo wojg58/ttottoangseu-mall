@@ -60,12 +60,12 @@ export default function WallpaperPreview({
 
           <div className="wp__btns">
             <a className="wp__btn" href={src} download>
-              모바일용 다운로드
+              MOBILE 다운로드
             </a>
             {/* PC용 파일이 따로 있으면 pcSrc로 바꿔서 추가 */}
             {pcSrc && (
               <a className="wp__btn wp__btn--ghost" href={pcSrc} download>
-                PC용 다운로드
+                PC 다운로드
               </a>
             )}
           </div>
