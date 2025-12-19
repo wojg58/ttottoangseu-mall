@@ -465,12 +465,12 @@ export default async function HomePage() {
                     귀여운 정품 캐릭터 키덜트 소품샵
                   </span>
                 </div>
-                <h1 className="text-3xl md:text-5xl font-bold text-[#4a3f48] mb-4 leading-tight">
+                <h1 className="text-3xl md:text-5xl font-bold text-black mb-4 leading-tight">
                   두근거리는 설렘을{" "}
                   <span className="text-[#ff6b9d]">선물하세요</span> 💕
                 </h1>
                 <p
-                  className="text-[#4a3f48] mb-6 text-lg"
+                  className="text-black mb-6 text-lg"
                   style={{
                     fontFamily:
                       "'NamyangjuGothic', 'Gowun Dodum', system-ui, sans-serif",
