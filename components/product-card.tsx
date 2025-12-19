@@ -14,7 +14,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Heart, Star } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import type { ProductListItem } from "@/types/database";
 
 interface ProductCardProps {
@@ -24,11 +24,6 @@ interface ProductCardProps {
 
 export default function ProductCard({ product, rank }: ProductCardProps) {
   const [isLiked, setIsLiked] = useState(false);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   // 할인율 계산
   const discountRate =
@@ -132,15 +127,11 @@ export default function ProductCard({ product, rank }: ProductCardProps) {
             </span>
           )}
           <span className="shop-price">
-            {mounted
-              ? `${displayPrice.toLocaleString("ko-KR")}원`
-              : `${displayPrice.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}원`}
+            {`${displayPrice.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}원`}
           </span>
           {discountRate > 0 && (
             <span className="shop-price-original">
-              {mounted
-                ? `${product.price.toLocaleString("ko-KR")}원`
-                : `${product.price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}원`}
+              {`${product.price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}원`}
             </span>
           )}
         </div>

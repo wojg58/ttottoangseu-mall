@@ -2,11 +2,16 @@ import type { Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
 import { koKR } from "@clerk/localizations";
 
+import dynamic from "next/dynamic";
 import ShopHeader from "@/components/shop-header";
 import ShopFooter from "@/components/shop-footer";
 import { SyncUserProvider } from "@/components/providers/sync-user-provider";
-import { ChatWidget } from "@/components/chatbot/chat-widget";
 import "./globals.css";
+
+// ChatWidget를 동적 import하여 클라이언트에서만 로드 (hydration 에러 방지)
+const ChatWidget = dynamic(() => import("@/components/chatbot/chat-widget").then(mod => ({ default: mod.ChatWidget })), {
+  ssr: false,
+});
 
 export const metadata: Metadata = {
   title: "또또앙스 | 캐릭터 굿즈 전문 쇼핑몰",

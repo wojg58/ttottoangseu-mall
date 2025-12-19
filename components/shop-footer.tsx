@@ -9,6 +9,36 @@ import Image from "next/image";
 export default function ShopFooter() {
   return (
     <footer className="bg-white text-[#4a3f48] mt-0 border-t border-gray-200">
+      {/* 푸터 상단 링크 */}
+      <div className="border-b border-gray-200">
+        <div className="shop-container py-4">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <ul className="flex flex-wrap items-center gap-[1.2cm] text-sm text-[#4a3f48]">
+              <li>
+                <Link href="/company" className="hover:text-[#ff6b9d] transition-colors">
+                  회사소개
+                </Link>
+              </li>
+              <li>
+                <Link href="/terms" className="hover:text-[#ff6b9d] transition-colors">
+                  이용약관
+                </Link>
+              </li>
+              <li>
+                <Link href="/privacy" className="hover:text-[#ff6b9d] transition-colors">
+                  개인정보취급방침
+                </Link>
+              </li>
+              <li>
+                <Link href="/guide" className="hover:text-[#ff6b9d] transition-colors">
+                  이용안내
+                </Link>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
       <div className="shop-container py-12">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* 브랜드 정보 */}
@@ -32,11 +62,6 @@ export default function ShopFooter() {
                 대표자명 우수정
               </p>
               <p className="mb-2">
-                대표전화 010-4112-6168{" "}
-                {"\u00A0".repeat(12)}
-                이메일 ttottoangseu@naver.com
-              </p>
-              <p className="mb-2">
                 사업자 등록번호 561-14-02359{" "}
                 {"\u00A0".repeat(3)}
                 통신판매업 신고번호 제 2023-경기안성-0595 호
@@ -47,78 +72,22 @@ export default function ShopFooter() {
             </div>
           </div>
 
-          {/* 고객 서비스 */}
-          <div>
-            <h4 className="font-bold mb-4 text-black">고객 서비스</h4>
-            <ul className="space-y-2 text-sm text-[#4a3f48]">
-              <li>
-                <Link href="/faq" className="hover:text-[#fad2e6]">
-                  자주 묻는 질문
-                </Link>
-              </li>
-              <li>
-                <Link href="/shipping" className="hover:text-[#fad2e6]">
-                  배송 안내
-                </Link>
-              </li>
-              <li>
-                <Link href="/returns" className="hover:text-[#fad2e6]">
-                  교환/환불 안내
-                </Link>
-              </li>
-              <li>
-                <Link href="/contact" className="hover:text-[#fad2e6]">
-                  문의하기
-                </Link>
-              </li>
-            </ul>
+          {/* 고객 센터 */}
+          <div className="h-[200px] flex flex-col">
+            <h4 className="font-bold mb-4 text-black">고객 센터</h4>
+            <div className="space-y-2 text-sm text-[#4a3f48]">
+              <div>010-4112-6168</div>
+              <div>ttottoangseu@naver.com</div>
+              <div>오전 9시 ~ 오후 6시(주말/공휴일 휴무)</div>
+            </div>
           </div>
 
-          {/* 쇼핑 정보 */}
-          <div>
-            <h4 className="font-bold mb-4 text-black">쇼핑 정보</h4>
-            <ul className="space-y-2 text-sm text-[#4a3f48]">
-              <li>
-                <Link href="/products" className="hover:text-[#fad2e6]">
-                  전체 상품
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/products?featured=true"
-                  className="hover:text-[#fad2e6]"
-                >
-                  베스트 상품
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/products?new=true"
-                  className="hover:text-[#fad2e6]"
-                >
-                  신상품
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/products?sale=true"
-                  className="hover:text-[#fad2e6]"
-                >
-                  할인 상품
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          {/* 이용약관 및 개인정보처리방침 */}
-          <div className="flex flex-col justify-end">
-            <div className="flex flex-col gap-2 text-xs text-[#4a3f48]">
-              <Link href="/terms" className="hover:text-[#ff6b9d]">
-                이용약관
-              </Link>
-              <Link href="/privacy" className="hover:text-[#ff6b9d]">
-                개인정보처리방침
-              </Link>
+          {/* 은행 정보 */}
+          <div className="h-[200px] flex flex-col">
+            <h4 className="font-bold mb-4 text-black">계좌 정보</h4>
+            <div className="space-y-2 text-sm text-[#4a3f48]">
+              <p>카카오뱅크 3333-28-2841708</p>
+              <p>예금주 : 우수정</p>
             </div>
           </div>
         </div>

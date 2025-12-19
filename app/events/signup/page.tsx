@@ -85,7 +85,7 @@ export default function SignupEventPage() {
             </li>
           </ol>
 
-          <div className="bg-[#fef9c3] rounded-xl p-6 mb-8">
+          <div className="bg-[#d1fae5] rounded-xl p-6 mb-8">
             <h3 className="text-lg font-bold text-[#4a3f48] mb-2">
               이벤트 안내
             </h3>

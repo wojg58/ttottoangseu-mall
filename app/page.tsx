@@ -457,7 +457,7 @@ export default async function HomePage() {
                 <div
                   className="inline-flex items-center gap-2 rounded-full px-4 py-2 mb-4"
                   style={{
-                    backgroundColor: "color-mix(in srgb, var(--color-white) 60%, transparent)",
+                    backgroundColor: "white",
                   }}
                 >
                   <Sparkles className="w-4 h-4 text-[#ff6b9d]" />

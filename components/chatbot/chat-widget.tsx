@@ -34,9 +34,11 @@ interface UiMessage {
 }
 
 function safeUuid() {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+  // 클라이언트에서만 실행되므로 crypto.randomUUID() 사용 가능
+  if (typeof window !== "undefined" && typeof crypto !== "undefined" && "randomUUID" in crypto) {
     return crypto.randomUUID();
   }
+  // 폴백: 클라이언트에서만 실행되므로 Date.now()와 Math.random() 사용 가능
   return `tmp_${Date.now()}_${Math.random().toString(16).slice(2)}`;
 }
 
@@ -130,7 +132,7 @@ export function ChatWidget() {
     if (hasShownGreeting || messages.length > 0) return; // 이미 인사말을 보여줬거나 메시지가 있으면 추가하지 않음
 
     const greeting: UiMessage = {
-      id: `greeting-${Date.now()}`, // 고정된 형식으로 ID 생성
+      id: safeUuid(), // 안전한 UUID 생성 함수 사용
       role: "assistant",
       content: `두근두근 설렘 가득한 또또앙스 쇼핑몰에 오신 걸 환영해요! 💕
 
