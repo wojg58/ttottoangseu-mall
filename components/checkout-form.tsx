@@ -6,13 +6,12 @@
 "use client";
 
 import { useState, useTransition, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useUser } from "@clerk/nextjs";
-import { createOrder, CreateOrderInput } from "@/actions/orders";
+import { createOrder } from "@/actions/orders";
 import { getAvailableCoupons, type Coupon } from "@/actions/coupons";
 import { calculateCouponDiscount } from "@/lib/coupon-utils";
 import type { CartItemWithProduct } from "@/types/database";
@@ -62,7 +61,6 @@ export default function CheckoutForm({
   const [showPaymentWidget, setShowPaymentWidget] = useState(false);
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [selectedCoupon, setSelectedCoupon] = useState<Coupon | null>(null);
-  const router = useRouter();
   const { user, isLoaded } = useUser();
 
   // 쿠폰 목록 가져오기

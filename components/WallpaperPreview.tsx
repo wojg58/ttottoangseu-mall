@@ -16,8 +16,6 @@ import Link from "next/link";
 type Props = {
   src: string; // 배경화면 이미지 URL (모바일용 - 폰 화면에 표시)
   bgSrc?: string; // 바탕 배경 이미지 URL (블러 배경용, 선택)
-  pcSrc?: string; // PC용 배경화면 이미지 URL (선택)
-  alt?: string;
   title?: string; // 제목 (기본: "배경화면")
   description?: string; // 설명 (기본: "스마트폰/PC에 저장해서 예쁘게 써보세요 💗")
 };
@@ -25,8 +23,6 @@ type Props = {
 export default function WallpaperPreview({
   src,
   bgSrc,
-  pcSrc,
-  alt = "wallpaper",
   title = "배경화면",
   description = "스마트폰/PC에 저장해서 예쁘게 써보세요 💗",
 }: Props) {

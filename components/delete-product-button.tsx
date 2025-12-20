@@ -5,7 +5,7 @@
 
 "use client";
 
-import { useState, useTransition } from "react";
+import { useTransition } from "react";
 import { Trash2 } from "lucide-react";
 import { deleteProduct } from "@/actions/admin-products";
 import { useRouter } from "next/navigation";

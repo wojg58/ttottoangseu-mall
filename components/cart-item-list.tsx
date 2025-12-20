@@ -15,7 +15,6 @@ import {
   clearCart,
 } from "@/actions/cart";
 import type { CartItemWithProduct } from "@/types/database";
-import { Button } from "@/components/ui/button";
 
 interface CartItemListProps {
   items: CartItemWithProduct[];

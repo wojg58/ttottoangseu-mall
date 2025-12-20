@@ -11,7 +11,7 @@
 
 "use client";
 
-import { useState, useTransition } from "react";
+import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
 import { cancelOrder } from "@/actions/orders";
@@ -27,7 +27,6 @@ export default function OrderCancelButton({
   orderStatus,
 }: OrderCancelButtonProps) {
   const [isPending, startTransition] = useTransition();
-  const [showConfirm, setShowConfirm] = useState(false);
   const router = useRouter();
 
   // 취소 가능한 상태 확인
