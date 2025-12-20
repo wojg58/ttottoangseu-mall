@@ -606,8 +606,6 @@ export default async function HomePage() {
             <WallpaperPreview
               src="/image/calendar_mobile_02.png"
               bgSrc="/image/calendar_main.png"
-              pcSrc="/image/calendar_01.png"
-              alt="1월 캘린더 배경화면"
               title="1월 배경화면"
               description="스마트폰/PC에 저장해서 예쁘게 써보세요 💗"
             />
