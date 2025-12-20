@@ -69,7 +69,12 @@ pnpm lint
   - `components/providers/`: React Context 프로바이더들
 - `lib/`: 유틸리티 함수 및 클라이언트 설정
   - `lib/supabase/`: Supabase 클라이언트들 (환경별로 분리)
-  - `lib/utils.ts`: 공통 유틸리티 (cn 함수 등)
+  - `lib/utils.ts`: 공통 유틸리티 (cn, formatPrice, formatNumber)
+  - `lib/utils/`: 기능별 유틸리티 모듈
+    - `compress-image.ts`: 서버 사이드 이미지 압축 (Sharp)
+    - `compress-image-client.ts`: 클라이언트 사이드 이미지 압축 (browser-image-compression)
+  - `lib/logger.ts`: 환경 변수 기반 로깅 (개발 환경에서만 출력)
+  - `lib/api-utils.ts`: API 라우트 공통 유틸리티 (인증 헬퍼 등)
 - `hooks/`: 커스텀 React Hook들
 - `supabase/`: 데이터베이스 마이그레이션 및 설정
   - `supabase/migrations/`: SQL 마이그레이션 파일들
@@ -195,7 +200,9 @@ const searchParams = await props.searchParams;
 
 - `middleware.ts`: Clerk 미들웨어 (인증 라우트 보호)
 - `app/layout.tsx`: RootLayout with ClerkProvider + SyncUserProvider
-- `lib/supabase.ts`: 레거시 Supabase 클라이언트 (사용 지양, 새 파일들 사용)
+- `lib/supabase/`: Supabase 클라이언트들 (환경별로 분리)
+- `lib/logger.ts`: 환경 변수 기반 로깅 유틸리티
+- `lib/api-utils.ts`: API 인증 헬퍼 함수들
 - `components.json`: shadcn/ui 설정
 
 ## Additional Cursor Rules

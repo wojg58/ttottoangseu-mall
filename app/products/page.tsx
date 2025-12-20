@@ -9,7 +9,6 @@
  * 4. 페이지네이션
  */
 
-import { Suspense } from "react";
 import Link from "next/link";
 import { Home } from "lucide-react";
 import { getProducts } from "@/actions/products";

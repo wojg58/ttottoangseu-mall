@@ -7,7 +7,6 @@
 
 import { SignUp, SignedIn, SignedOut } from "@clerk/nextjs";
 import { useSearchParams, useRouter } from "next/navigation";
-import { useEffect } from "react";
 
 export default function SignUpContent() {
   const searchParams = useSearchParams();
