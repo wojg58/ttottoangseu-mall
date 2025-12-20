@@ -9,7 +9,6 @@ import {
   Package,
   ShoppingCart,
   DollarSign,
-  TrendingUp,
   ChevronRight,
   AlertCircle,
 } from "lucide-react";

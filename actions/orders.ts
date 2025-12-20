@@ -1,11 +1,6 @@
 /**
  * @file actions/orders.ts
  * @description 주문 관련 Server Actions
- *
- * 주요 기능:
- * 1. 주문 생성
- * 2. 주문 조회
- * 3. 주문 상태 변경
  */
 
 "use server";
@@ -13,7 +8,8 @@
 import { auth } from "@clerk/nextjs/server";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import type { Order, OrderWithItems, OrderItem } from "@/types/database";
+import logger from "@/lib/logger";
+import type { Order, OrderWithItems } from "@/types/database";
 
 // 현재 사용자의 Supabase user ID 조회
 async function getCurrentUserId(): Promise<string | null> {
@@ -57,14 +53,12 @@ export async function createOrder(input: CreateOrderInput): Promise<{
   orderId?: string;
   orderNumber?: string;
 }> {
-  console.group("[createOrder] 주문 생성");
-  console.log("배송 정보:", input);
+  logger.group("[createOrder] 주문 생성");
 
   try {
     const userId = await getCurrentUserId();
     if (!userId) {
-      console.log("로그인 필요");
-      console.groupEnd();
+      logger.groupEnd();
       return { success: false, message: "로그인이 필요합니다." };
     }
 
@@ -78,8 +72,7 @@ export async function createOrder(input: CreateOrderInput): Promise<{
       .single();
 
     if (!cart) {
-      console.log("장바구니 없음");
-      console.groupEnd();
+      logger.groupEnd();
       return { success: false, message: "장바구니가 비어있습니다." };
     }
 
@@ -96,8 +89,7 @@ export async function createOrder(input: CreateOrderInput): Promise<{
       .eq("cart_id", cart.id);
 
     if (!cartItems || cartItems.length === 0) {
-      console.log("장바구니 비어있음");
-      console.groupEnd();
+      logger.groupEnd();
       return { success: false, message: "장바구니가 비어있습니다." };
     }
 
@@ -129,8 +121,7 @@ export async function createOrder(input: CreateOrderInput): Promise<{
 
       // 품절 확인
       if (product.status === "sold_out" || product.stock === 0) {
-        console.log("품절 상품:", product.name);
-        console.groupEnd();
+        logger.groupEnd();
         return {
           success: false,
           message: `${product.name}은(는) 품절된 상품입니다.`,
@@ -139,8 +130,7 @@ export async function createOrder(input: CreateOrderInput): Promise<{
 
       // 재고 확인
       if (product.stock < item.quantity) {
-        console.log("재고 부족:", product.name);
-        console.groupEnd();
+        logger.groupEnd();
         return {
           success: false,
           message: `${product.name}의 재고가 부족합니다. (현재 재고: ${product.stock}개)`,
@@ -172,7 +162,6 @@ export async function createOrder(input: CreateOrderInput): Promise<{
     // 쿠폰 할인 적용
     let couponDiscount = 0;
     if (input.couponId) {
-      console.log("쿠폰 적용 중:", input.couponId);
       const { data: coupon, error: couponError } = await supabase
         .from("coupons")
         .select("*")
@@ -182,9 +171,7 @@ export async function createOrder(input: CreateOrderInput): Promise<{
         .single();
 
       if (!couponError && coupon) {
-        // 만료 확인
         if (new Date(coupon.expires_at) >= new Date()) {
-          // 최소 주문 금액 확인
           if (subtotal >= coupon.min_order_amount) {
             if (coupon.discount_type === "fixed") {
               couponDiscount = coupon.discount_amount;
@@ -196,15 +183,8 @@ export async function createOrder(input: CreateOrderInput): Promise<{
             }
             couponDiscount = Math.floor(couponDiscount);
             totalAmount = Math.max(0, totalAmount - couponDiscount);
-            console.log("쿠폰 할인 적용:", couponDiscount, "원");
-          } else {
-            console.log("최소 주문 금액 미달");
           }
-        } else {
-          console.log("쿠폰 만료됨");
         }
-      } else {
-        console.log("쿠폰 조회 실패:", couponError);
       }
     }
 
@@ -228,8 +208,8 @@ export async function createOrder(input: CreateOrderInput): Promise<{
       .single();
 
     if (orderError || !order) {
-      console.error("주문 생성 에러:", orderError);
-      console.groupEnd();
+      logger.error("주문 생성 실패", orderError);
+      logger.groupEnd();
       return { success: false, message: "주문 생성에 실패했습니다." };
     }
 
@@ -244,10 +224,9 @@ export async function createOrder(input: CreateOrderInput): Promise<{
       .insert(orderItemsWithOrderId);
 
     if (itemsError) {
-      console.error("주문 아이템 생성 에러:", itemsError);
-      // 주문 롤백 (실패 시)
+      logger.error("주문 아이템 생성 실패", itemsError);
       await supabase.from("orders").delete().eq("id", order.id);
-      console.groupEnd();
+      logger.groupEnd();
       return { success: false, message: "주문 생성에 실패했습니다." };
     }
 
@@ -265,7 +244,6 @@ export async function createOrder(input: CreateOrderInput): Promise<{
 
     // 쿠폰 사용 처리
     if (input.couponId && couponDiscount > 0) {
-      console.log("쿠폰 사용 처리:", input.couponId);
       await supabase
         .from("coupons")
         .update({
@@ -279,8 +257,8 @@ export async function createOrder(input: CreateOrderInput): Promise<{
     revalidatePath("/cart");
     revalidatePath("/mypage/orders");
 
-    console.log("주문 생성 성공:", orderNumber);
-    console.groupEnd();
+    logger.info("주문 생성 완료", orderNumber);
+    logger.groupEnd();
     return {
       success: true,
       message: "주문이 생성되었습니다.",
@@ -288,22 +266,16 @@ export async function createOrder(input: CreateOrderInput): Promise<{
       orderNumber,
     };
   } catch (error) {
-    console.error("에러:", error);
-    console.groupEnd();
+    logger.error("주문 생성 예외", error);
+    logger.groupEnd();
     return { success: false, message: "주문 생성에 실패했습니다." };
   }
 }
 
 // 주문 목록 조회
 export async function getOrders(): Promise<Order[]> {
-  console.group("[getOrders] 주문 목록 조회");
-
   const userId = await getCurrentUserId();
-  if (!userId) {
-    console.log("로그인 필요");
-    console.groupEnd();
-    return [];
-  }
+  if (!userId) return [];
 
   const supabase = await createClient();
 
@@ -314,13 +286,10 @@ export async function getOrders(): Promise<Order[]> {
     .order("created_at", { ascending: false });
 
   if (error) {
-    console.error("에러:", error);
-    console.groupEnd();
+    logger.error("주문 목록 조회 실패", error);
     return [];
   }
 
-  console.log("결과:", data?.length, "개 주문");
-  console.groupEnd();
   return data as Order[];
 }
 
@@ -328,19 +297,11 @@ export async function getOrders(): Promise<Order[]> {
 export async function getOrderById(
   orderId: string,
 ): Promise<OrderWithItems | null> {
-  console.group("[getOrderById] 주문 상세 조회");
-  console.log("주문 ID:", orderId);
-
   const userId = await getCurrentUserId();
-  if (!userId) {
-    console.log("로그인 필요");
-    console.groupEnd();
-    return null;
-  }
+  if (!userId) return null;
 
   const supabase = await createClient();
 
-  // 주문 조회
   const { data: order, error } = await supabase
     .from("orders")
     .select("*")
@@ -349,19 +310,14 @@ export async function getOrderById(
     .single();
 
   if (error || !order) {
-    console.error("에러:", error);
-    console.groupEnd();
+    logger.error("주문 상세 조회 실패", error);
     return null;
   }
 
-  // 주문 아이템 조회
   const { data: items } = await supabase
     .from("order_items")
     .select("*")
     .eq("order_id", orderId);
-
-  console.log("결과:", order.order_number);
-  console.groupEnd();
 
   return {
     ...order,
@@ -369,7 +325,7 @@ export async function getOrderById(
   } as OrderWithItems;
 }
 
-// 결제 정보 저장 (TossPayments 결제 후)
+// 결제 정보 저장
 export async function savePaymentInfo(
   orderId: string,
   paymentData: {
@@ -378,19 +334,14 @@ export async function savePaymentInfo(
     amount: number;
   },
 ): Promise<{ success: boolean; message: string }> {
-  console.group("[savePaymentInfo] 결제 정보 저장");
-  console.log("주문 ID:", orderId);
-
   try {
     const userId = await getCurrentUserId();
     if (!userId) {
-      console.groupEnd();
       return { success: false, message: "로그인이 필요합니다." };
     }
 
     const supabase = await createClient();
 
-    // 주문 확인
     const { data: order } = await supabase
       .from("orders")
       .select("id, user_id")
@@ -399,12 +350,9 @@ export async function savePaymentInfo(
       .single();
 
     if (!order) {
-      console.log("주문 없음");
-      console.groupEnd();
       return { success: false, message: "주문을 찾을 수 없습니다." };
     }
 
-    // 결제 정보 저장
     const { error: paymentError } = await supabase.from("payments").insert({
       order_id: orderId,
       payment_key: paymentData.paymentKey,
@@ -420,52 +368,40 @@ export async function savePaymentInfo(
     });
 
     if (paymentError) {
-      console.error("결제 정보 저장 에러:", paymentError);
-      console.groupEnd();
+      logger.error("결제 정보 저장 실패", paymentError);
       return { success: false, message: "결제 정보 저장에 실패했습니다." };
     }
 
-    // 주문 상태 업데이트
     await supabase
       .from("orders")
       .update({ status: "confirmed" })
       .eq("id", orderId);
 
     revalidatePath("/mypage/orders");
-
-    console.log("성공");
-    console.groupEnd();
     return { success: true, message: "결제가 완료되었습니다." };
   } catch (error) {
-    console.error("에러:", error);
-    console.groupEnd();
+    logger.error("결제 처리 예외", error);
     return { success: false, message: "결제 처리에 실패했습니다." };
   }
 }
 
 /**
  * 주문 취소
- * - pending, confirmed 상태의 주문만 취소 가능
- * - 재고 복구
- * - 쿠폰 복구 (사용된 쿠폰이 있다면)
  */
 export async function cancelOrder(
   orderId: string,
 ): Promise<{ success: boolean; message: string }> {
-  console.group("[cancelOrder] 주문 취소 요청");
-  console.log("주문 ID:", orderId);
+  logger.group("[cancelOrder] 주문 취소");
 
   try {
     const userId = await getCurrentUserId();
     if (!userId) {
-      console.log("로그인 필요");
-      console.groupEnd();
+      logger.groupEnd();
       return { success: false, message: "로그인이 필요합니다." };
     }
 
     const supabase = await createClient();
 
-    // 주문 조회
     const { data: order, error: orderError } = await supabase
       .from("orders")
       .select("*")
@@ -474,44 +410,38 @@ export async function cancelOrder(
       .single();
 
     if (orderError || !order) {
-      console.error("주문 조회 에러:", orderError);
-      console.groupEnd();
+      logger.error("주문 조회 실패", orderError);
+      logger.groupEnd();
       return { success: false, message: "주문을 찾을 수 없습니다." };
     }
 
-    // 취소 가능한 상태 확인
     if (order.status === "cancelled") {
-      console.log("이미 취소된 주문");
-      console.groupEnd();
+      logger.groupEnd();
       return { success: false, message: "이미 취소된 주문입니다." };
     }
 
     if (order.status === "shipped" || order.status === "delivered") {
-      console.log("배송 중이거나 완료된 주문은 취소 불가");
-      console.groupEnd();
+      logger.groupEnd();
       return {
         success: false,
         message: "배송 중이거나 배송 완료된 주문은 취소할 수 없습니다.",
       };
     }
 
-    // 주문 아이템 조회
     const { data: orderItems, error: itemsError } = await supabase
       .from("order_items")
       .select("*")
       .eq("order_id", orderId);
 
     if (itemsError) {
-      console.error("주문 아이템 조회 에러:", itemsError);
-      console.groupEnd();
+      logger.error("주문 아이템 조회 실패", itemsError);
+      logger.groupEnd();
       return { success: false, message: "주문 정보 조회에 실패했습니다." };
     }
 
     // 재고 복구
     if (orderItems && orderItems.length > 0) {
-      console.log("재고 복구 중...");
       for (const item of orderItems) {
-        // 상품 재고 조회
         const { data: product } = await supabase
           .from("products")
           .select("stock")
@@ -523,17 +453,13 @@ export async function cancelOrder(
             .from("products")
             .update({ stock: product.stock + item.quantity })
             .eq("id", item.product_id);
-          console.log(
-            `재고 복구: ${item.product_name} +${item.quantity}개`,
-          );
         }
       }
     }
 
-    // 쿠폰 복구 (사용된 쿠폰이 있다면)
+    // 쿠폰 복구
     if (order.coupon_id) {
-      console.log("쿠폰 복구 중...", order.coupon_id);
-      const { error: couponError } = await supabase
+      await supabase
         .from("coupons")
         .update({
           status: "active",
@@ -541,35 +467,28 @@ export async function cancelOrder(
           order_id: null,
         })
         .eq("id", order.coupon_id);
-
-      if (couponError) {
-        console.error("쿠폰 복구 에러:", couponError);
-      } else {
-        console.log("쿠폰 복구 완료");
-      }
     }
 
-    // 주문 상태를 cancelled로 변경
     const { error: updateError } = await supabase
       .from("orders")
       .update({ status: "cancelled" })
       .eq("id", orderId);
 
     if (updateError) {
-      console.error("주문 취소 에러:", updateError);
-      console.groupEnd();
+      logger.error("주문 취소 실패", updateError);
+      logger.groupEnd();
       return { success: false, message: "주문 취소에 실패했습니다." };
     }
 
     revalidatePath("/mypage/orders");
     revalidatePath(`/mypage/orders/${orderId}`);
 
-    console.log("✅ 주문 취소 완료:", order.order_number);
-    console.groupEnd();
+    logger.info("주문 취소 완료", order.order_number);
+    logger.groupEnd();
     return { success: true, message: "주문이 취소되었습니다." };
   } catch (error) {
-    console.error("❌ 주문 취소 중 예외 발생:", error);
-    console.groupEnd();
+    logger.error("주문 취소 예외", error);
+    logger.groupEnd();
     return { success: false, message: "주문 취소 중 오류가 발생했습니다." };
   }
 }

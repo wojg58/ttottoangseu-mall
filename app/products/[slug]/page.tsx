@@ -16,9 +16,6 @@ import { notFound } from "next/navigation";
 import {
   Home,
   Heart,
-  ShoppingCart,
-  Minus,
-  Plus,
   Share2,
   Truck,
   Shield,

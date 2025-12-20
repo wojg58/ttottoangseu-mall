@@ -6,7 +6,7 @@
 import Link from "next/link";
 import { auth } from "@clerk/nextjs/server";
 import { redirect, notFound } from "next/navigation";
-import { Home, Package, MapPin, CreditCard, Phone } from "lucide-react";
+import { Home, Package, MapPin, CreditCard } from "lucide-react";
 import { getOrderById } from "@/actions/orders";
 import DateDisplay from "@/components/date-display";
 import NumberDisplay from "@/components/number-display";

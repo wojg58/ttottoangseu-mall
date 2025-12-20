@@ -9,12 +9,10 @@ import {
   Plus,
   ChevronLeft,
   Edit,
-  Trash2,
   FileText,
   Image as ImageIcon,
 } from "lucide-react";
 import { isAdmin, getAdminProducts } from "@/actions/admin";
-import { deleteProduct } from "@/actions/admin-products";
 import DeleteProductButton from "@/components/delete-product-button";
 import BulkDeleteProductsButton from "@/components/bulk-delete-products-button";
 import ProductSearch from "@/components/admin/product-search";

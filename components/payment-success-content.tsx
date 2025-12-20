@@ -7,9 +7,9 @@
 
 import { useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import Link from "next/link";
 import { CheckCircle2, Home, Package } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import PaymentStatusCard from "@/components/payment-status-card";
+import logger from "@/lib/logger";
 
 export default function PaymentSuccessContent() {
   const searchParams = useSearchParams();
@@ -18,26 +18,24 @@ export default function PaymentSuccessContent() {
   const [orderNumber, setOrderNumber] = useState<string | null>(null);
 
   useEffect(() => {
-    console.group("[PaymentSuccessContent] 결제 완료 페이지");
-    
-    // URL 파라미터에서 결제 정보 확인
+    logger.group("[PaymentSuccessContent] 결제 완료 페이지");
+
     const paymentKey = searchParams.get("paymentKey");
     const orderId = searchParams.get("orderId");
     const amount = searchParams.get("amount");
 
-    console.log("결제 정보:", { paymentKey, orderId, amount });
+    logger.debug("결제 정보:", { paymentKey, orderId, amount });
 
     if (!paymentKey || !orderId || !amount) {
-      console.log("필수 파라미터 누락");
+      logger.debug("필수 파라미터 누락");
       router.push("/payments/fail?message=결제 정보가 올바르지 않습니다.");
-      console.groupEnd();
+      logger.groupEnd();
       return;
     }
 
-    // 결제 승인 처리
     const confirmPayment = async () => {
       try {
-        console.log("결제 승인 API 호출");
+        logger.debug("결제 승인 API 호출");
         const response = await fetch("/api/payments/confirm", {
           method: "POST",
           headers: {
@@ -53,22 +51,22 @@ export default function PaymentSuccessContent() {
         const data = await response.json();
 
         if (!response.ok || !data.success) {
-          console.error("결제 승인 실패:", data);
-          router.push(`/payments/fail?message=${encodeURIComponent(data.message || "결제 승인에 실패했습니다.")}`);
-          console.groupEnd();
+          logger.error("결제 승인 실패:", data);
+          router.push(
+            `/payments/fail?message=${encodeURIComponent(data.message || "결제 승인에 실패했습니다.")}`
+          );
+          logger.groupEnd();
           return;
         }
 
-        console.log("결제 승인 성공:", data);
-        
-        // 주문번호 설정
+        logger.debug("결제 승인 성공:", data);
         setOrderNumber(data.orderNumber || orderId.substring(0, 8));
         setIsLoading(false);
-        console.groupEnd();
+        logger.groupEnd();
       } catch (error) {
-        console.error("결제 승인 처리 에러:", error);
+        logger.error("결제 승인 처리 에러:", error);
         router.push("/payments/fail?message=결제 처리 중 오류가 발생했습니다.");
-        console.groupEnd();
+        logger.groupEnd();
       }
     };
 
@@ -87,47 +85,17 @@ export default function PaymentSuccessContent() {
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-sm p-8 text-center">
-      <div className="flex justify-center mb-6">
-        <div className="w-20 h-20 bg-[#ffeef5] rounded-full flex items-center justify-center">
-          <CheckCircle2 className="w-12 h-12 text-[#ff6b9d]" />
-        </div>
-      </div>
-
-      <h1 className="text-2xl font-bold text-[#4a3f48] mb-2">결제가 완료되었습니다!</h1>
-      <p className="text-sm text-[#8b7d84] mb-8">
-        주문해주셔서 감사합니다.
-      </p>
-
-      {orderNumber && (
-        <div className="bg-[#ffeef5] rounded-lg p-4 mb-8">
-          <p className="text-sm text-[#8b7d84] mb-1">주문번호</p>
-          <p className="text-lg font-bold text-[#4a3f48]">{orderNumber}</p>
-        </div>
-      )}
-
-      <div className="flex flex-col sm:flex-row gap-3 justify-center">
-        <Button
-          asChild
-          variant="outline"
-          className="border-[#fad2e6] text-[#4a3f48] hover:bg-[#ffeef5]"
-        >
-          <Link href="/">
-            <Home className="w-4 h-4 mr-2" />
-            홈으로
-          </Link>
-        </Button>
-        <Button
-          asChild
-          className="bg-[#ff6b9d] hover:bg-[#ff5088] text-white"
-        >
-          <Link href="/mypage/orders">
-            <Package className="w-4 h-4 mr-2" />
-            주문 내역 보기
-          </Link>
-        </Button>
-      </div>
-    </div>
+    <PaymentStatusCard
+      icon={CheckCircle2}
+      iconBgClass="bg-[#ffeef5]"
+      iconColorClass="text-[#ff6b9d]"
+      title="결제가 완료되었습니다!"
+      message="주문해주셔서 감사합니다."
+      orderNumber={orderNumber ?? undefined}
+      actions={[
+        { label: "홈으로", href: "/", icon: Home },
+        { label: "주문 내역 보기", href: "/mypage/orders", icon: Package, primary: true },
+      ]}
+    />
   );
 }
-

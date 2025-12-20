@@ -14,41 +14,38 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Heart, Star } from "lucide-react";
-import { useState } from "react";
+import { useState, useMemo, memo } from "react";
 import type { ProductListItem } from "@/types/database";
+import { formatPrice } from "@/lib/utils";
 
 interface ProductCardProps {
   product: ProductListItem;
   rank?: number; // 베스트 상품 순위
 }
 
-export default function ProductCard({ product, rank }: ProductCardProps) {
+function ProductCardComponent({ product, rank }: ProductCardProps) {
   const [isLiked, setIsLiked] = useState(false);
 
-  // 할인율 계산
-  const discountRate =
-    product.discount_price && product.price > 0
-      ? Math.round(
-          ((product.price - product.discount_price) / product.price) * 100,
-        )
-      : 0;
+  // 메모이제이션된 계산값들
+  const { discountRate, displayPrice, isSoldOut } = useMemo(() => {
+    const discount =
+      product.discount_price && product.price > 0
+        ? Math.round(
+            ((product.price - product.discount_price) / product.price) * 100,
+          )
+        : 0;
 
-  // 표시 가격 (할인가 또는 정가)
-  const displayPrice = product.discount_price ?? product.price;
-
-  // 품절 여부
-  const isSoldOut = product.status === "sold_out" || product.stock === 0;
-
-  console.log("[ProductCard] 렌더링:", product.name, {
-    isSoldOut,
-    discountRate,
-  });
+    return {
+      discountRate: discount,
+      displayPrice: product.discount_price ?? product.price,
+      isSoldOut: product.status === "sold_out" || product.stock === 0,
+    };
+  }, [product.discount_price, product.price, product.status, product.stock]);
 
   const handleLikeClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setIsLiked(!isLiked);
-    console.log("[ProductCard] 찜하기 클릭:", product.name, !isLiked);
     // TODO: 찜하기 기능 구현
   };
 
@@ -126,12 +123,10 @@ export default function ProductCard({ product, rank }: ProductCardProps) {
               {discountRate}%
             </span>
           )}
-          <span className="shop-price">
-            {`${displayPrice.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}원`}
-          </span>
+          <span className="shop-price">{formatPrice(displayPrice)}</span>
           {discountRate > 0 && (
             <span className="shop-price-original">
-              {`${product.price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}원`}
+              {formatPrice(product.price)}
             </span>
           )}
         </div>
@@ -146,3 +141,19 @@ export default function ProductCard({ product, rank }: ProductCardProps) {
     </Link>
   );
 }
+
+// React.memo로 불필요한 리렌더링 방지
+const ProductCard = memo(ProductCardComponent, (prevProps, nextProps) => {
+  return (
+    prevProps.product.id === nextProps.product.id &&
+    prevProps.product.stock === nextProps.product.stock &&
+    prevProps.product.status === nextProps.product.status &&
+    prevProps.product.price === nextProps.product.price &&
+    prevProps.product.discount_price === nextProps.product.discount_price &&
+    prevProps.rank === nextProps.rank
+  );
+});
+
+ProductCard.displayName = "ProductCard";
+
+export default ProductCard;

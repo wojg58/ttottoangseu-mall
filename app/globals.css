@@ -92,13 +92,29 @@
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
 
-  /* 또또앙스 쇼핑몰 커스텀 컬러 */
+  /* 또또앙스 쇼핑몰 커스텀 컬러
+   *
+   * 사용 예시 (Tailwind v4 자동 생성):
+   * - text-shop-rose (= text-[#ff6b9d])
+   * - bg-shop-pink-light (= bg-[#ffeef5])
+   * - border-shop-pink (= border-[#fad2e6])
+   *
+   * 시맨틱 색상:
+   * - text-foreground (= text-[#4a3f48])
+   * - text-muted-foreground (= text-[#8b7d84])
+   * - border-border (= border-[#f5d5e3])
+   * - bg-secondary (= bg-[#ffeef5])
+   */
   --color-shop-pink: #fad2e6;
   --color-shop-pink-dark: #f5b8d4;
   --color-shop-pink-light: #ffeef5;
   --color-shop-rose: #ff6b9d;
+  --color-shop-rose-dark: #ff5088;
   --color-shop-cream: #fff9f7;
   --color-shop-beige: #f8f6f4;
+  --color-shop-text: #4a3f48;
+  --color-shop-text-muted: #8b7d84;
+  --color-shop-border: #f5d5e3;
 }
 
 :root {
@@ -196,11 +212,11 @@
   }
 
   .shop-btn-primary {
-    @apply bg-[#fad2e6] text-[#4a3f48] hover:bg-[#f5b8d4] transition-colors rounded-full px-6 py-2 font-medium;
+    @apply bg-shop-pink text-shop-text hover:bg-shop-pink-dark transition-colors rounded-full px-6 py-2 font-medium;
   }
 
   .shop-btn-accent {
-    @apply bg-[#ff6b9d] text-white hover:bg-[#ff5088] transition-colors rounded-full px-6 py-2 font-medium;
+    @apply bg-shop-rose text-white hover:bg-shop-rose-dark transition-colors rounded-full px-6 py-2 font-medium;
   }
 
   .shop-card {
@@ -212,11 +228,11 @@
   }
 
   .shop-badge-new {
-    @apply inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-[#ff6b9d] text-white;
+    @apply inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-shop-rose text-white;
   }
 
   .shop-badge-sale {
-    @apply inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-[#fad2e6] text-[#4a3f48];
+    @apply inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-shop-pink text-shop-text;
   }
 
   .shop-badge-soldout {
@@ -224,7 +240,7 @@
   }
 
   .shop-price {
-    @apply text-lg font-bold text-[#4a3f48];
+    @apply text-lg font-bold text-shop-text;
   }
 
   .shop-price-original {
@@ -232,7 +248,7 @@
   }
 
   .shop-price-discount {
-    @apply text-[#ff6b9d] font-bold;
+    @apply text-shop-rose font-bold;
   }
 
   .font-brand {
@@ -284,7 +300,7 @@
 
 .category-nav-item::after {
   content: "";
-  @apply absolute bottom-0 left-0 w-full h-0.5 bg-[#ff6b9d] transform scale-x-0 transition-transform duration-200;
+  @apply absolute bottom-0 left-0 w-full h-0.5 bg-shop-rose transform scale-x-0 transition-transform duration-200;
 }
 
 .category-nav-item:hover::after,
@@ -299,15 +315,15 @@
 }
 
 ::-webkit-scrollbar-track {
-  @apply bg-[#ffeef5];
+  @apply bg-shop-pink-light;
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-[#fad2e6] rounded-full;
+  @apply bg-shop-pink rounded-full;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  @apply bg-[#f5b8d4];
+  @apply bg-shop-pink-dark;
 }
 
 /* 2026 이미지 둥둥 떠다니는 애니메이션 */

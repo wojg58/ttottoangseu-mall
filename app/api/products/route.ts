@@ -9,7 +9,6 @@ import { getProducts } from "@/actions/products";
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
-    const page = parseInt(searchParams.get("page") || "1", 10);
     const limit = parseInt(searchParams.get("limit") || "5", 10);
     const skip = parseInt(searchParams.get("skip") || "0", 10);
 

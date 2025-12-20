@@ -14,339 +14,196 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowRight, Sparkles, TrendingUp, Star } from "lucide-react";
+import { ArrowRight, Sparkles, TrendingUp } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import ProductCard from "@/components/product-card";
 import AllProductsSection from "@/components/all-products-section";
 import EventBanner from "@/components/event-banner";
 import WallpaperPreview from "@/components/WallpaperPreview";
+import logger from "@/lib/logger";
 import type { ProductListItem, Category } from "@/types/database";
 
-// 카테고리별 이모지 매핑
-const CATEGORY_EMOJI: Record<string, string> = {
-  sanrio: "❤️",
-  character: "🧡",
-  "phone-strap": "💛",
-  keyring: "💚",
-  fashion: "💙",
-  bear: "🤎",
-  stationery: "💜",
-};
+// 베스트 상품 목록 (5개)
+const BEST_PRODUCT_NAMES = [
+  "산리오 헬로키티 블랙엔젤 스타일업 롱다리 마스코트 인형 키링 그레이 드레스",
+  "산리오 헬로키티 판타지 스타일업 시리즈 롱다리 태닝 코갸류 마스코트 인형 키링",
+  "유키오 마스코트 인형 키링",
+  "모프샌드 산리오 마스코트 인형 키링 귀여운 가방 장식 열쇠고리",
+  "ttotto_pr_069 먼작귀 치이카와 프렌즈 피규어 4 반다이 가챠 굿즈",
+];
 
-// 상품 데이터 가져오기 (서버 컴포넌트에서 실행)
+// 전체 상품 목록 (22개)
+const ALL_PRODUCT_NAMES = [
+  "산리오 헬로키티 고고걸 갸류 스타일업 마스코트 호피 태닝 롱다리 인형 키링",
+  "산리오 헬로키티 MC컬렉션 마스코트 스탠다드 인형 키링",
+  "산리오 헬로키티 MC컬렉션 마스코트 바니 토끼 인형 키링",
+  "산리오 MC컬렉션 마스코트 머메이드 인어 인형 키링",
+  "산리오 헬로키티 MC컬렉션 마스코트 애니멀 호피 인형 키링",
+  "산리오 헬로키티 MC컬렉션 마스코트 타이니참 인형 키링",
+  "산리오 헬로키티 MC컬렉션 마스코트 베이비 아기 인형 키링 키홀더",
+  "산리오 헬로키티 블랙엔젤 마스코트 인형 키링 실버",
+  "산리오 헬로키티 블랙엔젤 하트 카라비너 마스코트 인형 키링 그레이",
+  "산리오 헬로키티 판타지 마스코트 태닝 머메이드 인어 키링",
+  "산리오 헬로키티 판타지 요정 마스코트 홀더 하트 카라비너 인형 키링",
+  "헬로키티 블랙엔젤 퀼팅 하트 파우치 동전지갑 실버",
+  "헬로키티&타이니참 나카요시 마스코트 파우치 세트",
+  "산리오 헬로키티 90s 고고걸 갸류 글리터 반짝이 파우치",
+  "헬로키티 포치비 실리콘 동전지갑 키링 똑딱이 레드 민트 미니 파우치",
+  "키티 한교동 카피바라 피그 팬더 동물 털 파우치 겨울 퍼 화장품 파우치 필통",
+  "반다이 배스킨라빈스 아이스크림 키링 2탄",
+  "산리오 헬로키티 십이간지 띠별 동물 신년 운세 봅기 피규어",
+  "K푸드 미니어처 간식 초코 과자 봉지 가방꾸미기 열쇠고리 키링",
+  "치이카와 인테리어 미니 피규어 2탄 먼작귀 가차 미니어처",
+  "ttotto_pr_90 반다이 짱구 키구루미즈 크레용 신짱 플로키 미니 피규어 8종",
+  "ttotto_pr_84 모프샌드 에비냥 새우냥 피규어 키링 가챠 mofusand 새우튀김 캡슐토이",
+];
+
+/**
+ * 상품명 정규화 함수
+ */
+function normalize(str: string): string {
+  return str.trim().replace(/\s+/g, " ").replace(/[&]/g, "&").toLowerCase();
+}
+
+/**
+ * 상품명 매칭 점수 계산 함수
+ * @returns 0-100 사이의 점수
+ */
+function matchProduct(productName: string, targetName: string): number {
+  const normalizedProduct = normalize(productName);
+  const normalizedTarget = normalize(targetName);
+
+  // 1. 완전 일치
+  if (normalizedProduct === normalizedTarget) return 100;
+
+  // 2. 공백 제거 후 완전 일치
+  const noSpaceProduct = normalizedProduct.replace(/\s+/g, "");
+  const noSpaceTarget = normalizedTarget.replace(/\s+/g, "");
+  if (noSpaceProduct === noSpaceTarget) return 95;
+
+  // 3. 포함 관계
+  if (normalizedProduct.includes(normalizedTarget)) return 80;
+  if (normalizedTarget.includes(normalizedProduct)) return 80;
+
+  // 4. 주요 키워드 매칭
+  const excludeWords = ["산리오", "헬로키티", "마스코트", "인형", "키링"];
+  const targetWords = normalizedTarget
+    .split(/\s+/)
+    .filter((word) => word.length > 1 && !excludeWords.includes(word));
+
+  if (targetWords.length > 0) {
+    const matchedWords = targetWords.filter((word) =>
+      normalizedProduct.includes(word)
+    );
+    const matchRatio = matchedWords.length / targetWords.length;
+
+    if (matchRatio >= 0.8) return 70 + matchRatio * 10;
+    if (matchRatio >= 0.6) return 50 + matchRatio * 10;
+  }
+
+  // 5. 공통 단어 기반 점수
+  const productWords = new Set(normalizedProduct.split(/\s+/));
+  const targetWordsSet = new Set(normalizedTarget.split(/\s+/));
+  const commonWords = [...productWords].filter((word) =>
+    targetWordsSet.has(word)
+  );
+  const commonRatio =
+    commonWords.length / Math.max(productWords.size, targetWordsSet.size);
+
+  return commonRatio * 40;
+}
+
+/**
+ * 타겟 상품명 목록에서 최적 매칭 상품 찾기
+ */
+function findMatchedProducts<T extends { name: string }>(
+  products: T[],
+  targetNames: string[],
+  label: string
+): T[] {
+  return targetNames
+    .map((targetName, index) => {
+      const scoredProducts = products
+        .map((product) => ({
+          product,
+          score: matchProduct(product.name, targetName),
+        }))
+        .filter((item) => item.score >= 50)
+        .sort((a, b) => b.score - a.score);
+
+      const bestMatch = scoredProducts[0];
+
+      if (bestMatch && bestMatch.score >= 50) {
+        logger.debug(`[HomePage] ${label} ${index + 1}번 매칭 (${bestMatch.score.toFixed(0)}점)`, {
+          target: targetName.substring(0, 30) + "...",
+          found: bestMatch.product.name.substring(0, 30) + "...",
+        });
+        return bestMatch.product;
+      }
+
+      logger.warn(`[HomePage] ${label} ${index + 1}번 매칭 실패`, {
+        target: targetName.substring(0, 30) + "...",
+      });
+      return null;
+    })
+    .filter((product): product is NonNullable<typeof product> => product !== null);
+}
+
+/**
+ * 상품 데이터 가져오기 (서버 컴포넌트에서 실행)
+ * - 최적화: Supabase 쿼리 1회로 통합
+ */
 async function getProducts() {
-  console.log("[HomePage] 상품 데이터 fetching 시작");
+  logger.group("[HomePage] 상품 데이터 fetching");
+  logger.time("getProducts");
 
   const supabase = await createClient();
 
-  // 베스트 상품 (지정된 5개 상품을 번호순으로 표시)
-  const bestProductNames = [
-    "산리오 헬로키티 블랙엔젤 스타일업 롱다리 마스코트 인형 키링 그레이 드레스",
-    "산리오 헬로키티 판타지 스타일업 시리즈 롱다리 태닝 코갸류 마스코트 인형 키링",
-    "유키오 마스코트 인형 키링",
-    "모프샌드 산리오 마스코트 인형 키링 귀여운 가방 장식 열쇠고리",
-    "ttotto_pr_069 먼작귀 치이카와 프렌즈 피규어 4 반다이 가챠 굿즈",
-  ];
-
-  // 모든 활성 상품 가져오기 (베스트 상품 매칭용)
-  const { data: allProductsForBest, error: bestError } = await supabase
+  // 모든 활성 상품을 한 번에 가져오기
+  const { data: allProductsRaw, error } = await supabase
     .from("products")
     .select(
       `
       *,
       category:categories!fk_products_category_id(id, name, slug),
       images:product_images(id, image_url, is_primary, alt_text)
-    `,
+    `
     )
     .eq("status", "active")
     .is("deleted_at", null);
 
-  // 지정된 상품명과 매칭하여 순서대로 정렬
-  let featuredProducts: typeof allProductsForBest = [];
-  if (allProductsForBest && allProductsForBest.length > 0) {
-    // 상품명 정규화 함수
-    const normalize = (str: string): string => {
-      return str.trim().replace(/\s+/g, " ").replace(/[&]/g, "&").toLowerCase();
-    };
-
-    // 상품명 매칭 함수 (정확한 매칭 우선)
-    const matchProduct = (productName: string, targetName: string): number => {
-      const normalizedProduct = normalize(productName);
-      const normalizedTarget = normalize(targetName);
-
-      // 1. 완전 일치 (최우선)
-      if (normalizedProduct === normalizedTarget) {
-        return 100;
-      }
-
-      // 2. 공백 제거 후 완전 일치
-      const noSpaceProduct = normalizedProduct.replace(/\s+/g, "");
-      const noSpaceTarget = normalizedTarget.replace(/\s+/g, "");
-      if (noSpaceProduct === noSpaceTarget) {
-        return 95;
-      }
-
-      // 3. 한쪽이 다른 쪽을 포함하는 경우
-      if (normalizedProduct.includes(normalizedTarget)) {
-        return 80;
-      }
-      if (normalizedTarget.includes(normalizedProduct)) {
-        return 80;
-      }
-
-      // 4. 주요 키워드 매칭 점수 계산
-      const targetWords = normalizedTarget
-        .split(/\s+/)
-        .filter(
-          (word) =>
-            word.length > 1 &&
-            !["산리오", "헬로키티", "마스코트", "인형", "키링"].includes(word),
-        );
-
-      if (targetWords.length > 0) {
-        const matchedWords = targetWords.filter((word) =>
-          normalizedProduct.includes(word),
-        );
-        const matchRatio = matchedWords.length / targetWords.length;
-
-        if (matchRatio >= 0.8) {
-          return 70 + matchRatio * 10;
-        }
-        if (matchRatio >= 0.6) {
-          return 50 + matchRatio * 10;
-        }
-      }
-
-      // 5. 공통 단어 개수 기반 점수
-      const productWords = new Set(normalizedProduct.split(/\s+/));
-      const targetWordsSet = new Set(normalizedTarget.split(/\s+/));
-      const commonWords = [...productWords].filter((word) =>
-        targetWordsSet.has(word),
-      );
-      const commonRatio =
-        commonWords.length / Math.max(productWords.size, targetWordsSet.size);
-
-      return commonRatio * 40;
-    };
-
-    // 지정된 순서대로 상품 찾기
-    featuredProducts = bestProductNames
-      .map((targetName, index) => {
-        const scoredProducts = allProductsForBest
-          .map((product) => {
-            const productName = (product as { name: string }).name || "";
-            const score = matchProduct(productName, targetName);
-            return { product, score, productName };
-          })
-          .filter((item) => item.score >= 50)
-          .sort((a, b) => b.score - a.score);
-
-        const bestMatch = scoredProducts[0];
-
-        if (bestMatch && bestMatch.score >= 50) {
-          console.log(
-            `[HomePage] 베스트 상품 ${
-              index + 1
-            }번 매칭 (점수: ${bestMatch.score.toFixed(1)}):`,
-            {
-              target: targetName,
-              found: bestMatch.productName,
-              slug: (bestMatch.product as { slug: string }).slug,
-            },
-          );
-          return bestMatch.product;
-        } else {
-          console.warn(`[HomePage] 베스트 상품 ${index + 1}번 매칭 실패:`, {
-            target: targetName,
-            candidates: scoredProducts.slice(0, 3).map((p) => ({
-              name: p.productName,
-              score: p.score.toFixed(1),
-            })),
-          });
-          return null;
-        }
-      })
-      .filter(
-        (product): product is NonNullable<typeof product> => product !== null,
-      );
-
-    console.log("[HomePage] 베스트 상품 필터링 결과:", {
-      total: allProductsForBest.length,
-      matched: featuredProducts.length,
-      expected: bestProductNames.length,
-    });
+  if (error) {
+    logger.error("[HomePage] 상품 fetch 에러:", error);
+    logger.timeEnd("getProducts");
+    logger.groupEnd();
+    return { featuredProducts: [], allProducts: [], categories: [] };
   }
 
-  if (bestError) {
-    console.error("[HomePage] 베스트 상품 fetch 에러:", bestError);
+  // 상품이 없는 경우
+  if (!allProductsRaw || allProductsRaw.length === 0) {
+    logger.warn("[HomePage] 활성 상품 없음");
+    logger.timeEnd("getProducts");
+    logger.groupEnd();
+    return { featuredProducts: [], allProducts: [], categories: [] };
   }
 
-  // 전체상품 (지정된 22개 상품을 번호순으로 표시)
-  // 지정된 상품명 목록 (1번부터 22번까지)
-  const targetProductNames = [
-    "산리오 헬로키티 고고걸 갸류 스타일업 마스코트 호피 태닝 롱다리 인형 키링",
-    "산리오 헬로키티 MC컬렉션 마스코트 스탠다드 인형 키링",
-    "산리오 헬로키티 MC컬렉션 마스코트 바니 토끼 인형 키링",
-    "산리오 MC컬렉션 마스코트 머메이드 인어 인형 키링",
-    "산리오 헬로키티 MC컬렉션 마스코트 애니멀 호피 인형 키링",
-    "산리오 헬로키티 MC컬렉션 마스코트 타이니참 인형 키링",
-    "산리오 헬로키티 MC컬렉션 마스코트 베이비 아기 인형 키링 키홀더",
-    "산리오 헬로키티 블랙엔젤 마스코트 인형 키링 실버",
-    "산리오 헬로키티 블랙엔젤 하트 카라비너 마스코트 인형 키링 그레이",
-    "산리오 헬로키티 판타지 마스코트 태닝 머메이드 인어 키링",
-    "산리오 헬로키티 판타지 요정 마스코트 홀더 하트 카라비너 인형 키링",
-    "헬로키티 블랙엔젤 퀼팅 하트 파우치 동전지갑 실버",
-    "헬로키티&타이니참 나카요시 마스코트 파우치 세트",
-    "산리오 헬로키티 90s 고고걸 갸류 글리터 반짝이 파우치",
-    "헬로키티 포치비 실리콘 동전지갑 키링 똑딱이 레드 민트 미니 파우치",
-    "키티 한교동 카피바라 피그 팬더 동물 털 파우치 겨울 퍼 화장품 파우치 필통",
-    "반다이 배스킨라빈스 아이스크림 키링 2탄",
-    "산리오 헬로키티 십이간지 띠별 동물 신년 운세 봅기 피규어",
-    "K푸드 미니어처 간식 초코 과자 봉지 가방꾸미기 열쇠고리 키링",
-    "치이카와 인테리어 미니 피규어 2탄 먼작귀 가차 미니어처",
-    "ttotto_pr_90 반다이 짱구 키구루미즈 크레용 신짱 플로키 미니 피규어 8종",
-    "ttotto_pr_84 모프샌드 에비냥 새우냥 피규어 키링 가챠 mofusand 새우튀김 캡슐토이",
-  ];
+  // 타입 변환 (name 필드 접근용)
+  type RawProduct = (typeof allProductsRaw)[number];
+  const productsWithName = allProductsRaw as (RawProduct & { name: string })[];
 
-  // 모든 활성 상품 가져오기
-  const { data: allProductsRaw, error: allError } = await supabase
-    .from("products")
-    .select(
-      `
-      *,
-      category:categories!fk_products_category_id(id, name, slug),
-      images:product_images(id, image_url, is_primary, alt_text)
-    `,
-    )
-    .eq("status", "active")
-    .is("deleted_at", null);
+  // 베스트 상품 매칭
+  const featuredProducts = findMatchedProducts(
+    productsWithName,
+    BEST_PRODUCT_NAMES,
+    "베스트"
+  );
 
-  // 지정된 상품명과 매칭하여 순서대로 정렬
-  let allProducts: typeof allProductsRaw = [];
-  if (allProductsRaw && allProductsRaw.length > 0) {
-    // 상품명 정규화 함수 (공백, 특수문자 정리)
-    const normalize = (str: string): string => {
-      return str
-        .trim()
-        .replace(/\s+/g, " ") // 여러 공백을 하나로
-        .replace(/[&]/g, "&") // & 기호 유지
-        .toLowerCase();
-    };
-
-    // 상품명 매칭 함수 (정확한 매칭 우선)
-    const matchProduct = (productName: string, targetName: string): number => {
-      const normalizedProduct = normalize(productName);
-      const normalizedTarget = normalize(targetName);
-
-      // 1. 완전 일치 (최우선)
-      if (normalizedProduct === normalizedTarget) {
-        return 100;
-      }
-
-      // 2. 공백 제거 후 완전 일치
-      const noSpaceProduct = normalizedProduct.replace(/\s+/g, "");
-      const noSpaceTarget = normalizedTarget.replace(/\s+/g, "");
-      if (noSpaceProduct === noSpaceTarget) {
-        return 95;
-      }
-
-      // 3. 한쪽이 다른 쪽을 포함하는 경우
-      if (normalizedProduct.includes(normalizedTarget)) {
-        return 80;
-      }
-      if (normalizedTarget.includes(normalizedProduct)) {
-        return 80;
-      }
-
-      // 4. 주요 키워드 매칭 점수 계산
-      const targetWords = normalizedTarget
-        .split(/\s+/)
-        .filter(
-          (word) =>
-            word.length > 1 &&
-            !["산리오", "헬로키티", "마스코트", "인형", "키링"].includes(word),
-        );
-
-      if (targetWords.length > 0) {
-        const matchedWords = targetWords.filter((word) =>
-          normalizedProduct.includes(word),
-        );
-        const matchRatio = matchedWords.length / targetWords.length;
-
-        // 주요 키워드가 모두 포함되면 높은 점수
-        if (matchRatio >= 0.8) {
-          return 70 + matchRatio * 10;
-        }
-        if (matchRatio >= 0.6) {
-          return 50 + matchRatio * 10;
-        }
-      }
-
-      // 5. 공통 단어 개수 기반 점수
-      const productWords = new Set(normalizedProduct.split(/\s+/));
-      const targetWordsSet = new Set(normalizedTarget.split(/\s+/));
-      const commonWords = [...productWords].filter((word) =>
-        targetWordsSet.has(word),
-      );
-      const commonRatio =
-        commonWords.length / Math.max(productWords.size, targetWordsSet.size);
-
-      return commonRatio * 40;
-    };
-
-    // 지정된 순서대로 상품 찾기 (가장 높은 점수의 상품 선택)
-    allProducts = targetProductNames
-      .map((targetName, index) => {
-        // 모든 상품에 대해 매칭 점수 계산
-        const scoredProducts = allProductsRaw
-          .map((product) => {
-            const productName = (product as { name: string }).name || "";
-            const score = matchProduct(productName, targetName);
-            return { product, score, productName };
-          })
-          .filter((item) => item.score >= 50) // 최소 50점 이상만 고려
-          .sort((a, b) => b.score - a.score); // 점수 높은 순으로 정렬
-
-        const bestMatch = scoredProducts[0];
-
-        if (bestMatch && bestMatch.score >= 50) {
-          console.log(
-            `[HomePage] 상품 ${
-              index + 1
-            }번 매칭 (점수: ${bestMatch.score.toFixed(1)}):`,
-            {
-              target: targetName,
-              found: bestMatch.productName,
-              slug: (bestMatch.product as { slug: string }).slug,
-            },
-          );
-          return bestMatch.product;
-        } else {
-          console.warn(`[HomePage] 상품 ${index + 1}번 매칭 실패:`, {
-            target: targetName,
-            candidates: scoredProducts.slice(0, 3).map((p) => ({
-              name: p.productName,
-              score: p.score.toFixed(1),
-            })),
-          });
-          return null;
-        }
-      })
-      .filter(
-        (product): product is NonNullable<typeof product> => product !== null,
-      );
-
-    console.log("[HomePage] 전체상품 필터링 결과:", {
-      total: allProductsRaw.length,
-      matched: allProducts.length,
-      expected: targetProductNames.length,
-      missing: targetProductNames.length - allProducts.length,
-    });
-  }
-
-  if (allError) {
-    console.error("[HomePage] 전체상품 fetch 에러:", allError);
-  }
+  // 전체 상품 매칭
+  const allProducts = findMatchedProducts(
+    productsWithName,
+    ALL_PRODUCT_NAMES,
+    "전체상품"
+  );
 
   // 카테고리 목록
   const { data: categories, error: categoryError } = await supabase
@@ -357,14 +214,16 @@ async function getProducts() {
     .order("sort_order", { ascending: true });
 
   if (categoryError) {
-    console.error("[HomePage] 카테고리 fetch 에러:", categoryError);
+    logger.error("[HomePage] 카테고리 fetch 에러:", categoryError);
   }
 
-  console.log("[HomePage] 데이터 fetching 완료:", {
-    featuredCount: featuredProducts?.length ?? 0,
-    allCount: allProducts?.length ?? 0,
+  logger.debug("[HomePage] 데이터 fetching 완료:", {
+    featuredCount: featuredProducts.length,
+    allCount: allProducts.length,
     categoryCount: categories?.length ?? 0,
   });
+  logger.timeEnd("getProducts");
+  logger.groupEnd();
 
   // 데이터 변환
   const transformProduct = (product: unknown): ProductListItem => {
@@ -426,8 +285,8 @@ async function getProducts() {
   };
 
   return {
-    featuredProducts: (featuredProducts || []).map(transformProduct),
-    allProducts: (allProducts || []).map(transformProduct),
+    featuredProducts: featuredProducts.map(transformProduct),
+    allProducts: allProducts.map(transformProduct),
     categories: (categories || []) as Category[],
   };
 }
@@ -460,14 +319,14 @@ export default async function HomePage() {
                     backgroundColor: "white",
                   }}
                 >
-                  <Sparkles className="w-4 h-4 text-[#ff6b9d]" />
+                  <Sparkles className="w-4 h-4 text-shop-rose" />
                   <span className="text-[18px] text-black font-medium">
                     귀여운 정품 캐릭터 키덜트 소품샵
                   </span>
                 </div>
                 <h1 className="text-3xl md:text-5xl font-bold text-black mb-4 leading-tight">
                   두근거리는 설렘을{" "}
-                  <span className="text-[#ff6b9d]">선물하세요</span> 💕
+                  <span className="text-shop-rose">선물하세요</span> 💕
                 </h1>
                 <p
                   className="text-black mb-6 text-xl"
@@ -488,7 +347,7 @@ export default async function HomePage() {
                 >
                   {/* 장식적인 원들 */}
                   <div
-                    className="absolute w-32 h-32 bg-[#ff6b9d]/20 rounded-full"
+                    className="absolute w-32 h-32 bg-shop-rose/20 rounded-full"
                     style={{
                       left: "50%",
                       top: "50%",
@@ -525,7 +384,7 @@ export default async function HomePage() {
                   <TrendingUp className="w-5 h-5 text-[#F57F17]" />
                 </div>
                 <div className="text-center">
-                  <h2 className="text-2xl font-bold text-[#ff6b9d]">
+                  <h2 className="text-2xl font-bold text-shop-rose">
                     베스트 상품
                   </h2>
                 </div>
@@ -546,7 +405,7 @@ export default async function HomePage() {
                 <div className="flex justify-center mt-8">
                   <Link
                     href="/products?featured=true"
-                    className="text-[#ff6b9d] hover:text-pink-600 hover:underline text-sm flex items-center gap-1"
+                    className="text-shop-rose hover:text-pink-600 hover:underline text-sm flex items-center gap-1"
                   >
                     전체보기
                     <ArrowRight className="w-4 h-4" />
@@ -554,9 +413,9 @@ export default async function HomePage() {
                 </div>
               </>
             ) : (
-              <div className="text-center py-12 bg-[#ffeef5] rounded-xl">
+              <div className="text-center py-12 bg-shop-pink-light rounded-xl">
                 <span className="text-4xl mb-4 block">🎀</span>
-                <p className="text-[#8b7d84]">베스트 상품을 준비 중이에요!</p>
+                <p className="text-shop-text-muted">베스트 상품을 준비 중이에요!</p>
               </div>
             )}
           </div>
@@ -568,10 +427,10 @@ export default async function HomePage() {
             <div className="flex flex-col items-center justify-center mb-8">
               <div className="flex items-center gap-3 mb-4 justify-center">
                 <div className="w-10 h-10 bg-[#FFEB3B] rounded-full flex items-center justify-center">
-                  <Sparkles className="w-5 h-5 text-[#ff6b9d]" />
+                  <Sparkles className="w-5 h-5 text-shop-rose" />
                 </div>
                 <div className="text-center">
-                  <h2 className="text-2xl font-bold text-[#ff6b9d]">
+                  <h2 className="text-2xl font-bold text-shop-rose">
                     전체상품
                   </h2>
                 </div>
@@ -584,7 +443,7 @@ export default async function HomePage() {
                 <div className="flex justify-center mt-8">
                   <Link
                     href="/products"
-                    className="text-[#ff6b9d] hover:text-pink-600 hover:underline text-sm flex items-center gap-1"
+                    className="text-shop-rose hover:text-pink-600 hover:underline text-sm flex items-center gap-1"
                   >
                     전체보기
                     <ArrowRight className="w-4 h-4" />

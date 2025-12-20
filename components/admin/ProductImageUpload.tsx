@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { compressImages, getCompressionStats } from '@/lib/imageCompression';
+import { compressImages, getCompressionStats } from '@/lib/utils/compress-image-client';
 import Image from 'next/image';
 
 interface ProductImageUploadProps {

@@ -5,7 +5,7 @@
 
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 import { isAdmin, getAllOrders } from "@/actions/admin";
 import AdminOrderRow from "@/components/admin-order-row";
 
