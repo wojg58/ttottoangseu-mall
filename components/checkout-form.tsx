@@ -307,7 +307,7 @@ export default function CheckoutForm({
     console.group("[CheckoutForm] 주문 생성 시작");
     console.log("배송 정보:", data);
     console.log("선택된 쿠폰:", selectedCoupon);
-    console.log("최종 결제 금액:", finalTotal);
+    console.log("최종 결제 금액:", displayTotal);
     console.groupEnd();
 
     startTransition(async () => {
@@ -723,7 +723,8 @@ export default function CheckoutForm({
       {showPaymentWidget && orderId && orderNumber && (
         <div className="lg:col-span-3 mt-8">
           <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
-            <div className="flex items-center justify-between">
+            {/* 주문 헤더 */}
+            <div className="flex items-start justify-between mb-6">
               <div>
                 <h2 className="text-lg font-bold text-[#4a3f48] mb-2">주문 정보</h2>
                 <p className="text-sm text-[#8b7d84] mb-2">
@@ -750,6 +751,76 @@ export default function CheckoutForm({
                     router.push("/cart");
                   }}
                 />
+              </div>
+            </div>
+
+            {/* 주문 상품 목록 */}
+            <div className="border-t border-[#f5d5e3] pt-4">
+              <h3 className="text-base font-bold text-[#4a3f48] mb-4">
+                주문 상품 ({displayItems.length}개)
+              </h3>
+              <div className="space-y-3 mb-4">
+                {displayItems.map((item) => (
+                  <div
+                    key={item.id}
+                    className="flex items-center justify-between py-2 border-b border-[#f5d5e3] last:border-b-0"
+                  >
+                    <div className="flex-1">
+                      <p className="text-sm text-[#4a3f48] font-medium">
+                        {item.product_name}
+                      </p>
+                      {item.variant_info && (
+                        <p className="text-xs text-[#8b7d84] mt-1">
+                          옵션: {item.variant_info}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <span className="text-sm text-[#8b7d84]">
+                        수량: {item.quantity}개
+                      </span>
+                      <p className="text-sm font-bold text-[#4a3f48] w-24 text-right">
+                        {(item.price * item.quantity).toLocaleString("ko-KR")}원
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* 금액 정보 */}
+              <div className="border-t border-[#f5d5e3] pt-4 space-y-3">
+                <div className="flex justify-between text-sm">
+                  <span className="text-[#8b7d84]">상품 금액</span>
+                  <span className="text-[#4a3f48]">
+                    {displaySubtotal.toLocaleString("ko-KR")}원
+                  </span>
+                </div>
+                {displayCouponDiscount > 0 && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-[#8b7d84]">쿠폰 할인</span>
+                    <span className="text-[#ff6b9d] font-bold">
+                      -{displayCouponDiscount.toLocaleString("ko-KR")}원
+                    </span>
+                  </div>
+                )}
+                <div className="flex justify-between text-sm">
+                  <span className="text-[#8b7d84]">배송비</span>
+                  <span className="text-[#4a3f48]">
+                    {displayShippingFee === 0 ? (
+                      <span className="text-[#ff6b9d]">무료</span>
+                    ) : (
+                      `${displayShippingFee.toLocaleString("ko-KR")}원`
+                    )}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center pt-3 border-t border-[#f5d5e3]">
+                  <span className="text-base font-bold text-[#4a3f48]">
+                    총 결제 금액
+                  </span>
+                  <span className="text-xl font-bold text-[#ff6b9d]">
+                    {displayTotal.toLocaleString("ko-KR")}원
+                  </span>
+                </div>
               </div>
             </div>
           </div>
