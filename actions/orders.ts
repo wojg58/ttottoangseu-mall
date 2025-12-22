@@ -57,12 +57,12 @@ export async function createOrder(input: CreateOrderInput): Promise<{
   orderNumber?: string;
 }> {
   logger.group("[createOrder] 주문 생성");
-  logger.log("주문자 정보:", {
+  logger.info("주문자 정보:", {
     name: input.ordererName,
     phone: input.ordererPhone,
     email: input.ordererEmail,
   });
-  logger.log("배송 정보:", {
+  logger.info("배송 정보:", {
     name: input.shippingName,
     phone: input.shippingPhone,
     address: input.shippingAddress,
