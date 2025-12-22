@@ -41,7 +41,7 @@ export default function PaymentWidget({
   const [paymentMethod, setPaymentMethod] = useState<"카드" | "계좌이체" | null>(null);
   const [depositorName, setDepositorName] = useState("");
   const [useEscrow, setUseEscrow] = useState(false);
-  const [installment, setInstallment] = useState<"일시불" | "할부">("일시불");
+  const [cashReceipt, setCashReceipt] = useState<"신청" | "신청안함">("신청안함");
 
   useEffect(() => {
     console.group("[PaymentWidget] 초기화");
@@ -302,34 +302,34 @@ export default function PaymentWidget({
             </p>
           </div>
 
-          {/* 할부 결제 옵션 */}
+          {/* 현금영수증 신청 옵션 */}
           <div>
-            <h4 className="text-sm font-medium text-[#4a3f48] mb-3">할부결제+승인 신청</h4>
+            <h4 className="text-sm font-medium text-[#4a3f48] mb-3">현금영수증 신청</h4>
             <div className="space-y-2">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="radio"
-                  name="installment"
-                  value="할부"
-                  checked={installment === "할부"}
+                  name="cashReceipt"
+                  value="신청"
+                  checked={cashReceipt === "신청"}
                   onChange={(e) => {
-                    console.log("[할부결제] 할부 선택");
-                    setInstallment(e.target.value as "할부");
+                    console.log("[현금영수증] 신청 선택");
+                    setCashReceipt(e.target.value as "신청");
                   }}
                   className="w-4 h-4 text-[#ff6b9d] border-[#d4d4d4] focus:ring-[#ff6b9d]"
                 />
-                <span className="text-sm text-[#4a3f48]">할부결제+승인 신청</span>
+                <span className="text-sm text-[#4a3f48]">현금영수증신청</span>
               </label>
 
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="radio"
-                  name="installment"
-                  value="일시불"
-                  checked={installment === "일시불"}
+                  name="cashReceipt"
+                  value="신청안함"
+                  checked={cashReceipt === "신청안함"}
                   onChange={(e) => {
-                    console.log("[할부결제] 일시불 선택");
-                    setInstallment(e.target.value as "일시불");
+                    console.log("[현금영수증] 신청안함 선택");
+                    setCashReceipt(e.target.value as "신청안함");
                   }}
                   className="w-4 h-4 text-[#ff6b9d] border-[#d4d4d4] focus:ring-[#ff6b9d]"
                 />
