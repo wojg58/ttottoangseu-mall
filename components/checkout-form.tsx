@@ -465,32 +465,57 @@ export default function CheckoutForm({
       console.groupEnd();
 
       if (result.success && result.orderId && result.orderNumber) {
-        console.log("[CheckoutForm] ✅ 주문 생성 성공 - 결제 위젯 표시");
+        console.log("[CheckoutForm] ✅ 주문 생성 성공 - 토스페이먼츠 결제 시작");
         
-        // 즉시 상태 업데이트하여 결제 위젯 표시
+        // 주문 정보 상태 저장
         setOrderId(result.orderId);
         setOrderNumber(result.orderNumber);
-        setShowPaymentWidget(true);
         
-        // URL을 즉시 업데이트하여 서버 컴포넌트 리렌더링 시 orderId를 인식하도록 함
-        // replace를 사용하여 히스토리에 추가하지 않고 현재 URL만 변경
-        const newUrl = `/checkout?orderId=${result.orderId}`;
-        console.log("[CheckoutForm] URL 업데이트:", newUrl);
-        router.replace(newUrl, { scroll: false });
-        
-        // URL 업데이트 후 스크롤을 결제 위젯으로 이동
-        setTimeout(() => {
-          const paymentSection = document.getElementById("payment-section");
-          if (paymentSection) {
-            console.log("[CheckoutForm] 결제 섹션으로 스크롤 이동");
-            paymentSection.scrollIntoView({
-              behavior: "smooth",
-              block: "start",
-            });
-          } else {
-            console.warn("[CheckoutForm] ⚠️ 결제 섹션을 찾을 수 없음");
+        // 토스페이먼츠 결제창 열기
+        console.log("[CheckoutForm] 토스페이먼츠 결제 요청", {
+          orderId: result.orderId,
+          orderNumber: result.orderNumber,
+          amount: displayTotal,
+        });
+
+        // 토스페이먼츠 SDK 로드 및 결제 시작
+        try {
+          const { loadPaymentWidget } = await import("@tosspayments/payment-widget-sdk");
+          const clientKey = process.env.NEXT_PUBLIC_TOSS_PAYMENTS_CLIENT_KEY;
+          
+          if (!clientKey) {
+            throw new Error("TossPayments 클라이언트 키가 설정되지 않았습니다.");
           }
-        }, 100);
+
+          if (!user?.emailAddresses[0]?.emailAddress) {
+            throw new Error("사용자 이메일 정보를 찾을 수 없습니다.");
+          }
+
+          console.log("[CheckoutForm] 토스페이먼츠 위젯 로드 시작");
+          const paymentWidget = await loadPaymentWidget(clientKey, user.emailAddresses[0].emailAddress);
+          
+          console.log("[CheckoutForm] 결제 요청 파라미터:", {
+            orderId: result.orderId,
+            orderName: `주문번호: ${result.orderNumber}`,
+            customerName: data.shippingName,
+            amount: displayTotal,
+          });
+
+          // 결제 요청
+          await paymentWidget.requestPayment({
+            orderId: result.orderId,
+            orderName: `주문번호: ${result.orderNumber}`,
+            customerName: data.shippingName,
+            customerEmail: user.emailAddresses[0].emailAddress,
+            successUrl: `${window.location.origin}/payments/success?paymentKey={paymentKey}&orderId=${result.orderId}&amount=${displayTotal}`,
+            failUrl: `${window.location.origin}/payments/fail?message={message}`,
+          });
+          
+          console.log("[CheckoutForm] 결제 요청 완료 (리다이렉트 대기 중)");
+        } catch (error) {
+          console.error("[CheckoutForm] 결제 시작 실패:", error);
+          alert(error instanceof Error ? error.message : "결제를 시작할 수 없습니다.");
+        }
       } else {
         console.error("[CheckoutForm] ❌ 주문 생성 실패:", result.message);
         alert(result.message);
