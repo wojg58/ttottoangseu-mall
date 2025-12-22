@@ -511,6 +511,15 @@ export default function CheckoutForm({
           // 결제창 인스턴스 생성
           const payment = tossPayments.payment({ customerKey });
 
+          // successUrl과 failUrl 생성 (토스페이먼츠가 자동으로 쿼리 파라미터 추가)
+          const successUrl = `${window.location.origin}/payments/success`;
+          const failUrl = `${window.location.origin}/payments/fail`;
+
+          console.log("[CheckoutForm] 리다이렉트 URL:", {
+            successUrl,
+            failUrl,
+          });
+
           // 결제 수단에 따라 다른 결제창 열기
           if (selectedPaymentMethod === "카드") {
             // 신용카드 결제
@@ -525,8 +534,8 @@ export default function CheckoutForm({
               orderName: `주문번호: ${result.orderNumber}`,
               customerName: data.shippingName,
               customerEmail: user.emailAddresses[0].emailAddress,
-              successUrl: `${window.location.origin}/payments/success?paymentKey={paymentKey}&orderId=${result.orderId}&amount=${displayTotal}`,
-              failUrl: `${window.location.origin}/payments/fail?message={message}`,
+              successUrl: successUrl,
+              failUrl: failUrl,
             });
           } else if (selectedPaymentMethod === "계좌이체") {
             // 계좌이체 결제
@@ -541,8 +550,8 @@ export default function CheckoutForm({
               orderName: `주문번호: ${result.orderNumber}`,
               customerName: data.shippingName,
               customerEmail: user.emailAddresses[0].emailAddress,
-              successUrl: `${window.location.origin}/payments/success?paymentKey={paymentKey}&orderId=${result.orderId}&amount=${displayTotal}`,
-              failUrl: `${window.location.origin}/payments/fail?message={message}`,
+              successUrl: successUrl,
+              failUrl: failUrl,
               transfer: {
                 useEscrow: useEscrow,
               },
