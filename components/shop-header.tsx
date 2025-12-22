@@ -19,7 +19,7 @@ import { SignedOut, SignInButton, SignedIn, UserButton } from "@clerk/nextjs";
 import Link from "next/link";
 import Image from "next/image";
 import { Search, ShoppingCart, Heart, Menu, X } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
