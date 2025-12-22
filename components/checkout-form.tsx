@@ -499,9 +499,10 @@ export default function CheckoutForm({
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
       {/* 주문서 작성 */}
-      <div className="lg:col-span-2">
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+      {!showPaymentWidget && (
+        <div className="lg:col-span-2">
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             {/* 주문 상품 목록 */}
             <div className="bg-white rounded-xl shadow-sm p-6">
               <h3 className="text-lg font-bold text-[#4a3f48] mb-4">
@@ -893,10 +894,12 @@ export default function CheckoutForm({
             </div>
           </form>
         </Form>
-      </div>
+        </div>
+      )}
 
       {/* 결제 요약 */}
-      <div className="lg:col-span-1">
+      {!showPaymentWidget && (
+        <div className="lg:col-span-1">
         <div className="bg-white rounded-xl shadow-sm p-6 sticky top-24">
           <h2 className="text-lg font-bold text-[#4a3f48] mb-6">결제 금액</h2>
 
@@ -1029,11 +1032,13 @@ export default function CheckoutForm({
             </div>
           )}
         </div>
-      </div>
+        </div>
+      )}
+
 
       {/* 결제 위젯 섹션 */}
       {showPaymentWidget && orderId && orderNumber && isLoaded && user && (
-        <div id="payment-section" className="lg:col-span-3 mt-8">
+        <div id="payment-section" className="w-full max-w-2xl mx-auto">
           <div className="bg-white rounded-xl shadow-sm p-6">
             <h2 className="text-lg font-bold text-[#4a3f48] mb-6">결제</h2>
             <PaymentWidget
