@@ -275,6 +275,83 @@ export async function createOrder(input: CreateOrderInput): Promise<{
   }
 }
 
+// 간편 결제용 주문 생성 입력 타입
+export interface CreateQuickOrderInput {
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  amount: number;
+}
+
+// 간편 결제용 주문 생성 (12,200원 고정)
+export async function createQuickOrder(
+  input: CreateQuickOrderInput,
+): Promise<{
+  success: boolean;
+  message: string;
+  orderId?: string;
+  orderNumber?: string;
+}> {
+  logger.group("[createQuickOrder] 간편 주문 생성");
+  console.log("[createQuickOrder] 입력 데이터:", input);
+
+  try {
+    const userId = await getCurrentUserId();
+    if (!userId) {
+      logger.groupEnd();
+      return { success: false, message: "로그인이 필요합니다." };
+    }
+
+    const supabase = await createClient();
+
+    // 주문 생성 (배송 정보는 최소화)
+    const orderNumber = generateOrderNumber();
+    console.log("[createQuickOrder] 주문번호 생성:", orderNumber);
+
+    const { data: order, error: orderError } = await supabase
+      .from("orders")
+      .insert({
+        user_id: userId,
+        order_number: orderNumber,
+        status: "pending",
+        total_amount: input.amount,
+        shipping_name: input.customerName,
+        shipping_phone: input.customerPhone,
+        shipping_address: "간편 결제 (배송 정보 없음)",
+        shipping_zip_code: "",
+        shipping_memo: `간편 결제 - 이메일: ${input.customerEmail}`,
+      })
+      .select("id")
+      .single();
+
+    if (orderError || !order) {
+      logger.error("간편 주문 생성 실패", orderError);
+      console.error("[createQuickOrder] 주문 생성 에러:", orderError);
+      logger.groupEnd();
+      return { success: false, message: "주문 생성에 실패했습니다." };
+    }
+
+    console.log("[createQuickOrder] 주문 생성 성공:", {
+      orderId: order.id,
+      orderNumber,
+    });
+
+    logger.info("간편 주문 생성 완료", orderNumber);
+    logger.groupEnd();
+    return {
+      success: true,
+      message: "주문이 생성되었습니다.",
+      orderId: order.id,
+      orderNumber,
+    };
+  } catch (error) {
+    logger.error("간편 주문 생성 예외", error);
+    console.error("[createQuickOrder] 예외 발생:", error);
+    logger.groupEnd();
+    return { success: false, message: "주문 생성에 실패했습니다." };
+  }
+}
+
 // 주문 목록 조회
 export async function getOrders(): Promise<Order[]> {
   const userId = await getCurrentUserId();

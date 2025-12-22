@@ -32,6 +32,28 @@ import {
 import PaymentWidget from "@/components/payment-widget";
 import OrderCancelButton from "@/components/order-cancel-button";
 
+// Daum Postcode API 타입 정의
+declare global {
+  interface Window {
+    daum: {
+      Postcode: new (options: {
+        oncomplete: (data: {
+          zonecode: string;
+          address: string;
+          addressType: string;
+          bname: string;
+          buildingName: string;
+        }) => void;
+        width?: string | number;
+        height?: string | number;
+      }) => {
+        open: () => void;
+        embed: (element: HTMLElement) => void;
+      };
+    };
+  }
+}
+
 // 주문 상품 아이템 컴포넌트 (Hooks 규칙 준수를 위해 분리)
 interface CheckoutCartItemProps {
   item: CartItemWithProduct;
@@ -135,6 +157,52 @@ export default function CheckoutForm({
   const { user, isLoaded } = useUser();
   const router = useRouter();
 
+  // Daum Postcode API 스크립트 로드
+  useEffect(() => {
+    const script = document.createElement("script");
+    script.src =
+      "//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js";
+    script.async = true;
+    document.head.appendChild(script);
+
+    return () => {
+      // 컴포넌트 언마운트 시 스크립트 제거
+      if (document.head.contains(script)) {
+        document.head.removeChild(script);
+      }
+    };
+  }, []);
+
+  // 주소 검색 함수
+  const handleAddressSearch = () => {
+    if (!window.daum) {
+      console.error("[CheckoutForm] Daum Postcode API가 로드되지 않았습니다");
+      alert("주소 검색 서비스를 불러오는 중입니다. 잠시 후 다시 시도해주세요.");
+      return;
+    }
+
+    console.log("[CheckoutForm] 주소 검색 팝업 열기");
+
+    new window.daum.Postcode({
+      oncomplete: function (data) {
+        console.group("[CheckoutForm] 주소 선택 완료");
+        console.log("우편번호:", data.zonecode);
+        console.log("주소:", data.address);
+        console.log("주소 타입:", data.addressType);
+        console.groupEnd();
+
+        // 우편번호와 주소를 폼에 자동 입력
+        form.setValue("shippingZipCode", data.zonecode);
+        form.setValue("shippingAddress", data.address);
+
+        // 유효성 검사 트리거
+        form.trigger(["shippingZipCode", "shippingAddress"]);
+      },
+      width: "100%",
+      height: "100%",
+    }).open();
+  };
+
   // URL에 orderId가 있으면 주문 정보 로드
   useEffect(() => {
     if (urlOrderId && !orderNumber) {
@@ -189,7 +257,11 @@ export default function CheckoutForm({
   });
 
   const onSubmit = (data: CheckoutFormData) => {
-    console.log("[CheckoutForm] 주문 생성:", data);
+    console.group("[CheckoutForm] 주문 생성 시작");
+    console.log("배송 정보:", data);
+    console.log("선택된 쿠폰:", selectedCoupon);
+    console.log("최종 결제 금액:", finalTotal);
+    console.groupEnd();
 
     startTransition(async () => {
       const result = await createOrder({
@@ -201,8 +273,15 @@ export default function CheckoutForm({
         couponId: selectedCoupon?.id || null,
       });
 
+      console.group("[CheckoutForm] 주문 생성 결과");
+      console.log("성공 여부:", result.success);
+      console.log("주문 ID:", result.orderId);
+      console.log("주문 번호:", result.orderNumber);
+      console.log("메시지:", result.message);
+      console.groupEnd();
+
       if (result.success && result.orderId && result.orderNumber) {
-        console.log("[CheckoutForm] 주문 생성 성공, 결제 위젯 표시");
+        console.log("[CheckoutForm] ✅ 주문 생성 성공 - 결제 위젯 표시");
         
         // 즉시 상태 업데이트하여 결제 위젯 표시
         setOrderId(result.orderId);
@@ -211,17 +290,25 @@ export default function CheckoutForm({
         
         // URL을 즉시 업데이트하여 서버 컴포넌트 리렌더링 시 orderId를 인식하도록 함
         // replace를 사용하여 히스토리에 추가하지 않고 현재 URL만 변경
-        router.replace(`/checkout?orderId=${result.orderId}`, { scroll: false });
-        console.log("[CheckoutForm] URL 업데이트 완료:", `/checkout?orderId=${result.orderId}`);
+        const newUrl = `/checkout?orderId=${result.orderId}`;
+        console.log("[CheckoutForm] URL 업데이트:", newUrl);
+        router.replace(newUrl, { scroll: false });
         
         // URL 업데이트 후 스크롤을 결제 위젯으로 이동
         setTimeout(() => {
-          document.getElementById("payment-section")?.scrollIntoView({
-            behavior: "smooth",
-            block: "start",
-          });
+          const paymentSection = document.getElementById("payment-section");
+          if (paymentSection) {
+            console.log("[CheckoutForm] 결제 섹션으로 스크롤 이동");
+            paymentSection.scrollIntoView({
+              behavior: "smooth",
+              block: "start",
+            });
+          } else {
+            console.warn("[CheckoutForm] ⚠️ 결제 섹션을 찾을 수 없음");
+          }
         }, 100);
       } else {
+        console.error("[CheckoutForm] ❌ 주문 생성 실패:", result.message);
         alert(result.message);
       }
     });
@@ -297,10 +384,7 @@ export default function CheckoutForm({
                           type="button"
                           variant="outline"
                           className="border-[#fad2e6] text-[#4a3f48] hover:bg-[#ffeef5]"
-                          onClick={() => {
-                            // TODO: 주소 검색 API 연동 (다음 우편번호 서비스 등)
-                            alert("주소 검색 기능은 추후 지원될 예정입니다.");
-                          }}
+                          onClick={handleAddressSearch}
                         >
                           주소 검색
                         </Button>
@@ -521,7 +605,10 @@ export default function CheckoutForm({
               </p>
 
               <Button
-                onClick={form.handleSubmit(onSubmit)}
+                onClick={() => {
+                  console.log("[CheckoutForm] 결제하기 버튼 클릭");
+                  form.handleSubmit(onSubmit)();
+                }}
                 disabled={isPending}
                 className="w-full h-14 bg-[#ff6b9d] hover:bg-[#ff5088] text-white rounded-xl text-base font-bold disabled:opacity-50"
               >

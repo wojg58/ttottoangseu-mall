@@ -80,8 +80,13 @@ export default function CartSummary({
 
       {/* 결제 버튼 */}
       <Link href="/checkout" className="block">
-        <Button className="w-full h-14 bg-[#ff6b9d] hover:bg-[#ff5088] text-white rounded-xl text-base font-bold">
-          주문하기
+        <Button 
+          className="w-full h-14 bg-[#ff6b9d] hover:bg-[#ff5088] text-white rounded-xl text-base font-bold"
+          onClick={() => {
+            console.log("[CartSummary] 주문하기 버튼 클릭 - /checkout으로 이동");
+          }}
+        >
+          {total.toLocaleString("ko-KR")}원 주문하기
         </Button>
       </Link>
 
