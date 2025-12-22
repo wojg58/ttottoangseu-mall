@@ -294,6 +294,7 @@ export default function CheckoutForm({
 
   // URL에 orderId가 있으면 주문 정보 로드
   useEffect(() => {
+    const urlOrderId = searchParams.get("orderId");
     if (urlOrderId && !orderNumber) {
       console.log("[CheckoutForm] URL에서 orderId 발견, 주문 정보 로드:", urlOrderId);
       getOrderById(urlOrderId)
@@ -342,7 +343,7 @@ export default function CheckoutForm({
           console.error("[CheckoutForm] 주문 정보 로드 실패:", error);
         });
     }
-  }, [urlOrderId, orderNumber]);
+  }, [searchParams, orderNumber]);
 
   // 쿠폰 목록 가져오기
   useEffect(() => {
@@ -478,9 +479,9 @@ export default function CheckoutForm({
           amount: displayTotal,
         });
 
-        // 토스페이먼츠 SDK 로드 및 결제 시작
+        // 토스페이먼츠 결제창 열기
         try {
-          const { loadPaymentWidget } = await import("@tosspayments/payment-widget-sdk");
+          const { loadTossPayments } = await import("@tosspayments/tosspayments-sdk");
           const clientKey = process.env.NEXT_PUBLIC_TOSS_PAYMENTS_CLIENT_KEY;
           
           if (!clientKey) {
@@ -491,25 +492,53 @@ export default function CheckoutForm({
             throw new Error("사용자 이메일 정보를 찾을 수 없습니다.");
           }
 
-          console.log("[CheckoutForm] 토스페이먼츠 위젯 로드 시작");
-          const paymentWidget = await loadPaymentWidget(clientKey, user.emailAddresses[0].emailAddress);
+          console.log("[CheckoutForm] 토스페이먼츠 SDK 로드 시작");
+          const tossPayments = await loadTossPayments(clientKey);
           
           console.log("[CheckoutForm] 결제 요청 파라미터:", {
             orderId: result.orderId,
             orderName: `주문번호: ${result.orderNumber}`,
             customerName: data.shippingName,
             amount: displayTotal,
+            paymentMethod: selectedPaymentMethod,
           });
 
-          // 결제 요청
-          await paymentWidget.requestPayment({
-            orderId: result.orderId,
-            orderName: `주문번호: ${result.orderNumber}`,
-            customerName: data.shippingName,
-            customerEmail: user.emailAddresses[0].emailAddress,
-            successUrl: `${window.location.origin}/payments/success?paymentKey={paymentKey}&orderId=${result.orderId}&amount=${displayTotal}`,
-            failUrl: `${window.location.origin}/payments/fail?message={message}`,
-          });
+          // 결제 수단에 따라 다른 결제창 열기
+          if (selectedPaymentMethod === "카드") {
+            // 신용카드 결제
+            console.log("[CheckoutForm] 신용카드 결제창 열기");
+            await tossPayments.payment({
+              method: "카드",
+              orderId: result.orderId,
+              orderName: `주문번호: ${result.orderNumber}`,
+              customerName: data.shippingName,
+              customerEmail: user.emailAddresses[0].emailAddress,
+              amount: displayTotal,
+              successUrl: `${window.location.origin}/payments/success?paymentKey={paymentKey}&orderId=${result.orderId}&amount=${displayTotal}`,
+              failUrl: `${window.location.origin}/payments/fail?message={message}`,
+            });
+          } else if (selectedPaymentMethod === "계좌이체") {
+            // 계좌이체 결제
+            console.log("[CheckoutForm] 계좌이체 결제창 열기");
+            await tossPayments.payment({
+              method: "계좌이체",
+              orderId: result.orderId,
+              orderName: `주문번호: ${result.orderNumber}`,
+              customerName: data.shippingName,
+              customerEmail: user.emailAddresses[0].emailAddress,
+              amount: displayTotal,
+              successUrl: `${window.location.origin}/payments/success?paymentKey={paymentKey}&orderId=${result.orderId}&amount=${displayTotal}`,
+              failUrl: `${window.location.origin}/payments/fail?message={message}`,
+              transfer: {
+                useEscrow: useEscrow,
+              },
+              cashReceipt: {
+                type: cashReceipt === "신청" ? "소득공제" : "미발행",
+              },
+            });
+          } else {
+            throw new Error("결제 수단을 선택해주세요.");
+          }
           
           console.log("[CheckoutForm] 결제 요청 완료 (리다이렉트 대기 중)");
         } catch (error) {
