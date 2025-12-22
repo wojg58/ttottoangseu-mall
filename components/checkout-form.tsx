@@ -347,7 +347,7 @@ export default function CheckoutForm({
                                       )}
                                     </p>
                                   </div>
-                                  <div className="flex items-center gap-4">
+                                  <div className="flex items-center gap-3">
                                     <div className="flex items-center gap-2">
                                       <span className="text-xs text-[#8b7d84]">수량</span>
                                       <span className="text-sm font-bold text-[#4a3f48]">
@@ -360,10 +360,11 @@ export default function CheckoutForm({
                                     <button
                                       onClick={handleRemove}
                                       disabled={isRemoving || isPending}
-                                      className="p-1.5 text-[#8b7d84] hover:text-[#ff6b9d] hover:bg-[#ffeef5] rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed opacity-0 group-hover:opacity-100"
+                                      className="flex items-center gap-1 px-2 py-1 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 border border-red-200 hover:border-red-300 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                       title="주문에서 제외"
                                     >
-                                      <X className="w-4 h-4" />
+                                      <X className="w-3.5 h-3.5" />
+                                      <span>삭제</span>
                                     </button>
                                   </div>
                                 </div>
