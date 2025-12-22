@@ -154,6 +154,19 @@ export default function CheckoutForm({
   const [showPaymentWidget, setShowPaymentWidget] = useState(!!urlOrderId);
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [selectedCoupon, setSelectedCoupon] = useState<Coupon | null>(null);
+  const [orderData, setOrderData] = useState<{
+    subtotal: number;
+    shippingFee: number;
+    couponDiscount: number;
+    total: number;
+    items: Array<{
+      id: string;
+      product_name: string;
+      variant_info: string | null;
+      quantity: number;
+      price: number;
+    }>;
+  } | null>(null);
   const { user, isLoaded } = useUser();
   const router = useRouter();
 
@@ -210,9 +223,43 @@ export default function CheckoutForm({
       getOrderById(urlOrderId)
         .then((order) => {
           if (order) {
+            console.group("[CheckoutForm] 주문 정보 로드 완료");
+            console.log("주문번호:", order.order_number);
+            console.log("주문 금액:", order.total_amount);
+            console.log("주문 아이템 수:", order.items.length);
+            console.groupEnd();
+
             setOrderNumber(order.order_number);
             setShowPaymentWidget(true);
-            console.log("[CheckoutForm] 주문 정보 로드 완료:", order.order_number);
+
+            // 주문 아이템에서 금액 정보 계산
+            const itemsSubtotal = order.items.reduce(
+              (sum, item) => sum + item.price * item.quantity,
+              0,
+            );
+            const shipping = itemsSubtotal >= 50000 ? 0 : 3000;
+            const couponDisc = itemsSubtotal + shipping - order.total_amount;
+            
+            console.group("[CheckoutForm] 금액 계산");
+            console.log("상품 금액:", itemsSubtotal);
+            console.log("배송비:", shipping);
+            console.log("쿠폰 할인:", couponDisc);
+            console.log("총 금액:", order.total_amount);
+            console.groupEnd();
+
+            setOrderData({
+              subtotal: itemsSubtotal,
+              shippingFee: shipping,
+              couponDiscount: Math.max(0, couponDisc),
+              total: order.total_amount,
+              items: order.items.map((item) => ({
+                id: item.id,
+                product_name: item.product_name,
+                variant_info: item.variant_info,
+                quantity: item.quantity,
+                price: item.price,
+              })),
+            });
           }
         })
         .catch((error) => {
@@ -237,13 +284,13 @@ export default function CheckoutForm({
     }
   }, [isLoaded, user]);
 
-  // 쿠폰 할인 금액 계산
-  const couponDiscount = selectedCoupon
-    ? calculateCouponDiscount(selectedCoupon, subtotal)
-    : 0;
-
-  // 최종 결제 금액 계산 (쿠폰 할인 적용)
-  const finalTotal = Math.max(0, total - couponDiscount);
+  // 주문 생성 후에는 orderData 사용, 그 전에는 props 사용
+  const displaySubtotal = orderData?.subtotal ?? subtotal;
+  const displayShippingFee = orderData?.shippingFee ?? shippingFee;
+  const displayCouponDiscount = orderData?.couponDiscount ?? (selectedCoupon ? calculateCouponDiscount(selectedCoupon, subtotal) : 0);
+  const displayTotal = orderData?.total ?? Math.max(0, total - (selectedCoupon ? calculateCouponDiscount(selectedCoupon, subtotal) : 0));
+  const displayItems = orderData?.items ?? [];
+  const displayItemCount = orderData ? orderData.items.length : cartItems.length;
 
   const form = useForm<CheckoutFormData>({
     resolver: zodResolver(checkoutSchema),
@@ -437,79 +484,126 @@ export default function CheckoutForm({
               {/* 주문 상품 목록 */}
               <div className="mt-8">
                 <h3 className="text-base font-bold text-[#4a3f48] mb-4">
-                  주문 상품 ({cartItems.length}개)
+                  주문 상품 ({!showPaymentWidget ? cartItems.length : displayItems.length}개)
                 </h3>
                 <div className="space-y-4">
-                  {/* 상품별로 그룹화 */}
-                  {(() => {
-                    // 상품 ID별로 그룹화
-                    const groupedItems = cartItems.reduce((acc, item) => {
-                      const productId = item.product_id;
-                      if (!acc[productId]) {
-                        acc[productId] = [];
-                      }
-                      acc[productId].push(item);
-                      return acc;
-                    }, {} as Record<string, typeof cartItems>);
+                  {!showPaymentWidget ? (
+                    /* 주문 생성 전: 장바구니 아이템 표시 */
+                    (() => {
+                      // 상품 ID별로 그룹화
+                      const groupedItems = cartItems.reduce((acc, item) => {
+                        const productId = item.product_id;
+                        if (!acc[productId]) {
+                          acc[productId] = [];
+                        }
+                        acc[productId].push(item);
+                        return acc;
+                      }, {} as Record<string, typeof cartItems>);
 
-                    return Object.entries(groupedItems).map(([productId, items]) => {
-                      const firstItem = items[0];
-                      const totalQuantity = items.reduce((sum, item) => sum + item.quantity, 0);
-                      const totalPrice = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+                      return Object.entries(groupedItems).map(([productId, items]) => {
+                        const firstItem = items[0];
+                        const totalQuantity = items.reduce((sum, item) => sum + item.quantity, 0);
+                        const totalPrice = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
-                      return (
-                        <div
-                          key={productId}
-                          className="border border-[#f5d5e3] rounded-lg p-4 bg-white"
-                        >
-                          {/* 상품 기본 정보 */}
-                          <div className="flex gap-3 mb-3">
-                            <div className="relative w-16 h-16 rounded-lg overflow-hidden bg-white shrink-0">
-                              <Image
-                                src={
-                                  firstItem.primary_image?.image_url ||
-                                  "https://placehold.co/200x200/fad2e6/333333?text=No+Image"
-                                }
-                                alt={firstItem.product.name}
-                                fill
-                                className="object-cover"
-                                sizes="64px"
-                              />
+                        return (
+                          <div
+                            key={productId}
+                            className="border border-[#f5d5e3] rounded-lg p-4 bg-white"
+                          >
+                            {/* 상품 기본 정보 */}
+                            <div className="flex gap-3 mb-3">
+                              <div className="relative w-16 h-16 rounded-lg overflow-hidden bg-white shrink-0">
+                                <Image
+                                  src={
+                                    firstItem.primary_image?.image_url ||
+                                    "https://placehold.co/200x200/fad2e6/333333?text=No+Image"
+                                  }
+                                  alt={firstItem.product.name}
+                                  fill
+                                  className="object-cover"
+                                  sizes="64px"
+                                />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm text-[#4a3f48] font-medium line-clamp-1">
+                                  {firstItem.product.name}
+                                </p>
+                              </div>
                             </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm text-[#4a3f48] font-medium line-clamp-1">
-                                {firstItem.product.name}
+
+                            {/* 옵션별 상세 정보 */}
+                            <div className="space-y-2 pl-20">
+                              {items.map((item) => (
+                                <CheckoutCartItem
+                                  key={item.id}
+                                  item={item}
+                                  isPending={isPending}
+                                />
+                              ))}
+                            </div>
+
+                            {/* 총계 */}
+                            <div className="flex items-center justify-between mt-3 pt-3 border-t border-[#f5d5e3]">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs text-[#8b7d84]">총 수량</span>
+                                <span className="text-sm font-bold text-[#4a3f48]">
+                                  {totalQuantity}개
+                                </span>
+                              </div>
+                              <p className="text-base font-bold text-[#ff6b9d]">
+                                {totalPrice.toLocaleString("ko-KR")}원
                               </p>
                             </div>
                           </div>
-
-                          {/* 옵션별 상세 정보 */}
-                          <div className="space-y-2 pl-20">
-                            {items.map((item) => (
-                              <CheckoutCartItem
-                                key={item.id}
-                                item={item}
-                                isPending={isPending}
-                              />
-                            ))}
-                          </div>
-
-                          {/* 총계 */}
-                          <div className="flex items-center justify-between mt-3 pt-3 border-t border-[#f5d5e3]">
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs text-[#8b7d84]">총 수량</span>
-                              <span className="text-sm font-bold text-[#4a3f48]">
-                                {totalQuantity}개
-                              </span>
+                        );
+                      });
+                    })()
+                  ) : (
+                    /* 주문 생성 후: 주문 아이템 표시 */
+                    <div className="border border-[#f5d5e3] rounded-lg p-4 bg-white">
+                      <div className="space-y-3">
+                        {displayItems.map((item) => (
+                          <div
+                            key={item.id}
+                            className="flex items-center justify-between py-2 border-b border-[#f5d5e3] last:border-b-0"
+                          >
+                            <div className="flex-1">
+                              <p className="text-sm text-[#4a3f48] font-medium">
+                                {item.product_name}
+                              </p>
+                              {item.variant_info && (
+                                <p className="text-xs text-[#8b7d84] mt-1">
+                                  옵션: {item.variant_info}
+                                </p>
+                              )}
                             </div>
-                            <p className="text-base font-bold text-[#ff6b9d]">
-                              {totalPrice.toLocaleString("ko-KR")}원
-                            </p>
+                            <div className="flex items-center gap-4">
+                              <span className="text-sm text-[#8b7d84]">
+                                수량: {item.quantity}개
+                              </span>
+                              <p className="text-sm font-bold text-[#4a3f48] w-24 text-right">
+                                {(item.price * item.quantity).toLocaleString("ko-KR")}원
+                              </p>
+                            </div>
                           </div>
+                        ))}
+                      </div>
+                      {/* 총계 */}
+                      <div className="flex items-center justify-between mt-3 pt-3 border-t border-[#f5d5e3]">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-[#8b7d84]">총 수량</span>
+                          <span className="text-sm font-bold text-[#4a3f48]">
+                            {displayItems.reduce((sum, item) => sum + item.quantity, 0)}개
+                          </span>
                         </div>
-                      );
-                    });
-                  })()}
+                        <p className="text-base font-bold text-[#ff6b9d]">
+                          {displayItems
+                            .reduce((sum, item) => sum + item.price * item.quantity, 0)
+                            .toLocaleString("ko-KR")}원
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </form>
@@ -563,27 +657,27 @@ export default function CheckoutForm({
           <div className="space-y-3 pb-4 border-b border-[#f5d5e3]">
             <div className="flex justify-between text-sm">
               <span className="text-[#8b7d84]">
-                상품 금액 ({cartItems.length}개)
+                상품 금액 ({displayItemCount}개)
               </span>
               <span className="text-[#4a3f48]">
-                {subtotal.toLocaleString("ko-KR")}원
+                {displaySubtotal.toLocaleString("ko-KR")}원
               </span>
             </div>
-            {selectedCoupon && couponDiscount > 0 && (
+            {displayCouponDiscount > 0 && (
               <div className="flex justify-between text-sm">
                 <span className="text-[#8b7d84]">쿠폰 할인</span>
                 <span className="text-[#ff6b9d] font-bold">
-                  -{couponDiscount.toLocaleString("ko-KR")}원
+                  -{displayCouponDiscount.toLocaleString("ko-KR")}원
                 </span>
               </div>
             )}
             <div className="flex justify-between text-sm">
               <span className="text-[#8b7d84]">배송비</span>
               <span className="text-[#4a3f48]">
-                {shippingFee === 0 ? (
+                {displayShippingFee === 0 ? (
                   <span className="text-[#ff6b9d]">무료</span>
                 ) : (
-                  `${shippingFee.toLocaleString("ko-KR")}원`
+                  `${displayShippingFee.toLocaleString("ko-KR")}원`
                 )}
               </span>
             </div>
@@ -594,7 +688,7 @@ export default function CheckoutForm({
               총 결제 금액
             </span>
             <span className="text-xl font-bold text-[#ff6b9d]">
-              {finalTotal.toLocaleString("ko-KR")}원
+              {displayTotal.toLocaleString("ko-KR")}원
             </span>
           </div>
 
@@ -612,7 +706,7 @@ export default function CheckoutForm({
                 disabled={isPending}
                 className="w-full h-14 bg-[#ff6b9d] hover:bg-[#ff5088] text-white rounded-xl text-base font-bold disabled:opacity-50"
               >
-                {isPending ? "처리 중..." : `${finalTotal.toLocaleString("ko-KR")}원 결제하기`}
+                {isPending ? "처리 중..." : `${displayTotal.toLocaleString("ko-KR")}원 결제하기`}
               </Button>
             </>
           ) : (
@@ -670,7 +764,7 @@ export default function CheckoutForm({
             <PaymentWidget
               orderId={orderId}
               orderNumber={orderNumber}
-              amount={finalTotal}
+              amount={displayTotal}
               customerName={form.getValues("shippingName")}
               customerEmail={user.emailAddresses[0]?.emailAddress || ""}
             />
