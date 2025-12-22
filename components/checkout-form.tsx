@@ -219,10 +219,8 @@ export default function CheckoutForm({
 }: CheckoutFormProps) {
   const [isPending, startTransition] = useTransition();
   const searchParams = useSearchParams();
-  const urlOrderId = searchParams.get("orderId");
-  const [orderId, setOrderId] = useState<string | null>(urlOrderId);
+  const [orderId, setOrderId] = useState<string | null>(null);
   const [orderNumber, setOrderNumber] = useState<string | null>(null);
-  const [showPaymentWidget, setShowPaymentWidget] = useState(!!urlOrderId);
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [selectedCoupon, setSelectedCoupon] = useState<Coupon | null>(null);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<"카드" | "계좌이체" | null>(null);
@@ -503,19 +501,17 @@ export default function CheckoutForm({
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
       {/* 주문서 작성 */}
-      {!showPaymentWidget && (
-        <div className="lg:col-span-2">
+      <div className="lg:col-span-2">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             {/* 주문 상품 목록 */}
             <div className="bg-white rounded-xl shadow-sm p-6">
               <h3 className="text-lg font-bold text-[#4a3f48] mb-4">
-                주문 상품 ({!showPaymentWidget ? cartItems.length : displayItems.length}개)
+                주문 상품 ({cartItems.length}개)
               </h3>
               <div className="space-y-4">
-                {!showPaymentWidget ? (
-                  /* 주문 생성 전: 장바구니 아이템 표시 */
-                  (() => {
+                {/* 장바구니 아이템 표시 */}
+                {(() => {
                     // 상품 ID별로 그룹화
                     const groupedItems = cartItems.reduce((acc, item) => {
                       const productId = item.product_id;
@@ -580,101 +576,7 @@ export default function CheckoutForm({
                         </div>
                       );
                     });
-                  })()
-                ) : (
-                  /* 주문 생성 후: 주문 아이템 표시 */
-                  (() => {
-                    // 상품별로 그룹화
-                    const groupedItems = displayItems.reduce((acc, item) => {
-                      const key = item.product_id || item.product_name;
-                      if (!acc[key]) {
-                        acc[key] = [];
-                      }
-                      acc[key].push(item);
-                      return acc;
-                    }, {} as Record<string, typeof displayItems>);
-
-                    return Object.entries(groupedItems).map(([productKey, items]) => {
-                      const firstItem = items[0];
-                      const totalQuantity = items.reduce((sum, item) => sum + item.quantity, 0);
-                      const totalPrice = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-
-                      return (
-                        <div
-                          key={productKey}
-                          className="border border-[#f5d5e3] rounded-lg p-4 bg-white mb-3"
-                        >
-                          {/* 상품 기본 정보 */}
-                          <div className="flex gap-3 mb-3">
-                            <div className="relative w-16 h-16 rounded-lg overflow-hidden bg-white shrink-0">
-                              <Image
-                                src={firstItem.image_url || "/placeholder.png"}
-                                alt={firstItem.product_name || "상품 이미지"}
-                                fill
-                                sizes="64px"
-                                className="object-cover"
-                              />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm text-[#4a3f48] font-medium line-clamp-2">
-                                {firstItem.product_name}
-                              </p>
-                            </div>
-                          </div>
-
-                          {/* 옵션별 아이템 */}
-                          <div className="space-y-2">
-                            {items.map((item) => (
-                              <div
-                                key={item.id}
-                                className="flex items-center justify-between py-2 px-3 bg-[#fef8fb] rounded-lg"
-                              >
-                                <div className="flex-1 min-w-0">
-                                  {/* 상품 옵션 */}
-                                  {item.variant_info && (
-                                    <p className="text-sm text-[#4a3f48] font-medium mb-1">
-                                      {item.variant_info}
-                                    </p>
-                                  )}
-                                  {/* 개별 단가 */}
-                                  <p className="text-xs text-[#8b7d84]">
-                                    단가: {item.price.toLocaleString("ko-KR")}원
-                                  </p>
-                                </div>
-                                <div className="flex items-center gap-4">
-                                  {/* 수량 */}
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-xs text-[#8b7d84]">수량</span>
-                                    <span className="text-sm font-bold text-[#4a3f48]">
-                                      {item.quantity}개
-                                    </span>
-                                  </div>
-                                  {/* 합계 금액 */}
-                                  <p className="text-sm font-bold text-[#4a3f48] w-28 text-right">
-                                    {(item.price * item.quantity).toLocaleString("ko-KR")}원
-                                  </p>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-
-                          {/* 상품별 총계 */}
-                          <div className="flex items-center justify-between mt-3 pt-3 border-t border-[#f5d5e3]">
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs text-[#8b7d84]">총 수량</span>
-                              <span className="text-sm font-bold text-[#4a3f48]">
-                                {totalQuantity}개
-                              </span>
-                            </div>
-                            <p className="text-base font-bold text-[#ff6b9d]">
-                              {totalPrice.toLocaleString("ko-KR")}원
-                            </p>
-                          </div>
-                        </div>
-                      );
-                    });
-                  })()
-                )}
+                  })()}
               </div>
             </div>
 
@@ -898,12 +800,10 @@ export default function CheckoutForm({
             </div>
           </form>
         </Form>
-        </div>
-      )}
+      </div>
 
       {/* 결제 요약 */}
-      {!showPaymentWidget && (
-        <div className="lg:col-span-1">
+      <div className="lg:col-span-1">
         <div className="bg-white rounded-xl shadow-sm p-6 sticky top-24">
           <h2 className="text-lg font-bold text-[#4a3f48] mb-6">결제 금액</h2>
 
@@ -983,239 +883,206 @@ export default function CheckoutForm({
             </span>
           </div>
 
-          {!showPaymentWidget ? (
-            <>
-              {/* 결제 수단 선택 */}
-              <div className="mb-6">
-                <h3 className="text-sm font-bold text-[#4a3f48] mb-3">결제 수단</h3>
-                <label className="flex items-center gap-3 p-4 border-2 border-[#fad2e6] rounded-lg cursor-pointer hover:bg-[#ffeef5] transition-colors">
-                  <input
-                    type="checkbox"
-                    checked={form.watch("paymentMethod") === "TOSS"}
-                    onChange={(e) => {
-                      console.log("[결제수단] 토스페이먼츠 체크:", e.target.checked);
-                      if (e.target.checked) {
-                        form.setValue("paymentMethod", "TOSS");
-                      } else {
-                        form.setValue("paymentMethod", "" as "TOSS");
-                        setSelectedPaymentMethod(null);
-                      }
-                    }}
-                    className="w-5 h-5 text-[#ff6b9d] border-[#f5d5e3] rounded focus:ring-[#ff6b9d]"
-                  />
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-[#4a3f48]">토스페이먼츠</span>
-                      <span className="px-2 py-0.5 bg-[#ffeef5] text-[#ff6b9d] text-xs font-medium rounded">
-                        추천
-                      </span>
-                    </div>
-                    <p className="text-xs text-[#8b7d84] mt-1">
-                      카드, 계좌이체, 간편결제 등 다양한 결제 수단을 이용할 수 있습니다.
-                    </p>
-                  </div>
-                </label>
+          {/* 결제 수단 선택 */}
+          <div className="mb-6">
+            <h3 className="text-sm font-bold text-[#4a3f48] mb-3">결제 수단</h3>
+            <label className="flex items-center gap-3 p-4 border-2 border-[#fad2e6] rounded-lg cursor-pointer hover:bg-[#ffeef5] transition-colors">
+              <input
+                type="checkbox"
+                checked={form.watch("paymentMethod") === "TOSS"}
+                onChange={(e) => {
+                  console.log("[결제수단] 토스페이먼츠 체크:", e.target.checked);
+                  if (e.target.checked) {
+                    form.setValue("paymentMethod", "TOSS");
+                  } else {
+                    form.setValue("paymentMethod", "" as "TOSS");
+                    setSelectedPaymentMethod(null);
+                  }
+                }}
+                className="w-5 h-5 text-[#ff6b9d] border-[#f5d5e3] rounded focus:ring-[#ff6b9d]"
+              />
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-[#4a3f48]">토스페이먼츠</span>
+                  <span className="px-2 py-0.5 bg-[#ffeef5] text-[#ff6b9d] text-xs font-medium rounded">
+                    추천
+                  </span>
+                </div>
+                <p className="text-xs text-[#8b7d84] mt-1">
+                  카드, 계좌이체, 간편결제 등 다양한 결제 수단을 이용할 수 있습니다.
+                </p>
+              </div>
+            </label>
+          </div>
+
+          {/* 토스페이먼츠 체크 시 결제 수단 상세 선택 */}
+          {form.watch("paymentMethod") === "TOSS" && (
+            <div className="mb-6 space-y-4">
+              <div className="space-y-3">
+                <h3 className="text-base font-bold text-[#4a3f48]">결제수단</h3>
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 cursor-pointer p-3 border border-[#f5d5e3] rounded-lg hover:bg-[#fef8fb] transition-colors">
+                    <input
+                      type="radio"
+                      name="paymentMethodDetail"
+                      value="카드"
+                      checked={selectedPaymentMethod === "카드"}
+                      onChange={(e) => {
+                        console.log("[결제수단] 신용카드 결제 선택");
+                        setSelectedPaymentMethod(e.target.value as "카드");
+                      }}
+                      className="w-4 h-4 text-[#ff6b9d] border-[#f5d5e3] focus:ring-[#ff6b9d]"
+                    />
+                    <span className="text-sm text-[#4a3f48] font-medium">신용카드 결제</span>
+                  </label>
+
+                  <label className="flex items-center gap-2 cursor-pointer p-3 border border-[#f5d5e3] rounded-lg hover:bg-[#fef8fb] transition-colors">
+                    <input
+                      type="radio"
+                      name="paymentMethodDetail"
+                      value="계좌이체"
+                      checked={selectedPaymentMethod === "계좌이체"}
+                      onChange={(e) => {
+                        console.log("[결제수단] 에스크로(실시간 계좌이체) 선택");
+                        setSelectedPaymentMethod(e.target.value as "계좌이체");
+                      }}
+                      className="w-4 h-4 text-[#ff6b9d] border-[#f5d5e3] focus:ring-[#ff6b9d]"
+                    />
+                    <span className="text-sm text-[#4a3f48] font-medium">에스크로(실시간 계좌이체)</span>
+                  </label>
+                </div>
               </div>
 
-              {/* 토스페이먼츠 체크 시 결제 수단 상세 선택 */}
-              {form.watch("paymentMethod") === "TOSS" && (
-                <div className="mb-6 space-y-4">
-                  <div className="space-y-3">
-                    <h3 className="text-base font-bold text-[#4a3f48]">결제수단</h3>
+              {/* 에스크로(실시간 계좌이체) 선택 시 추가 입력 필드 */}
+              {selectedPaymentMethod === "계좌이체" && (
+                <div className="space-y-4">
+                  {/* 예금주명 */}
+                  <div>
+                    <label className="block text-sm font-medium text-[#4a3f48] mb-2">
+                      예금주명
+                    </label>
+                    <input
+                      type="text"
+                      value={depositorName}
+                      onChange={(e) => {
+                        console.log("[입금자명] 입력:", e.target.value);
+                        setDepositorName(e.target.value);
+                      }}
+                      placeholder=""
+                      className="w-full px-3 py-2 border border-[#d4d4d4] rounded text-sm focus:outline-none focus:border-[#ff6b9d] focus:ring-1 focus:ring-[#ff6b9d]"
+                    />
+                  </div>
+
+                  {/* 에스크로 서비스 체크박스 */}
+                  <div className="flex items-start gap-2">
+                    <input
+                      type="checkbox"
+                      id="escrow-checkout"
+                      checked={useEscrow}
+                      onChange={(e) => {
+                        console.log("[에스크로] 체크:", e.target.checked);
+                        setUseEscrow(e.target.checked);
+                      }}
+                      className="w-4 h-4 text-[#ff6b9d] border-[#d4d4d4] rounded focus:ring-[#ff6b9d] mt-0.5"
+                    />
+                    <label htmlFor="escrow-checkout" className="text-xs text-[#4a3f48] cursor-pointer">
+                      에스크로(구매안전) 서비스를 적용합니다.
+                    </label>
+                  </div>
+
+                  {/* 경고 메시지 */}
+                  <div className="bg-[#fff5f5] border border-[#fad2e6] rounded p-3">
+                    <p className="text-xs text-[#ff6b9d] leading-relaxed">
+                      ⚠️ 소액 결제의 경우 PG사 정책에 따라 관련 금융 결제 수단이 인증 후 사용이 가능합니다.
+                    </p>
+                  </div>
+
+                  {/* 현금영수증 신청 옵션 */}
+                  <div>
+                    <h4 className="text-sm font-medium text-[#4a3f48] mb-3">현금영수증 신청</h4>
                     <div className="space-y-2">
-                      <label className="flex items-center gap-2 cursor-pointer p-3 border border-[#f5d5e3] rounded-lg hover:bg-[#fef8fb] transition-colors">
+                      <label className="flex items-center gap-2 cursor-pointer">
                         <input
                           type="radio"
-                          name="paymentMethodDetail"
-                          value="카드"
-                          checked={selectedPaymentMethod === "카드"}
+                          name="cashReceipt"
+                          value="신청"
+                          checked={cashReceipt === "신청"}
                           onChange={(e) => {
-                            console.log("[결제수단] 신용카드 결제 선택");
-                            setSelectedPaymentMethod(e.target.value as "카드");
+                            console.log("[현금영수증] 신청 선택");
+                            setCashReceipt(e.target.value as "신청");
                           }}
-                          className="w-4 h-4 text-[#ff6b9d] border-[#f5d5e3] focus:ring-[#ff6b9d]"
+                          className="w-4 h-4 text-[#ff6b9d] border-[#d4d4d4] focus:ring-[#ff6b9d]"
                         />
-                        <span className="text-sm text-[#4a3f48] font-medium">신용카드 결제</span>
+                        <span className="text-sm text-[#4a3f48]">현금영수증신청</span>
                       </label>
 
-                      <label className="flex items-center gap-2 cursor-pointer p-3 border border-[#f5d5e3] rounded-lg hover:bg-[#fef8fb] transition-colors">
+                      <label className="flex items-center gap-2 cursor-pointer">
                         <input
                           type="radio"
-                          name="paymentMethodDetail"
-                          value="계좌이체"
-                          checked={selectedPaymentMethod === "계좌이체"}
+                          name="cashReceipt"
+                          value="신청안함"
+                          checked={cashReceipt === "신청안함"}
                           onChange={(e) => {
-                            console.log("[결제수단] 에스크로(실시간 계좌이체) 선택");
-                            setSelectedPaymentMethod(e.target.value as "계좌이체");
+                            console.log("[현금영수증] 신청안함 선택");
+                            setCashReceipt(e.target.value as "신청안함");
                           }}
-                          className="w-4 h-4 text-[#ff6b9d] border-[#f5d5e3] focus:ring-[#ff6b9d]"
+                          className="w-4 h-4 text-[#ff6b9d] border-[#d4d4d4] focus:ring-[#ff6b9d]"
                         />
-                        <span className="text-sm text-[#4a3f48] font-medium">에스크로(실시간 계좌이체)</span>
+                        <span className="text-sm text-[#4a3f48]">신청안함</span>
                       </label>
                     </div>
                   </div>
-
-                  {/* 에스크로(실시간 계좌이체) 선택 시 추가 입력 필드 */}
-                  {selectedPaymentMethod === "계좌이체" && (
-                    <div className="space-y-4">
-                      {/* 예금주명 */}
-                      <div>
-                        <label className="block text-sm font-medium text-[#4a3f48] mb-2">
-                          예금주명
-                        </label>
-                        <input
-                          type="text"
-                          value={depositorName}
-                          onChange={(e) => {
-                            console.log("[입금자명] 입력:", e.target.value);
-                            setDepositorName(e.target.value);
-                          }}
-                          placeholder=""
-                          className="w-full px-3 py-2 border border-[#d4d4d4] rounded text-sm focus:outline-none focus:border-[#ff6b9d] focus:ring-1 focus:ring-[#ff6b9d]"
-                        />
-                      </div>
-
-                      {/* 에스크로 서비스 체크박스 */}
-                      <div className="flex items-start gap-2">
-                        <input
-                          type="checkbox"
-                          id="escrow-checkout"
-                          checked={useEscrow}
-                          onChange={(e) => {
-                            console.log("[에스크로] 체크:", e.target.checked);
-                            setUseEscrow(e.target.checked);
-                          }}
-                          className="w-4 h-4 text-[#ff6b9d] border-[#d4d4d4] rounded focus:ring-[#ff6b9d] mt-0.5"
-                        />
-                        <label htmlFor="escrow-checkout" className="text-xs text-[#4a3f48] cursor-pointer">
-                          에스크로(구매안전) 서비스를 적용합니다.
-                        </label>
-                      </div>
-
-                      {/* 경고 메시지 */}
-                      <div className="bg-[#fff5f5] border border-[#fad2e6] rounded p-3">
-                        <p className="text-xs text-[#ff6b9d] leading-relaxed">
-                          ⚠️ 소액 결제의 경우 PG사 정책에 따라 관련 금융 결제 수단이 인증 후 사용이 가능합니다.
-                        </p>
-                      </div>
-
-                      {/* 현금영수증 신청 옵션 */}
-                      <div>
-                        <h4 className="text-sm font-medium text-[#4a3f48] mb-3">현금영수증 신청</h4>
-                        <div className="space-y-2">
-                          <label className="flex items-center gap-2 cursor-pointer">
-                            <input
-                              type="radio"
-                              name="cashReceipt"
-                              value="신청"
-                              checked={cashReceipt === "신청"}
-                              onChange={(e) => {
-                                console.log("[현금영수증] 신청 선택");
-                                setCashReceipt(e.target.value as "신청");
-                              }}
-                              className="w-4 h-4 text-[#ff6b9d] border-[#d4d4d4] focus:ring-[#ff6b9d]"
-                            />
-                            <span className="text-sm text-[#4a3f48]">현금영수증신청</span>
-                          </label>
-
-                          <label className="flex items-center gap-2 cursor-pointer">
-                            <input
-                              type="radio"
-                              name="cashReceipt"
-                              value="신청안함"
-                              checked={cashReceipt === "신청안함"}
-                              onChange={(e) => {
-                                console.log("[현금영수증] 신청안함 선택");
-                                setCashReceipt(e.target.value as "신청안함");
-                              }}
-                              className="w-4 h-4 text-[#ff6b9d] border-[#d4d4d4] focus:ring-[#ff6b9d]"
-                            />
-                            <span className="text-sm text-[#4a3f48]">신청안함</span>
-                          </label>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* 신용카드 결제 선택 시 최종 금액 표시 */}
-                  {selectedPaymentMethod === "카드" && (
-                    <div className="border-t border-[#f5d5e3] pt-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm text-[#8b7d84]">카드 결제 최종결제 금액</span>
-                        <div className="text-right">
-                          <div className="text-2xl font-bold text-[#ff6b9d]">
-                            {displayTotal.toLocaleString("ko-KR")}
-                            <span className="text-base">원</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  <p className="text-xs text-[#8b7d84] text-center">
-                    {selectedPaymentMethod === "카드" 
-                      ? "결제하기 버튼을 클릭하면 토스페이먼츠 결제창이 열립니다."
-                      : selectedPaymentMethod === "계좌이체"
-                      ? "입금자명을 확인하시고 결제하기 버튼을 클릭해주세요."
-                      : "결제 수단을 선택해주세요."}
-                  </p>
                 </div>
               )}
 
-              <Button
-                onClick={() => {
-                  console.log("[CheckoutForm] 결제하기 버튼 클릭");
-                  form.handleSubmit(onSubmit)();
-                }}
-                disabled={
-                  isPending || 
-                  form.watch("paymentMethod") !== "TOSS" || 
-                  !selectedPaymentMethod ||
-                  (selectedPaymentMethod === "계좌이체" && !depositorName.trim())
-                }
-                className="w-full h-14 bg-[#ff6b9d] hover:bg-[#ff5088] text-white rounded-xl text-base font-bold disabled:opacity-50"
-              >
-                {isPending 
-                  ? "처리 중..." 
-                  : !selectedPaymentMethod 
-                  ? "결제 수단을 선택해주세요" 
-                  : selectedPaymentMethod === "계좌이체" && !depositorName.trim()
-                  ? "예금주명을 입력해주세요"
-                  : `${displayTotal.toLocaleString("ko-KR")}원 결제하기`}
-              </Button>
-            </>
-          ) : (
-            <div className="mt-4">
-              <p className="text-xs text-[#8b7d84] mb-4">
-                주문이 생성되었습니다. 결제 페이지로 이동합니다...
+              {/* 신용카드 결제 선택 시 최종 금액 표시 */}
+              {selectedPaymentMethod === "카드" && (
+                <div className="border-t border-[#f5d5e3] pt-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-[#8b7d84]">카드 결제 최종결제 금액</span>
+                    <div className="text-right">
+                      <div className="text-2xl font-bold text-[#ff6b9d]">
+                        {displayTotal.toLocaleString("ko-KR")}
+                        <span className="text-base">원</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <p className="text-xs text-[#8b7d84] text-center">
+                {selectedPaymentMethod === "카드" 
+                  ? "결제하기 버튼을 클릭하면 토스페이먼츠 결제창이 열립니다."
+                  : selectedPaymentMethod === "계좌이체"
+                  ? "입금자명을 확인하시고 결제하기 버튼을 클릭해주세요."
+                  : "결제 수단을 선택해주세요."}
               </p>
             </div>
           )}
-        </div>
-        </div>
-      )}
 
-
-      {/* 결제 위젯 섹션 */}
-      {showPaymentWidget && orderId && orderNumber && isLoaded && user && (
-        <div id="payment-section" className="w-full max-w-lg mx-auto">
-          <div className="bg-white rounded-xl shadow-sm p-8">
-            <h2 className="text-xl font-bold text-[#4a3f48] mb-6 text-center">총 결제 금액</h2>
-            <div className="mb-8 text-center py-6 bg-[#fef8fb] rounded-xl">
-              <p className="text-4xl font-bold text-[#ff6b9d]">
-                {displayTotal.toLocaleString("ko-KR")}원
-              </p>
-            </div>
-            <PaymentWidget
-              orderId={orderId}
-              orderNumber={orderNumber}
-              amount={displayTotal}
-              customerName={form.getValues("shippingName")}
-              customerEmail={user.emailAddresses[0]?.emailAddress || ""}
-            />
-          </div>
+          <Button
+            onClick={() => {
+              console.log("[CheckoutForm] 결제하기 버튼 클릭");
+              form.handleSubmit(onSubmit)();
+            }}
+            disabled={
+              isPending || 
+              form.watch("paymentMethod") !== "TOSS" || 
+              !selectedPaymentMethod ||
+              (selectedPaymentMethod === "계좌이체" && !depositorName.trim())
+            }
+            className="w-full h-14 bg-[#ff6b9d] hover:bg-[#ff5088] text-white rounded-xl text-base font-bold disabled:opacity-50"
+          >
+            {isPending 
+              ? "처리 중..." 
+              : !selectedPaymentMethod 
+              ? "결제 수단을 선택해주세요" 
+              : selectedPaymentMethod === "계좌이체" && !depositorName.trim()
+              ? "예금주명을 입력해주세요"
+              : `${displayTotal.toLocaleString("ko-KR")}원 결제하기`}
+          </Button>
         </div>
-      )}
+      </div>
     </div>
   );
 }
