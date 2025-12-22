@@ -495,38 +495,52 @@ export default function CheckoutForm({
           console.log("[CheckoutForm] 토스페이먼츠 SDK 로드 시작");
           const tossPayments = await loadTossPayments(clientKey);
           
+          // customerKey 생성 (구매자 식별용 고유 ID)
+          // Clerk 사용자 ID를 기반으로 생성 (UUID 형식)
+          const customerKey = user.id || `customer_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+          
           console.log("[CheckoutForm] 결제 요청 파라미터:", {
             orderId: result.orderId,
             orderName: `주문번호: ${result.orderNumber}`,
             customerName: data.shippingName,
+            customerKey: customerKey,
             amount: displayTotal,
             paymentMethod: selectedPaymentMethod,
           });
+
+          // 결제창 인스턴스 생성
+          const payment = tossPayments.payment({ customerKey });
 
           // 결제 수단에 따라 다른 결제창 열기
           if (selectedPaymentMethod === "카드") {
             // 신용카드 결제
             console.log("[CheckoutForm] 신용카드 결제창 열기");
-            await tossPayments.payment({
-              method: "카드",
+            await payment.requestPayment({
+              method: "CARD",
+              amount: {
+                currency: "KRW",
+                value: displayTotal,
+              },
               orderId: result.orderId,
               orderName: `주문번호: ${result.orderNumber}`,
               customerName: data.shippingName,
               customerEmail: user.emailAddresses[0].emailAddress,
-              amount: displayTotal,
               successUrl: `${window.location.origin}/payments/success?paymentKey={paymentKey}&orderId=${result.orderId}&amount=${displayTotal}`,
               failUrl: `${window.location.origin}/payments/fail?message={message}`,
             });
           } else if (selectedPaymentMethod === "계좌이체") {
             // 계좌이체 결제
             console.log("[CheckoutForm] 계좌이체 결제창 열기");
-            await tossPayments.payment({
-              method: "계좌이체",
+            await payment.requestPayment({
+              method: "TRANSFER",
+              amount: {
+                currency: "KRW",
+                value: displayTotal,
+              },
               orderId: result.orderId,
               orderName: `주문번호: ${result.orderNumber}`,
               customerName: data.shippingName,
               customerEmail: user.emailAddresses[0].emailAddress,
-              amount: displayTotal,
               successUrl: `${window.location.origin}/payments/success?paymentKey={paymentKey}&orderId=${result.orderId}&amount=${displayTotal}`,
               failUrl: `${window.location.origin}/payments/fail?message={message}`,
               transfer: {
