@@ -476,49 +476,87 @@ export default function CheckoutForm({
                   })()
                 ) : (
                   /* 주문 생성 후: 주문 아이템 표시 */
-                  <div className="border border-[#f5d5e3] rounded-lg p-4 bg-white">
-                    <div className="space-y-3">
-                      {displayItems.map((item) => (
+                  (() => {
+                    // 상품별로 그룹화
+                    const groupedItems = displayItems.reduce((acc, item) => {
+                      const key = item.product_id || item.product_name;
+                      if (!acc[key]) {
+                        acc[key] = [];
+                      }
+                      acc[key].push(item);
+                      return acc;
+                    }, {} as Record<string, typeof displayItems>);
+
+                    return Object.entries(groupedItems).map(([productKey, items]) => {
+                      const firstItem = items[0];
+                      const totalQuantity = items.reduce((sum, item) => sum + item.quantity, 0);
+                      const totalPrice = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
+                      return (
                         <div
-                          key={item.id}
-                          className="flex items-center justify-between py-2 border-b border-[#f5d5e3] last:border-b-0"
+                          key={productKey}
+                          className="border border-[#f5d5e3] rounded-lg p-4 bg-white mb-3"
                         >
-                          <div className="flex-1">
-                            <p className="text-sm text-[#4a3f48] font-medium">
-                              {item.product_name}
-                            </p>
-                            {item.variant_info && (
-                              <p className="text-xs text-[#8b7d84] mt-1">
-                                옵션: {item.variant_info}
+                          {/* 상품 기본 정보 */}
+                          <div className="flex gap-3 mb-3">
+                            <div className="relative w-16 h-16 rounded-lg overflow-hidden bg-white shrink-0">
+                              <Image
+                                src={firstItem.image_url || "/placeholder.png"}
+                                alt={firstItem.product_name || "상품 이미지"}
+                                fill
+                                sizes="64px"
+                                className="object-cover"
+                              />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm text-[#4a3f48] font-medium line-clamp-2">
+                                {firstItem.product_name}
                               </p>
-                            )}
+                            </div>
                           </div>
-                          <div className="flex items-center gap-4">
-                            <span className="text-sm text-[#8b7d84]">
-                              수량: {item.quantity}개
-                            </span>
-                            <p className="text-sm font-bold text-[#4a3f48] w-24 text-right">
-                              {(item.price * item.quantity).toLocaleString("ko-KR")}원
+
+                          {/* 옵션별 아이템 */}
+                          <div className="space-y-2">
+                            {items.map((item) => (
+                              <div
+                                key={item.id}
+                                className="flex items-center justify-between py-2 px-3 bg-[#fef8fb] rounded-lg"
+                              >
+                                <div className="flex-1">
+                                  {item.variant_info && (
+                                    <p className="text-xs text-[#8b7d84]">
+                                      {item.variant_info}
+                                    </p>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-4">
+                                  <span className="text-sm text-[#8b7d84]">
+                                    {item.quantity}개
+                                  </span>
+                                  <p className="text-sm font-medium text-[#4a3f48] w-24 text-right">
+                                    {(item.price * item.quantity).toLocaleString("ko-KR")}원
+                                  </p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+
+                          {/* 상품별 총계 */}
+                          <div className="flex items-center justify-between mt-3 pt-3 border-t border-[#f5d5e3]">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-[#8b7d84]">총 수량</span>
+                              <span className="text-sm font-bold text-[#4a3f48]">
+                                {totalQuantity}개
+                              </span>
+                            </div>
+                            <p className="text-base font-bold text-[#ff6b9d]">
+                              {totalPrice.toLocaleString("ko-KR")}원
                             </p>
                           </div>
                         </div>
-                      ))}
-                    </div>
-                    {/* 총계 */}
-                    <div className="flex items-center justify-between mt-3 pt-3 border-t border-[#f5d5e3]">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-[#8b7d84]">총 수량</span>
-                        <span className="text-sm font-bold text-[#4a3f48]">
-                          {displayItems.reduce((sum, item) => sum + item.quantity, 0)}개
-                        </span>
-                      </div>
-                      <p className="text-base font-bold text-[#ff6b9d]">
-                        {displayItems
-                          .reduce((sum, item) => sum + item.price * item.quantity, 0)
-                          .toLocaleString("ko-KR")}원
-                      </p>
-                    </div>
-                  </div>
+                      );
+                    });
+                  })()
                 )}
               </div>
             </div>
