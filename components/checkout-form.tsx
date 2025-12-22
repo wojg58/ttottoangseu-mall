@@ -32,6 +32,71 @@ import {
 import PaymentWidget from "@/components/payment-widget";
 import OrderCancelButton from "@/components/order-cancel-button";
 
+// 주문 상품 아이템 컴포넌트 (Hooks 규칙 준수를 위해 분리)
+interface CheckoutCartItemProps {
+  item: CartItemWithProduct;
+  isPending: boolean;
+}
+
+function CheckoutCartItem({ item, isPending }: CheckoutCartItemProps) {
+  const [isRemoving, startTransition] = useTransition();
+  const router = useRouter();
+
+  const handleRemove = () => {
+    if (!confirm("이 상품을 주문에서 제외하시겠습니까?")) {
+      return;
+    }
+
+    console.log("[CheckoutCartItem] 상품 제거:", item.id);
+
+    startTransition(async () => {
+      const result = await removeFromCart(item.id);
+      if (result.success) {
+        console.log("[CheckoutCartItem] 상품 제거 성공:", result.message);
+        // 페이지 새로고침하여 장바구니 상태 반영
+        router.refresh();
+      } else {
+        console.error("[CheckoutCartItem] 상품 제거 실패:", result.message);
+        alert(result.message);
+      }
+    });
+  };
+
+  return (
+    <div className="flex items-center justify-between py-2 border-b border-[#f5d5e3] last:border-b-0 group">
+      <div className="flex-1">
+        <p className="text-sm text-[#4a3f48]">
+          {item.variant ? (
+            <span>{item.variant.variant_value}</span>
+          ) : (
+            <span className="text-[#8b7d84]">기본 옵션</span>
+          )}
+        </p>
+      </div>
+      <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-[#8b7d84]">수량</span>
+          <span className="text-sm font-bold text-[#4a3f48]">
+            {item.quantity}개
+          </span>
+        </div>
+        <p className="text-sm font-bold text-[#4a3f48] w-24 text-right">
+          {(item.price * item.quantity).toLocaleString("ko-KR")}원
+        </p>
+        <button
+          onClick={handleRemove}
+          disabled={isRemoving || isPending}
+          className="flex items-center gap-1 px-2 py-1 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 border border-red-200 hover:border-red-300 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          title="주문에서 제외"
+        >
+          <X className="w-3.5 h-3.5" />
+          <span>{isRemoving ? "삭제 중..." : "삭제"}</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // 폼 스키마
 const checkoutSchema = z.object({
   shippingName: z.string().min(2, "수령인 이름을 입력해주세요."),
@@ -308,68 +373,13 @@ export default function CheckoutForm({
 
                           {/* 옵션별 상세 정보 */}
                           <div className="space-y-2 pl-20">
-                            {items.map((item) => {
-                              const [isRemoving, setIsRemoving] = useState(false);
-                              
-                              const handleRemove = async () => {
-                                if (!confirm("이 상품을 주문에서 제외하시겠습니까?")) {
-                                  return;
-                                }
-                                
-                                console.log("[CheckoutForm] 상품 제거:", item.id);
-                                setIsRemoving(true);
-                                
-                                startTransition(async () => {
-                                  const result = await removeFromCart(item.id);
-                                  if (result.success) {
-                                    console.log("[CheckoutForm] 상품 제거 성공:", result.message);
-                                    // 페이지 새로고침하여 장바구니 상태 반영
-                                    router.refresh();
-                                  } else {
-                                    console.error("[CheckoutForm] 상품 제거 실패:", result.message);
-                                    alert(result.message);
-                                    setIsRemoving(false);
-                                  }
-                                });
-                              };
-
-                              return (
-                                <div
-                                  key={item.id}
-                                  className="flex items-center justify-between py-2 border-b border-[#f5d5e3] last:border-b-0 group"
-                                >
-                                  <div className="flex-1">
-                                    <p className="text-sm text-[#4a3f48]">
-                                      {item.variant ? (
-                                        <span>{item.variant.variant_value}</span>
-                                      ) : (
-                                        <span className="text-[#8b7d84]">기본 옵션</span>
-                                      )}
-                                    </p>
-                                  </div>
-                                  <div className="flex items-center gap-3">
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-xs text-[#8b7d84]">수량</span>
-                                      <span className="text-sm font-bold text-[#4a3f48]">
-                                        {item.quantity}개
-                                      </span>
-                                    </div>
-                                    <p className="text-sm font-bold text-[#4a3f48] w-24 text-right">
-                                      {(item.price * item.quantity).toLocaleString("ko-KR")}원
-                                    </p>
-                                    <button
-                                      onClick={handleRemove}
-                                      disabled={isRemoving || isPending}
-                                      className="flex items-center gap-1 px-2 py-1 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 border border-red-200 hover:border-red-300 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                      title="주문에서 제외"
-                                    >
-                                      <X className="w-3.5 h-3.5" />
-                                      <span>삭제</span>
-                                    </button>
-                                  </div>
-                                </div>
-                              );
-                            })}
+                            {items.map((item) => (
+                              <CheckoutCartItem
+                                key={item.id}
+                                item={item}
+                                isPending={isPending}
+                              />
+                            ))}
                           </div>
 
                           {/* 총계 */}
