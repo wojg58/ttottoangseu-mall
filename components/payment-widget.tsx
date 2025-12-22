@@ -260,7 +260,7 @@ export default function PaymentWidget({
 
       {/* 계좌이체 선택 시 추가 입력 필드 */}
       {paymentMethod === "계좌이체" && (
-        <div className="space-y-4 p-4 border border-[#f5d5e3] rounded-lg bg-[#fef8fb]">
+        <div className="space-y-4">
           {/* 입금자명 */}
           <div>
             <label className="block text-sm font-medium text-[#4a3f48] mb-2">
@@ -274,15 +274,30 @@ export default function PaymentWidget({
                 setDepositorName(e.target.value);
               }}
               placeholder=""
-              className="w-full px-3 py-2 border border-[#d4d4d4] rounded-md text-sm focus:outline-none focus:border-[#ff6b9d] focus:ring-1 focus:ring-[#ff6b9d]"
+              className="w-full px-3 py-2 border border-[#d4d4d4] rounded text-sm focus:outline-none focus:border-[#ff6b9d] focus:ring-1 focus:ring-[#ff6b9d]"
             />
-            <p className="text-xs text-[#8b7d84] mt-1">
-              ⚠️ 에스크로(구매안전)서비스를 적용합니다.
-            </p>
           </div>
 
+          {/* 에스크로 서비스 체크박스 */}
+          <div className="flex items-start gap-2">
+            <input
+              type="checkbox"
+              id="escrow"
+              checked={useEscrow}
+              onChange={(e) => {
+                console.log("[에스크로] 체크:", e.target.checked);
+                setUseEscrow(e.target.checked);
+              }}
+              className="w-4 h-4 text-[#ff6b9d] border-[#d4d4d4] rounded focus:ring-[#ff6b9d] mt-0.5"
+            />
+            <label htmlFor="escrow" className="text-xs text-[#4a3f48] cursor-pointer">
+              에스크로(구매안전) 서비스를 적용합니다.
+            </label>
+          </div>
+
+          {/* 경고 메시지 */}
           <div className="bg-[#fff5f5] border border-[#fad2e6] rounded p-3">
-            <p className="text-xs text-[#4a3f48] leading-relaxed">
+            <p className="text-xs text-[#ff6b9d] leading-relaxed">
               ⚠️ 소액 결제의 경우 PG사 정책에 따라 관련 금융 결제 수단이 인증 후 사용이 가능합니다.
             </p>
           </div>
@@ -301,7 +316,7 @@ export default function PaymentWidget({
                     console.log("[할부결제] 할부 선택");
                     setInstallment(e.target.value as "할부");
                   }}
-                  className="w-4 h-4 text-[#ff6b9d] border-[#f5d5e3] focus:ring-[#ff6b9d]"
+                  className="w-4 h-4 text-[#ff6b9d] border-[#d4d4d4] focus:ring-[#ff6b9d]"
                 />
                 <span className="text-sm text-[#4a3f48]">할부결제+승인 신청</span>
               </label>
@@ -316,7 +331,7 @@ export default function PaymentWidget({
                     console.log("[할부결제] 일시불 선택");
                     setInstallment(e.target.value as "일시불");
                   }}
-                  className="w-4 h-4 text-[#ff6b9d] border-[#f5d5e3] focus:ring-[#ff6b9d]"
+                  className="w-4 h-4 text-[#ff6b9d] border-[#d4d4d4] focus:ring-[#ff6b9d]"
                 />
                 <span className="text-sm text-[#4a3f48]">신청안함</span>
               </label>
