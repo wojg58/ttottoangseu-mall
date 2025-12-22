@@ -225,6 +225,7 @@ export default function CheckoutForm({
   const [showPaymentWidget, setShowPaymentWidget] = useState(!!urlOrderId);
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [selectedCoupon, setSelectedCoupon] = useState<Coupon | null>(null);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<"카드" | "계좌이체" | null>(null);
   const [orderData, setOrderData] = useState<{
     subtotal: number;
     shippingFee: number;
@@ -989,8 +990,12 @@ export default function CheckoutForm({
                     type="checkbox"
                     checked={form.watch("paymentMethod") === "TOSS"}
                     onChange={(e) => {
+                      console.log("[결제수단] 토스페이먼츠 체크:", e.target.checked);
                       if (e.target.checked) {
                         form.setValue("paymentMethod", "TOSS");
+                      } else {
+                        form.setValue("paymentMethod", "" as "TOSS");
+                        setSelectedPaymentMethod(null);
                       }
                     }}
                     className="w-5 h-5 text-[#ff6b9d] border-[#f5d5e3] rounded focus:ring-[#ff6b9d]"
@@ -1009,19 +1014,78 @@ export default function CheckoutForm({
                 </label>
               </div>
 
-              <p className="text-xs text-[#8b7d84] mb-4">
-                주문 내용을 확인했으며, 결제에 동의합니다.
-              </p>
+              {/* 토스페이먼츠 체크 시 결제 수단 상세 선택 */}
+              {form.watch("paymentMethod") === "TOSS" && (
+                <div className="mb-6 space-y-4">
+                  <div className="space-y-3">
+                    <h3 className="text-base font-bold text-[#4a3f48]">결제수단</h3>
+                    <div className="space-y-2">
+                      <label className="flex items-center gap-2 cursor-pointer p-3 border border-[#f5d5e3] rounded-lg hover:bg-[#fef8fb] transition-colors">
+                        <input
+                          type="radio"
+                          name="paymentMethodDetail"
+                          value="카드"
+                          checked={selectedPaymentMethod === "카드"}
+                          onChange={(e) => {
+                            console.log("[결제수단] 신용카드 결제 선택");
+                            setSelectedPaymentMethod(e.target.value as "카드");
+                          }}
+                          className="w-4 h-4 text-[#ff6b9d] border-[#f5d5e3] focus:ring-[#ff6b9d]"
+                        />
+                        <span className="text-sm text-[#4a3f48] font-medium">신용카드 결제</span>
+                      </label>
+
+                      <label className="flex items-center gap-2 cursor-pointer p-3 border border-[#f5d5e3] rounded-lg hover:bg-[#fef8fb] transition-colors">
+                        <input
+                          type="radio"
+                          name="paymentMethodDetail"
+                          value="계좌이체"
+                          checked={selectedPaymentMethod === "계좌이체"}
+                          onChange={(e) => {
+                            console.log("[결제수단] 에스크로(실시간 계좌이체) 선택");
+                            setSelectedPaymentMethod(e.target.value as "계좌이체");
+                          }}
+                          className="w-4 h-4 text-[#ff6b9d] border-[#f5d5e3] focus:ring-[#ff6b9d]"
+                        />
+                        <span className="text-sm text-[#4a3f48] font-medium">에스크로(실시간 계좌이체)</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* 신용카드 결제 선택 시 최종 금액 표시 */}
+                  {selectedPaymentMethod === "카드" && (
+                    <div className="border-t border-[#f5d5e3] pt-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm text-[#8b7d84]">카드 결제 최종결제 금액</span>
+                        <div className="text-right">
+                          <div className="text-2xl font-bold text-[#ff6b9d]">
+                            {displayTotal.toLocaleString("ko-KR")}
+                            <span className="text-base">원</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <p className="text-xs text-[#8b7d84] text-center">
+                    {selectedPaymentMethod === "카드" 
+                      ? "결제하기 버튼을 클릭하면 토스페이먼츠 결제창이 열립니다."
+                      : selectedPaymentMethod === "계좌이체"
+                      ? "에스크로(실시간 계좌이체)를 선택하셨습니다."
+                      : "결제 수단을 선택해주세요."}
+                  </p>
+                </div>
+              )}
 
               <Button
                 onClick={() => {
                   console.log("[CheckoutForm] 결제하기 버튼 클릭");
                   form.handleSubmit(onSubmit)();
                 }}
-                disabled={isPending || form.watch("paymentMethod") !== "TOSS"}
+                disabled={isPending || form.watch("paymentMethod") !== "TOSS" || !selectedPaymentMethod}
                 className="w-full h-14 bg-[#ff6b9d] hover:bg-[#ff5088] text-white rounded-xl text-base font-bold disabled:opacity-50"
               >
-                {isPending ? "처리 중..." : `${displayTotal.toLocaleString("ko-KR")}원 결제하기`}
+                {isPending ? "처리 중..." : !selectedPaymentMethod ? "결제 수단을 선택해주세요" : `${displayTotal.toLocaleString("ko-KR")}원 결제하기`}
               </Button>
             </>
           ) : (
