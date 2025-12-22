@@ -107,10 +107,31 @@ export default function PaymentWidget({
     console.log("주문 ID:", orderId);
     console.log("주문번호:", orderNumber);
     console.log("결제 금액:", amount);
+    console.log("결제 위젯 상태:", {
+      paymentWidget: !!paymentWidgetRef.current,
+      paymentMethodsWidget: !!paymentMethodsWidgetRef.current,
+      agreementWidget: !!agreementWidgetRef.current,
+      isLoading,
+      error,
+    });
 
     if (!paymentWidgetRef.current) {
       console.error("결제 위젯이 초기화되지 않았습니다.");
       alert("결제 위젯을 불러오는 중입니다. 잠시 후 다시 시도해주세요.");
+      console.groupEnd();
+      return;
+    }
+
+    if (isLoading) {
+      console.error("결제 위젯이 아직 로딩 중입니다.");
+      alert("결제 위젯을 불러오는 중입니다. 잠시 후 다시 시도해주세요.");
+      console.groupEnd();
+      return;
+    }
+
+    if (error) {
+      console.error("결제 위젯 초기화 에러:", error);
+      alert(`결제 위젯 오류: ${error}`);
       console.groupEnd();
       return;
     }
@@ -141,19 +162,36 @@ export default function PaymentWidget({
       console.log("결제 정보:", data);
 
       // 결제 위젯 실행 (TossPayments 위젯이 자동으로 결제 처리)
-      await paymentWidgetRef.current.requestPayment({
-        orderId: data.paymentId || orderId,
+      // orderId는 원래 주문 ID를 사용해야 함 (paymentId가 아님)
+      const paymentRequest = {
+        orderId: orderId, // 원래 주문 ID 사용
         orderName: `주문번호: ${orderNumber}`,
         customerName,
         customerEmail,
         successUrl: `${window.location.origin}/payments/success?paymentKey={paymentKey}&orderId=${orderId}&amount=${amount}`,
         failUrl: `${window.location.origin}/payments/fail?message={message}`,
-      });
+      };
+
+      console.log("[PaymentWidget] requestPayment 호출:", paymentRequest);
+      
+      try {
+        await paymentWidgetRef.current.requestPayment(paymentRequest);
+        console.log("[PaymentWidget] requestPayment 성공");
+      } catch (paymentError) {
+        console.error("[PaymentWidget] requestPayment 에러:", paymentError);
+        throw paymentError;
+      }
 
       console.groupEnd();
     } catch (err) {
       console.error("결제 요청 에러:", err);
-      alert(err instanceof Error ? err.message : "결제 요청에 실패했습니다.");
+      const errorMessage = err instanceof Error ? err.message : "결제 요청에 실패했습니다.";
+      console.error("[PaymentWidget] 에러 상세:", {
+        error: err,
+        message: errorMessage,
+        stack: err instanceof Error ? err.stack : undefined,
+      });
+      alert(errorMessage);
       console.groupEnd();
     }
   };
