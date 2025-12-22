@@ -6,14 +6,14 @@
 "use client";
 
 import { useState, useTransition, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useUser } from "@clerk/nextjs";
 import { X } from "lucide-react";
-import { createOrder } from "@/actions/orders";
+import { createOrder, getOrderById } from "@/actions/orders";
 import { removeFromCart } from "@/actions/cart";
 import { getAvailableCoupons, type Coupon } from "@/actions/coupons";
 import { calculateCouponDiscount } from "@/lib/coupon-utils";
@@ -125,13 +125,33 @@ export default function CheckoutForm({
   total,
 }: CheckoutFormProps) {
   const [isPending, startTransition] = useTransition();
-  const [orderId, setOrderId] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+  const urlOrderId = searchParams.get("orderId");
+  const [orderId, setOrderId] = useState<string | null>(urlOrderId);
   const [orderNumber, setOrderNumber] = useState<string | null>(null);
-  const [showPaymentWidget, setShowPaymentWidget] = useState(false);
+  const [showPaymentWidget, setShowPaymentWidget] = useState(!!urlOrderId);
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [selectedCoupon, setSelectedCoupon] = useState<Coupon | null>(null);
   const { user, isLoaded } = useUser();
   const router = useRouter();
+
+  // URL에 orderId가 있으면 주문 정보 로드
+  useEffect(() => {
+    if (urlOrderId && !orderNumber) {
+      console.log("[CheckoutForm] URL에서 orderId 발견, 주문 정보 로드:", urlOrderId);
+      getOrderById(urlOrderId)
+        .then((order) => {
+          if (order) {
+            setOrderNumber(order.order_number);
+            setShowPaymentWidget(true);
+            console.log("[CheckoutForm] 주문 정보 로드 완료:", order.order_number);
+          }
+        })
+        .catch((error) => {
+          console.error("[CheckoutForm] 주문 정보 로드 실패:", error);
+        });
+    }
+  }, [urlOrderId, orderNumber]);
 
   // 쿠폰 목록 가져오기
   useEffect(() => {
@@ -186,6 +206,12 @@ export default function CheckoutForm({
         setOrderId(result.orderId);
         setOrderNumber(result.orderNumber);
         setShowPaymentWidget(true);
+        
+        // URL에 orderId 추가하여 페이지 새로고침 시에도 주문 상태 유지
+        const url = new URL(window.location.href);
+        url.searchParams.set("orderId", result.orderId);
+        window.history.replaceState({}, "", url.toString());
+        
         // 스크롤을 결제 위젯으로 이동
         setTimeout(() => {
           document.getElementById("payment-section")?.scrollIntoView({

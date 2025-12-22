@@ -10,7 +10,11 @@ import { Home } from "lucide-react";
 import { getCartItems } from "@/actions/cart";
 import CheckoutForm from "@/components/checkout-form";
 
-export default async function CheckoutPage() {
+export default async function CheckoutPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ orderId?: string }>;
+}) {
   const { userId } = await auth();
 
   if (!userId) {
@@ -19,10 +23,14 @@ export default async function CheckoutPage() {
 
   console.log("[CheckoutPage] 렌더링");
 
+  const params = await searchParams;
+  const orderId = params.orderId;
+
   const cartItems = await getCartItems();
 
-  // 장바구니가 비어있으면 장바구니 페이지로
-  if (cartItems.length === 0) {
+  // 주문이 생성된 상태(orderId가 있는 경우)가 아니고 장바구니가 비어있으면 장바구니 페이지로
+  // 주문이 생성된 후에는 장바구니가 비워지므로, orderId가 있으면 체크를 건너뜀
+  if (!orderId && cartItems.length === 0) {
     redirect("/cart");
   }
 
