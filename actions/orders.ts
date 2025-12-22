@@ -256,6 +256,7 @@ export async function createOrder(input: CreateOrderInput): Promise<{
 
     revalidatePath("/cart");
     revalidatePath("/mypage/orders");
+    // checkout 페이지는 revalidate하지 않음 (주문 생성 후에도 페이지에 머물 수 있도록)
 
     logger.info("주문 생성 완료", orderNumber);
     logger.groupEnd();

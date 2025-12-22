@@ -202,23 +202,16 @@ export default function CheckoutForm({
       });
 
       if (result.success && result.orderId && result.orderNumber) {
-        console.log("[CheckoutForm] 주문 생성 성공, 결제 위젯 표시");
-        setOrderId(result.orderId);
-        setOrderNumber(result.orderNumber);
-        setShowPaymentWidget(true);
+        console.log("[CheckoutForm] 주문 생성 성공, URL 업데이트 및 페이지 이동");
         
-        // URL에 orderId 추가하여 페이지 새로고침 시에도 주문 상태 유지
-        const url = new URL(window.location.href);
-        url.searchParams.set("orderId", result.orderId);
-        window.history.replaceState({}, "", url.toString());
+        // URL에 orderId를 추가하여 서버 컴포넌트가 리렌더링될 때 주문 상태를 인식할 수 있도록 함
+        // router.push를 사용하여 페이지를 리로드하고 URL을 업데이트
+        const newUrl = `/checkout?orderId=${result.orderId}`;
+        console.log("[CheckoutForm] 새 URL로 이동:", newUrl);
+        router.push(newUrl);
         
-        // 스크롤을 결제 위젯으로 이동
-        setTimeout(() => {
-          document.getElementById("payment-section")?.scrollIntoView({
-            behavior: "smooth",
-            block: "start",
-          });
-        }, 100);
+        // router.push 후에는 컴포넌트가 언마운트되므로 여기서 상태 업데이트는 의미 없음
+        // useEffect에서 URL의 orderId를 읽어와서 상태를 복원함
       } else {
         alert(result.message);
       }
