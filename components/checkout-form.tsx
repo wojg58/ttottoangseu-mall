@@ -1038,9 +1038,14 @@ export default function CheckoutForm({
 
       {/* 결제 위젯 섹션 */}
       {showPaymentWidget && orderId && orderNumber && isLoaded && user && (
-        <div id="payment-section" className="w-full max-w-2xl mx-auto">
-          <div className="bg-white rounded-xl shadow-sm p-6">
-            <h2 className="text-lg font-bold text-[#4a3f48] mb-6">결제</h2>
+        <div id="payment-section" className="w-full max-w-md mx-auto">
+          <div className="bg-white rounded-xl shadow-sm p-8">
+            <h2 className="text-xl font-bold text-[#4a3f48] mb-4 text-center">결제 금액</h2>
+            <div className="mb-6 text-center">
+              <p className="text-3xl font-bold text-[#ff6b9d]">
+                {displayTotal.toLocaleString("ko-KR")}원
+              </p>
+            </div>
             <PaymentWidget
               orderId={orderId}
               orderNumber={orderNumber}

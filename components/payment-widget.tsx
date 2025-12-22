@@ -36,12 +36,6 @@ export default function PaymentWidget({
   customerEmail,
 }: PaymentWidgetProps) {
   const paymentWidgetRef = useRef<PaymentWidgetInstance | null>(null);
-  const paymentMethodsWidgetRef = useRef<ReturnType<
-    PaymentWidgetInstance["renderPaymentMethods"]
-  > | null>(null);
-  const agreementWidgetRef = useRef<ReturnType<
-    PaymentWidgetInstance["renderAgreement"]
-  > | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -74,24 +68,6 @@ export default function PaymentWidget({
         paymentWidgetRef.current = paymentWidget;
         console.log("[PaymentWidget] 결제 위젯 인스턴스 생성 완료");
 
-        // 결제 수단 위젯 렌더링
-        console.log("[PaymentWidget] 결제 수단 위젯 렌더링 시작", { amount });
-        const paymentMethodsWidget = paymentWidget.renderPaymentMethods(
-          "#payment-method",
-          { value: amount },
-          { variantKey: "DEFAULT" },
-        );
-        paymentMethodsWidgetRef.current = paymentMethodsWidget;
-        console.log("[PaymentWidget] 결제 수단 위젯 렌더링 완료");
-
-        // 이용약관 위젯 렌더링
-        console.log("[PaymentWidget] 이용약관 위젯 렌더링 시작");
-        const agreementWidget = paymentWidget.renderAgreement("#agreement", {
-          variantKey: "AGREEMENT",
-        });
-        agreementWidgetRef.current = agreementWidget;
-        console.log("[PaymentWidget] 이용약관 위젯 렌더링 완료");
-
         setIsLoading(false);
         console.log("결제 위젯 초기화 완료");
         console.groupEnd();
@@ -108,13 +84,6 @@ export default function PaymentWidget({
     };
 
     initializePaymentWidget();
-
-    // cleanup
-    return () => {
-      // Payment widget cleanup is handled automatically
-      paymentMethodsWidgetRef.current = null;
-      agreementWidgetRef.current = null;
-    };
   }, [orderId, orderNumber, amount, customerEmail]);
 
   const handlePayment = async () => {
@@ -124,8 +93,6 @@ export default function PaymentWidget({
     console.log("결제 금액:", amount);
     console.log("결제 위젯 상태:", {
       paymentWidget: !!paymentWidgetRef.current,
-      paymentMethodsWidget: !!paymentMethodsWidgetRef.current,
-      agreementWidget: !!agreementWidgetRef.current,
       isLoading,
       error,
     });
@@ -240,22 +207,15 @@ export default function PaymentWidget({
 
   return (
     <div className="space-y-6">
-      {/* 결제 수단 선택 */}
-      <div>
-        <h3 className="text-base font-bold text-[#4a3f48] mb-4">결제 수단</h3>
-        <div id="payment-method" className="min-h-[200px]"></div>
-      </div>
-
-      {/* 이용약관 */}
-      <div>
-        <h3 className="text-base font-bold text-[#4a3f48] mb-4">이용약관</h3>
-        <div id="agreement" className="min-h-[100px]"></div>
-      </div>
+      <p className="text-sm text-[#8b7d84] text-center">
+        결제하기 버튼을 클릭하면 토스페이먼츠 결제창이 열립니다.
+      </p>
 
       {/* 결제 버튼 */}
       <Button
         onClick={handlePayment}
-        className="w-full h-14 bg-[#ff6b9d] hover:bg-[#ff5088] text-white rounded-xl text-base font-bold"
+        disabled={isLoading}
+        className="w-full h-14 bg-[#ff6b9d] hover:bg-[#ff5088] text-white rounded-xl text-base font-bold disabled:opacity-50"
       >
         {amount.toLocaleString("ko-KR")}원 결제하기
       </Button>
