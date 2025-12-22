@@ -14,10 +14,18 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
-import { Minus, Plus, ShoppingCart, X } from "lucide-react";
+import { Minus, Plus, ShoppingCart, X, CheckCircle2 } from "lucide-react";
 import type { ProductVariant } from "@/types/database";
 import ProductVariantSelector from "@/components/product-variant-selector";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { addToCart } from "@/actions/cart";
 
 interface ProductDetailOptionsProps {
@@ -45,6 +53,7 @@ export default function ProductDetailOptions({
   const [selectedOptions, setSelectedOptions] = useState<SelectedOption[]>([]);
   const [quantity, setQuantity] = useState(1); // 옵션이 없는 상품의 수량
   const [isPending, startTransition] = useTransition();
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const { isSignedIn } = useAuth();
   const router = useRouter();
 
@@ -139,9 +148,9 @@ export default function ProductDetailOptions({
               return;
             }
           }
-          alert(`${productName}이(가) 장바구니에 담겼습니다!`);
           // 장바구니에 담은 후 선택 옵션 초기화
           setSelectedOptions([]);
+          setShowSuccessModal(true);
         } else {
           // 옵션이 없는 상품: 수량만 지정하여 장바구니에 추가
           const result = await addToCart(productId, quantity);
@@ -149,7 +158,7 @@ export default function ProductDetailOptions({
             alert(result.message);
             return;
           }
-          alert(`${productName}이(가) 장바구니에 담겼습니다!`);
+          setShowSuccessModal(true);
         }
         console.log("[ProductDetailOptions] 장바구니 담기 성공");
       } catch (error) {
@@ -369,6 +378,43 @@ export default function ProductDetailOptions({
           {isLoading ? "처리 중..." : "바로 구매"}
         </Button>
       </div>
+
+      {/* 장바구니 담기 성공 모달 */}
+      <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="flex items-center justify-center mb-4">
+              <div className="w-16 h-16 bg-[#ffeef5] rounded-full flex items-center justify-center">
+                <CheckCircle2 className="w-10 h-10 text-[#ff6b9d]" />
+              </div>
+            </div>
+            <DialogTitle className="text-center text-xl font-bold text-[#4a3f48]">
+              장바구니에 담았습니다
+            </DialogTitle>
+            <DialogDescription className="text-center text-[#8b7d84] pt-2">
+              {productName}이(가) 장바구니에 담겼습니다!
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => setShowSuccessModal(false)}
+              className="w-full sm:w-auto border-[#f5d5e3] text-[#4a3f48] hover:bg-[#ffeef5]"
+            >
+              쇼핑 계속하기
+            </Button>
+            <Button
+              onClick={() => {
+                setShowSuccessModal(false);
+                router.push("/cart");
+              }}
+              className="w-full sm:w-auto bg-[#ff6b9d] hover:bg-[#ff5088] text-white"
+            >
+              장바구니로 가기
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

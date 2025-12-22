@@ -13,8 +13,16 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@clerk/nextjs";
-import { Minus, Plus, ShoppingCart } from "lucide-react";
+import { Minus, Plus, ShoppingCart, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { addToCart } from "@/actions/cart";
 
 interface AddToCartButtonProps {
@@ -36,6 +44,7 @@ export default function AddToCartButton({
 }: AddToCartButtonProps) {
   const [quantity, setQuantity] = useState(1);
   const [isPending, startTransition] = useTransition();
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const { isSignedIn } = useAuth();
   const router = useRouter();
 
@@ -69,8 +78,8 @@ export default function AddToCartButton({
     startTransition(async () => {
       const result = await addToCart(productId, quantity, variantId);
       if (result.success) {
-        alert(`${productName}이(가) 장바구니에 담겼습니다!`);
         console.log("[AddToCartButton] 장바구니 담기 성공");
+        setShowSuccessModal(true);
       } else {
         alert(result.message);
         console.error("[AddToCartButton] 장바구니 담기 실패:", result.message);
@@ -154,6 +163,43 @@ export default function AddToCartButton({
           {isSoldOut ? "품절" : "바로 구매"}
         </Button>
       </div>
+
+      {/* 장바구니 담기 성공 모달 */}
+      <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="flex items-center justify-center mb-4">
+              <div className="w-16 h-16 bg-[#ffeef5] rounded-full flex items-center justify-center">
+                <CheckCircle2 className="w-10 h-10 text-[#ff6b9d]" />
+              </div>
+            </div>
+            <DialogTitle className="text-center text-xl font-bold text-[#4a3f48]">
+              장바구니에 담았습니다
+            </DialogTitle>
+            <DialogDescription className="text-center text-[#8b7d84] pt-2">
+              {productName}이(가) 장바구니에 담겼습니다!
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => setShowSuccessModal(false)}
+              className="w-full sm:w-auto border-[#f5d5e3] text-[#4a3f48] hover:bg-[#ffeef5]"
+            >
+              쇼핑 계속하기
+            </Button>
+            <Button
+              onClick={() => {
+                setShowSuccessModal(false);
+                router.push("/cart");
+              }}
+              className="w-full sm:w-auto bg-[#ff6b9d] hover:bg-[#ff5088] text-white"
+            >
+              장바구니로 가기
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
