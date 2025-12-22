@@ -55,27 +55,42 @@ export default function PaymentWidget({
       try {
         // 클라이언트 키는 환경 변수에서 가져옴
         const clientKey = process.env.NEXT_PUBLIC_TOSS_PAYMENTS_CLIENT_KEY;
+        console.log("[PaymentWidget] 클라이언트 키 확인:", {
+          exists: !!clientKey,
+          startsWithTest: clientKey?.startsWith("test_"),
+          length: clientKey?.length,
+        });
+        
         if (!clientKey) {
           throw new Error("TossPayments 클라이언트 키가 설정되지 않았습니다.");
         }
 
-        console.log("결제 위젯 로드 시작");
+        console.log("[PaymentWidget] 결제 위젯 로드 시작", {
+          clientKey: clientKey.substring(0, 10) + "...",
+          customerEmail,
+        });
+        
         const paymentWidget = await loadPaymentWidget(clientKey, customerEmail);
         paymentWidgetRef.current = paymentWidget;
+        console.log("[PaymentWidget] 결제 위젯 인스턴스 생성 완료");
 
         // 결제 수단 위젯 렌더링
+        console.log("[PaymentWidget] 결제 수단 위젯 렌더링 시작", { amount });
         const paymentMethodsWidget = paymentWidget.renderPaymentMethods(
           "#payment-method",
           { value: amount },
           { variantKey: "DEFAULT" },
         );
         paymentMethodsWidgetRef.current = paymentMethodsWidget;
+        console.log("[PaymentWidget] 결제 수단 위젯 렌더링 완료");
 
         // 이용약관 위젯 렌더링
+        console.log("[PaymentWidget] 이용약관 위젯 렌더링 시작");
         const agreementWidget = paymentWidget.renderAgreement("#agreement", {
           variantKey: "AGREEMENT",
         });
         agreementWidgetRef.current = agreementWidget;
+        console.log("[PaymentWidget] 이용약관 위젯 렌더링 완료");
 
         setIsLoading(false);
         console.log("결제 위젯 초기화 완료");
@@ -175,10 +190,18 @@ export default function PaymentWidget({
       console.log("[PaymentWidget] requestPayment 호출:", paymentRequest);
       
       try {
-        await paymentWidgetRef.current.requestPayment(paymentRequest);
-        console.log("[PaymentWidget] requestPayment 성공");
+        console.log("[PaymentWidget] requestPayment 호출 직전");
+        const result = await paymentWidgetRef.current.requestPayment(paymentRequest);
+        console.log("[PaymentWidget] requestPayment 성공, 결과:", result);
+        // requestPayment는 Promise를 반환하지만, 실제로는 결제 페이지로 리다이렉트되므로
+        // 여기까지 도달하는 경우는 드뭅니다.
       } catch (paymentError) {
         console.error("[PaymentWidget] requestPayment 에러:", paymentError);
+        console.error("[PaymentWidget] 에러 상세:", {
+          name: paymentError instanceof Error ? paymentError.name : undefined,
+          message: paymentError instanceof Error ? paymentError.message : String(paymentError),
+          stack: paymentError instanceof Error ? paymentError.stack : undefined,
+        });
         throw paymentError;
       }
 
