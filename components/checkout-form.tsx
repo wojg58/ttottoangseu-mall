@@ -400,6 +400,129 @@ export default function CheckoutForm({
       <div className="lg:col-span-2">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            {/* 주문 상품 목록 */}
+            <div className="bg-white rounded-xl shadow-sm p-6">
+              <h3 className="text-lg font-bold text-[#4a3f48] mb-4">
+                주문 상품 ({!showPaymentWidget ? cartItems.length : displayItems.length}개)
+              </h3>
+              <div className="space-y-4">
+                {!showPaymentWidget ? (
+                  /* 주문 생성 전: 장바구니 아이템 표시 */
+                  (() => {
+                    // 상품 ID별로 그룹화
+                    const groupedItems = cartItems.reduce((acc, item) => {
+                      const productId = item.product_id;
+                      if (!acc[productId]) {
+                        acc[productId] = [];
+                      }
+                      acc[productId].push(item);
+                      return acc;
+                    }, {} as Record<string, typeof cartItems>);
+
+                    return Object.entries(groupedItems).map(([productId, items]) => {
+                      const firstItem = items[0];
+                      const totalQuantity = items.reduce((sum, item) => sum + item.quantity, 0);
+                      const totalPrice = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
+                      return (
+                        <div
+                          key={productId}
+                          className="border border-[#f5d5e3] rounded-lg p-4 bg-white"
+                        >
+                          {/* 상품 기본 정보 */}
+                          <div className="flex gap-3 mb-3">
+                            <div className="relative w-16 h-16 rounded-lg overflow-hidden bg-white shrink-0">
+                              <Image
+                                src={firstItem.image_url || "/placeholder.png"}
+                                alt={firstItem.product_name}
+                                fill
+                                sizes="64px"
+                                className="object-cover"
+                              />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm text-[#4a3f48] font-medium line-clamp-1">
+                                {firstItem.product_name}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* 옵션별 아이템 */}
+                          <div className="space-y-2 pl-20">
+                            {items.map((item) => (
+                              <CheckoutCartItem
+                                key={item.id}
+                                item={item}
+                                isPending={isPending}
+                              />
+                            ))}
+                          </div>
+
+                          {/* 상품별 총계 */}
+                          <div className="flex items-center justify-between mt-3 pt-3 border-t border-[#f5d5e3]">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-[#8b7d84]">총 수량</span>
+                              <span className="text-sm font-bold text-[#4a3f48]">
+                                {totalQuantity}개
+                              </span>
+                            </div>
+                            <p className="text-base font-bold text-[#ff6b9d]">
+                              {totalPrice.toLocaleString("ko-KR")}원
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    });
+                  })()
+                ) : (
+                  /* 주문 생성 후: 주문 아이템 표시 */
+                  <div className="border border-[#f5d5e3] rounded-lg p-4 bg-white">
+                    <div className="space-y-3">
+                      {displayItems.map((item) => (
+                        <div
+                          key={item.id}
+                          className="flex items-center justify-between py-2 border-b border-[#f5d5e3] last:border-b-0"
+                        >
+                          <div className="flex-1">
+                            <p className="text-sm text-[#4a3f48] font-medium">
+                              {item.product_name}
+                            </p>
+                            {item.variant_info && (
+                              <p className="text-xs text-[#8b7d84] mt-1">
+                                옵션: {item.variant_info}
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-4">
+                            <span className="text-sm text-[#8b7d84]">
+                              수량: {item.quantity}개
+                            </span>
+                            <p className="text-sm font-bold text-[#4a3f48] w-24 text-right">
+                              {(item.price * item.quantity).toLocaleString("ko-KR")}원
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    {/* 총계 */}
+                    <div className="flex items-center justify-between mt-3 pt-3 border-t border-[#f5d5e3]">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-[#8b7d84]">총 수량</span>
+                        <span className="text-sm font-bold text-[#4a3f48]">
+                          {displayItems.reduce((sum, item) => sum + item.quantity, 0)}개
+                        </span>
+                      </div>
+                      <p className="text-base font-bold text-[#ff6b9d]">
+                        {displayItems
+                          .reduce((sum, item) => sum + item.price * item.quantity, 0)
+                          .toLocaleString("ko-KR")}원
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
             {/* 주문자 정보 */}
             <div className="bg-white rounded-xl shadow-sm p-6">
               <h2 className="text-lg font-bold text-[#4a3f48] mb-6">주문자 정보</h2>
@@ -585,137 +708,6 @@ export default function CheckoutForm({
                     </FormItem>
                   )}
                 />
-              </div>
-            </div>
-
-            {/* 주문 상품 목록 */}
-            <div className="bg-white rounded-xl shadow-sm p-6">
-              <h3 className="text-lg font-bold text-[#4a3f48] mb-4">
-                주문 상품 ({!showPaymentWidget ? cartItems.length : displayItems.length}개)
-              </h3>
-              <div className="space-y-4">
-                <h3 className="text-base font-bold text-[#4a3f48] mb-4">
-                  주문 상품 ({!showPaymentWidget ? cartItems.length : displayItems.length}개)
-                </h3>
-                <div className="space-y-4">
-                  {!showPaymentWidget ? (
-                    /* 주문 생성 전: 장바구니 아이템 표시 */
-                    (() => {
-                      // 상품 ID별로 그룹화
-                      const groupedItems = cartItems.reduce((acc, item) => {
-                        const productId = item.product_id;
-                        if (!acc[productId]) {
-                          acc[productId] = [];
-                        }
-                        acc[productId].push(item);
-                        return acc;
-                      }, {} as Record<string, typeof cartItems>);
-
-                      return Object.entries(groupedItems).map(([productId, items]) => {
-                        const firstItem = items[0];
-                        const totalQuantity = items.reduce((sum, item) => sum + item.quantity, 0);
-                        const totalPrice = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-
-                        return (
-                          <div
-                            key={productId}
-                            className="border border-[#f5d5e3] rounded-lg p-4 bg-white"
-                          >
-                            {/* 상품 기본 정보 */}
-                            <div className="flex gap-3 mb-3">
-                              <div className="relative w-16 h-16 rounded-lg overflow-hidden bg-white shrink-0">
-                                <Image
-                                  src={
-                                    firstItem.primary_image?.image_url ||
-                                    "https://placehold.co/200x200/fad2e6/333333?text=No+Image"
-                                  }
-                                  alt={firstItem.product.name}
-                                  fill
-                                  className="object-cover"
-                                  sizes="64px"
-                                />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm text-[#4a3f48] font-medium line-clamp-1">
-                                  {firstItem.product.name}
-                                </p>
-                              </div>
-                            </div>
-
-                            {/* 옵션별 상세 정보 */}
-                            <div className="space-y-2 pl-20">
-                              {items.map((item) => (
-                                <CheckoutCartItem
-                                  key={item.id}
-                                  item={item}
-                                  isPending={isPending}
-                                />
-                              ))}
-                            </div>
-
-                            {/* 총계 */}
-                            <div className="flex items-center justify-between mt-3 pt-3 border-t border-[#f5d5e3]">
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs text-[#8b7d84]">총 수량</span>
-                                <span className="text-sm font-bold text-[#4a3f48]">
-                                  {totalQuantity}개
-                                </span>
-                              </div>
-                              <p className="text-base font-bold text-[#ff6b9d]">
-                                {totalPrice.toLocaleString("ko-KR")}원
-                              </p>
-                            </div>
-                          </div>
-                        );
-                      });
-                    })()
-                  ) : (
-                    /* 주문 생성 후: 주문 아이템 표시 */
-                    <div className="border border-[#f5d5e3] rounded-lg p-4 bg-white">
-                      <div className="space-y-3">
-                        {displayItems.map((item) => (
-                          <div
-                            key={item.id}
-                            className="flex items-center justify-between py-2 border-b border-[#f5d5e3] last:border-b-0"
-                          >
-                            <div className="flex-1">
-                              <p className="text-sm text-[#4a3f48] font-medium">
-                                {item.product_name}
-                              </p>
-                              {item.variant_info && (
-                                <p className="text-xs text-[#8b7d84] mt-1">
-                                  옵션: {item.variant_info}
-                                </p>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-4">
-                              <span className="text-sm text-[#8b7d84]">
-                                수량: {item.quantity}개
-                              </span>
-                              <p className="text-sm font-bold text-[#4a3f48] w-24 text-right">
-                                {(item.price * item.quantity).toLocaleString("ko-KR")}원
-                              </p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                      {/* 총계 */}
-                      <div className="flex items-center justify-between mt-3 pt-3 border-t border-[#f5d5e3]">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-[#8b7d84]">총 수량</span>
-                          <span className="text-sm font-bold text-[#4a3f48]">
-                            {displayItems.reduce((sum, item) => sum + item.quantity, 0)}개
-                          </span>
-                        </div>
-                        <p className="text-base font-bold text-[#ff6b9d]">
-                          {displayItems
-                            .reduce((sum, item) => sum + item.price * item.quantity, 0)
-                            .toLocaleString("ko-KR")}원
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                </div>
               </div>
             </div>
           </form>
