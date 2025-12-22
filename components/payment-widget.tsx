@@ -38,6 +38,7 @@ export default function PaymentWidget({
   const paymentWidgetRef = useRef<PaymentWidgetInstance | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<"카드" | "계좌이체">("카드");
 
   useEffect(() => {
     console.group("[PaymentWidget] 초기화");
@@ -152,9 +153,12 @@ export default function PaymentWidget({
         customerEmail,
         successUrl: `${window.location.origin}/payments/success?paymentKey={paymentKey}&orderId=${orderId}&amount=${amount}`,
         failUrl: `${window.location.origin}/payments/fail?message={message}`,
+        flowMode: "DIRECT" as const, // 결제창 바로 열기
+        easyPay: paymentMethod === "카드" ? "토스페이" : undefined,
       };
 
       console.log("[PaymentWidget] requestPayment 호출:", paymentRequest);
+      console.log("[PaymentWidget] 선택된 결제수단:", paymentMethod);
       
       try {
         console.log("[PaymentWidget] requestPayment 호출 직전");
@@ -207,7 +211,64 @@ export default function PaymentWidget({
 
   return (
     <div className="space-y-6">
-      <p className="text-sm text-[#8b7d84] text-center">
+      {/* 결제 수단 선택 */}
+      <div className="space-y-3">
+        <h3 className="text-base font-bold text-[#4a3f48]">결제 수단</h3>
+        <div className="space-y-2">
+          <label className="flex items-center gap-3 p-4 border-2 rounded-lg cursor-pointer transition-colors hover:bg-[#fef8fb]"
+            style={{
+              borderColor: paymentMethod === "카드" ? "#ff6b9d" : "#f5d5e3",
+              backgroundColor: paymentMethod === "카드" ? "#fef8fb" : "white",
+            }}
+          >
+            <input
+              type="radio"
+              name="paymentMethod"
+              value="카드"
+              checked={paymentMethod === "카드"}
+              onChange={(e) => setPaymentMethod(e.target.value as "카드")}
+              className="w-5 h-5 text-[#ff6b9d] border-[#f5d5e3] focus:ring-[#ff6b9d]"
+            />
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-[#4a3f48]">카드 결제</span>
+                <span className="px-2 py-0.5 bg-[#ffeef5] text-[#ff6b9d] text-xs font-medium rounded">
+                  추천
+                </span>
+              </div>
+              <p className="text-xs text-[#8b7d84] mt-1">
+                신용카드, 체크카드로 간편하게 결제하세요
+              </p>
+            </div>
+          </label>
+
+          <label className="flex items-center gap-3 p-4 border-2 rounded-lg cursor-pointer transition-colors hover:bg-[#fef8fb]"
+            style={{
+              borderColor: paymentMethod === "계좌이체" ? "#ff6b9d" : "#f5d5e3",
+              backgroundColor: paymentMethod === "계좌이체" ? "#fef8fb" : "white",
+            }}
+          >
+            <input
+              type="radio"
+              name="paymentMethod"
+              value="계좌이체"
+              checked={paymentMethod === "계좌이체"}
+              onChange={(e) => setPaymentMethod(e.target.value as "계좌이체")}
+              className="w-5 h-5 text-[#ff6b9d] border-[#f5d5e3] focus:ring-[#ff6b9d]"
+            />
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-[#4a3f48]">에스크로(실시간 계좌이체)</span>
+              </div>
+              <p className="text-xs text-[#8b7d84] mt-1">
+                실시간 계좌이체로 안전하게 결제하세요
+              </p>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <p className="text-xs text-[#8b7d84] text-center">
         결제하기 버튼을 클릭하면 토스페이먼츠 결제창이 열립니다.
       </p>
 
