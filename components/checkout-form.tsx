@@ -85,30 +85,38 @@ function CheckoutCartItem({ item, isPending }: CheckoutCartItemProps) {
   };
 
   return (
-    <div className="flex items-center justify-between py-2 border-b border-[#f5d5e3] last:border-b-0 group">
-      <div className="flex-1">
-        <p className="text-sm text-[#4a3f48]">
+    <div className="flex items-center justify-between py-2 px-3 bg-[#fef8fb] rounded-lg group">
+      <div className="flex-1 min-w-0">
+        {/* 상품 옵션 */}
+        <p className="text-sm text-[#4a3f48] font-medium mb-1">
           {item.variant ? (
             <span>{item.variant.variant_value}</span>
           ) : (
             <span className="text-[#8b7d84]">기본 옵션</span>
           )}
         </p>
+        {/* 개별 단가 */}
+        <p className="text-xs text-[#8b7d84]">
+          단가: {item.price.toLocaleString("ko-KR")}원
+        </p>
       </div>
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-4">
+        {/* 수량 */}
         <div className="flex items-center gap-2">
           <span className="text-xs text-[#8b7d84]">수량</span>
           <span className="text-sm font-bold text-[#4a3f48]">
             {item.quantity}개
           </span>
         </div>
-        <p className="text-sm font-bold text-[#4a3f48] w-24 text-right">
+        {/* 합계 금액 */}
+        <p className="text-sm font-bold text-[#4a3f48] w-28 text-right">
           {(item.price * item.quantity).toLocaleString("ko-KR")}원
         </p>
+        {/* 삭제 버튼 */}
         <button
           onClick={handleRemove}
           disabled={isRemoving || isPending}
-          className="flex items-center gap-1 px-2 py-1 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 border border-red-200 hover:border-red-300 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex items-center gap-1 px-2 py-1 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 border border-red-200 hover:border-red-300 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
           title="주문에서 제외"
         >
           <X className="w-3.5 h-3.5" />
@@ -433,8 +441,8 @@ export default function CheckoutForm({
                           <div className="flex gap-3 mb-3">
                             <div className="relative w-16 h-16 rounded-lg overflow-hidden bg-white shrink-0">
                               <Image
-                                src={firstItem.image_url || "/placeholder.png"}
-                                alt={firstItem.product_name || "상품 이미지"}
+                                src={firstItem.primary_image?.image_url || "/placeholder.png"}
+                                alt={firstItem.product.name || "상품 이미지"}
                                 fill
                                 sizes="64px"
                                 className="object-cover"
@@ -442,13 +450,13 @@ export default function CheckoutForm({
                             </div>
                             <div className="flex-1 min-w-0">
                               <p className="text-sm text-[#4a3f48] font-medium line-clamp-1">
-                                {firstItem.product_name}
+                                {firstItem.product.name}
                               </p>
                             </div>
                           </div>
 
                           {/* 옵션별 아이템 */}
-                          <div className="space-y-2 pl-20">
+                          <div className="space-y-2">
                             {items.map((item) => (
                               <CheckoutCartItem
                                 key={item.id}
@@ -522,18 +530,28 @@ export default function CheckoutForm({
                                 key={item.id}
                                 className="flex items-center justify-between py-2 px-3 bg-[#fef8fb] rounded-lg"
                               >
-                                <div className="flex-1">
+                                <div className="flex-1 min-w-0">
+                                  {/* 상품 옵션 */}
                                   {item.variant_info && (
-                                    <p className="text-xs text-[#8b7d84]">
+                                    <p className="text-sm text-[#4a3f48] font-medium mb-1">
                                       {item.variant_info}
                                     </p>
                                   )}
+                                  {/* 개별 단가 */}
+                                  <p className="text-xs text-[#8b7d84]">
+                                    단가: {item.price.toLocaleString("ko-KR")}원
+                                  </p>
                                 </div>
                                 <div className="flex items-center gap-4">
-                                  <span className="text-sm text-[#8b7d84]">
-                                    {item.quantity}개
-                                  </span>
-                                  <p className="text-sm font-medium text-[#4a3f48] w-24 text-right">
+                                  {/* 수량 */}
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xs text-[#8b7d84]">수량</span>
+                                    <span className="text-sm font-bold text-[#4a3f48]">
+                                      {item.quantity}개
+                                    </span>
+                                  </div>
+                                  {/* 합계 금액 */}
+                                  <p className="text-sm font-bold text-[#4a3f48] w-28 text-right">
                                     {(item.price * item.quantity).toLocaleString("ko-KR")}원
                                   </p>
                                 </div>
