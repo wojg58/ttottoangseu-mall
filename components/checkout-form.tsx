@@ -12,9 +12,9 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useUser } from "@clerk/nextjs";
-import { X } from "lucide-react";
+import { X, Plus, Minus } from "lucide-react";
 import { createOrder, getOrderById } from "@/actions/orders";
-import { removeFromCart } from "@/actions/cart";
+import { removeFromCart, updateCartItemQuantity } from "@/actions/cart";
 import { getAvailableCoupons, type Coupon } from "@/actions/coupons";
 import { calculateCouponDiscount } from "@/lib/coupon-utils";
 import type { CartItemWithProduct } from "@/types/database";
@@ -62,6 +62,7 @@ interface CheckoutCartItemProps {
 
 function CheckoutCartItem({ item, isPending }: CheckoutCartItemProps) {
   const [isRemoving, startTransition] = useTransition();
+  const [isUpdating, setIsUpdating] = useState(false);
   const router = useRouter();
 
   const handleRemove = () => {
@@ -84,6 +85,36 @@ function CheckoutCartItem({ item, isPending }: CheckoutCartItemProps) {
     });
   };
 
+  const handleQuantityChange = (newQuantity: number) => {
+    if (newQuantity < 1) return;
+    if (newQuantity === item.quantity) return;
+
+    console.log("[CheckoutCartItem] 수량 변경:", item.id, item.quantity, "->", newQuantity);
+
+    setIsUpdating(true);
+    startTransition(async () => {
+      const result = await updateCartItemQuantity(item.id, newQuantity);
+      if (result.success) {
+        console.log("[CheckoutCartItem] 수량 변경 성공:", result.message);
+        router.refresh();
+      } else {
+        console.error("[CheckoutCartItem] 수량 변경 실패:", result.message);
+        alert(result.message);
+      }
+      setIsUpdating(false);
+    });
+  };
+
+  const handleDecrease = () => {
+    if (item.quantity > 1) {
+      handleQuantityChange(item.quantity - 1);
+    }
+  };
+
+  const handleIncrease = () => {
+    handleQuantityChange(item.quantity + 1);
+  };
+
   return (
     <div className="flex items-center justify-between py-2 px-3 bg-[#fef8fb] rounded-lg group">
       <div className="flex-1 min-w-0">
@@ -101,12 +132,30 @@ function CheckoutCartItem({ item, isPending }: CheckoutCartItemProps) {
         </p>
       </div>
       <div className="flex items-center gap-4">
-        {/* 수량 */}
+        {/* 수량 변경 */}
         <div className="flex items-center gap-2">
           <span className="text-xs text-[#8b7d84]">수량</span>
-          <span className="text-sm font-bold text-[#4a3f48]">
-            {item.quantity}개
-          </span>
+          <div className="flex items-center gap-1 border border-[#f5d5e3] rounded-md">
+            <button
+              onClick={handleDecrease}
+              disabled={isUpdating || isRemoving || isPending || item.quantity <= 1}
+              className="p-1.5 text-[#4a3f48] hover:bg-[#fef8fb] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              title="수량 감소"
+            >
+              <Minus className="w-3.5 h-3.5" />
+            </button>
+            <span className="text-sm font-bold text-[#4a3f48] min-w-[2rem] text-center">
+              {item.quantity}
+            </span>
+            <button
+              onClick={handleIncrease}
+              disabled={isUpdating || isRemoving || isPending}
+              className="p-1.5 text-[#4a3f48] hover:bg-[#fef8fb] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              title="수량 증가"
+            >
+              <Plus className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
         {/* 합계 금액 */}
         <p className="text-sm font-bold text-[#4a3f48] w-28 text-right">
@@ -115,7 +164,7 @@ function CheckoutCartItem({ item, isPending }: CheckoutCartItemProps) {
         {/* 삭제 버튼 */}
         <button
           onClick={handleRemove}
-          disabled={isRemoving || isPending}
+          disabled={isRemoving || isPending || isUpdating}
           className="flex items-center gap-1 px-2 py-1 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 border border-red-200 hover:border-red-300 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
           title="주문에서 제외"
         >
