@@ -240,6 +240,9 @@ export default function CheckoutForm({
   } | null>(null);
   const { user, isLoaded } = useUser();
   const router = useRouter();
+  
+  // 배송지 옵션 상태 (true: 회원 정보와 동일, false: 새로운 배송지)
+  const [useMemberInfo, setUseMemberInfo] = useState(true);
 
   // Daum Postcode API 스크립트 로드
   useEffect(() => {
@@ -377,6 +380,48 @@ export default function CheckoutForm({
       paymentMethod: "TOSS",
     },
   });
+
+  // 회원 정보와 동일 옵션 선택 시 배송 정보 자동 채우기
+  useEffect(() => {
+    if (useMemberInfo && isLoaded && user) {
+      const ordererName = form.getValues("ordererName");
+      const ordererPhone = form.getValues("ordererPhone");
+      
+      console.log("[CheckoutForm] 회원 정보로 배송 정보 자동 채우기", {
+        ordererName,
+        ordererPhone,
+      });
+      
+      if (ordererName) {
+        form.setValue("shippingName", ordererName);
+      }
+      if (ordererPhone) {
+        form.setValue("shippingPhone", ordererPhone);
+      }
+    } else if (!useMemberInfo) {
+      // 새로운 배송지 선택 시 필드 초기화
+      form.setValue("shippingName", "");
+      form.setValue("shippingPhone", "");
+      form.setValue("shippingZipCode", "");
+      form.setValue("shippingAddress", "");
+      form.setValue("shippingMemo", "");
+    }
+  }, [useMemberInfo, isLoaded, user, form]);
+
+  // 주문자 정보 변경 시 배송 정보도 업데이트 (회원 정보와 동일 옵션 선택 시)
+  const ordererName = form.watch("ordererName");
+  const ordererPhone = form.watch("ordererPhone");
+  
+  useEffect(() => {
+    if (useMemberInfo) {
+      if (ordererName) {
+        form.setValue("shippingName", ordererName);
+      }
+      if (ordererPhone) {
+        form.setValue("shippingPhone", ordererPhone);
+      }
+    }
+  }, [ordererName, ordererPhone, useMemberInfo, form]);
 
   const onSubmit = (data: CheckoutFormData) => {
     console.group("[CheckoutForm] 주문 생성 시작");
@@ -703,6 +748,35 @@ export default function CheckoutForm({
               <h2 className="text-lg font-bold text-[#4a3f48] mb-6">배송 정보</h2>
 
               <div className="space-y-4">
+                {/* 배송지 옵션 선택 */}
+                <div className="flex gap-4 pb-4 border-b border-[#f5d5e3]">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={useMemberInfo}
+                      onChange={(e) => {
+                        setUseMemberInfo(e.target.checked);
+                        if (e.target.checked) {
+                          // 회원 정보와 동일 선택 시 새로운 배송지 체크 해제
+                        }
+                      }}
+                      className="w-4 h-4 text-[#ff6b9d] border-[#f5d5e3] rounded focus:ring-[#fad2e6] focus:ring-2"
+                    />
+                    <span className="text-sm text-[#4a3f48] font-medium">회원 정보와 동일</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={!useMemberInfo}
+                      onChange={(e) => {
+                        setUseMemberInfo(!e.target.checked);
+                      }}
+                      className="w-4 h-4 text-[#ff6b9d] border-[#f5d5e3] rounded focus:ring-[#fad2e6] focus:ring-2"
+                    />
+                    <span className="text-sm text-[#4a3f48] font-medium">새로운 배송지</span>
+                  </label>
+                </div>
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
@@ -716,6 +790,7 @@ export default function CheckoutForm({
                         <Input
                           placeholder="수령인 이름"
                           className="border-[#f5d5e3] focus:border-[#fad2e6] focus:ring-[#fad2e6]"
+                          disabled={useMemberInfo}
                           {...field}
                         />
                       </FormControl>
@@ -736,6 +811,7 @@ export default function CheckoutForm({
                         <Input
                           placeholder="010-0000-0000"
                           className="border-[#f5d5e3] focus:border-[#fad2e6] focus:ring-[#fad2e6]"
+                          disabled={useMemberInfo}
                           {...field}
                         />
                       </FormControl>
