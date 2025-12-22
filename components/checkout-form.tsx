@@ -434,7 +434,7 @@ export default function CheckoutForm({
                             <div className="relative w-16 h-16 rounded-lg overflow-hidden bg-white shrink-0">
                               <Image
                                 src={firstItem.image_url || "/placeholder.png"}
-                                alt={firstItem.product_name}
+                                alt={firstItem.product_name || "상품 이미지"}
                                 fill
                                 sizes="64px"
                                 className="object-cover"
