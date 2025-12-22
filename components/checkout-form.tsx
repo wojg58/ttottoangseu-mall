@@ -121,6 +121,15 @@ function CheckoutCartItem({ item, isPending }: CheckoutCartItemProps) {
 
 // 폼 스키마
 const checkoutSchema = z.object({
+  // 주문자 정보
+  ordererName: z.string().min(2, "주문자 이름을 입력해주세요."),
+  ordererPhone: z
+    .string()
+    .min(10, "연락처를 입력해주세요.")
+    .regex(/^[0-9-]+$/, "올바른 연락처 형식을 입력해주세요."),
+  ordererEmail: z.string().email("올바른 이메일 형식을 입력해주세요."),
+  
+  // 배송 정보
   shippingName: z.string().min(2, "수령인 이름을 입력해주세요."),
   shippingPhone: z
     .string()
@@ -129,6 +138,11 @@ const checkoutSchema = z.object({
   shippingZipCode: z.string().min(5, "우편번호를 입력해주세요."),
   shippingAddress: z.string().min(5, "배송지 주소를 입력해주세요."),
   shippingMemo: z.string().optional(),
+  
+  // 결제 수단
+  paymentMethod: z.literal("TOSS", {
+    errorMap: () => ({ message: "결제 수단을 선택해주세요." }),
+  }),
 });
 
 type CheckoutFormData = z.infer<typeof checkoutSchema>;
@@ -295,23 +309,42 @@ export default function CheckoutForm({
   const form = useForm<CheckoutFormData>({
     resolver: zodResolver(checkoutSchema),
     defaultValues: {
+      ordererName: user?.fullName || "",
+      ordererPhone: "",
+      ordererEmail: user?.primaryEmailAddress?.emailAddress || "",
       shippingName: "",
       shippingPhone: "",
       shippingZipCode: "",
       shippingAddress: "",
       shippingMemo: "",
+      paymentMethod: "TOSS",
     },
   });
 
   const onSubmit = (data: CheckoutFormData) => {
     console.group("[CheckoutForm] 주문 생성 시작");
-    console.log("배송 정보:", data);
+    console.log("주문자 정보:", {
+      name: data.ordererName,
+      phone: data.ordererPhone,
+      email: data.ordererEmail,
+    });
+    console.log("배송 정보:", {
+      name: data.shippingName,
+      phone: data.shippingPhone,
+      address: data.shippingAddress,
+      zipCode: data.shippingZipCode,
+      memo: data.shippingMemo,
+    });
     console.log("선택된 쿠폰:", selectedCoupon);
     console.log("최종 결제 금액:", displayTotal);
+    console.log("결제 수단:", data.paymentMethod);
     console.groupEnd();
 
     startTransition(async () => {
       const result = await createOrder({
+        ordererName: data.ordererName,
+        ordererPhone: data.ordererPhone,
+        ordererEmail: data.ordererEmail,
         shippingName: data.shippingName,
         shippingPhone: data.shippingPhone,
         shippingAddress: data.shippingAddress,
@@ -363,17 +396,89 @@ export default function CheckoutForm({
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-      {/* 배송 정보 입력 */}
+      {/* 주문서 작성 */}
       <div className="lg:col-span-2">
-        <div className="bg-white rounded-xl shadow-sm p-6">
-          <h2 className="text-lg font-bold text-[#4a3f48] mb-6">배송 정보</h2>
-
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            {/* 주문자 정보 */}
+            <div className="bg-white rounded-xl shadow-sm p-6">
+              <h2 className="text-lg font-bold text-[#4a3f48] mb-6">주문자 정보</h2>
+              
+              <div className="space-y-4">
                 <FormField
                   control={form.control}
-                  name="shippingName"
+                  name="ordererName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-[#4a3f48]">
+                        이름 <span className="text-[#ff6b9d]">*</span>
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="주문자 이름"
+                          className="border-[#f5d5e3] focus:border-[#fad2e6] focus:ring-[#fad2e6]"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="ordererPhone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-[#4a3f48]">
+                          연락처 <span className="text-[#ff6b9d]">*</span>
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="010-0000-0000"
+                            className="border-[#f5d5e3] focus:border-[#fad2e6] focus:ring-[#fad2e6]"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="ordererEmail"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-[#4a3f48]">
+                          이메일 <span className="text-[#ff6b9d]">*</span>
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            type="email"
+                            placeholder="example@email.com"
+                            className="border-[#f5d5e3] focus:border-[#fad2e6] focus:ring-[#fad2e6]"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* 배송 정보 */}
+            <div className="bg-white rounded-xl shadow-sm p-6">
+              <h2 className="text-lg font-bold text-[#4a3f48] mb-6">배송 정보</h2>
+
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="shippingName"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-[#4a3f48]">
@@ -462,27 +567,33 @@ export default function CheckoutForm({
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="shippingMemo"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-[#4a3f48]">배송 메모</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="배송 시 요청사항을 입력해주세요 (선택)"
-                        className="border-[#f5d5e3] focus:border-[#fad2e6] focus:ring-[#fad2e6] resize-none"
-                        rows={3}
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                <FormField
+                  control={form.control}
+                  name="shippingMemo"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-[#4a3f48]">배송 메모</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="배송 시 요청사항을 입력해주세요 (선택)"
+                          className="border-[#f5d5e3] focus:border-[#fad2e6] focus:ring-[#fad2e6] resize-none"
+                          rows={3}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
 
-              {/* 주문 상품 목록 */}
-              <div className="mt-8">
+            {/* 주문 상품 목록 */}
+            <div className="bg-white rounded-xl shadow-sm p-6">
+              <h3 className="text-lg font-bold text-[#4a3f48] mb-4">
+                주문 상품 ({!showPaymentWidget ? cartItems.length : displayItems.length}개)
+              </h3>
+              <div className="space-y-4">
                 <h3 className="text-base font-bold text-[#4a3f48] mb-4">
                   주문 상품 ({!showPaymentWidget ? cartItems.length : displayItems.length}개)
                 </h3>
@@ -606,9 +717,9 @@ export default function CheckoutForm({
                   )}
                 </div>
               </div>
-            </form>
-          </Form>
-        </div>
+            </div>
+          </form>
+        </Form>
       </div>
 
       {/* 결제 요약 */}
@@ -683,7 +794,7 @@ export default function CheckoutForm({
             </div>
           </div>
 
-          <div className="flex justify-between items-center py-4">
+          <div className="flex justify-between items-center py-4 mb-4 border-b border-[#f5d5e3]">
             <span className="text-base font-bold text-[#4a3f48]">
               총 결제 금액
             </span>
@@ -694,6 +805,34 @@ export default function CheckoutForm({
 
           {!showPaymentWidget ? (
             <>
+              {/* 결제 수단 선택 */}
+              <div className="mb-6">
+                <h3 className="text-sm font-bold text-[#4a3f48] mb-3">결제 수단</h3>
+                <label className="flex items-center gap-3 p-4 border-2 border-[#fad2e6] rounded-lg cursor-pointer hover:bg-[#ffeef5] transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={form.watch("paymentMethod") === "TOSS"}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        form.setValue("paymentMethod", "TOSS");
+                      }
+                    }}
+                    className="w-5 h-5 text-[#ff6b9d] border-[#f5d5e3] rounded focus:ring-[#ff6b9d]"
+                  />
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-[#4a3f48]">토스페이먼츠</span>
+                      <span className="px-2 py-0.5 bg-[#ffeef5] text-[#ff6b9d] text-xs font-medium rounded">
+                        추천
+                      </span>
+                    </div>
+                    <p className="text-xs text-[#8b7d84] mt-1">
+                      카드, 계좌이체, 간편결제 등 다양한 결제 수단을 이용할 수 있습니다.
+                    </p>
+                  </div>
+                </label>
+              </div>
+
               <p className="text-xs text-[#8b7d84] mb-4">
                 주문 내용을 확인했으며, 결제에 동의합니다.
               </p>
@@ -703,7 +842,7 @@ export default function CheckoutForm({
                   console.log("[CheckoutForm] 결제하기 버튼 클릭");
                   form.handleSubmit(onSubmit)();
                 }}
-                disabled={isPending}
+                disabled={isPending || form.watch("paymentMethod") !== "TOSS"}
                 className="w-full h-14 bg-[#ff6b9d] hover:bg-[#ff5088] text-white rounded-xl text-base font-bold disabled:opacity-50"
               >
                 {isPending ? "처리 중..." : `${displayTotal.toLocaleString("ko-KR")}원 결제하기`}
@@ -712,7 +851,7 @@ export default function CheckoutForm({
           ) : (
             <div className="mt-4">
               <p className="text-xs text-[#8b7d84] mb-4">
-                주문이 생성되었습니다. 아래에서 결제를 진행해주세요.
+                주문이 생성되었습니다. 결제 페이지로 이동합니다...
               </p>
             </div>
           )}

@@ -38,6 +38,9 @@ function generateOrderNumber(): string {
 
 // 주문 생성 입력 타입
 export interface CreateOrderInput {
+  ordererName: string;
+  ordererPhone: string;
+  ordererEmail: string;
   shippingName: string;
   shippingPhone: string;
   shippingAddress: string;
@@ -54,6 +57,18 @@ export async function createOrder(input: CreateOrderInput): Promise<{
   orderNumber?: string;
 }> {
   logger.group("[createOrder] 주문 생성");
+  logger.log("주문자 정보:", {
+    name: input.ordererName,
+    phone: input.ordererPhone,
+    email: input.ordererEmail,
+  });
+  logger.log("배송 정보:", {
+    name: input.shippingName,
+    phone: input.shippingPhone,
+    address: input.shippingAddress,
+    zipCode: input.shippingZipCode,
+    memo: input.shippingMemo,
+  });
 
   try {
     const userId = await getCurrentUserId();
