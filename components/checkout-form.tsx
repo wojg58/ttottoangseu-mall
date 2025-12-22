@@ -226,6 +226,9 @@ export default function CheckoutForm({
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [selectedCoupon, setSelectedCoupon] = useState<Coupon | null>(null);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<"카드" | "계좌이체" | null>(null);
+  const [depositorName, setDepositorName] = useState("");
+  const [useEscrow, setUseEscrow] = useState(false);
+  const [cashReceipt, setCashReceipt] = useState<"신청" | "신청안함">("신청안함");
   const [orderData, setOrderData] = useState<{
     subtotal: number;
     shippingFee: number;
@@ -1052,6 +1055,88 @@ export default function CheckoutForm({
                     </div>
                   </div>
 
+                  {/* 에스크로(실시간 계좌이체) 선택 시 추가 입력 필드 */}
+                  {selectedPaymentMethod === "계좌이체" && (
+                    <div className="space-y-4">
+                      {/* 예금주명 */}
+                      <div>
+                        <label className="block text-sm font-medium text-[#4a3f48] mb-2">
+                          예금주명
+                        </label>
+                        <input
+                          type="text"
+                          value={depositorName}
+                          onChange={(e) => {
+                            console.log("[입금자명] 입력:", e.target.value);
+                            setDepositorName(e.target.value);
+                          }}
+                          placeholder=""
+                          className="w-full px-3 py-2 border border-[#d4d4d4] rounded text-sm focus:outline-none focus:border-[#ff6b9d] focus:ring-1 focus:ring-[#ff6b9d]"
+                        />
+                      </div>
+
+                      {/* 에스크로 서비스 체크박스 */}
+                      <div className="flex items-start gap-2">
+                        <input
+                          type="checkbox"
+                          id="escrow-checkout"
+                          checked={useEscrow}
+                          onChange={(e) => {
+                            console.log("[에스크로] 체크:", e.target.checked);
+                            setUseEscrow(e.target.checked);
+                          }}
+                          className="w-4 h-4 text-[#ff6b9d] border-[#d4d4d4] rounded focus:ring-[#ff6b9d] mt-0.5"
+                        />
+                        <label htmlFor="escrow-checkout" className="text-xs text-[#4a3f48] cursor-pointer">
+                          에스크로(구매안전) 서비스를 적용합니다.
+                        </label>
+                      </div>
+
+                      {/* 경고 메시지 */}
+                      <div className="bg-[#fff5f5] border border-[#fad2e6] rounded p-3">
+                        <p className="text-xs text-[#ff6b9d] leading-relaxed">
+                          ⚠️ 소액 결제의 경우 PG사 정책에 따라 관련 금융 결제 수단이 인증 후 사용이 가능합니다.
+                        </p>
+                      </div>
+
+                      {/* 현금영수증 신청 옵션 */}
+                      <div>
+                        <h4 className="text-sm font-medium text-[#4a3f48] mb-3">현금영수증 신청</h4>
+                        <div className="space-y-2">
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="cashReceipt"
+                              value="신청"
+                              checked={cashReceipt === "신청"}
+                              onChange={(e) => {
+                                console.log("[현금영수증] 신청 선택");
+                                setCashReceipt(e.target.value as "신청");
+                              }}
+                              className="w-4 h-4 text-[#ff6b9d] border-[#d4d4d4] focus:ring-[#ff6b9d]"
+                            />
+                            <span className="text-sm text-[#4a3f48]">현금영수증신청</span>
+                          </label>
+
+                          <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="cashReceipt"
+                              value="신청안함"
+                              checked={cashReceipt === "신청안함"}
+                              onChange={(e) => {
+                                console.log("[현금영수증] 신청안함 선택");
+                                setCashReceipt(e.target.value as "신청안함");
+                              }}
+                              className="w-4 h-4 text-[#ff6b9d] border-[#d4d4d4] focus:ring-[#ff6b9d]"
+                            />
+                            <span className="text-sm text-[#4a3f48]">신청안함</span>
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {/* 신용카드 결제 선택 시 최종 금액 표시 */}
                   {selectedPaymentMethod === "카드" && (
                     <div className="border-t border-[#f5d5e3] pt-4">
@@ -1071,7 +1156,7 @@ export default function CheckoutForm({
                     {selectedPaymentMethod === "카드" 
                       ? "결제하기 버튼을 클릭하면 토스페이먼츠 결제창이 열립니다."
                       : selectedPaymentMethod === "계좌이체"
-                      ? "에스크로(실시간 계좌이체)를 선택하셨습니다."
+                      ? "입금자명을 확인하시고 결제하기 버튼을 클릭해주세요."
                       : "결제 수단을 선택해주세요."}
                   </p>
                 </div>
@@ -1082,10 +1167,21 @@ export default function CheckoutForm({
                   console.log("[CheckoutForm] 결제하기 버튼 클릭");
                   form.handleSubmit(onSubmit)();
                 }}
-                disabled={isPending || form.watch("paymentMethod") !== "TOSS" || !selectedPaymentMethod}
+                disabled={
+                  isPending || 
+                  form.watch("paymentMethod") !== "TOSS" || 
+                  !selectedPaymentMethod ||
+                  (selectedPaymentMethod === "계좌이체" && !depositorName.trim())
+                }
                 className="w-full h-14 bg-[#ff6b9d] hover:bg-[#ff5088] text-white rounded-xl text-base font-bold disabled:opacity-50"
               >
-                {isPending ? "처리 중..." : !selectedPaymentMethod ? "결제 수단을 선택해주세요" : `${displayTotal.toLocaleString("ko-KR")}원 결제하기`}
+                {isPending 
+                  ? "처리 중..." 
+                  : !selectedPaymentMethod 
+                  ? "결제 수단을 선택해주세요" 
+                  : selectedPaymentMethod === "계좌이체" && !depositorName.trim()
+                  ? "예금주명을 입력해주세요"
+                  : `${displayTotal.toLocaleString("ko-KR")}원 결제하기`}
               </Button>
             </>
           ) : (
