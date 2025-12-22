@@ -40,9 +40,15 @@ const CATEGORIES = [
 export default function ShopHeader() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [mounted, setMounted] = useState(false);
   const router = useRouter();
 
   console.log("[ShopHeader] 렌더링");
+
+  // 클라이언트에서만 마운트된 후 상태 업데이트 (Hydration 에러 방지)
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -145,7 +151,7 @@ export default function ShopHeader() {
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                 className="p-2 text-white hover:bg-white/20 rounded-full transition-colors lg:hidden"
               >
-                {isMobileMenuOpen ? (
+                {mounted && isMobileMenuOpen ? (
                   <X className="w-6 h-6" />
                 ) : (
                   <Menu className="w-6 h-6" />
@@ -199,7 +205,7 @@ export default function ShopHeader() {
       </nav>
 
       {/* 모바일 메뉴 */}
-      {isMobileMenuOpen && (
+      {mounted && isMobileMenuOpen && (
         <nav className="bg-white border-b border-[#f5d5e3] lg:hidden">
           <div className="shop-container py-4">
             <ul className="grid grid-cols-3 gap-2">
