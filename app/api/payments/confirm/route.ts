@@ -7,6 +7,12 @@
  * 2. 결제 정보 업데이트 (payments 테이블)
  * 3. 주문 상태 업데이트 (orders 테이블)
  *
+ * 테스트 환경에서 에러 재현:
+ * - 환경 변수 TOSS_PAYMENTS_TEST_CODE에 테스트 코드를 설정하면
+ *   TossPayments-Test-Code 헤더가 자동으로 추가됩니다.
+ * - test_ 로 시작하는 API 키를 사용할 때만 테스트 헤더가 적용됩니다.
+ * - 예시: TOSS_PAYMENTS_TEST_CODE=INVALID_CARD_EXPIRATION
+ *
  * @dependencies
  * - TossPayments API: 결제 승인 API 호출
  */
@@ -117,16 +123,25 @@ export async function POST(request: NextRequest) {
     }
 
     // TossPayments 결제 승인 API 호출
-    // 참고: 실제 구현 시 TossPayments API를 호출해야 합니다.
-    // 여기서는 시뮬레이션으로 처리합니다.
     console.log("TossPayments 결제 승인 API 호출");
+    
+    // 테스트 환경에서 에러 재현을 위한 헤더 준비
+    const headers: Record<string, string> = {
+      "Authorization": `Basic ${Buffer.from(`${secretKey}:`).toString("base64")}`,
+      "Content-Type": "application/json",
+    };
+
+    // 테스트 코드 헤더 추가 (환경 변수에 설정된 경우)
+    // test_ 로 시작하는 API 키를 사용할 때만 테스트 헤더가 적용됩니다.
+    const testCode = process.env.TOSS_PAYMENTS_TEST_CODE;
+    if (testCode && secretKey.startsWith("test_")) {
+      headers["TossPayments-Test-Code"] = testCode;
+      console.log(`[테스트 모드] TossPayments-Test-Code: ${testCode}`);
+    }
     
     const tossResponse = await fetch("https://api.tosspayments.com/v1/payments/confirm", {
       method: "POST",
-      headers: {
-        "Authorization": `Basic ${Buffer.from(`${secretKey}:`).toString("base64")}`,
-        "Content-Type": "application/json",
-      },
+      headers,
       body: JSON.stringify({
         paymentKey,
         orderId,
