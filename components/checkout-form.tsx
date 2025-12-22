@@ -6,6 +6,7 @@
 "use client";
 
 import { useState, useTransition, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -27,6 +28,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import PaymentWidget from "@/components/payment-widget";
+import OrderCancelButton from "@/components/order-cancel-button";
 
 // 폼 스키마
 const checkoutSchema = z.object({
@@ -62,6 +64,7 @@ export default function CheckoutForm({
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [selectedCoupon, setSelectedCoupon] = useState<Coupon | null>(null);
   const { user, isLoaded } = useUser();
+  const router = useRouter();
 
   // 쿠폰 목록 가져오기
   useEffect(() => {
@@ -459,6 +462,43 @@ export default function CheckoutForm({
           )}
         </div>
       </div>
+
+      {/* 주문 상태 및 취소 섹션 */}
+      {showPaymentWidget && orderId && orderNumber && (
+        <div className="lg:col-span-3 mt-8">
+          <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-[#4a3f48] mb-2">주문 정보</h2>
+                <p className="text-sm text-[#8b7d84] mb-2">
+                  주문번호: <span className="font-medium text-[#4a3f48]">{orderNumber}</span>
+                </p>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-[#8b7d84]">주문 상태:</span>
+                  <span className="px-3 py-1 rounded-full text-sm font-medium bg-[#ffeef5] text-[#ff6b9d]">
+                    결제 대기
+                  </span>
+                </div>
+              </div>
+              <div className="w-48">
+                <OrderCancelButton
+                  orderId={orderId}
+                  orderStatus="pending"
+                  onCancelSuccess={() => {
+                    console.log("[CheckoutForm] 주문 취소 성공, 장바구니로 이동");
+                    // 주문 상태 초기화
+                    setOrderId(null);
+                    setOrderNumber(null);
+                    setShowPaymentWidget(false);
+                    // 장바구니로 리다이렉트
+                    router.push("/cart");
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 결제 위젯 섹션 */}
       {showPaymentWidget && orderId && orderNumber && isLoaded && user && (

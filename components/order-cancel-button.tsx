@@ -20,11 +20,13 @@ import { Button } from "@/components/ui/button";
 interface OrderCancelButtonProps {
   orderId: string;
   orderStatus: string;
+  onCancelSuccess?: () => void;
 }
 
 export default function OrderCancelButton({
   orderId,
   orderStatus,
+  onCancelSuccess,
 }: OrderCancelButtonProps) {
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
@@ -46,9 +48,15 @@ export default function OrderCancelButton({
     startTransition(async () => {
       const result = await cancelOrder(orderId);
       if (result.success) {
+        console.log("[OrderCancelButton] 주문 취소 성공:", result.message);
         alert(result.message);
-        router.refresh(); // 페이지 새로고침
+        if (onCancelSuccess) {
+          onCancelSuccess();
+        } else {
+          router.refresh(); // 페이지 새로고침
+        }
       } else {
+        console.error("[OrderCancelButton] 주문 취소 실패:", result.message);
         alert(result.message);
       }
     });
