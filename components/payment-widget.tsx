@@ -38,7 +38,7 @@ export default function PaymentWidget({
   const paymentWidgetRef = useRef<PaymentWidgetInstance | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<"카드" | "계좌이체">("카드");
+  const [paymentMethod, setPaymentMethod] = useState<"카드" | "계좌이체" | null>(null);
   const [depositorName, setDepositorName] = useState("");
   const [useEscrow, setUseEscrow] = useState(false);
   const [installment, setInstallment] = useState<"일시불" | "할부">("일시불");
@@ -225,29 +225,35 @@ export default function PaymentWidget({
       {/* 결제 수단 선택 */}
       <div className="space-y-3">
         <h3 className="text-base font-bold text-[#4a3f48]">결제수단</h3>
-        <div className="flex gap-4">
-          <label className="flex items-center gap-2 cursor-pointer">
+        <div className="space-y-2">
+          <label className="flex items-center gap-2 cursor-pointer p-3 border border-[#f5d5e3] rounded-lg hover:bg-[#fef8fb] transition-colors">
             <input
               type="radio"
               name="paymentMethod"
               value="카드"
               checked={paymentMethod === "카드"}
-              onChange={(e) => setPaymentMethod(e.target.value as "카드")}
+              onChange={(e) => {
+                console.log("[결제수단] 신용카드 결제 선택");
+                setPaymentMethod(e.target.value as "카드");
+              }}
               className="w-4 h-4 text-[#ff6b9d] border-[#f5d5e3] focus:ring-[#ff6b9d]"
             />
-            <span className="text-sm text-[#4a3f48]">카드 결제</span>
+            <span className="text-sm text-[#4a3f48] font-medium">신용카드 결제</span>
           </label>
 
-          <label className="flex items-center gap-2 cursor-pointer">
+          <label className="flex items-center gap-2 cursor-pointer p-3 border border-[#f5d5e3] rounded-lg hover:bg-[#fef8fb] transition-colors">
             <input
               type="radio"
               name="paymentMethod"
               value="계좌이체"
               checked={paymentMethod === "계좌이체"}
-              onChange={(e) => setPaymentMethod(e.target.value as "계좌이체")}
+              onChange={(e) => {
+                console.log("[결제수단] 에스크로(실시간 계좌이체) 선택");
+                setPaymentMethod(e.target.value as "계좌이체");
+              }}
               className="w-4 h-4 text-[#ff6b9d] border-[#f5d5e3] focus:ring-[#ff6b9d]"
             />
-            <span className="text-sm text-[#4a3f48]">에스크로(실시간 계좌이체)</span>
+            <span className="text-sm text-[#4a3f48] font-medium">에스크로(실시간 계좌이체)</span>
           </label>
         </div>
       </div>
@@ -258,49 +264,46 @@ export default function PaymentWidget({
           {/* 입금자명 */}
           <div>
             <label className="block text-sm font-medium text-[#4a3f48] mb-2">
-              입금자명 <span className="text-[#ff6b9d]">*</span>
+              예금주명
             </label>
             <input
               type="text"
               value={depositorName}
-              onChange={(e) => setDepositorName(e.target.value)}
-              placeholder="입금자명을 입력하세요"
-              className="w-full px-3 py-2 border border-[#f5d5e3] rounded-md text-sm focus:outline-none focus:border-[#ff6b9d] focus:ring-1 focus:ring-[#ff6b9d]"
+              onChange={(e) => {
+                console.log("[입금자명] 입력:", e.target.value);
+                setDepositorName(e.target.value);
+              }}
+              placeholder=""
+              className="w-full px-3 py-2 border border-[#d4d4d4] rounded-md text-sm focus:outline-none focus:border-[#ff6b9d] focus:ring-1 focus:ring-[#ff6b9d]"
             />
+            <p className="text-xs text-[#8b7d84] mt-1">
+              ⚠️ 에스크로(구매안전)서비스를 적용합니다.
+            </p>
           </div>
 
-          {/* 에스크로 서비스 */}
-          <div className="flex items-start gap-2">
-            <input
-              type="checkbox"
-              id="escrow"
-              checked={useEscrow}
-              onChange={(e) => setUseEscrow(e.target.checked)}
-              className="w-4 h-4 text-[#ff6b9d] border-[#f5d5e3] rounded focus:ring-[#ff6b9d] mt-0.5"
-            />
-            <label htmlFor="escrow" className="text-xs text-[#4a3f48]">
-              에스크로(구매안전) 서비스를 적용합니다.
-            </label>
-          </div>
-
-          <div className="text-xs text-[#ff6b9d] bg-white p-3 rounded border border-[#fad2e6]">
-            ⚠️ 소액 결제의 경우 PG사 정책에 따라 관련 금융 결제 수단의 인증 후 사용이 가능합니다.
+          <div className="bg-[#fff5f5] border border-[#fad2e6] rounded p-3">
+            <p className="text-xs text-[#4a3f48] leading-relaxed">
+              ⚠️ 소액 결제의 경우 PG사 정책에 따라 관련 금융 결제 수단이 인증 후 사용이 가능합니다.
+            </p>
           </div>
 
           {/* 할부 결제 옵션 */}
           <div>
-            <h4 className="text-sm font-medium text-[#4a3f48] mb-2">할부결제 선택</h4>
-            <div className="flex gap-4">
+            <h4 className="text-sm font-medium text-[#4a3f48] mb-3">할부결제+승인 신청</h4>
+            <div className="space-y-2">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="radio"
                   name="installment"
                   value="할부"
                   checked={installment === "할부"}
-                  onChange={(e) => setInstallment(e.target.value as "할부")}
+                  onChange={(e) => {
+                    console.log("[할부결제] 할부 선택");
+                    setInstallment(e.target.value as "할부");
+                  }}
                   className="w-4 h-4 text-[#ff6b9d] border-[#f5d5e3] focus:ring-[#ff6b9d]"
                 />
-                <span className="text-sm text-[#4a3f48]">할부결제 승인</span>
+                <span className="text-sm text-[#4a3f48]">할부결제+승인 신청</span>
               </label>
 
               <label className="flex items-center gap-2 cursor-pointer">
@@ -309,41 +312,55 @@ export default function PaymentWidget({
                   name="installment"
                   value="일시불"
                   checked={installment === "일시불"}
-                  onChange={(e) => setInstallment(e.target.value as "일시불")}
+                  onChange={(e) => {
+                    console.log("[할부결제] 일시불 선택");
+                    setInstallment(e.target.value as "일시불");
+                  }}
                   className="w-4 h-4 text-[#ff6b9d] border-[#f5d5e3] focus:ring-[#ff6b9d]"
                 />
-                <span className="text-sm text-[#4a3f48]">일시불</span>
+                <span className="text-sm text-[#4a3f48]">신청안함</span>
               </label>
             </div>
           </div>
         </div>
       )}
 
-      {/* 최종 결제 금액 */}
-      <div className="border-t border-[#f5d5e3] pt-4">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-sm text-[#8b7d84]">
-            {paymentMethod === "카드" ? "카드결제" : "계좌이체"} 최종 금액
-          </span>
-          <span className="text-2xl font-bold text-[#ff6b9d]">
-            {amount.toLocaleString("ko-KR")}원
-          </span>
-        </div>
-      </div>
+      {/* 신용카드 결제 선택 시에만 최종 금액 표시 */}
+      {paymentMethod === "카드" && (
+        <>
+          <div className="border-t border-[#f5d5e3] pt-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm text-[#8b7d84]">카드 결제 최종결제 금액</span>
+              <div className="text-right">
+                <div className="text-2xl font-bold text-[#ff6b9d]">
+                  {amount.toLocaleString("ko-KR")}
+                  <span className="text-base">원</span>
+                </div>
+              </div>
+            </div>
+          </div>
 
-      <p className="text-xs text-[#8b7d84] text-center">
-        {paymentMethod === "카드" 
-          ? "결제하기 버튼을 클릭하면 토스페이먼츠 결제창이 열립니다."
-          : "입금자명을 확인하시고 결제하기 버튼을 클릭해주세요."}
-      </p>
+          <p className="text-xs text-[#8b7d84] text-center">
+            결제하기 버튼을 클릭하면 토스페이먼츠 결제창이 열립니다.
+          </p>
+        </>
+      )}
 
       {/* 결제 버튼 */}
       <Button
         onClick={handlePayment}
-        disabled={isLoading || (paymentMethod === "계좌이체" && !depositorName.trim())}
+        disabled={
+          isLoading || 
+          !paymentMethod || 
+          (paymentMethod === "계좌이체" && !depositorName.trim())
+        }
         className="w-full h-14 bg-[#ff6b9d] hover:bg-[#ff5088] text-white rounded-xl text-base font-bold disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        결제하기
+        {!paymentMethod 
+          ? "결제 수단을 선택해주세요" 
+          : paymentMethod === "계좌이체" && !depositorName.trim()
+          ? "예금주명을 입력해주세요"
+          : "결제하기"}
       </Button>
     </div>
   );
