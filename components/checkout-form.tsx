@@ -540,6 +540,22 @@ export default function CheckoutForm({
           } else if (selectedPaymentMethod === "계좌이체") {
             // 계좌이체 결제
             console.log("[CheckoutForm] 계좌이체 결제창 열기");
+            
+            // transfer 객체 구성 (cashReceipt는 transfer 안에 있어야 함)
+            const transferOptions: {
+              useEscrow: boolean;
+              cashReceipt?: { type: string };
+            } = {
+              useEscrow: useEscrow,
+            };
+            
+            // 현금영수증 신청 시에만 추가
+            if (cashReceipt === "신청") {
+              transferOptions.cashReceipt = {
+                type: "소득공제", // 또는 "지출증빙"
+              };
+            }
+            
             await payment.requestPayment({
               method: "TRANSFER",
               amount: {
@@ -552,12 +568,7 @@ export default function CheckoutForm({
               customerEmail: user.emailAddresses[0].emailAddress,
               successUrl: successUrl,
               failUrl: failUrl,
-              transfer: {
-                useEscrow: useEscrow,
-              },
-              cashReceipt: {
-                type: cashReceipt === "신청" ? "소득공제" : "미발행",
-              },
+              transfer: transferOptions,
             });
           } else {
             throw new Error("결제 수단을 선택해주세요.");
