@@ -254,9 +254,11 @@ export async function createOrder(input: CreateOrderInput): Promise<{
         .eq("id", input.couponId);
     }
 
+    // 주문 생성 후 장바구니가 비워지므로 장바구니 페이지만 revalidate
+    // checkout 페이지는 revalidate하지 않음 (주문 생성 후에도 페이지에 머물 수 있도록)
     revalidatePath("/cart");
     revalidatePath("/mypage/orders");
-    // checkout 페이지는 revalidate하지 않음 (주문 생성 후에도 페이지에 머물 수 있도록)
+    // checkout 페이지는 revalidate하지 않음 - 주문 생성 후에도 결제 위젯을 표시하기 위해
 
     logger.info("주문 생성 완료", orderNumber);
     logger.groupEnd();
