@@ -197,7 +197,7 @@ const checkoutSchema = z.object({
   shippingMemo: z.string().optional(),
   
   // 결제 수단
-  paymentMethod: z.literal("TOSS", {
+  paymentMethod: z.literal("KG_INICIS", {
     errorMap: () => ({ message: "결제 수단을 선택해주세요." }),
   }),
 });
@@ -380,7 +380,7 @@ export default function CheckoutForm({
       shippingZipCode: "",
       shippingAddress: "",
       shippingMemo: "",
-      paymentMethod: "TOSS",
+      paymentMethod: "KG_INICIS",
     },
   });
 
@@ -466,113 +466,55 @@ export default function CheckoutForm({
       console.groupEnd();
 
       if (result.success && result.orderId && result.orderNumber) {
-        console.log("[CheckoutForm] ✅ 주문 생성 성공 - 토스페이먼츠 결제 시작");
+        console.log("[CheckoutForm] ✅ 주문 생성 성공 - KG이니시스 결제 시작");
         
         // 주문 정보 상태 저장
         setOrderId(result.orderId);
         setOrderNumber(result.orderNumber);
         
-        // 토스페이먼츠 결제창 열기
-        console.log("[CheckoutForm] 토스페이먼츠 결제 요청", {
+        // KG이니시스 결제창 열기
+        console.log("[CheckoutForm] KG이니시스 결제 요청", {
           orderId: result.orderId,
           orderNumber: result.orderNumber,
           amount: displayTotal,
         });
 
-        // 토스페이먼츠 결제창 열기
+        // KG이니시스 결제창 열기
         try {
-          const { loadTossPayments } = await import("@tosspayments/tosspayments-sdk");
-          const clientKey = process.env.NEXT_PUBLIC_TOSS_PAYMENTS_CLIENT_KEY;
+          // TODO: KG이니시스 웹표준 결제창 연동 필요
+          const clientKey = process.env.NEXT_PUBLIC_KG_INICIS_MID;
           
           if (!clientKey) {
-            throw new Error("TossPayments 클라이언트 키가 설정되지 않았습니다.");
+            throw new Error("KG이니시스 MID가 설정되지 않았습니다.");
           }
 
           if (!user?.emailAddresses[0]?.emailAddress) {
             throw new Error("사용자 이메일 정보를 찾을 수 없습니다.");
           }
 
-          console.log("[CheckoutForm] 토스페이먼츠 SDK 로드 시작");
-          const tossPayments = await loadTossPayments(clientKey);
+          console.log("[CheckoutForm] KG이니시스 결제창 준비 시작");
           
-          // customerKey 생성 (구매자 식별용 고유 ID)
-          // Clerk 사용자 ID를 기반으로 생성 (UUID 형식)
-          const customerKey = user.id || `customer_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+          // TODO: KG이니시스 웹표준 결제창 연동 코드 추가 필요
+          // KG이니시스는 form submit 방식의 웹표준 결제창을 사용합니다.
+          // 신용카드: PType=Card
+          // 실시간 계좌이체: PType=DirectBank
           
+          const successUrl = `${window.location.origin}/payments/success`;
+          const failUrl = `${window.location.origin}/payments/fail`;
+
           console.log("[CheckoutForm] 결제 요청 파라미터:", {
             orderId: result.orderId,
             orderName: `주문번호: ${result.orderNumber}`,
             customerName: data.shippingName,
-            customerKey: customerKey,
             amount: displayTotal,
             paymentMethod: selectedPaymentMethod,
-          });
-
-          // 결제창 인스턴스 생성
-          const payment = tossPayments.payment({ customerKey });
-
-          // successUrl과 failUrl 생성 (토스페이먼츠가 자동으로 쿼리 파라미터 추가)
-          const successUrl = `${window.location.origin}/payments/success`;
-          const failUrl = `${window.location.origin}/payments/fail`;
-
-          console.log("[CheckoutForm] 리다이렉트 URL:", {
             successUrl,
             failUrl,
           });
 
-          // 결제 수단에 따라 다른 결제창 열기
-          if (selectedPaymentMethod === "카드") {
-            // 신용카드 결제
-            console.log("[CheckoutForm] 신용카드 결제창 열기");
-            await payment.requestPayment({
-              method: "CARD",
-              amount: {
-                currency: "KRW",
-                value: displayTotal,
-              },
-              orderId: result.orderId,
-              orderName: `주문번호: ${result.orderNumber}`,
-              customerName: data.shippingName,
-              customerEmail: user.emailAddresses[0].emailAddress,
-              successUrl: successUrl,
-              failUrl: failUrl,
-            });
-          } else if (selectedPaymentMethod === "계좌이체") {
-            // 계좌이체 결제
-            console.log("[CheckoutForm] 계좌이체 결제창 열기");
-            
-            // transfer 객체 구성 (cashReceipt는 transfer 안에 있어야 함)
-            const transferOptions: {
-              useEscrow: boolean;
-              cashReceipt?: { type: string };
-            } = {
-              useEscrow: useEscrow,
-            };
-            
-            // 현금영수증 신청 시에만 추가
-            if (cashReceipt === "신청") {
-              transferOptions.cashReceipt = {
-                type: "소득공제", // 또는 "지출증빙"
-              };
-            }
-            
-            await payment.requestPayment({
-              method: "TRANSFER",
-              amount: {
-                currency: "KRW",
-                value: displayTotal,
-              },
-              orderId: result.orderId,
-              orderName: `주문번호: ${result.orderNumber}`,
-              customerName: data.shippingName,
-              customerEmail: user.emailAddresses[0].emailAddress,
-              successUrl: successUrl,
-              failUrl: failUrl,
-              transfer: transferOptions,
-            });
-          } else {
-            throw new Error("결제 수단을 선택해주세요.");
-          }
+          // TODO: KG이니시스 결제창 호출 로직 구현 필요
+          // 현재는 임시로 에러 발생
+          throw new Error("KG이니시스 결제 연동이 아직 완료되지 않았습니다. 개발 중입니다.");
           
           console.log("[CheckoutForm] 결제 요청 완료 (리다이렉트 대기 중)");
         } catch (error) {
@@ -977,13 +919,13 @@ export default function CheckoutForm({
             <label className="flex items-center gap-3 p-4 border-2 border-[#fad2e6] rounded-lg cursor-pointer hover:bg-[#ffeef5] transition-colors">
               <input
                 type="checkbox"
-                checked={form.watch("paymentMethod") === "TOSS"}
+                checked={form.watch("paymentMethod") === "KG_INICIS"}
                 onChange={(e) => {
-                  console.log("[결제수단] 토스페이먼츠 체크:", e.target.checked);
+                  console.log("[결제수단] KG이니시스 체크:", e.target.checked);
                   if (e.target.checked) {
-                    form.setValue("paymentMethod", "TOSS");
+                    form.setValue("paymentMethod", "KG_INICIS");
                   } else {
-                    form.setValue("paymentMethod", "" as "TOSS");
+                    form.setValue("paymentMethod", "" as "KG_INICIS");
                     setSelectedPaymentMethod(null);
                   }
                 }}
@@ -991,20 +933,20 @@ export default function CheckoutForm({
               />
               <div className="flex-1">
                 <div className="flex items-center gap-2">
-                  <span className="font-bold text-[#4a3f48]">토스페이먼츠</span>
+                  <span className="font-bold text-[#4a3f48]">KG이니시스</span>
                   <span className="px-2 py-0.5 bg-[#ffeef5] text-[#ff6b9d] text-xs font-medium rounded">
                     추천
                   </span>
                 </div>
                 <p className="text-xs text-[#8b7d84] mt-1">
-                  카드, 계좌이체, 간편결제 등 다양한 결제 수단을 이용할 수 있습니다.
+                  신용카드 결제와 에스크로(실시간 계좌이체)를 이용할 수 있습니다.
                 </p>
               </div>
             </label>
           </div>
 
-          {/* 토스페이먼츠 체크 시 결제 수단 상세 선택 */}
-          {form.watch("paymentMethod") === "TOSS" && (
+          {/* KG이니시스 체크 시 결제 수단 상세 선택 */}
+          {form.watch("paymentMethod") === "KG_INICIS" && (
             <div className="mb-6 space-y-4">
               <div className="space-y-3">
                 <h3 className="text-base font-bold text-[#4a3f48]">결제수단</h3>
@@ -1140,7 +1082,7 @@ export default function CheckoutForm({
 
               <p className="text-xs text-[#8b7d84] text-center">
                 {selectedPaymentMethod === "카드" 
-                  ? "결제하기 버튼을 클릭하면 토스페이먼츠 결제창이 열립니다."
+                  ? "결제하기 버튼을 클릭하면 KG이니시스 결제창이 열립니다."
                   : selectedPaymentMethod === "계좌이체"
                   ? "입금자명을 확인하시고 결제하기 버튼을 클릭해주세요."
                   : "결제 수단을 선택해주세요."}
@@ -1155,7 +1097,7 @@ export default function CheckoutForm({
             }}
             disabled={
               isPending || 
-              form.watch("paymentMethod") !== "TOSS" || 
+              form.watch("paymentMethod") !== "KG_INICIS" || 
               !selectedPaymentMethod ||
               (selectedPaymentMethod === "계좌이체" && !depositorName.trim())
             }
