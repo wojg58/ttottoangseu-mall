@@ -331,8 +331,7 @@ export default async function HomePage() {
                 <p
                   className="text-black mb-6 text-xl"
                   style={{
-                    fontFamily:
-                      "'NamyangjuGothic', 'Gowun Dodum', system-ui, sans-serif",
+                    fontFamily: "Paperozi, system-ui, sans-serif",
                   }}
                 >
                   산리오, 짱구, 유키오 등 사랑스러운 캐릭터 굿즈를 만나보세요.
