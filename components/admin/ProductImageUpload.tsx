@@ -26,27 +26,23 @@ export default function ProductImageUpload({
     const files = e.target.files;
     if (!files) return;
 
-    // 특정 상품 ID에 대해서는 압축 건너뛰기
-    const shouldSkipCompression = productId === 'ttotto_pr_255';
-    
-    if (shouldSkipCompression) {
-      // 압축 없이 원본 파일 사용
-      const fileArray = Array.from(files);
-      setSelectedFiles(fileArray);
-      const previews = fileArray.map((file) => URL.createObjectURL(file));
-      setPreviewUrls(previews);
-      console.log('[ProductImageUpload] 압축 건너뛰기 (상품 ID: ttotto_pr_255)');
-      return;
-    }
-
     setIsCompressing(true);
 
     try {
       const fileArray = Array.from(files);
-      const compressedFiles = await compressImages(fileArray);
+      
+      // 특정 상품 ID에 대해서는 사이즈 제한 없이 압축 (품질만 조정)
+      const compressionOptions = productId === 'ttotto_pr_255' 
+        ? { maxWidthOrHeight: undefined } // 사이즈 제한 없음
+        : undefined; // 기본 옵션 사용
+      
+      const compressedFiles = await compressImages(fileArray, compressionOptions);
       const stats = getCompressionStats(fileArray, compressedFiles);
 
       console.log(`압축 완료: ${stats.originalMB} MB → ${stats.compressedMB} MB`);
+      if (productId === 'ttotto_pr_255') {
+        console.log('[ProductImageUpload] 사이즈 제한 없이 압축 완료 (상품 ID: ttotto_pr_255)');
+      }
 
       setSelectedFiles(compressedFiles);
 
@@ -73,18 +69,10 @@ export default function ProductImageUpload({
     try {
       for (let i = 0; i < selectedFiles.length; i++) {
         const file = selectedFiles[i];
-        // 압축을 건너뛴 경우 원본 파일 확장자 유지
-        const shouldSkipCompression = productId === 'ttotto_pr_255';
-        const fileExt = shouldSkipCompression 
-          ? file.name.split('.').pop() || 'jpg'
-          : 'webp';
-        const fileName = `detail-${i + 1}.${fileExt}`;
+        // 모든 경우 WebP로 변환 (압축은 하지만 사이즈 제한 없음)
+        const fileName = `detail-${i + 1}.webp`;
         const filePath = `products/${productSlug}/${fileName}`;
-
-        // 압축을 건너뛴 경우 원본 파일 형식의 contentType 사용
-        const contentType = shouldSkipCompression
-          ? file.type || `image/${fileExt}`
-          : 'image/webp';
+        const contentType = 'image/webp';
 
         const { error: uploadError } = await supabase.storage
           .from('uploads')
@@ -137,8 +125,8 @@ export default function ProductImageUpload({
         />
         <p className="mt-1 text-xs text-gray-500">
           {productId === 'ttotto_pr_255' 
-            ? '💡 이 상품은 압축 없이 원본 이미지로 업로드됩니다'
-            : '💡 이미지 선택 시 자동으로 압축됩니다 (150KB 목표)'}
+            ? '💡 이 상품은 사이즈 제한 없이 압축됩니다 (원본 해상도 유지)'
+            : '💡 이미지 선택 시 자동으로 압축됩니다 (150KB 목표, 최대 1200px)'}
         </p>
       </div>
 

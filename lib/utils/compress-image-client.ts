@@ -4,9 +4,20 @@
 import imageCompression from 'browser-image-compression';
 
 /**
- * 이미지 압축 옵션
+ * 이미지 압축 옵션 타입
  */
-const compressionOptions = {
+export interface CompressionOptions {
+  maxSizeMB?: number;
+  maxWidthOrHeight?: number;
+  useWebWorker?: boolean;
+  fileType?: string;
+  initialQuality?: number;
+}
+
+/**
+ * 기본 이미지 압축 옵션
+ */
+const defaultCompressionOptions: CompressionOptions = {
   maxSizeMB: 0.15,              // 최대 150KB
   maxWidthOrHeight: 1200,       // 최대 1200px
   useWebWorker: true,           // 멀티스레드 사용
@@ -17,10 +28,14 @@ const compressionOptions = {
 /**
  * 단일 이미지 압축
  */
-export async function compressImage(file: File): Promise<File> {
+export async function compressImage(
+  file: File,
+  options?: CompressionOptions
+): Promise<File> {
   try {
     console.log(`압축 시작: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`);
 
+    const compressionOptions = { ...defaultCompressionOptions, ...options };
     const compressedFile = await imageCompression(file, compressionOptions);
 
     console.log(`압축 완료: ${compressedFile.name} (${(compressedFile.size / 1024).toFixed(1)} KB)`);
@@ -42,11 +57,14 @@ export async function compressImage(file: File): Promise<File> {
 /**
  * 여러 이미지 일괄 압축
  */
-export async function compressImages(files: File[]): Promise<File[]> {
+export async function compressImages(
+  files: File[],
+  options?: CompressionOptions
+): Promise<File[]> {
   const compressedFiles: File[] = [];
 
   for (const file of files) {
-    const compressed = await compressImage(file);
+    const compressed = await compressImage(file, options);
     compressedFiles.push(compressed);
   }
 
