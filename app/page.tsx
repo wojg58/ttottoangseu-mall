@@ -332,6 +332,7 @@ export default async function HomePage() {
                   className="text-black mb-6 text-xl"
                   style={{
                     fontFamily: "Nanum Gothic, system-ui, sans-serif",
+                    fontWeight: "bold",
                   }}
                 >
                   산리오, 짱구, 유키오 등 사랑스러운 캐릭터 굿즈를 만나보세요.
