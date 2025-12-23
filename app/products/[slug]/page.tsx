@@ -225,11 +225,15 @@ export default async function ProductDetailPage({
               <button className="py-4 text-[#ff6b9d] border-b-2 border-[#ff6b9d] font-bold">
                 상품 설명
               </button>
+              {/* 리뷰 (리뷰가 있을 때만 숫자 표시) */}
+              {/* TODO: 실제 리뷰 데이터 연동 시 reviewCount 사용 */}
               <button className="py-4 text-[#8b7d84] hover:text-[#4a3f48]">
-                리뷰 (0)
+                리뷰{false && ` (0)`}
               </button>
+              {/* 문의 (문의가 있을 때만 숫자 표시) */}
+              {/* TODO: 실제 문의 데이터 연동 시 inquiryCount 사용 */}
               <button className="py-4 text-[#8b7d84] hover:text-[#4a3f48]">
-                문의 (3)
+                문의{false && ` (3)`}
               </button>
             </nav>
           </div>
