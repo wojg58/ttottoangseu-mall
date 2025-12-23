@@ -1297,15 +1297,25 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
                               const formData = new FormData();
                               formData.append("file", file);
 
+                              // 특정 상품 ID에 대해서는 사이즈 제한 없이 압축
+                              const isSpecialProduct = product?.id === 'ttotto_pr_255';
+                              const uploadOptions = isSpecialProduct
+                                ? { maxWidth: undefined } // 사이즈 제한 없음
+                                : {
+                                    width: 800,
+                                    height: 800,
+                                    fit: "cover" as const, // 정사각형으로 자르기
+                                  };
+                              
                               console.log(
-                                `[ProductForm] 이미지 ${i + 1} 압축 및 업로드 중... (800x800으로 통일)`,
+                                `[ProductForm] 이미지 ${i + 1} 압축 및 업로드 중... ${
+                                  isSpecialProduct 
+                                    ? '(사이즈 제한 없음)' 
+                                    : '(800x800으로 통일)'
+                                }`,
                               );
-                              // 상품 설명 에디터용: 800x800으로 통일
-                              const result = await uploadImageFile(formData, {
-                                width: 800,
-                                height: 800,
-                                fit: "cover", // 정사각형으로 자르기
-                              });
+                              
+                              const result = await uploadImageFile(formData, uploadOptions);
 
                               if (result.success && result.url) {
                                 console.log(
