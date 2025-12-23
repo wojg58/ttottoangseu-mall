@@ -348,16 +348,42 @@ export default function CheckoutForm({
   // 쿠폰 목록 가져오기
   useEffect(() => {
     if (isLoaded && user) {
-      console.log("[CheckoutForm] 쿠폰 목록 조회 시작", { userId: user.id });
+      console.group("[CheckoutForm] 쿠폰 목록 조회 시작");
+      console.log("사용자 ID:", user.id);
+      console.log("사용자 로드 상태:", isLoaded);
+      
       getAvailableCoupons()
         .then((couponList) => {
-          console.log(`[CheckoutForm] ${couponList.length}개의 쿠폰 조회 완료`, couponList);
+          console.log(`[CheckoutForm] ✅ ${couponList.length}개의 쿠폰 조회 완료`);
+          if (couponList.length > 0) {
+            console.log("쿠폰 목록:", couponList.map(c => ({ 
+              id: c.id, 
+              name: c.name, 
+              discount: c.discount_amount,
+              type: c.discount_type,
+              status: c.status,
+              expires_at: c.expires_at
+            })));
+          } else {
+            console.log("[CheckoutForm] ⚠️ 사용 가능한 쿠폰이 없습니다.");
+          }
           setCoupons(couponList);
+          console.groupEnd();
         })
         .catch((error) => {
-          console.error("[CheckoutForm] 쿠폰 조회 실패:", error);
+          console.error("[CheckoutForm] ❌ 쿠폰 조회 실패:", error);
+          console.error("에러 상세:", {
+            message: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined
+          });
           setCoupons([]);
+          console.groupEnd();
         });
+    } else {
+      console.log("[CheckoutForm] 쿠폰 조회 스킵 - 로그인 필요", {
+        isLoaded,
+        hasUser: !!user
+      });
     }
   }, [isLoaded, user]);
 
@@ -840,7 +866,7 @@ export default function CheckoutForm({
           {/* 쿠폰 선택 */}
           <div className="mb-4 pb-4 border-b border-[#f5d5e3]">
             <h3 className="text-sm font-bold text-[#4a3f48] mb-2">쿠폰</h3>
-            {coupons.length > 0 ? (
+            {isLoaded && user ? (
               <>
                 <select
                   value={selectedCoupon?.id || ""}
@@ -850,8 +876,11 @@ export default function CheckoutForm({
                     console.log("[CheckoutForm] 쿠폰 선택:", coupon);
                   }}
                   className="w-full px-3 py-2 border border-[#f5d5e3] rounded-lg text-sm focus:border-[#ff6b9d] focus:ring-[#ff6b9d] focus:outline-none"
+                  disabled={coupons.length === 0}
                 >
-                  <option value="">쿠폰 선택 안함</option>
+                  <option value="">
+                    {coupons.length > 0 ? "쿠폰 선택 안함" : "사용 가능한 쿠폰이 없습니다."}
+                  </option>
                   {coupons.map((coupon) => (
                     <option key={coupon.id} value={coupon.id}>
                       {coupon.name} (
@@ -867,10 +896,15 @@ export default function CheckoutForm({
                     {selectedCoupon.name} 적용됨
                   </p>
                 )}
+                {coupons.length === 0 && (
+                  <p className="text-xs text-[#8b7d84] mt-1">
+                    사용 가능한 쿠폰이 없습니다.
+                  </p>
+                )}
               </>
             ) : (
               <p className="text-xs text-[#8b7d84]">
-                사용 가능한 쿠폰이 없습니다.
+                로그인 후 쿠폰을 사용할 수 있습니다.
               </p>
             )}
           </div>
