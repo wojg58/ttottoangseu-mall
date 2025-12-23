@@ -26,6 +26,19 @@ export default function ProductImageUpload({
     const files = e.target.files;
     if (!files) return;
 
+    // 특정 상품 ID에 대해서는 압축 건너뛰기
+    const shouldSkipCompression = productId === 'ttotto_pr_255';
+    
+    if (shouldSkipCompression) {
+      // 압축 없이 원본 파일 사용
+      const fileArray = Array.from(files);
+      setSelectedFiles(fileArray);
+      const previews = fileArray.map((file) => URL.createObjectURL(file));
+      setPreviewUrls(previews);
+      console.log('[ProductImageUpload] 압축 건너뛰기 (상품 ID: ttotto_pr_255)');
+      return;
+    }
+
     setIsCompressing(true);
 
     try {
@@ -60,12 +73,23 @@ export default function ProductImageUpload({
     try {
       for (let i = 0; i < selectedFiles.length; i++) {
         const file = selectedFiles[i];
-        const fileName = `detail-${i + 1}.webp`;
+        // 압축을 건너뛴 경우 원본 파일 확장자 유지
+        const shouldSkipCompression = productId === 'ttotto_pr_255';
+        const fileExt = shouldSkipCompression 
+          ? file.name.split('.').pop() || 'jpg'
+          : 'webp';
+        const fileName = `detail-${i + 1}.${fileExt}`;
         const filePath = `products/${productSlug}/${fileName}`;
+
+        // 압축을 건너뛴 경우 원본 파일 형식의 contentType 사용
+        const contentType = shouldSkipCompression
+          ? file.type || `image/${fileExt}`
+          : 'image/webp';
 
         const { error: uploadError } = await supabase.storage
           .from('uploads')
           .upload(filePath, file, {
+            contentType,
             cacheControl: '3600',
             upsert: false,
           });
@@ -112,7 +136,9 @@ export default function ProductImageUpload({
           className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
         />
         <p className="mt-1 text-xs text-gray-500">
-          💡 이미지 선택 시 자동으로 압축됩니다 (150KB 목표)
+          {productId === 'ttotto_pr_255' 
+            ? '💡 이 상품은 압축 없이 원본 이미지로 업로드됩니다'
+            : '💡 이미지 선택 시 자동으로 압축됩니다 (150KB 목표)'}
         </p>
       </div>
 
