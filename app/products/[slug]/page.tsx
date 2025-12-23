@@ -131,18 +131,26 @@ export default async function ProductDetailPage({
               {product.name}
             </h1>
 
-            {/* 리뷰 */}
-            <div className="flex items-center gap-2 mb-6">
-              <div className="flex items-center">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <Star
-                    key={star}
-                    className="w-4 h-4 fill-gray-300 text-gray-300"
-                  />
-                ))}
+            {/* 리뷰 (리뷰가 있을 때만 표시) */}
+            {/* TODO: 실제 리뷰 데이터 연동 시 reviewCount와 averageRating 사용 */}
+            {false && (
+              <div className="flex items-center gap-2 mb-6">
+                <div className="flex items-center">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <Star
+                      key={star}
+                      className={`w-4 h-4 ${
+                        star <= 4
+                          ? "fill-yellow-400 text-yellow-400"
+                          : "fill-gray-200 text-gray-200"
+                      }`}
+                    />
+                  ))}
+                </div>
+                <span className="text-sm text-[#4a3f48] font-medium">4.8</span>
+                <span className="text-sm text-[#8b7d84]">(리뷰 12개)</span>
               </div>
-              <span className="text-sm text-[#8b7d84]">리뷰 없음</span>
-            </div>
+            )}
 
             {/* 가격 */}
             <div className="bg-[#ffeef5] rounded-xl p-6 mb-6">
