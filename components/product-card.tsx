@@ -131,11 +131,10 @@ function ProductCardComponent({ product, rank }: ProductCardProps) {
           )}
         </div>
 
-        {/* 리뷰 (TODO: 실제 리뷰 데이터 연동) */}
-        <div className="flex items-center gap-1 mt-2 text-xs text-black">
-          <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
-          <span className="font-medium">4.8</span>
-          <span>리뷰 12</span>
+        {/* 리뷰 */}
+        <div className="flex items-center gap-1 mt-2 text-xs text-[#8b7d84]">
+          <Star className="w-3 h-3 fill-gray-300 text-gray-300" />
+          <span>리뷰 없음</span>
         </div>
       </div>
     </Link>
