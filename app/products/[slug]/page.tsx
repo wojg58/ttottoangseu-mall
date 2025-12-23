@@ -25,6 +25,7 @@ import {
 import { getProductBySlug } from "@/actions/products";
 import ProductImageGallery from "@/components/product-image-gallery";
 import ProductDetailOptions from "@/components/product-detail-options";
+import ProductDetailTabs from "@/components/product-detail-tabs";
 
 interface ProductDetailPageProps {
   params: Promise<{
@@ -218,64 +219,13 @@ export default async function ProductDetailPage({
           </div>
         </div>
 
-        {/* 상품 상세 설명 */}
-        <section className="mt-12 lg:mt-16">
-          <div className="border-b border-[#f5d5e3]">
-            <nav className="flex gap-8">
-              <button className="py-4 text-[#ff6b9d] border-b-2 border-[#ff6b9d] font-bold">
-                상품 설명
-              </button>
-              {/* 리뷰 (리뷰가 있을 때만 숫자 표시) */}
-              {/* TODO: 실제 리뷰 데이터 연동 시 reviewCount 사용 */}
-              <button className="py-4 text-[#8b7d84] hover:text-[#4a3f48]">
-                리뷰{false && ` (0)`}
-              </button>
-              {/* 문의 (문의가 있을 때만 숫자 표시) */}
-              {/* TODO: 실제 문의 데이터 연동 시 inquiryCount 사용 */}
-              <button className="py-4 text-[#8b7d84] hover:text-[#4a3f48]">
-                문의{false && ` (3)`}
-              </button>
-            </nav>
-          </div>
-
-          <div className="py-8">
-            {product.description ? (
-              <div
-                className="product-description prose prose-pink max-w-none [&_img]:max-w-full [&_img]:h-auto [&_img]:rounded-lg [&_img]:my-4 [&_img]:block [&_img]:mx-auto [&_p]:text-[#4a3f48] [&_p]:leading-relaxed [&_p]:mb-4 [&_p]:mt-0 [&_p]:first:mt-0 [&_p]:last:mb-0 [&_p:empty]:mb-4 [&_p:empty]:min-h-[1rem] [&_br]:block [&_br]:my-2 [&_br+br]:my-4 [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:text-[#4a3f48] [&_h1]:mt-6 [&_h1]:mb-4 [&_h2]:text-xl [&_h2]:font-bold [&_h2]:text-[#4a3f48] [&_h2]:mt-5 [&_h2]:mb-3 [&_h3]:text-lg [&_h3]:font-bold [&_h3]:text-[#4a3f48] [&_h3]:mt-4 [&_h3]:mb-2 [&_ul]:list-disc [&_ul]:ml-6 [&_ul]:mb-4 [&_ol]:list-decimal [&_ol]:ml-6 [&_ol]:mb-4 [&_li]:text-[#4a3f48] [&_li]:mb-2 [&_a]:text-[#ff6b9d] [&_a]:underline [&_a]:hover:text-[#ff5088] [&_div]:mb-4 [&_div]:last:mb-0"
-                dangerouslySetInnerHTML={{ __html: product.description }}
-              />
-            ) : (
-              <p className="text-[#8b7d84] text-center py-8">
-                상품 설명이 없습니다.
-              </p>
-            )}
-
-            {/* 상품 이미지들 (상세 이미지) - 갤러리에서 추가한 이미지들 */}
-            {detailImages.length > 0 && (
-              <div className="mt-8 space-y-6">
-                {detailImages.map((image, index) => (
-                  <div
-                    key={image.id}
-                    className="relative w-full max-w-4xl mx-auto rounded-xl overflow-hidden bg-[#f5f5f5]"
-                  >
-                    <div className="relative aspect-video w-full">
-                      <Image
-                        src={image.image_url}
-                        alt={
-                          image.alt_text ||
-                          `${product.name} 상세 이미지 ${index + 1}`
-                        }
-                        fill
-                        className="object-contain"
-                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1200px"
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </section>
+        {/* 상품 상세 설명, 리뷰, 문의 탭 */}
+        <ProductDetailTabs
+          productId={product.id}
+          productName={product.name}
+          description={product.description}
+          detailImages={detailImages}
+        />
       </div>
     </main>
   );
