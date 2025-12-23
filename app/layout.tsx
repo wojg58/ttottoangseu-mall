@@ -44,6 +44,10 @@ export default function RootLayout({
             href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
             rel="stylesheet"
           />
+          <link
+            href="http://fonts.googleapis.com/earlyaccess/nanumgothic.css"
+            rel="stylesheet"
+          />
         </head>
         <body className="antialiased min-h-screen flex flex-col">
           <SyncUserProvider>
