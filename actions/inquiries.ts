@@ -13,8 +13,24 @@
 
 "use server";
 
+import { auth } from "@clerk/nextjs/server";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentUserId } from "@/lib/api-utils";
+
+// 현재 사용자의 Supabase user ID 조회
+async function getCurrentUserId(): Promise<string | null> {
+  const { userId: clerkUserId } = await auth();
+  if (!clerkUserId) return null;
+
+  const supabase = await createClient();
+  const { data: user } = await supabase
+    .from("users")
+    .select("id")
+    .eq("clerk_user_id", clerkUserId)
+    .is("deleted_at", null)
+    .maybeSingle();
+
+  return user?.id ?? null;
+}
 
 export interface Inquiry {
   id: string;
