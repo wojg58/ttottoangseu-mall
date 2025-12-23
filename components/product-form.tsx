@@ -1525,7 +1525,12 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
                         `[ProductForm] 이미지 ${i + 1}/${files.length} 업로드 중...`,
                       );
 
-                      const result = await uploadImageFile(formData);
+                      // 특정 상품 ID에 대해서는 사이즈 제한 없이 압축
+                      const uploadOptions = product?.id === 'ttotto_pr_255'
+                        ? { maxWidth: undefined } // 사이즈 제한 없음
+                        : undefined; // 기본 옵션 사용
+                      
+                      const result = await uploadImageFile(formData, uploadOptions);
                       if (result.success && result.url) {
                         uploadedImages.push({
                           image_url: result.url,

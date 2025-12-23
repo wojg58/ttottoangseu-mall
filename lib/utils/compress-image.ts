@@ -101,13 +101,16 @@ export async function compressImage(
         fit: fit as "cover" | "contain" | "fill" | "inside" | "outside",
         position: "center", // cover 모드일 때 중앙에서 자르기
       });
-    } else if (metadata.width && metadata.width > maxWidth) {
+    } else if (maxWidth !== undefined && metadata.width && metadata.width > maxWidth) {
       // 최대 너비만 지정된 경우 (기존 로직)
       console.log(`이미지 리사이즈: ${metadata.width}px → ${maxWidth}px`);
       sharpInstance = sharpInstance.resize(maxWidth, null, {
         withoutEnlargement: true,
         fit: "inside",
       });
+    } else if (maxWidth === undefined) {
+      // 사이즈 제한 없음
+      console.log(`사이즈 제한 없음: 원본 해상도 유지 (${metadata.width}x${metadata.height}px)`);
     }
 
     // 포맷 결정

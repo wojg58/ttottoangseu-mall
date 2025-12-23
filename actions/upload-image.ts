@@ -23,6 +23,8 @@ export interface UploadImageOptions {
   height?: number;
   /** 리사이즈 모드 (기본값: "inside") */
   fit?: "cover" | "contain" | "fill" | "inside" | "outside";
+  /** 최대 너비 제한 (undefined면 제한 없음) */
+  maxWidth?: number | undefined;
 }
 
 export async function uploadImageFile(
@@ -71,7 +73,9 @@ export async function uploadImageFile(
     console.log("이미지 압축 시작...");
     const compressedResult = await compressImage(Buffer.from(arrayBuffer), {
       quality: 85, // 품질 85% (고품질 유지하면서 용량 최적화)
-      maxWidth: options?.width ? undefined : 2000, // 고정 크기가 지정되지 않은 경우만 최대 너비 적용
+      maxWidth: options?.maxWidth !== undefined 
+        ? options.maxWidth 
+        : (options?.width ? undefined : 2000), // maxWidth가 명시적으로 설정된 경우 사용, 아니면 기존 로직
       width: options?.width, // 고정 너비 (상품 설명 에디터용: 800)
       height: options?.height, // 고정 높이 (상품 설명 에디터용: 800)
       fit: options?.fit || "inside", // 리사이즈 모드 (고정 크기일 때는 cover 사용)
