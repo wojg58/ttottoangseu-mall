@@ -915,73 +915,64 @@ export default function CheckoutForm({
 
           {/* 결제 수단 선택 */}
           <div className="mb-6">
-            <h3 className="text-sm font-bold text-[#4a3f48] mb-3">결제 수단</h3>
-            <label className="flex items-center gap-3 p-4 border-2 border-[#fad2e6] rounded-lg cursor-pointer hover:bg-[#ffeef5] transition-colors">
-              <input
-                type="checkbox"
-                checked={form.watch("paymentMethod") === "KG_INICIS"}
-                onChange={(e) => {
-                  console.log("[결제수단] KG이니시스 체크:", e.target.checked);
-                  if (e.target.checked) {
+            <h3 className="text-sm font-bold text-[#4a3f48] mb-3">결제수단 선택</h3>
+            <div className="space-y-3">
+              {/* 신용카드 결제 */}
+              <label 
+                className={`flex items-center gap-3 p-4 border-2 rounded-lg cursor-pointer transition-colors ${
+                  selectedPaymentMethod === "카드" 
+                    ? "border-black bg-white" 
+                    : "border-[#f5d5e3] hover:bg-[#fef8fb]"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="paymentMethod"
+                  value="카드"
+                  checked={selectedPaymentMethod === "카드"}
+                  onChange={(e) => {
+                    console.log("[결제수단] 신용카드 결제 선택");
+                    setSelectedPaymentMethod("카드");
                     form.setValue("paymentMethod", "KG_INICIS");
-                  } else {
-                    form.setValue("paymentMethod", "" as "KG_INICIS");
-                    setSelectedPaymentMethod(null);
-                  }
-                }}
-                className="w-5 h-5 text-[#ff6b9d] border-[#f5d5e3] rounded focus:ring-[#ff6b9d]"
-              />
-              <div className="flex-1">
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-[#4a3f48]">KG이니시스</span>
-                  <span className="px-2 py-0.5 bg-[#ffeef5] text-[#ff6b9d] text-xs font-medium rounded">
-                    추천
-                  </span>
-                </div>
-                <p className="text-xs text-[#8b7d84] mt-1">
-                  신용카드 결제와 에스크로(실시간 계좌이체)를 이용할 수 있습니다.
-                </p>
-              </div>
-            </label>
+                  }}
+                  className="w-5 h-5 text-[#ff6b9d] border-[#f5d5e3] focus:ring-[#ff6b9d]"
+                />
+                <span className="text-sm font-medium text-[#4a3f48]">신용카드</span>
+              </label>
+
+              {/* 에스크로(실시간 계좌이체) */}
+              <label 
+                className={`flex items-center gap-3 p-4 border-2 rounded-lg cursor-pointer transition-colors ${
+                  selectedPaymentMethod === "계좌이체" 
+                    ? "border-black bg-white" 
+                    : "border-[#f5d5e3] hover:bg-[#fef8fb]"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="paymentMethod"
+                  value="계좌이체"
+                  checked={selectedPaymentMethod === "계좌이체"}
+                  onChange={(e) => {
+                    console.log("[결제수단] 에스크로(실시간 계좌이체) 선택");
+                    setSelectedPaymentMethod("계좌이체");
+                    form.setValue("paymentMethod", "KG_INICIS");
+                  }}
+                  className="w-5 h-5 text-[#ff6b9d] border-[#f5d5e3] focus:ring-[#ff6b9d]"
+                />
+                <span className="text-sm font-medium text-[#4a3f48]">에스크로(계좌이체)</span>
+              </label>
+            </div>
+            
+            {/* 소액 결제 안내 */}
+            <p className="text-xs text-[#8b7d84] mt-2">
+              - 소액 결제의 경우 PG사 정책에 따라 결제 금액 제한이 있을 수 있습니다.
+            </p>
           </div>
 
-          {/* KG이니시스 체크 시 결제 수단 상세 선택 */}
-          {form.watch("paymentMethod") === "KG_INICIS" && (
+          {/* 결제 수단 상세 설정 */}
+          {selectedPaymentMethod && (
             <div className="mb-6 space-y-4">
-              <div className="space-y-3">
-                <h3 className="text-base font-bold text-[#4a3f48]">결제수단</h3>
-                <div className="space-y-2">
-                  <label className="flex items-center gap-2 cursor-pointer p-3 border border-[#f5d5e3] rounded-lg hover:bg-[#fef8fb] transition-colors">
-                    <input
-                      type="radio"
-                      name="paymentMethodDetail"
-                      value="카드"
-                      checked={selectedPaymentMethod === "카드"}
-                      onChange={(e) => {
-                        console.log("[결제수단] 신용카드 결제 선택");
-                        setSelectedPaymentMethod(e.target.value as "카드");
-                      }}
-                      className="w-4 h-4 text-[#ff6b9d] border-[#f5d5e3] focus:ring-[#ff6b9d]"
-                    />
-                    <span className="text-sm text-[#4a3f48] font-medium">신용카드 결제</span>
-                  </label>
-
-                  <label className="flex items-center gap-2 cursor-pointer p-3 border border-[#f5d5e3] rounded-lg hover:bg-[#fef8fb] transition-colors">
-                    <input
-                      type="radio"
-                      name="paymentMethodDetail"
-                      value="계좌이체"
-                      checked={selectedPaymentMethod === "계좌이체"}
-                      onChange={(e) => {
-                        console.log("[결제수단] 에스크로(실시간 계좌이체) 선택");
-                        setSelectedPaymentMethod(e.target.value as "계좌이체");
-                      }}
-                      className="w-4 h-4 text-[#ff6b9d] border-[#f5d5e3] focus:ring-[#ff6b9d]"
-                    />
-                    <span className="text-sm text-[#4a3f48] font-medium">에스크로(실시간 계좌이체)</span>
-                  </label>
-                </div>
-              </div>
 
               {/* 에스크로(실시간 계좌이체) 선택 시 추가 입력 필드 */}
               {selectedPaymentMethod === "계좌이체" && (
@@ -989,13 +980,13 @@ export default function CheckoutForm({
                   {/* 예금주명 */}
                   <div>
                     <label className="block text-sm font-medium text-[#4a3f48] mb-2">
-                      예금주명
+                      예금주명<span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
                       value={depositorName}
                       onChange={(e) => {
-                        console.log("[입금자명] 입력:", e.target.value);
+                        console.log("[예금주명] 입력:", e.target.value);
                         setDepositorName(e.target.value);
                       }}
                       placeholder=""
@@ -1015,80 +1006,52 @@ export default function CheckoutForm({
                       }}
                       className="w-4 h-4 text-[#ff6b9d] border-[#d4d4d4] rounded focus:ring-[#ff6b9d] mt-0.5"
                     />
-                    <label htmlFor="escrow-checkout" className="text-xs text-[#4a3f48] cursor-pointer">
-                      에스크로(구매안전) 서비스를 적용합니다.
+                    <label htmlFor="escrow-checkout" className="text-sm text-[#4a3f48] cursor-pointer">
+                      에스크로(구매안전서비스를 적용합니다.
                     </label>
                   </div>
-
-                  {/* 경고 메시지 */}
-                  <div className="bg-[#fff5f5] border border-[#fad2e6] rounded p-3">
-                    <p className="text-xs text-[#ff6b9d] leading-relaxed">
-                      ⚠️ 소액 결제의 경우 PG사 정책에 따라 관련 금융 결제 수단이 인증 후 사용이 가능합니다.
-                    </p>
-                  </div>
-
-                  {/* 현금영수증 신청 옵션 */}
-                  <div>
-                    <h4 className="text-sm font-medium text-[#4a3f48] mb-3">현금영수증 신청</h4>
-                    <div className="space-y-2">
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="radio"
-                          name="cashReceipt"
-                          value="신청"
-                          checked={cashReceipt === "신청"}
-                          onChange={(e) => {
-                            console.log("[현금영수증] 신청 선택");
-                            setCashReceipt(e.target.value as "신청");
-                          }}
-                          className="w-4 h-4 text-[#ff6b9d] border-[#d4d4d4] focus:ring-[#ff6b9d]"
-                        />
-                        <span className="text-sm text-[#4a3f48]">현금영수증신청</span>
-                      </label>
-
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="radio"
-                          name="cashReceipt"
-                          value="신청안함"
-                          checked={cashReceipt === "신청안함"}
-                          onChange={(e) => {
-                            console.log("[현금영수증] 신청안함 선택");
-                            setCashReceipt(e.target.value as "신청안함");
-                          }}
-                          className="w-4 h-4 text-[#ff6b9d] border-[#d4d4d4] focus:ring-[#ff6b9d]"
-                        />
-                        <span className="text-sm text-[#4a3f48]">신청안함</span>
-                      </label>
-                    </div>
-                  </div>
                 </div>
               )}
 
-              {/* 신용카드 결제 선택 시 최종 금액 표시 */}
-              {selectedPaymentMethod === "카드" && (
-                <div className="border-t border-[#f5d5e3] pt-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-[#8b7d84]">카드 결제 최종결제 금액</span>
-                    <div className="text-right">
-                      <div className="text-2xl font-bold text-[#ff6b9d]">
-                        {displayTotal.toLocaleString("ko-KR")}
-                        <span className="text-base">원</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
+              {/* 결제수단과 입력정보를 다음에도 사용 체크박스 */}
+              <div className="flex items-start gap-2">
+                <input
+                  type="checkbox"
+                  id="save-payment-info"
+                  className="w-4 h-4 text-[#ff6b9d] border-[#d4d4d4] rounded focus:ring-[#ff6b9d] mt-0.5"
+                />
+                <label htmlFor="save-payment-info" className="text-sm text-[#4a3f48] cursor-pointer">
+                  결제수단과 입력정보를 다음에도 사용
+                </label>
+              </div>
 
-              <p className="text-xs text-[#8b7d84] text-center">
-                {selectedPaymentMethod === "카드" 
-                  ? "결제하기 버튼을 클릭하면 KG이니시스 결제창이 열립니다."
-                  : selectedPaymentMethod === "계좌이체"
-                  ? "입금자명을 확인하시고 결제하기 버튼을 클릭해주세요."
-                  : "결제 수단을 선택해주세요."}
-              </p>
             </div>
           )}
+
+          {/* 적립 혜택 */}
+          <div className="mb-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold text-[#4a3f48]">적립 혜택</h3>
+              <div className="flex items-center gap-1">
+                <span className="text-sm text-[#4a3f48]">0원</span>
+                <span className="text-xs text-[#8b7d84]">▼</span>
+              </div>
+            </div>
+          </div>
+
+          {/* 배송정보 제공방침 동의 */}
+          <div className="mb-4">
+            <p className="text-xs text-[#8b7d84]">
+              배송정보 제공방침 동의 <span className="text-[#4a3f48] underline cursor-pointer">자세히 &gt;</span>
+            </p>
+          </div>
+
+          {/* 주문 내용 확인 및 약관 동의 */}
+          <div className="mb-6">
+            <p className="text-xs text-[#4a3f48]">
+              주문 내용을 확인하였으며 약관에 동의합니다.
+            </p>
+          </div>
 
           <Button
             onClick={() => {
@@ -1097,11 +1060,10 @@ export default function CheckoutForm({
             }}
             disabled={
               isPending || 
-              form.watch("paymentMethod") !== "KG_INICIS" || 
               !selectedPaymentMethod ||
               (selectedPaymentMethod === "계좌이체" && !depositorName.trim())
             }
-            className="w-full h-14 bg-[#ff6b9d] hover:bg-[#ff5088] text-white rounded-xl text-base font-bold disabled:opacity-50"
+            className="w-full h-14 bg-black hover:bg-gray-800 text-white rounded-lg text-base font-bold disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isPending 
               ? "처리 중..." 
