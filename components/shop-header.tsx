@@ -15,7 +15,7 @@
 
 "use client";
 
-import { SignedOut, SignInButton, SignedIn, UserButton } from "@clerk/nextjs";
+import { SignedOut, SignedIn, UserButton } from "@clerk/nextjs";
 import Link from "next/link";
 import Image from "next/image";
 import { Search, ShoppingCart, Heart, Menu, X } from "lucide-react";
@@ -83,9 +83,9 @@ export default function ShopHeader() {
                 className="object-contain"
               />
               <div className="hidden sm:block">
-                <h1 className="text-5xl font-bold drop-shadow-sm brand-text-logo text-white">
+                <div className="text-5xl font-bold drop-shadow-sm brand-text-logo text-white">
                   또또앙스
-                </h1>
+                </div>
               </div>
             </Link>
 
@@ -101,7 +101,8 @@ export default function ShopHeader() {
                 />
                 <button
                   type="submit"
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white hover:text-white/80 transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white hover:text-white/80 transition-colors min-w-[48px] min-h-[48px] flex items-center justify-center"
+                  aria-label="검색"
                 >
                   <Search className="w-5 h-5" />
                 </button>
@@ -113,13 +114,15 @@ export default function ShopHeader() {
               <SignedIn>
                 <Link
                   href="/wishlist"
-                  className="p-2 text-white hover:bg-white/20 rounded-full transition-colors hidden sm:flex"
+                  className="p-3 min-w-[48px] min-h-[48px] text-white hover:bg-white/20 rounded-full transition-colors hidden sm:flex items-center justify-center"
+                  aria-label="찜하기 목록"
                 >
                   <Heart className="w-5 h-5" />
                 </Link>
                 <Link
                   href="/cart"
-                  className="p-2 text-white hover:bg-white/20 rounded-full transition-colors relative"
+                  className="p-3 min-w-[48px] min-h-[48px] text-white hover:bg-white/20 rounded-full transition-colors relative flex items-center justify-center"
+                  aria-label="장바구니"
                 >
                   <ShoppingCart className="w-5 h-5" />
                   {/* TODO: 장바구니 아이템 개수 표시 */}
@@ -141,15 +144,21 @@ export default function ShopHeader() {
                 </div>
               </SignedIn>
               <SignedOut>
-                <SignInButton mode="modal">
-                  <Button className="shop-btn-accent text-sm">로그인</Button>
-                </SignInButton>
+                <div className="flex items-center gap-2">
+                  <Link href="/sign-in">
+                    <Button className="shop-btn-accent text-sm">로그인</Button>
+                  </Link>
+                  <Link href="/sign-up">
+                    <Button className="shop-btn-accent text-sm">회원가입</Button>
+                  </Link>
+                </div>
               </SignedOut>
 
               {/* 모바일 메뉴 버튼 */}
               <button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="p-2 text-white hover:bg-white/20 rounded-full transition-colors lg:hidden"
+                className="p-3 min-w-[48px] min-h-[48px] text-white hover:bg-white/20 rounded-full transition-colors lg:hidden flex items-center justify-center"
+                aria-label={isMobileMenuOpen ? "메뉴 닫기" : "메뉴 열기"}
               >
                 {mounted && isMobileMenuOpen ? (
                   <X className="w-6 h-6" />

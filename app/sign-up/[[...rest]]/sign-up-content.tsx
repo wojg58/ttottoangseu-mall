@@ -11,7 +11,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 export default function SignUpContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const redirectUrl = searchParams.get("redirect_url") || "/events/signup";
+  const redirectUrl = searchParams.get("redirect_url") || "/";
 
   console.log("[SignUpContent] 회원가입 폼 렌더링", { redirectUrl });
 
@@ -51,6 +51,14 @@ export default function SignUpContent() {
             signInUrl="/sign-in"
             afterSignUpUrl={redirectUrl}
             forceRedirectUrl={redirectUrl}
+            additionalFields={[
+              {
+                name: "username",
+                label: "아이디",
+                placeholder: "아이디를 입력해주세요",
+                required: true,
+              },
+            ]}
             appearance={{
               elements: {
                 rootBox: "mx-auto",

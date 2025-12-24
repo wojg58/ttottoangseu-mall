@@ -124,9 +124,10 @@ export default function AddToCartButton({
           <button
             onClick={() => handleQuantityChange(-1)}
             disabled={quantity <= 1 || isSoldOut}
-            className="w-8 h-8 rounded-full border border-[#f5d5e3] flex items-center justify-center text-[#4a3f48] hover:bg-[#ffeef5] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="min-w-[48px] min-h-[48px] rounded-full border border-[#f5d5e3] flex items-center justify-center text-[#4a3f48] hover:bg-[#ffeef5] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            aria-label="수량 감소"
           >
-            <Minus className="w-4 h-4" />
+            <Minus className="w-5 h-5" />
           </button>
           <span className="w-12 text-center text-lg font-bold text-[#4a3f48]">
             {quantity}
@@ -134,9 +135,10 @@ export default function AddToCartButton({
           <button
             onClick={() => handleQuantityChange(1)}
             disabled={quantity >= stock || isSoldOut}
-            className="w-8 h-8 rounded-full border border-[#f5d5e3] flex items-center justify-center text-[#4a3f48] hover:bg-[#ffeef5] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="min-w-[48px] min-h-[48px] rounded-full border border-[#f5d5e3] flex items-center justify-center text-[#4a3f48] hover:bg-[#ffeef5] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            aria-label="수량 증가"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-5 h-5" />
           </button>
         </div>
         <span className="ml-auto text-lg font-bold text-[#4a3f48]">

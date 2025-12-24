@@ -5,6 +5,7 @@
 
 "use client";
 
+import Image from "next/image";
 import { Star } from "lucide-react";
 import type { Review } from "@/actions/reviews";
 
@@ -56,12 +57,14 @@ export default function ReviewList({ reviews }: ReviewListProps) {
           {review.images && review.images.length > 0 && (
             <div className="flex gap-2 mt-4">
               {review.images.map((imageUrl, index) => (
-                <img
-                  key={index}
-                  src={imageUrl}
-                  alt={`리뷰 이미지 ${index + 1}`}
-                  className="w-20 h-20 object-cover rounded-lg"
-                />
+                <div key={index} className="relative w-20 h-20 rounded-lg overflow-hidden">
+                  <Image
+                    src={imageUrl}
+                    alt={`리뷰 이미지 ${index + 1}`}
+                    fill
+                    className="object-cover"
+                  />
+                </div>
               ))}
             </div>
           )}

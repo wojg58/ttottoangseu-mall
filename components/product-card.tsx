@@ -96,10 +96,11 @@ function ProductCardComponent({ product, rank }: ProductCardProps) {
         {/* 찜하기 버튼 */}
         <button
           onClick={handleLikeClick}
-          className="absolute top-2 right-2 p-2 bg-white/80 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white"
+          className="absolute top-2 right-2 p-3 min-w-[48px] min-h-[48px] bg-white/80 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white flex items-center justify-center"
+          aria-label={isLiked ? "찜하기 취소" : "찜하기"}
         >
           <Heart
-            className={`w-4 h-4 ${
+            className={`w-5 h-5 ${
               isLiked ? "fill-[#ff6b9d] text-[#ff6b9d]" : "text-gray-400"
             }`}
           />

@@ -29,13 +29,32 @@ export const metadata: Metadata = {
   },
 };
 
+// Clerk localization 커스터마이징 - "사용자 이름"을 "아이디"로 변경
+const customKoKR = {
+  ...koKR,
+  formFieldLabel__username: "아이디",
+  formFieldLabel__identifier: "아이디",
+  // 중첩 구조도 시도
+  formFields: {
+    ...koKR.formFields,
+    username: {
+      ...(koKR.formFields as any)?.username,
+      label: "아이디",
+    },
+    identifier: {
+      ...(koKR.formFields as any)?.identifier,
+      label: "아이디",
+    },
+  },
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <ClerkProvider localization={koKR}>
+    <ClerkProvider localization={customKoKR}>
       <html lang="ko">
         <head>
           <link rel="preconnect" href="https://fonts.googleapis.com" />

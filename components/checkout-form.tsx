@@ -392,7 +392,6 @@ export default function CheckoutForm({
   const displayShippingFee = orderData?.shippingFee ?? shippingFee;
   const displayCouponDiscount = orderData?.couponDiscount ?? (selectedCoupon ? calculateCouponDiscount(selectedCoupon, subtotal) : 0);
   const displayTotal = orderData?.total ?? Math.max(0, total - (selectedCoupon ? calculateCouponDiscount(selectedCoupon, subtotal) : 0));
-  const displayItems = orderData?.items ?? [];
   const displayItemCount = orderData ? orderData.items.length : cartItems.length;
 
   const form = useForm<CheckoutFormData>({
@@ -964,7 +963,7 @@ export default function CheckoutForm({
                   name="paymentMethod"
                   value="카드"
                   checked={selectedPaymentMethod === "카드"}
-                  onChange={(e) => {
+                  onChange={() => {
                     console.log("[결제수단] 신용카드 결제 선택");
                     setSelectedPaymentMethod("카드");
                     form.setValue("paymentMethod", "KG_INICIS");
@@ -987,7 +986,7 @@ export default function CheckoutForm({
                   name="paymentMethod"
                   value="계좌이체"
                   checked={selectedPaymentMethod === "계좌이체"}
-                  onChange={(e) => {
+                  onChange={() => {
                     console.log("[결제수단] 에스크로(실시간 계좌이체) 선택");
                     setSelectedPaymentMethod("계좌이체");
                     form.setValue("paymentMethod", "KG_INICIS");

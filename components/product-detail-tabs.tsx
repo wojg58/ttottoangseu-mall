@@ -10,7 +10,8 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import Image from "next/image";
 import { useAuth } from "@clerk/nextjs";
 import { Star } from "lucide-react";
 import { getProductReviews, getProductAverageRating } from "@/actions/reviews";
@@ -47,7 +48,7 @@ export default function ProductDetailTabs({
   const [isLoading, setIsLoading] = useState(false);
 
   // 리뷰 데이터 로드
-  const loadReviews = async () => {
+  const loadReviews = useCallback(async () => {
     setIsLoading(true);
     const [reviewsResult, ratingResult] = await Promise.all([
       getProductReviews(productId),
@@ -62,10 +63,10 @@ export default function ProductDetailTabs({
       setAverageRating(ratingResult.averageRating);
     }
     setIsLoading(false);
-  };
+  }, [productId]);
 
   // 문의 데이터 로드
-  const loadInquiries = async () => {
+  const loadInquiries = useCallback(async () => {
     setIsLoading(true);
     const [inquiriesResult, countResult] = await Promise.all([
       getProductInquiries(productId),
@@ -79,7 +80,7 @@ export default function ProductDetailTabs({
       setInquiryCount(countResult.count);
     }
     setIsLoading(false);
-  };
+  }, [productId]);
 
   // 탭 변경 시 데이터 로드
   useEffect(() => {
@@ -88,7 +89,7 @@ export default function ProductDetailTabs({
     } else if (activeTab === "inquiries") {
       loadInquiries();
     }
-  }, [activeTab, productId]);
+  }, [activeTab, productId, loadReviews, loadInquiries]);
 
   const handleReviewSubmit = () => {
     loadReviews();
@@ -158,13 +159,14 @@ export default function ProductDetailTabs({
                     className="relative w-full max-w-4xl mx-auto rounded-xl overflow-hidden bg-[#f5f5f5]"
                   >
                     <div className="relative aspect-video w-full">
-                      <img
+                      <Image
                         src={image.image_url}
                         alt={
                           image.alt_text ||
                           `${productName} 상세 이미지 ${index + 1}`
                         }
-                        className="object-contain w-full h-full"
+                        fill
+                        className="object-contain"
                       />
                     </div>
                   </div>
