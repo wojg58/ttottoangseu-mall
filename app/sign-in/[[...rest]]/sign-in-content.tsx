@@ -550,8 +550,13 @@ export default function SignInContent() {
           const emailValue = identifierInput.value.trim();
           const passwordValue = passwordInput.value;
 
-          console.log("이메일:", emailValue);
-          console.log("비밀번호 입력됨:", passwordValue ? "예" : "아니오");
+          console.log("[SignInContent] 입력값 확인:");
+          console.log("  - 이메일 입력 필드:", identifierInput);
+          console.log("  - 이메일 값 (raw):", identifierInput.value);
+          console.log("  - 이메일 값 (trimmed):", emailValue);
+          console.log("  - 이메일 값 길이:", emailValue.length);
+          console.log("  - 비밀번호 입력됨:", passwordValue ? "예" : "아니오");
+          console.log("  - 비밀번호 값 길이:", passwordValue ? passwordValue.length : 0);
 
           if (emailValue && passwordValue) {
             try {
@@ -627,9 +632,15 @@ export default function SignInContent() {
 
               // 1단계: 이메일로 signIn 생성
               console.log("[SignInContent] SignIn.create 호출 중...");
+              console.log("[SignInContent] 전달할 identifier:", emailValue);
+              console.log("[SignInContent] identifier 타입:", typeof emailValue);
+              console.log("[SignInContent] identifier 길이:", emailValue.length);
+              
               const signInAttempt = await signIn.create({
                 identifier: emailValue,
               });
+              
+              console.log("[SignInContent] SignIn.create 응답:", signInAttempt);
 
               console.log(
                 "[SignInContent] SignIn 생성 완료, 비밀번호 인증 시도",
@@ -726,31 +737,47 @@ export default function SignInContent() {
                 status: err.status,
                 statusCode: err.statusCode,
               });
+              
+              // 에러 코드 확인
+              const errorCode = err.errors?.[0]?.code;
+              console.error("[SignInContent] 에러 코드:", errorCode);
+              console.error("[SignInContent] 에러 전체 객체:", JSON.stringify(err, null, 2));
 
               // 에러 메시지 추출
               let errorMessage = "로그인에 실패했습니다.";
               if (err.errors && err.errors.length > 0) {
-                errorMessage = err.errors[0].message || errorMessage;
+                const firstError = err.errors[0];
+                errorMessage = firstError.message || firstError.longMessage || errorMessage;
+                
+                // 에러 코드 기반 처리
+                if (errorCode === "form_identifier_not_found") {
+                  errorMessage = "등록되지 않은 이메일 주소입니다. 회원가입을 먼저 진행해주세요.";
+                } else if (errorCode === "form_password_incorrect") {
+                  errorMessage = "비밀번호가 올바르지 않습니다.";
+                } else if (errorCode === "form_identifier_invalid") {
+                  errorMessage = "이메일 주소 형식이 올바르지 않습니다.";
+                }
               } else if (err.message) {
                 errorMessage = err.message;
               }
 
-              // 사용자 친화적인 메시지로 변환
+              // 사용자 친화적인 메시지로 변환 (에러 코드가 없을 경우)
               if (
                 errorMessage.includes("identifier") ||
-                errorMessage.includes("email")
+                errorMessage.includes("email") ||
+                errorMessage.includes("Couldn't find your account") ||
+                errorMessage.includes("not found")
               ) {
-                errorMessage = "이메일 주소를 확인해주세요.";
+                if (!errorCode || errorCode !== "form_identifier_not_found") {
+                  errorMessage = "이메일 주소를 확인해주세요.";
+                }
               } else if (
                 errorMessage.includes("password") ||
                 errorMessage.includes("incorrect")
               ) {
-                errorMessage = "비밀번호가 올바르지 않습니다.";
-              } else if (
-                errorMessage.includes("not found") ||
-                errorMessage.includes("존재하지")
-              ) {
-                errorMessage = "등록되지 않은 이메일 주소입니다.";
+                if (!errorCode || errorCode !== "form_password_incorrect") {
+                  errorMessage = "비밀번호가 올바르지 않습니다.";
+                }
               }
 
               alert(errorMessage);
