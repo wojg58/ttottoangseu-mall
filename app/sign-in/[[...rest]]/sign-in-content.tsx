@@ -3,8 +3,8 @@
  * @description 로그인 폼 컨텐츠 컴포넌트
  *
  * 주요 기능:
- * 1. 아이디와 비밀번호로 로그인
- * 2. 커스텀 디자인의 로그인 폼
+ * 1. 이메일과 비밀번호로 로그인
+ * 2. 2열 레이아웃의 커스텀 디자인 로그인 폼 (라벨 왼쪽, 입력 필드 오른쪽)
  * 3. 로그인 과정 로깅
  */
 
@@ -25,10 +25,10 @@ export default function SignInContent() {
   console.log("현재 URL:", window.location.href);
   console.groupEnd();
 
-  // placeholder 텍스트 변경, 라벨 추가, 필드 순서 재정렬
+  // 폼 필드를 이미지 디자인대로 2열 레이아웃으로 변경
   useEffect(() => {
     const updateForm = () => {
-      console.group("[SignInContent] 폼 필드 업데이트");
+      console.group("[SignInContent] 폼 필드 업데이트 - 2열 레이아웃");
 
       // "최근 사용" 배지 숨기기
       const badges = document.querySelectorAll('.cl-lastAuthenticationStrategyBadge');
@@ -40,85 +40,197 @@ export default function SignInContent() {
         }
       });
 
-      // 아이디 필드 라벨 변경
+      // 이메일 필드 라벨 변경 및 필수 표시 추가
       const identifierLabel = document.querySelector(
-        'label[for="identifier-field"]'
+        'label[for="identifier-field"], label[for*="identifier"]'
       ) as HTMLLabelElement;
-      if (identifierLabel && !identifierLabel.textContent?.includes("아이디")) {
-        console.log("아이디 라벨 변경");
-        identifierLabel.textContent = "아이디";
+      if (identifierLabel) {
+        const labelText = identifierLabel.textContent || '';
+        if (!labelText.includes("이메일")) {
+          console.log("이메일 라벨 변경");
+          // 기존 텍스트를 숨기고 새 텍스트 추가
+          const asterisk = document.createElement('span');
+          asterisk.textContent = '* ';
+          asterisk.style.color = '#ef4444';
+          asterisk.style.marginRight = '4px';
+          
+          const labelSpan = document.createElement('span');
+          labelSpan.textContent = '이메일';
+          
+          identifierLabel.innerHTML = '';
+          identifierLabel.appendChild(asterisk);
+          identifierLabel.appendChild(labelSpan);
+        }
       }
 
-      // 아이디 필드 placeholder 변경
+      // 이메일 필드 placeholder 변경
       const identifierInput = document.querySelector(
-        'input[name="identifier"], input[id="identifier-field"]'
+        'input[name="identifier"], input[id="identifier-field"], input[id*="identifier"]'
       ) as HTMLInputElement;
-      if (identifierInput && identifierInput.placeholder !== "아이디를 입력하세요") {
-        console.log("아이디 placeholder 변경");
-        identifierInput.placeholder = "아이디를 입력하세요";
+      if (identifierInput && identifierInput.placeholder !== "example@email.com") {
+        console.log("이메일 placeholder 변경");
+        identifierInput.placeholder = "example@email.com";
       }
 
-      // 비밀번호 필드 라벨 변경
+      // 비밀번호 필드 라벨 변경 및 필수 표시 추가
       const passwordLabel = document.querySelector(
-        'label[for="password-field"]'
+        'label[for="password-field"], label[for*="password"]'
       ) as HTMLLabelElement;
-      if (passwordLabel && !passwordLabel.textContent?.includes("비밀번호")) {
-        console.log("비밀번호 라벨 변경");
-        passwordLabel.textContent = "비밀번호";
+      if (passwordLabel) {
+        const labelText = passwordLabel.textContent || '';
+        if (!labelText.includes("비밀번호")) {
+          console.log("비밀번호 라벨 변경");
+          // 기존 텍스트를 숨기고 새 텍스트 추가
+          const asterisk = document.createElement('span');
+          asterisk.textContent = '* ';
+          asterisk.style.color = '#ef4444';
+          asterisk.style.marginRight = '4px';
+          
+          const labelSpan = document.createElement('span');
+          labelSpan.textContent = '비밀번호';
+          
+          passwordLabel.innerHTML = '';
+          passwordLabel.appendChild(asterisk);
+          passwordLabel.appendChild(labelSpan);
+        }
       }
 
       // 비밀번호 필드 placeholder 변경
       const passwordInput = document.querySelector(
-        'input[name="password"], input[id="password-field"]'
+        'input[name="password"], input[id="password-field"], input[id*="password"]'
       ) as HTMLInputElement;
-      if (passwordInput && passwordInput.placeholder !== "비밀번호를 입력하세요") {
+      if (passwordInput && passwordInput.placeholder !== "비밀번호를 입력해주세요") {
         console.log("비밀번호 placeholder 변경");
-        passwordInput.placeholder = "비밀번호를 입력하세요";
+        passwordInput.placeholder = "비밀번호를 입력해주세요";
       }
 
-      // ===== 핵심: 필드 구조 재정렬 =====
-      // 각 필드의 라벨 행과 입력창을 올바른 순서로 재배치
-      const identifierLabelRow = document.querySelector('.cl-formFieldLabelRow__identifier') as HTMLElement;
-      const identifierInputContainer = identifierInput?.parentElement as HTMLElement;
-      const passwordLabelRow = document.querySelector('.cl-formFieldLabelRow__password') as HTMLElement;
-      const passwordInputContainer = passwordInput?.closest('.cl-formFieldInputGroup') as HTMLElement || passwordInput?.parentElement as HTMLElement;
-
+      // ===== 2열 레이아웃 구현 =====
       const identifierRow = document.querySelector('.cl-formFieldRow__identifier') as HTMLElement;
       const passwordRow = document.querySelector('.cl-formFieldRow__password') as HTMLElement;
 
-      // 아이디 필드 재정렬: 라벨 → 입력창
-      if (identifierRow && identifierLabelRow && identifierInputContainer) {
-        console.log("아이디 필드 순서 재정렬");
-        identifierRow.innerHTML = '';
-        identifierRow.appendChild(identifierLabelRow);
-        identifierRow.appendChild(identifierInputContainer);
+      // 이메일 필드: 2열 레이아웃 (라벨 왼쪽, 입력 필드 오른쪽)
+      if (identifierRow) {
+        console.log("이메일 필드 2열 레이아웃 적용");
         
-        identifierRow.style.cssText = `
-          margin-bottom: 2rem !important;
-          margin-top: 0 !important;
-          display: flex !important;
-          flex-direction: column !important;
-          gap: 0.5rem !important;
-        `;
+        // 라벨과 입력 필드 컨테이너 찾기
+        const identifierLabelRow = identifierRow.querySelector('.cl-formFieldLabelRow__identifier') as HTMLElement;
+        const identifierInputContainer = identifierInput?.closest('.cl-formFieldInputGroup') as HTMLElement || 
+                                         identifierInput?.parentElement as HTMLElement;
+
+        if (identifierLabelRow && identifierInputContainer) {
+          // 기존 구조를 테이블 형태로 변경
+          identifierRow.style.cssText = `
+            display: grid !important;
+            grid-template-columns: 150px 1fr !important;
+            gap: 1rem !important;
+            align-items: start !important;
+            margin-bottom: 1.5rem !important;
+            margin-top: 0 !important;
+          `;
+
+          // 라벨을 왼쪽 열에 배치
+          identifierLabelRow.style.cssText = `
+            grid-column: 1 !important;
+            padding-top: 0.75rem !important;
+            margin: 0 !important;
+          `;
+
+          // 입력 필드를 오른쪽 열에 배치
+          identifierInputContainer.style.cssText = `
+            grid-column: 2 !important;
+            margin: 0 !important;
+          `;
+
+          // 안내 문구 추가 (이메일 필드 아래)
+          let emailHint = identifierRow.querySelector('.email-hint') as HTMLElement;
+          if (!emailHint) {
+            emailHint = document.createElement('p');
+            emailHint.className = 'email-hint';
+            emailHint.textContent = '로그인 아이디로 사용할 이메일을 입력해 주세요.';
+            emailHint.style.cssText = `
+              grid-column: 2 !important;
+              font-size: 0.875rem !important;
+              color: #6b7280 !important;
+              margin-top: 0.5rem !important;
+              margin-bottom: 0 !important;
+            `;
+            identifierRow.appendChild(emailHint);
+          }
+
+          // 오류 메시지도 2열 레이아웃에 맞게 조정
+          const identifierError = identifierRow.querySelector('.cl-formFieldErrorText') as HTMLElement;
+          if (identifierError) {
+            identifierError.style.cssText = `
+              grid-column: 2 !important;
+              margin-top: 0.5rem !important;
+              margin-left: 0 !important;
+            `;
+          }
+        }
       }
 
-      // 비밀번호 필드 재정렬: 라벨 → 입력창
-      if (passwordRow && passwordLabelRow && passwordInputContainer) {
-        console.log("비밀번호 필드 순서 재정렬");
-        passwordRow.innerHTML = '';
-        passwordRow.appendChild(passwordLabelRow);
-        passwordRow.appendChild(passwordInputContainer);
+      // 비밀번호 필드: 2열 레이아웃 (라벨 왼쪽, 입력 필드 오른쪽)
+      if (passwordRow) {
+        console.log("비밀번호 필드 2열 레이아웃 적용");
         
-        passwordRow.style.cssText = `
-          margin-top: 0 !important;
-          margin-bottom: 2rem !important;
-          display: flex !important;
-          flex-direction: column !important;
-          gap: 0.5rem !important;
-        `;
+        // 라벨과 입력 필드 컨테이너 찾기
+        const passwordLabelRow = passwordRow.querySelector('.cl-formFieldLabelRow__password') as HTMLElement;
+        const passwordInputContainer = passwordInput?.closest('.cl-formFieldInputGroup') as HTMLElement || 
+                                      passwordInput?.parentElement as HTMLElement;
+
+        if (passwordLabelRow && passwordInputContainer) {
+          // 기존 구조를 테이블 형태로 변경
+          passwordRow.style.cssText = `
+            display: grid !important;
+            grid-template-columns: 150px 1fr !important;
+            gap: 1rem !important;
+            align-items: start !important;
+            margin-bottom: 1.5rem !important;
+            margin-top: 0 !important;
+          `;
+
+          // 라벨을 왼쪽 열에 배치
+          passwordLabelRow.style.cssText = `
+            grid-column: 1 !important;
+            padding-top: 0.75rem !important;
+            margin: 0 !important;
+          `;
+
+          // 입력 필드를 오른쪽 열에 배치
+          passwordInputContainer.style.cssText = `
+            grid-column: 2 !important;
+            margin: 0 !important;
+          `;
+
+          // 안내 문구 추가 (비밀번호 필드 아래)
+          let passwordHint = passwordRow.querySelector('.password-hint') as HTMLElement;
+          if (!passwordHint) {
+            passwordHint = document.createElement('p');
+            passwordHint.className = 'password-hint';
+            passwordHint.textContent = '영문/숫자/특수문자 중 2가지 이상 조합, 8자~16자';
+            passwordHint.style.cssText = `
+              grid-column: 2 !important;
+              font-size: 0.875rem !important;
+              color: #6b7280 !important;
+              margin-top: 0.5rem !important;
+              margin-bottom: 0 !important;
+            `;
+            passwordRow.appendChild(passwordHint);
+          }
+
+          // 오류 메시지도 2열 레이아웃에 맞게 조정
+          const passwordError = passwordRow.querySelector('.cl-formFieldErrorText') as HTMLElement;
+          if (passwordError) {
+            passwordError.style.cssText = `
+              grid-column: 2 !important;
+              margin-top: 0.5rem !important;
+              margin-left: 0 !important;
+            `;
+          }
+        }
       }
 
-      // 필드 순서: 아이디 → 비밀번호
+      // 필드 순서: 이메일 → 비밀번호
       if (identifierRow && passwordRow) {
         const form = identifierRow.parentElement;
         if (form) {
@@ -127,7 +239,7 @@ export default function SignInContent() {
           const passwordIndex = formChildren.indexOf(passwordRow);
 
           if (identifierIndex > passwordIndex) {
-            console.log("아이디 필드를 비밀번호 필드 앞으로 이동");
+            console.log("이메일 필드를 비밀번호 필드 앞으로 이동");
             form.insertBefore(identifierRow, passwordRow);
           }
         }
@@ -195,8 +307,8 @@ export default function SignInContent() {
         </div>
       </SignedIn>
       <SignedOut>
-        <main className="min-h-screen bg-gradient-to-br from-[#fff9f7] to-[#ffe8f0] flex items-center justify-center py-12 px-4">
-          <div className="w-full max-w-md">
+        <main className="min-h-screen bg-white flex items-center justify-center py-12 px-4">
+          <div className="w-full max-w-2xl">
             {/* 헤더 */}
             <div className="text-center mb-8">
               <h1 className="text-4xl font-bold text-[#ff6b9d] mb-3 tracking-tight">
@@ -208,7 +320,7 @@ export default function SignInContent() {
             </div>
 
             {/* 로그인 폼 카드 */}
-            <div className="bg-white rounded-3xl p-8 shadow-lg border border-[#f5d5e3]">
+            <div className="bg-white rounded-lg p-8 shadow-sm border border-gray-200">
               <SignIn
                 routing="path"
                 path="/sign-in"
@@ -225,31 +337,29 @@ export default function SignInContent() {
                     dividerRow: "hidden",
                     
                     // 폼 컨테이너
-                    form: "flex flex-col gap-8",
+                    form: "flex flex-col gap-0",
                     
-                    // 폼 필드 행 - 간격 확보
-                    formFieldRow: "block mb-8 mt-0",
+                    // 폼 필드 행
+                    formFieldRow: "block mb-0 mt-0",
                     
                     // 폼 필드 라벨 행
-                    formFieldLabelRow: "flex justify-between items-center mb-3 mt-0",
+                    formFieldLabelRow: "flex justify-start items-center mb-0 mt-0",
                     
                     // 폼 필드 라벨
-                    formFieldLabel: "block text-[#4a3f48] font-semibold text-base",
+                    formFieldLabel: "block text-[#4a3f48] font-medium text-base",
                     
                     // 입력 필드
                     formFieldInput: 
-                      "block w-full px-4 py-3 mt-2 mb-0 rounded-xl border-2 border-[#f5d5e3] " +
+                      "block w-full px-4 py-3 rounded-lg border border-gray-300 " +
                       "focus:border-[#ff6b9d] focus:ring-2 focus:ring-[#ff6b9d]/20 " +
-                      "transition-all duration-200 text-[#4a3f48] placeholder:text-[#d4b5c8] " +
+                      "transition-all duration-200 text-[#4a3f48] placeholder:text-gray-400 " +
                       "box-border",
                     
                     // 로그인 버튼
                     formButtonPrimary:
-                      "w-full bg-gradient-to-r from-[#ff6b9d] to-[#ff5088] " +
-                      "hover:from-[#ff5088] hover:to-[#ff3d77] " +
-                      "text-white font-semibold py-3 rounded-xl mt-8 " +
-                      "transition-all duration-200 shadow-md hover:shadow-lg " +
-                      "transform hover:-translate-y-0.5",
+                      "w-full bg-[#ff6b9d] hover:bg-[#ff5088] " +
+                      "text-white font-semibold py-3 rounded-lg mt-8 " +
+                      "transition-all duration-200 shadow-sm hover:shadow-md",
                     
                     // 푸터 링크
                     footerActionLink: "text-[#ff6b9d] hover:text-[#ff5088] font-medium",
