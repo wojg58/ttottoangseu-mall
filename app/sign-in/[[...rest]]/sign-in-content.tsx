@@ -75,7 +75,7 @@ export default function SignInContent() {
         passwordInput.placeholder = "비밀번호를 입력하세요";
       }
 
-      // 필드 간격 조정
+      // 필드 간격 조정 - 강제 적용
       const identifierRow = document.querySelector(
         '.cl-formFieldRow__identifier'
       ) as HTMLElement;
@@ -84,13 +84,35 @@ export default function SignInContent() {
       ) as HTMLElement;
 
       if (identifierRow) {
-        identifierRow.style.marginBottom = '1.5rem';
-        identifierRow.style.display = 'block';
+        console.log("[SignInContent] 아이디 필드 간격 적용");
+        identifierRow.style.cssText = `
+          margin-bottom: 2rem !important;
+          margin-top: 0 !important;
+          padding-bottom: 1rem !important;
+          display: block !important;
+          clear: both !important;
+        `;
       }
 
       if (passwordRow) {
-        passwordRow.style.marginBottom = '1.5rem';
-        passwordRow.style.display = 'block';
+        console.log("[SignInContent] 비밀번호 필드 간격 적용");
+        passwordRow.style.cssText = `
+          margin-top: 1.5rem !important;
+          margin-bottom: 2rem !important;
+          padding-top: 1rem !important;
+          display: block !important;
+          clear: both !important;
+        `;
+      }
+
+      // 폼 컨테이너에도 간격 적용
+      const form = document.querySelector('.cl-form') as HTMLElement;
+      if (form) {
+        form.style.cssText = `
+          display: flex !important;
+          flex-direction: column !important;
+          gap: 2rem !important;
+        `;
       }
 
       // 필드 순서 조정: 아이디 → 비밀번호
@@ -206,26 +228,30 @@ export default function SignInContent() {
                     socialButtonsBlockButton: "hidden",
                     dividerRow: "hidden",
                     
+                    // 폼 컨테이너
+                    form: "flex flex-col gap-8",
+                    
                     // 폼 필드 행 - 간격 확보
-                    formFieldRow: "block mb-6",
+                    formFieldRow: "block mb-8 mt-0",
                     
                     // 폼 필드 라벨 행
-                    formFieldLabelRow: "flex justify-between items-center mb-2",
+                    formFieldLabelRow: "flex justify-between items-center mb-3 mt-0",
                     
                     // 폼 필드 라벨
-                    formFieldLabel: "block text-[#4a3f48] font-semibold text-sm",
+                    formFieldLabel: "block text-[#4a3f48] font-semibold text-base",
                     
                     // 입력 필드
                     formFieldInput: 
-                      "block w-full px-4 py-3 mt-1 rounded-xl border-2 border-[#f5d5e3] " +
+                      "block w-full px-4 py-3 mt-2 mb-0 rounded-xl border-2 border-[#f5d5e3] " +
                       "focus:border-[#ff6b9d] focus:ring-2 focus:ring-[#ff6b9d]/20 " +
-                      "transition-all duration-200 text-[#4a3f48] placeholder:text-[#d4b5c8]",
+                      "transition-all duration-200 text-[#4a3f48] placeholder:text-[#d4b5c8] " +
+                      "box-border",
                     
                     // 로그인 버튼
                     formButtonPrimary:
                       "w-full bg-gradient-to-r from-[#ff6b9d] to-[#ff5088] " +
                       "hover:from-[#ff5088] hover:to-[#ff3d77] " +
-                      "text-white font-semibold py-3 rounded-xl mt-4 " +
+                      "text-white font-semibold py-3 rounded-xl mt-8 " +
                       "transition-all duration-200 shadow-md hover:shadow-lg " +
                       "transform hover:-translate-y-0.5",
                     
@@ -237,10 +263,13 @@ export default function SignInContent() {
                     identityPreviewEditButton: "text-[#ff6b9d] hover:text-[#ff5088]",
                     
                     // 오류 메시지
-                    formFieldErrorText: "text-red-500 text-sm mt-1",
+                    formFieldErrorText: "text-red-500 text-sm mt-2",
                     
                     // 최근 사용 배지 숨기기
-                    lastAuthenticationStrategyBadge: "hidden",
+                    lastAuthenticationStrategyBadge: "hidden opacity-0 h-0 w-0",
+                    
+                    // 비밀번호 필드 액션
+                    formFieldAction: "mt-2",
                   },
                 }}
               />

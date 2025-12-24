@@ -610,10 +610,20 @@
    Clerk 로그인 폼 스타일 (필드 간격 조정)
    ======================================== */
 
+/* 로그인 폼 컨테이너 */
+.cl-form,
+.cl-formContainer {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 2rem !important;
+}
+
 /* 로그인 폼 필드 간격 */
 .cl-formFieldRow {
-  margin-bottom: 1.5rem !important;
+  margin-bottom: 2rem !important;
+  margin-top: 0 !important;
   display: block !important;
+  clear: both !important;
 }
 
 /* 필드 라벨 행 */
@@ -621,37 +631,62 @@
   display: flex !important;
   justify-content: space-between !important;
   align-items: center !important;
-  margin-bottom: 0.5rem !important;
+  margin-bottom: 0.75rem !important;
+  margin-top: 0 !important;
 }
 
 /* "최근 사용" 배지 숨기기 */
 .cl-lastAuthenticationStrategyBadge {
   display: none !important;
+  visibility: hidden !important;
+  height: 0 !important;
+  width: 0 !important;
+  opacity: 0 !important;
 }
 
 /* 라벨 스타일 */
 .cl-formFieldLabel {
   display: block !important;
-  margin-bottom: 0.5rem !important;
+  margin-bottom: 0.75rem !important;
+  margin-top: 0 !important;
 }
 
 /* 입력 필드 */
 .cl-formFieldInput {
   display: block !important;
   width: 100% !important;
-  margin-top: 0.25rem !important;
+  margin-top: 0.5rem !important;
+  margin-bottom: 0 !important;
+  box-sizing: border-box !important;
 }
 
-/* 아이디 필드와 비밀번호 필드 간격 */
+/* 아이디 필드 간격 */
 .cl-formFieldRow__identifier {
-  margin-bottom: 1.5rem !important;
+  margin-bottom: 2rem !important;
+  margin-top: 0 !important;
+  padding-bottom: 1rem !important;
 }
 
+/* 비밀번호 필드 간격 */
 .cl-formFieldRow__password {
-  margin-bottom: 1.5rem !important;
+  margin-top: 1rem !important;
+  margin-bottom: 2rem !important;
+  padding-top: 1rem !important;
+}
+
+/* 입력 필드 컨테이너 */
+.cl-formFieldInput__identifier,
+.cl-formFieldInput__password {
+  margin-top: 0.5rem !important;
+  margin-bottom: 1rem !important;
 }
 
 /* 로그인 버튼 위 간격 */
 .cl-formButtonPrimary {
-  margin-top: 1rem !important;
+  margin-top: 2rem !important;
+}
+
+/* 비밀번호 필드 액션 */
+.cl-formFieldAction {
+  margin-top: 0.5rem !important;
 }
