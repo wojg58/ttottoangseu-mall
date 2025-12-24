@@ -64,35 +64,10 @@ export default function SignInContent() {
       ) as HTMLInputElement;
 
       if (identifierRow && identifierInput && !isEmailFieldApplied) {
-        console.log("아이디 필드 간단 스타일 적용");
+        console.log("아이디 필드 스타일 적용");
         
         // placeholder 비우기
         identifierInput.placeholder = "";
-
-        // 라벨 숨기기
-        const identifierLabelRow = identifierRow.querySelector('.cl-formFieldLabelRow__identifier') as HTMLElement;
-        if (identifierLabelRow) {
-          identifierLabelRow.style.display = 'none';
-        }
-        
-        // 입력 필드 스타일 적용 (심플한 스타일)
-        identifierInput.style.cssText = `
-          width: 100% !important;
-          padding: 0.75rem 1rem !important;
-          min-height: 3rem !important;
-          border: 1px solid #e5e7eb !important;
-          border-radius: 0.25rem !important;
-          font-size: 1rem !important;
-          box-sizing: border-box !important;
-          background: white !important;
-          outline: none !important;
-          margin-bottom: 0.75rem !important;
-        `;
-        
-        // identifierRow 스타일
-        identifierRow.style.cssText = `
-          margin-bottom: 0 !important;
-        `;
 
         isEmailFieldApplied = true;
       }
@@ -104,34 +79,10 @@ export default function SignInContent() {
       ) as HTMLInputElement;
 
       if (passwordRow && passwordInput && !isPasswordFieldApplied) {
-        console.log("비밀번호 필드 간단 스타일 적용");
+        console.log("비밀번호 필드 스타일 적용");
         
         // placeholder 비우기
         passwordInput.placeholder = "";
-
-        // 라벨 숨기기
-        const passwordLabelRow = passwordRow.querySelector('.cl-formFieldLabelRow__password') as HTMLElement;
-        if (passwordLabelRow) {
-          passwordLabelRow.style.display = 'none';
-        }
-        
-        // 입력 필드 스타일 적용 (심플한 스타일)
-        passwordInput.style.cssText = `
-          width: 100% !important;
-          padding: 0.75rem 1rem !important;
-          min-height: 3rem !important;
-          border: 1px solid #e5e7eb !important;
-          border-radius: 0.25rem !important;
-          font-size: 1rem !important;
-          box-sizing: border-box !important;
-          background: white !important;
-          outline: none !important;
-        `;
-        
-        // passwordRow 스타일
-        passwordRow.style.cssText = `
-          margin-bottom: 1rem !important;
-        `;
 
         isPasswordFieldApplied = true;
       }
@@ -281,20 +232,20 @@ export default function SignInContent() {
                     // 폼 컨테이너
                     form: "flex flex-col gap-4",
                     
-                    // 폼 필드 행 (간격 증가)
+                    // 폼 필드 행
                     formFieldRow: "block mb-4 mt-0",
                     
-                    // 폼 필드 라벨 행
-                    formFieldLabelRow: "flex justify-start items-center mb-0 mt-0",
+                    // 폼 필드 라벨 행 - 숨김
+                    formFieldLabelRow: "hidden",
                     
-                    // 폼 필드 라벨
-                    formFieldLabel: "block text-[#4a3f48] font-medium text-base",
+                    // 폼 필드 라벨 - 숨김
+                    formFieldLabel: "hidden",
                     
-                    // 입력 필드 (높이 증가)
+                    // 입력 필드
                     formFieldInput: 
                       "block w-full px-4 py-4 rounded-lg border border-gray-300 " +
                       "focus:border-[#ff6b9d] focus:ring-2 focus:ring-[#ff6b9d]/20 " +
-                      "transition-all duration-200 text-[#4a3f48] placeholder:text-gray-400 " +
+                      "transition-all duration-200 text-[#4a3f48] placeholder:text-transparent " +
                       "box-border min-h-[3.5rem] text-base",
                     
                     // 로그인 버튼
