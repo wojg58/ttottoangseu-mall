@@ -68,7 +68,7 @@ export default function RootLayout({
             rel="stylesheet"
           />
         </head>
-        <body className="antialiased min-h-screen flex flex-col">
+        <body className="antialiased min-h-screen flex flex-col" suppressHydrationWarning>
           <SyncUserProvider>
             <ShopHeader />
             <div className="flex-1">{children}</div>

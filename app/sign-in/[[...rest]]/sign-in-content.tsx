@@ -22,13 +22,13 @@ export default function SignInContent() {
   const { signIn: clerkSignIn, setActive } = useClerk();
   const redirectUrl = searchParams.get("redirect_url") || "/";
 
-  // 클라이언트 사이드에서만 실행
-  if (typeof window !== "undefined") {
+  // 클라이언트 사이드에서만 실행 (useEffect 안으로 이동하여 hydration mismatch 방지)
+  useEffect(() => {
     console.group("[SignInContent] 로그인 페이지 초기화");
     console.log("리다이렉트 URL:", redirectUrl);
     console.log("현재 URL:", window.location.href);
     console.groupEnd();
-  }
+  }, [redirectUrl]);
 
   // 폼 필드를 세로 레이아웃으로 변경 (라벨 위, 입력칸 아래)
   useEffect(() => {
