@@ -24,17 +24,17 @@ export default function SignInContent() {
   console.log("현재 URL:", window.location.href);
   console.groupEnd();
 
-  // placeholder 텍스트 변경, 라벨 추가, 필드 간격 조정
+  // placeholder 텍스트 변경, 라벨 추가, 필드 순서 재정렬
   useEffect(() => {
     const updateForm = () => {
-      console.log("[SignInContent] 폼 필드 업데이트 중...");
+      console.group("[SignInContent] 폼 필드 업데이트");
 
       // "최근 사용" 배지 숨기기
       const badges = document.querySelectorAll('.cl-lastAuthenticationStrategyBadge');
       badges.forEach((badge) => {
         const badgeElement = badge as HTMLElement;
         if (badgeElement.style.display !== 'none') {
-          console.log("[SignInContent] '최근 사용' 배지 숨김");
+          console.log("'최근 사용' 배지 숨김");
           badgeElement.style.display = 'none';
         }
       });
@@ -44,7 +44,7 @@ export default function SignInContent() {
         'label[for="identifier-field"]'
       ) as HTMLLabelElement;
       if (identifierLabel && !identifierLabel.textContent?.includes("아이디")) {
-        console.log("[SignInContent] 아이디 라벨 변경");
+        console.log("아이디 라벨 변경");
         identifierLabel.textContent = "아이디";
       }
 
@@ -53,7 +53,7 @@ export default function SignInContent() {
         'input[name="identifier"], input[id="identifier-field"]'
       ) as HTMLInputElement;
       if (identifierInput && identifierInput.placeholder !== "아이디를 입력하세요") {
-        console.log("[SignInContent] 아이디 placeholder 변경");
+        console.log("아이디 placeholder 변경");
         identifierInput.placeholder = "아이디를 입력하세요";
       }
 
@@ -62,7 +62,7 @@ export default function SignInContent() {
         'label[for="password-field"]'
       ) as HTMLLabelElement;
       if (passwordLabel && !passwordLabel.textContent?.includes("비밀번호")) {
-        console.log("[SignInContent] 비밀번호 라벨 변경");
+        console.log("비밀번호 라벨 변경");
         passwordLabel.textContent = "비밀번호";
       }
 
@@ -71,77 +71,72 @@ export default function SignInContent() {
         'input[name="password"], input[id="password-field"]'
       ) as HTMLInputElement;
       if (passwordInput && passwordInput.placeholder !== "비밀번호를 입력하세요") {
-        console.log("[SignInContent] 비밀번호 placeholder 변경");
+        console.log("비밀번호 placeholder 변경");
         passwordInput.placeholder = "비밀번호를 입력하세요";
       }
 
-      // 필드 간격 조정 - 강제 적용
-      const identifierRow = document.querySelector(
-        '.cl-formFieldRow__identifier'
-      ) as HTMLElement;
-      const passwordRow = document.querySelector(
-        '.cl-formFieldRow__password'
-      ) as HTMLElement;
+      // ===== 핵심: 필드 구조 재정렬 =====
+      // 각 필드의 라벨 행과 입력창을 올바른 순서로 재배치
+      const identifierLabelRow = document.querySelector('.cl-formFieldLabelRow__identifier') as HTMLElement;
+      const identifierInputContainer = identifierInput?.parentElement as HTMLElement;
+      const passwordLabelRow = document.querySelector('.cl-formFieldLabelRow__password') as HTMLElement;
+      const passwordInputContainer = passwordInput?.closest('.cl-formFieldInputGroup') as HTMLElement || passwordInput?.parentElement as HTMLElement;
 
-      if (identifierRow) {
-        console.log("[SignInContent] 아이디 필드 간격 적용");
+      const identifierRow = document.querySelector('.cl-formFieldRow__identifier') as HTMLElement;
+      const passwordRow = document.querySelector('.cl-formFieldRow__password') as HTMLElement;
+
+      // 아이디 필드 재정렬: 라벨 → 입력창
+      if (identifierRow && identifierLabelRow && identifierInputContainer) {
+        console.log("아이디 필드 순서 재정렬");
+        identifierRow.innerHTML = '';
+        identifierRow.appendChild(identifierLabelRow);
+        identifierRow.appendChild(identifierInputContainer);
+        
         identifierRow.style.cssText = `
           margin-bottom: 2rem !important;
           margin-top: 0 !important;
-          padding-bottom: 1rem !important;
-          display: block !important;
-          clear: both !important;
-        `;
-      }
-
-      if (passwordRow) {
-        console.log("[SignInContent] 비밀번호 필드 간격 적용");
-        passwordRow.style.cssText = `
-          margin-top: 1.5rem !important;
-          margin-bottom: 2rem !important;
-          padding-top: 1rem !important;
-          display: block !important;
-          clear: both !important;
-        `;
-      }
-
-      // 폼 컨테이너에도 간격 적용
-      const form = document.querySelector('.cl-form') as HTMLElement;
-      if (form) {
-        form.style.cssText = `
           display: flex !important;
           flex-direction: column !important;
-          gap: 2rem !important;
+          gap: 0.5rem !important;
         `;
       }
 
-      // 필드 순서 조정: 아이디 → 비밀번호
+      // 비밀번호 필드 재정렬: 라벨 → 입력창
+      if (passwordRow && passwordLabelRow && passwordInputContainer) {
+        console.log("비밀번호 필드 순서 재정렬");
+        passwordRow.innerHTML = '';
+        passwordRow.appendChild(passwordLabelRow);
+        passwordRow.appendChild(passwordInputContainer);
+        
+        passwordRow.style.cssText = `
+          margin-top: 0 !important;
+          margin-bottom: 2rem !important;
+          display: flex !important;
+          flex-direction: column !important;
+          gap: 0.5rem !important;
+        `;
+      }
+
+      // 필드 순서: 아이디 → 비밀번호
       if (identifierRow && passwordRow) {
-        const form = identifierRow.parentElement || passwordRow.parentElement;
+        const form = identifierRow.parentElement;
         if (form) {
           const formChildren = Array.from(form.children);
           const identifierIndex = formChildren.indexOf(identifierRow);
           const passwordIndex = formChildren.indexOf(passwordRow);
 
-          // 아이디 필드가 비밀번호 필드보다 뒤에 있으면 순서 변경
           if (identifierIndex > passwordIndex) {
-            console.log("[SignInContent] 필드 순서 변경 중...");
+            console.log("아이디 필드를 비밀번호 필드 앞으로 이동");
             form.insertBefore(identifierRow, passwordRow);
-          }
-          // 비밀번호 필드가 아이디 필드 바로 다음에 오도록 보장
-          else if (identifierIndex < passwordIndex - 1) {
-            const nextSibling = identifierRow.nextElementSibling;
-            if (nextSibling && nextSibling !== passwordRow) {
-              console.log("[SignInContent] 비밀번호 필드 위치 조정");
-              form.insertBefore(passwordRow, nextSibling);
-            }
           }
         }
       }
+
+      console.groupEnd();
     };
 
     // 초기 실행
-    updateForm();
+    setTimeout(updateForm, 100);
 
     // MutationObserver로 동적으로 추가되는 요소 감지
     const observer = new MutationObserver(() => {
@@ -153,7 +148,7 @@ export default function SignInContent() {
     });
 
     // 주기적으로 확인 (Clerk가 동적으로 필드를 추가할 수 있음)
-    const interval = setInterval(updateForm, 500);
+    const interval = setInterval(updateForm, 1000);
 
     return () => {
       observer.disconnect();
