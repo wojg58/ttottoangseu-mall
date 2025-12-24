@@ -54,25 +54,33 @@ export default function SignInContent() {
       console.group("[SignInContent] 폼 필드 업데이트 - 세로 레이아웃");
 
       // "최근 사용" 배지 숨기기
-      const badges = document.querySelectorAll('.cl-lastAuthenticationStrategyBadge');
+      const badges = document.querySelectorAll(
+        ".cl-lastAuthenticationStrategyBadge",
+      );
       badges.forEach((badge) => {
         const badgeElement = badge as HTMLElement;
-        if (badgeElement.style.display !== 'none') {
-          badgeElement.style.display = 'none';
+        if (badgeElement.style.display !== "none") {
+          badgeElement.style.display = "none";
         }
       });
 
       // 아이디 필드 처리
-      const identifierRow = document.querySelector('.cl-formFieldRow__identifier') as HTMLElement;
+      const identifierRow = document.querySelector(
+        ".cl-formFieldRow__identifier",
+      ) as HTMLElement;
       const identifierInput = document.querySelector(
-        'input[name="identifier"], input[id="identifier-field"], input[id*="identifier"]'
+        'input[name="identifier"], input[id="identifier-field"], input[id*="identifier"]',
       ) as HTMLInputElement;
-      const identifierLabelRow = identifierRow?.querySelector('.cl-formFieldLabelRow__identifier') as HTMLElement;
-      const identifierLabel = identifierRow?.querySelector('.cl-formFieldLabel__identifier-field') as HTMLElement;
+      const identifierLabelRow = identifierRow?.querySelector(
+        ".cl-formFieldLabelRow__identifier",
+      ) as HTMLElement;
+      const identifierLabel = identifierRow?.querySelector(
+        ".cl-formFieldLabel__identifier-field",
+      ) as HTMLElement;
 
       if (identifierRow && identifierInput && !isEmailFieldApplied) {
         console.log("[SignInContent] 이메일 주소 입력칸 스타일 적용 및 활성화");
-        
+
         // 이메일 주소 입력칸 컨테이너 표시 및 활성화
         identifierRow.style.cssText = `
           display: block !important;
@@ -80,56 +88,60 @@ export default function SignInContent() {
           opacity: 1 !important;
           pointer-events: auto !important;
         `;
-        
+
         // 이메일 주소 입력 필드 활성화
-        identifierInput.removeAttribute('disabled');
-        identifierInput.removeAttribute('readonly');
-        identifierInput.removeAttribute('tabindex');
-        identifierInput.setAttribute('tabindex', '0');
-        identifierInput.setAttribute('aria-disabled', 'false');
-        identifierInput.style.pointerEvents = 'auto';
-        identifierInput.style.cursor = 'text';
-        identifierInput.style.display = 'block';
-        identifierInput.style.visibility = 'visible';
-        identifierInput.style.opacity = '1';
-        
+        identifierInput.removeAttribute("disabled");
+        identifierInput.removeAttribute("readonly");
+        identifierInput.removeAttribute("tabindex");
+        identifierInput.setAttribute("tabindex", "0");
+        identifierInput.setAttribute("aria-disabled", "false");
+        identifierInput.style.pointerEvents = "auto";
+        identifierInput.style.cursor = "text";
+        identifierInput.style.display = "block";
+        identifierInput.style.visibility = "visible";
+        identifierInput.style.opacity = "1";
+
         // placeholder 비우기
         identifierInput.placeholder = "";
-        
+
         // identifier 필드의 검증 속성 수정
-        identifierInput.removeAttribute('pattern');
-        identifierInput.setAttribute('type', 'email');
-        identifierInput.setAttribute('inputmode', 'email');
-        identifierInput.removeAttribute('aria-invalid');
-        identifierInput.setAttribute('aria-invalid', 'false');
+        identifierInput.removeAttribute("pattern");
+        identifierInput.setAttribute("type", "email");
+        identifierInput.setAttribute("inputmode", "email");
+        identifierInput.removeAttribute("aria-invalid");
+        identifierInput.setAttribute("aria-invalid", "false");
 
         // 이메일 입력 후 자동 리다이렉트 방지
-        identifierInput.addEventListener('blur', (e) => {
+        identifierInput.addEventListener("blur", (e) => {
           // 이메일 입력 후 blur 이벤트가 발생해도 페이지 이동을 막지 않음
           // 대신 비밀번호 필드로 포커스 이동
           const passwordInput = document.querySelector(
-            'input[name="password"], input[id="password-field"], input[id*="password"]'
+            'input[name="password"], input[id="password-field"], input[id*="password"]',
           ) as HTMLInputElement;
           if (passwordInput && identifierInput.value) {
             // 비밀번호 필드가 있으면 포커스 이동하지 않음 (사용자가 직접 클릭하도록)
             console.log("[SignInContent] 이메일 입력 완료, 비밀번호 입력 대기");
           }
-          
+
           // 에러 메시지 제거
-          const error = identifierRow.querySelector('.cl-formFieldErrorText') as HTMLElement;
+          const error = identifierRow.querySelector(
+            ".cl-formFieldErrorText",
+          ) as HTMLElement;
           if (error) {
-            error.style.display = 'none';
+            error.style.display = "none";
           }
         });
-        
+
         // 입력 시 에러 메시지 제거
-        identifierInput.addEventListener('input', () => {
-          const error = identifierRow.querySelector('.cl-formFieldErrorText') as HTMLElement;
+        identifierInput.addEventListener("input", () => {
+          const error = identifierRow.querySelector(
+            ".cl-formFieldErrorText",
+          ) as HTMLElement;
           if (error) {
-            error.style.display = 'none';
+            error.style.display = "none";
           }
           // aria-invalid 속성도 false로 설정
-          identifierInput.setAttribute('aria-invalid', 'false');
+          identifierInput.setAttribute("aria-invalid", "false");
         });
 
         // 라벨 행과 라벨이 보이도록 보장
@@ -157,16 +169,22 @@ export default function SignInContent() {
       }
 
       // 비밀번호 필드 처리
-      const passwordRow = document.querySelector('.cl-formFieldRow__password') as HTMLElement;
+      const passwordRow = document.querySelector(
+        ".cl-formFieldRow__password",
+      ) as HTMLElement;
       const passwordInput = document.querySelector(
-        'input[name="password"], input[id="password-field"], input[id*="password"]'
+        'input[name="password"], input[id="password-field"], input[id*="password"]',
       ) as HTMLInputElement;
-      const passwordLabelRow = passwordRow?.querySelector('.cl-formFieldLabelRow__password') as HTMLElement;
-      const passwordLabel = passwordRow?.querySelector('.cl-formFieldLabel__password-field') as HTMLElement;
+      const passwordLabelRow = passwordRow?.querySelector(
+        ".cl-formFieldLabelRow__password",
+      ) as HTMLElement;
+      const passwordLabel = passwordRow?.querySelector(
+        ".cl-formFieldLabel__password-field",
+      ) as HTMLElement;
 
       if (passwordRow && passwordInput && !isPasswordFieldApplied) {
         console.log("[SignInContent] 비밀번호 입력칸 스타일 적용 및 활성화");
-        
+
         // 비밀번호 입력칸 컨테이너 표시 및 활성화
         passwordRow.style.cssText = `
           display: block !important;
@@ -174,22 +192,22 @@ export default function SignInContent() {
           opacity: 1 !important;
           pointer-events: auto !important;
         `;
-        
+
         // placeholder 비우기
         passwordInput.placeholder = "";
 
         // 비밀번호 필드를 입력 가능하도록 설정
-        passwordInput.removeAttribute('disabled');
-        passwordInput.removeAttribute('readonly');
-        passwordInput.removeAttribute('tabindex');
-        passwordInput.setAttribute('tabindex', '0');
-        passwordInput.setAttribute('aria-disabled', 'false');
-        passwordInput.style.pointerEvents = 'auto';
-        passwordInput.style.cursor = 'text';
-        passwordInput.style.display = 'block';
-        passwordInput.style.visibility = 'visible';
-        passwordInput.style.opacity = '1';
-        
+        passwordInput.removeAttribute("disabled");
+        passwordInput.removeAttribute("readonly");
+        passwordInput.removeAttribute("tabindex");
+        passwordInput.setAttribute("tabindex", "0");
+        passwordInput.setAttribute("aria-disabled", "false");
+        passwordInput.style.pointerEvents = "auto";
+        passwordInput.style.cursor = "text";
+        passwordInput.style.display = "block";
+        passwordInput.style.visibility = "visible";
+        passwordInput.style.opacity = "1";
+
         // 비밀번호 필드 스타일 - 입력 가능하도록
         passwordInput.style.cssText += `
           pointer-events: auto !important;
@@ -234,12 +252,14 @@ export default function SignInContent() {
         }
 
         // 비밀번호 표시/숨김 버튼도 활성화
-        const showPasswordButton = passwordRow.querySelector('.cl-formFieldInputShowPasswordButton') as HTMLElement;
+        const showPasswordButton = passwordRow.querySelector(
+          ".cl-formFieldInputShowPasswordButton",
+        ) as HTMLElement;
         if (showPasswordButton) {
-          showPasswordButton.removeAttribute('tabindex');
-          showPasswordButton.setAttribute('tabindex', '0');
-          showPasswordButton.style.pointerEvents = 'auto';
-          showPasswordButton.style.cursor = 'pointer';
+          showPasswordButton.removeAttribute("tabindex");
+          showPasswordButton.setAttribute("tabindex", "0");
+          showPasswordButton.style.pointerEvents = "auto";
+          showPasswordButton.style.cursor = "pointer";
           console.log("비밀번호 표시/숨김 버튼 활성화");
         }
 
@@ -247,7 +267,12 @@ export default function SignInContent() {
       }
 
       // 필드 순서: 이메일 → 비밀번호
-      if (identifierRow && passwordRow && isEmailFieldApplied && isPasswordFieldApplied) {
+      if (
+        identifierRow &&
+        passwordRow &&
+        isEmailFieldApplied &&
+        isPasswordFieldApplied
+      ) {
         const form = identifierRow.parentElement;
         if (form) {
           const formChildren = Array.from(form.children);
@@ -270,9 +295,11 @@ export default function SignInContent() {
             opacity: 1 !important;
           `;
         }
-        
+
         // identifier 필드 컨테이너도 보이도록 보장
-        const identifierField = identifierRow.querySelector('.cl-formField__identifier') as HTMLElement;
+        const identifierField = identifierRow.querySelector(
+          ".cl-formField__identifier",
+        ) as HTMLElement;
         if (identifierField) {
           identifierField.style.cssText += `
             display: block !important;
@@ -280,9 +307,11 @@ export default function SignInContent() {
             opacity: 1 !important;
           `;
         }
-        
+
         // 에러 메시지만 숨기기 (입력 필드는 숨기지 않음)
-        const identifierError = identifierRow.querySelector('.cl-formFieldErrorText') as HTMLElement;
+        const identifierError = identifierRow.querySelector(
+          ".cl-formFieldErrorText",
+        ) as HTMLElement;
         if (identifierError) {
           // "Identifier is invalid." 에러 메시지만 숨기기
           identifierError.style.cssText = `
@@ -297,7 +326,9 @@ export default function SignInContent() {
       }
 
       if (passwordRow) {
-        const passwordError = passwordRow.querySelector('.cl-formFieldErrorText') as HTMLElement;
+        const passwordError = passwordRow.querySelector(
+          ".cl-formFieldErrorText",
+        ) as HTMLElement;
         if (passwordError) {
           passwordError.style.cssText = `
             margin-top: 0.5rem !important;
@@ -309,19 +340,23 @@ export default function SignInContent() {
       }
 
       // 로그인 버튼이 보이도록 보장 및 간격 확인
-      const loginButton = document.querySelector('.cl-formButtonPrimary, button[type="submit"]') as HTMLButtonElement;
-      const loginButtonContainer = loginButton?.closest('.cl-internal-1pnppin') as HTMLElement;
-      
+      const loginButton = document.querySelector(
+        '.cl-formButtonPrimary, button[type="submit"]',
+      ) as HTMLButtonElement;
+      const loginButtonContainer = loginButton?.closest(
+        ".cl-internal-1pnppin",
+      ) as HTMLElement;
+
       if (loginButton) {
         console.log("로그인 버튼 스타일 적용 및 클릭 가능하도록 설정");
-        
+
         // 로그인 버튼을 클릭 가능하도록 설정
-        loginButton.removeAttribute('disabled');
-        loginButton.removeAttribute('tabindex');
-        loginButton.setAttribute('tabindex', '0');
-        loginButton.setAttribute('aria-disabled', 'false');
-        loginButton.type = 'submit';
-        
+        loginButton.removeAttribute("disabled");
+        loginButton.removeAttribute("tabindex");
+        loginButton.setAttribute("tabindex", "0");
+        loginButton.setAttribute("aria-disabled", "false");
+        loginButton.type = "submit";
+
         loginButton.style.cssText = `
           position: relative !important;
           display: block !important;
@@ -335,9 +370,9 @@ export default function SignInContent() {
           pointer-events: auto !important;
           cursor: pointer !important;
         `;
-        
+
         // 로그인 버튼 클릭 이벤트 로깅
-        loginButton.addEventListener('click', (e) => {
+        loginButton.addEventListener("click", (e) => {
           console.group("[SignInContent] 로그인 버튼 클릭");
           console.log("시간:", new Date().toISOString());
           console.log("버튼 타입:", loginButton.type);
@@ -368,14 +403,17 @@ export default function SignInContent() {
 
     const observer = new MutationObserver(() => {
       const now = Date.now();
-      if (now - lastUpdateTime > THROTTLE_MS && (!isEmailFieldApplied || !isPasswordFieldApplied)) {
+      if (
+        now - lastUpdateTime > THROTTLE_MS &&
+        (!isEmailFieldApplied || !isPasswordFieldApplied)
+      ) {
         lastUpdateTime = now;
         updateForm();
       }
     });
 
     // Clerk 폼이 렌더링될 컨테이너만 관찰
-    const formContainer = document.querySelector('.cl-rootBox, .cl-card, form');
+    const formContainer = document.querySelector(".cl-rootBox, .cl-card, form");
     if (formContainer) {
       observer.observe(formContainer, {
         childList: true,
@@ -402,10 +440,10 @@ export default function SignInContent() {
     };
 
     // 폼 제출 이벤트 리스너
-    const form = document.querySelector('form.cl-form');
+    const form = document.querySelector("form.cl-form");
     if (form) {
-      form.addEventListener('submit', handleSignIn);
-      return () => form.removeEventListener('submit', handleSignIn);
+      form.addEventListener("submit", handleSignIn);
+      return () => form.removeEventListener("submit", handleSignIn);
     }
   }, [redirectUrl]);
 
@@ -413,57 +451,59 @@ export default function SignInContent() {
   useEffect(() => {
     const preventSecondPageRedirect = () => {
       const currentPath = window.location.pathname;
-      
+
       // /sign-in/create, /sign-up, 또는 다른 두 번째 입력 페이지로 이동하는 것을 감지
       if (
-        (currentPath.includes('/sign-in/') && currentPath !== '/sign-in') ||
-        currentPath === '/sign-up' ||
-        currentPath.includes('/sign-up/')
+        (currentPath.includes("/sign-in/") && currentPath !== "/sign-in") ||
+        currentPath === "/sign-up" ||
+        currentPath.includes("/sign-up/")
       ) {
-        console.group("[SignInContent] 두 번째 입력 페이지로 이동 감지, 즉시 차단");
+        console.group(
+          "[SignInContent] 두 번째 입력 페이지로 이동 감지, 즉시 차단",
+        );
         console.log("현재 경로:", currentPath);
         console.log("시간:", new Date().toISOString());
         console.groupEnd();
-        
+
         // 즉시 로그인 페이지로 다시 리다이렉트
-        window.history.replaceState(null, '', '/sign-in');
-        router.replace('/sign-in');
+        window.history.replaceState(null, "", "/sign-in");
+        router.replace("/sign-in");
       }
     };
 
     // 더 빠른 주기로 URL 확인 (100ms)
     const interval = setInterval(preventSecondPageRedirect, 100);
-    
+
     // popstate 이벤트 리스너 (뒤로가기/앞으로가기)
-    window.addEventListener('popstate', preventSecondPageRedirect);
-    
+    window.addEventListener("popstate", preventSecondPageRedirect);
+
     // pushstate/replacestate 이벤트 감지 및 차단
     const originalPushState = history.pushState;
     const originalReplaceState = history.replaceState;
-    
-    history.pushState = function(...args) {
-      const url = typeof args[2] === 'string' ? args[2] : '';
-      if (url.includes('/sign-in/') && url !== '/sign-in') {
+
+    history.pushState = function (...args) {
+      const url = typeof args[2] === "string" ? args[2] : "";
+      if (url.includes("/sign-in/") && url !== "/sign-in") {
         console.log("[SignInContent] pushState 차단:", url);
         return; // 두 번째 페이지로의 pushState 차단
       }
       originalPushState.apply(history, args);
       setTimeout(preventSecondPageRedirect, 0);
     };
-    
-    history.replaceState = function(...args) {
-      const url = typeof args[2] === 'string' ? args[2] : '';
-      if (url.includes('/sign-in/') && url !== '/sign-in') {
+
+    history.replaceState = function (...args) {
+      const url = typeof args[2] === "string" ? args[2] : "";
+      if (url.includes("/sign-in/") && url !== "/sign-in") {
         console.log("[SignInContent] replaceState 차단:", url);
         return; // 두 번째 페이지로의 replaceState 차단
       }
       originalReplaceState.apply(history, args);
       setTimeout(preventSecondPageRedirect, 0);
     };
-    
+
     return () => {
       clearInterval(interval);
-      window.removeEventListener('popstate', preventSecondPageRedirect);
+      window.removeEventListener("popstate", preventSecondPageRedirect);
       history.pushState = originalPushState;
       history.replaceState = originalReplaceState;
     };
@@ -472,26 +512,30 @@ export default function SignInContent() {
   // Clerk 폼 제출을 가로채서 바로 로그인 처리
   useEffect(() => {
     const interceptClerkFormSubmit = () => {
-      const clerkForm = document.querySelector('form.cl-form') as HTMLFormElement;
+      const clerkForm = document.querySelector(
+        "form.cl-form",
+      ) as HTMLFormElement;
       if (!clerkForm) return;
 
       // 폼 제출 이벤트 가로채기
       const handleFormSubmit = async (e: SubmitEvent) => {
-        console.group("[SignInContent] Clerk 폼 제출 가로채기 - 바로 로그인 처리");
+        console.group(
+          "[SignInContent] Clerk 폼 제출 가로채기 - 바로 로그인 처리",
+        );
         console.log("시간:", new Date().toISOString());
         console.log("이벤트 타입:", e.type);
-        
+
         // 기본 동작 방지
         e.preventDefault();
         e.stopPropagation();
         e.stopImmediatePropagation();
-        
+
         // Clerk 폼에서 이메일과 비밀번호 추출
         const identifierInput = clerkForm.querySelector(
-          'input[name="identifier"], input[id="identifier-field"], input[id*="identifier"], input[type="email"]'
+          'input[name="identifier"], input[id="identifier-field"], input[id*="identifier"], input[type="email"]',
         ) as HTMLInputElement;
         const passwordInput = clerkForm.querySelector(
-          'input[name="password"], input[id="password-field"], input[id*="password"], input[type="password"]'
+          'input[name="password"], input[id="password-field"], input[id*="password"], input[type="password"]',
         ) as HTMLInputElement;
 
         if (identifierInput && passwordInput) {
@@ -506,56 +550,87 @@ export default function SignInContent() {
               // Clerk가 초기화될 때까지 대기 (최대 10초)
               let attempts = 0;
               const maxAttempts = 100; // 10초 (100ms * 100)
-              
+
               console.log("[SignInContent] Clerk 초기화 대기 시작");
-              
+
               // Clerk가 완전히 초기화될 때까지 대기
               while (attempts < maxAttempts) {
                 // 현재 상태 확인
                 const currentIsLoaded = isLoaded;
-                const hasSignIn = clerk?.signIn;
-                const hasSetActive = clerk?.setActive;
-                
+                const hasSignIn =
+                  clerk && typeof (clerk as any).signIn !== "undefined";
+                const hasSetActive =
+                  clerk && typeof clerk.setActive === "function";
+
                 if (currentIsLoaded && clerk && hasSignIn && hasSetActive) {
                   console.log("[SignInContent] Clerk 초기화 확인 완료");
                   break;
                 }
-                
-                await new Promise(resolve => setTimeout(resolve, 100));
+
+                await new Promise((resolve) => setTimeout(resolve, 100));
                 attempts++;
-                
+
                 // 주기적으로 상태 확인
                 if (attempts % 10 === 0) {
-                  console.log(`[SignInContent] 초기화 대기 중... (${attempts * 100}ms)`);
+                  console.log(
+                    `[SignInContent] 초기화 대기 중... (${attempts * 100}ms)`,
+                  );
                   console.log(`  - isLoaded: ${isLoaded}`);
                   console.log(`  - clerk: ${!!clerk}`);
-                  console.log(`  - signIn: ${!!clerk?.signIn}`);
-                  console.log(`  - setActive: ${!!clerk?.setActive}`);
+                  console.log(`  - signIn: ${hasSignIn}`);
+                  console.log(`  - setActive: ${hasSetActive}`);
                 }
               }
 
               // 최종 확인
-              if (!isLoaded || !clerk || !clerk.signIn || !clerk.setActive) {
-                console.error("[SignInContent] Clerk가 초기화되지 않음 (타임아웃)");
-                console.error("최종 상태 - isLoaded:", isLoaded, "clerk:", !!clerk, "signIn:", !!clerk?.signIn, "setActive:", !!clerk?.setActive);
-                
+              const hasSignInFinal =
+                clerk && typeof (clerk as any).signIn !== "undefined";
+              const hasSetActiveFinal =
+                clerk && typeof clerk.setActive === "function";
+
+              if (
+                !isLoaded ||
+                !clerk ||
+                !hasSignInFinal ||
+                !hasSetActiveFinal
+              ) {
+                console.error(
+                  "[SignInContent] Clerk가 초기화되지 않음 (타임아웃)",
+                );
+                console.error(
+                  "최종 상태 - isLoaded:",
+                  isLoaded,
+                  "clerk:",
+                  !!clerk,
+                  "signIn:",
+                  hasSignInFinal,
+                  "setActive:",
+                  hasSetActiveFinal,
+                );
+
                 // 페이지 새로고침 제안
-                const shouldReload = confirm("Clerk가 아직 초기화되지 않았습니다. 페이지를 새로고침하시겠습니까?");
+                const shouldReload = confirm(
+                  "Clerk가 아직 초기화되지 않았습니다. 페이지를 새로고침하시겠습니까?",
+                );
                 if (shouldReload) {
                   window.location.reload();
                 }
                 return;
               }
 
-              console.log("[SignInContent] Clerk 초기화 확인 완료, 로그인 시작");
+              console.log(
+                "[SignInContent] Clerk 초기화 확인 완료, 로그인 시작",
+              );
 
               // 1단계: 이메일로 signIn 생성
               console.log("[SignInContent] SignIn.create 호출 중...");
-              const signInAttempt = await clerk.signIn.create({
+              const signInAttempt = await (clerk as any).signIn.create({
                 identifier: emailValue,
               });
 
-              console.log("[SignInContent] SignIn 생성 완료, 비밀번호 인증 시도");
+              console.log(
+                "[SignInContent] SignIn 생성 완료, 비밀번호 인증 시도",
+              );
 
               // 2단계: 비밀번호로 인증 시도
               console.log("[SignInContent] attemptFirstFactor 호출 중...");
@@ -566,42 +641,71 @@ export default function SignInContent() {
 
               console.log("[SignInContent] 로그인 성공, 상태:", result.status);
               console.log("[SignInContent] result 전체:", result);
-              
+
               // 로그인 성공 후 세션 활성화 및 리다이렉트
               if (result.status === "complete") {
                 console.log("[SignInContent] 로그인 완료, 세션 활성화 시작");
-                console.log("[SignInContent] result.createdSessionId:", result.createdSessionId);
-                console.log("[SignInContent] setActive 존재:", !!setActive);
-                
+                console.log(
+                  "[SignInContent] result.createdSessionId:",
+                  result.createdSessionId,
+                );
+                console.log(
+                  "[SignInContent] clerk.setActive 존재:",
+                  !!clerk?.setActive,
+                );
+
                 // 세션 활성화
                 if (result.createdSessionId && clerk.setActive) {
                   try {
-                    console.log("[SignInContent] setActive 호출 중, sessionId:", result.createdSessionId);
+                    console.log(
+                      "[SignInContent] setActive 호출 중, sessionId:",
+                      result.createdSessionId,
+                    );
                     await clerk.setActive({ session: result.createdSessionId });
                     console.log("[SignInContent] setActive 완료");
-                    
+
                     // setActive 후 약간의 딜레이 (세션 동기화 대기)
-                    await new Promise(resolve => setTimeout(resolve, 500));
-                    
-                    console.log("[SignInContent] 세션 활성화 완료, isSignedIn 상태 확인");
+                    await new Promise((resolve) => setTimeout(resolve, 500));
+
+                    console.log(
+                      "[SignInContent] 세션 활성화 완료, isSignedIn 상태 확인",
+                    );
                     console.log("[SignInContent] 현재 isSignedIn:", isSignedIn);
                     console.log("[SignInContent] 현재 isLoaded:", isLoaded);
                   } catch (setActiveError: any) {
-                    console.error("[SignInContent] setActive 실패:", setActiveError);
-                    alert("세션 활성화에 실패했습니다. 페이지를 새로고침해주세요.");
+                    console.error(
+                      "[SignInContent] setActive 실패:",
+                      setActiveError,
+                    );
+                    alert(
+                      "세션 활성화에 실패했습니다. 페이지를 새로고침해주세요.",
+                    );
                     return;
                   }
                 } else {
-                  console.warn("[SignInContent] createdSessionId 또는 setActive가 없음");
-                  console.warn("[SignInContent] createdSessionId:", result.createdSessionId);
-                  console.warn("[SignInContent] setActive:", !!clerk?.setActive);
+                  console.warn(
+                    "[SignInContent] createdSessionId 또는 setActive가 없음",
+                  );
+                  console.warn(
+                    "[SignInContent] createdSessionId:",
+                    result.createdSessionId,
+                  );
+                  console.warn(
+                    "[SignInContent] setActive:",
+                    !!clerk?.setActive,
+                  );
                 }
-                
-                console.log("[SignInContent] 세션 활성화 완료, isSignedIn 변경 대기");
+
+                console.log(
+                  "[SignInContent] 세션 활성화 완료, isSignedIn 변경 대기",
+                );
                 // 리다이렉트는 useEffect에서 isSignedIn이 true가 되면 자동으로 처리됨
                 // 여기서는 세션 활성화만 하고, 리다이렉트는 기다리지 않음
               } else {
-                console.warn("[SignInContent] 로그인 상태가 complete가 아님:", result.status);
+                console.warn(
+                  "[SignInContent] 로그인 상태가 complete가 아님:",
+                  result.status,
+                );
                 alert("로그인을 완료할 수 없습니다. 다시 시도해주세요.");
               }
             } catch (err: any) {
@@ -612,7 +716,7 @@ export default function SignInContent() {
                 status: err.status,
                 statusCode: err.statusCode,
               });
-              
+
               // 에러 메시지 추출
               let errorMessage = "로그인에 실패했습니다.";
               if (err.errors && err.errors.length > 0) {
@@ -620,16 +724,25 @@ export default function SignInContent() {
               } else if (err.message) {
                 errorMessage = err.message;
               }
-              
+
               // 사용자 친화적인 메시지로 변환
-              if (errorMessage.includes("identifier") || errorMessage.includes("email")) {
+              if (
+                errorMessage.includes("identifier") ||
+                errorMessage.includes("email")
+              ) {
                 errorMessage = "이메일 주소를 확인해주세요.";
-              } else if (errorMessage.includes("password") || errorMessage.includes("incorrect")) {
+              } else if (
+                errorMessage.includes("password") ||
+                errorMessage.includes("incorrect")
+              ) {
                 errorMessage = "비밀번호가 올바르지 않습니다.";
-              } else if (errorMessage.includes("not found") || errorMessage.includes("존재하지")) {
+              } else if (
+                errorMessage.includes("not found") ||
+                errorMessage.includes("존재하지")
+              ) {
                 errorMessage = "등록되지 않은 이메일 주소입니다.";
               }
-              
+
               alert(errorMessage);
             }
           } else {
@@ -642,63 +755,82 @@ export default function SignInContent() {
       };
 
       // 폼 제출 이벤트 리스너 추가
-      clerkForm.addEventListener('submit', handleFormSubmit, true); // capture phase에서 실행
+      clerkForm.addEventListener("submit", handleFormSubmit, true); // capture phase에서 실행
 
       // 버튼 텍스트를 "로그인"으로 변경 및 클릭 이벤트 가로채기
-      const loginButton = clerkForm.querySelector('.cl-formButtonPrimary, button[type="submit"]') as HTMLButtonElement;
+      const loginButton = clerkForm.querySelector(
+        '.cl-formButtonPrimary, button[type="submit"]',
+      ) as HTMLButtonElement;
       if (loginButton) {
         // 버튼의 직접 텍스트 변경 (가장 확실한 방법)
-        const originalText = loginButton.textContent || loginButton.innerText || "";
-        if (originalText && (originalText.includes("계속") || originalText.includes("Continue"))) {
+        const originalText =
+          loginButton.textContent || loginButton.innerText || "";
+        if (
+          originalText &&
+          (originalText.includes("계속") || originalText.includes("Continue"))
+        ) {
           // 버튼의 모든 자식 요소를 확인하여 텍스트 변경
-          const allSpans = loginButton.querySelectorAll('span, .cl-button__text');
+          const allSpans = loginButton.querySelectorAll(
+            "span, .cl-button__text",
+          );
           allSpans.forEach((span) => {
             const spanElement = span as HTMLElement;
-            if (spanElement.textContent && (spanElement.textContent.includes("계속") || spanElement.textContent.includes("Continue"))) {
+            if (
+              spanElement.textContent &&
+              (spanElement.textContent.includes("계속") ||
+                spanElement.textContent.includes("Continue"))
+            ) {
               spanElement.textContent = "로그인";
             }
           });
-          
+
           // 버튼의 직접 텍스트도 변경
           loginButton.textContent = "로그인";
           loginButton.innerText = "로그인";
-          
+
           // 버튼의 모든 텍스트 노드 찾아서 변경
           const walker = document.createTreeWalker(
             loginButton,
             NodeFilter.SHOW_TEXT,
-            null
+            null,
           );
           let node;
-          while (node = walker.nextNode()) {
-            if (node.textContent && (node.textContent.includes("계속") || node.textContent.includes("Continue"))) {
+          while ((node = walker.nextNode())) {
+            if (
+              node.textContent &&
+              (node.textContent.includes("계속") ||
+                node.textContent.includes("Continue"))
+            ) {
               node.textContent = "로그인";
             }
           }
         }
-        
+
         // 버튼 클릭 이벤트도 가로채기 (폼 제출과 동일한 처리)
         const handleButtonClick = async (e: MouseEvent) => {
           console.log("[SignInContent] 로그인 버튼 클릭 감지");
           e.preventDefault();
           e.stopPropagation();
           e.stopImmediatePropagation();
-          
+
           // 폼 제출 이벤트를 트리거하여 handleFormSubmit이 실행되도록
-          const formEvent = new SubmitEvent('submit', { bubbles: true, cancelable: true });
+          const formEvent = new SubmitEvent("submit", {
+            bubbles: true,
+            cancelable: true,
+          });
           handleFormSubmit(formEvent);
         };
-        
-        loginButton.addEventListener('click', handleButtonClick, true);
-        
+
+        loginButton.addEventListener("click", handleButtonClick, true);
+
         // cleanup 함수에 버튼 클릭 이벤트 리스너 제거 추가
         return () => {
-          clerkForm.removeEventListener('submit', handleFormSubmit, true);
-          loginButton.removeEventListener('click', handleButtonClick, true);
+          clerkForm.removeEventListener("submit", handleFormSubmit, true);
+          loginButton.removeEventListener("click", handleButtonClick, true);
         };
       } else {
         return () => {
-          clerkForm.removeEventListener('submit', handleFormSubmit, true);
+          clerkForm.removeEventListener("submit", handleFormSubmit, true);
         };
       }
     };
@@ -722,14 +854,16 @@ export default function SignInContent() {
       console.log("isSignedIn:", isSignedIn);
       console.log("isLoaded:", isLoaded);
       console.groupEnd();
-      
+
       // 리다이렉트 실행 (약간의 딜레이를 두어 사용자 동기화가 완료될 시간을 줌)
       setTimeout(() => {
         router.push(redirectUrl);
       }, 1000);
     } else if (isLoaded && !isSignedIn) {
       // 로그인 페이지에 있는데 isSignedIn이 false인 경우 로그만 출력
-      console.log("[SignInContent] isLoaded는 true이지만 isSignedIn이 false입니다.");
+      console.log(
+        "[SignInContent] isLoaded는 true이지만 isSignedIn이 false입니다.",
+      );
     }
   }, [isLoaded, isSignedIn, redirectUrl, router]);
 
@@ -787,17 +921,19 @@ export default function SignInContent() {
                     // 소셜 버튼 표시
                     socialButtonsBlockButton: "block",
                     dividerRow: "block",
-                    
+
                     // 이메일/비밀번호 필드 표시
                     formFieldRow__identifier: "block",
                     formFieldRow__password: "block",
                     form: "block",
-                    
+
                     // 로그인 버튼 스타일
-                    formButtonPrimary: "w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-3 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md",
-                    
+                    formButtonPrimary:
+                      "w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-3 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md",
+
                     // 푸터 링크
-                    footerActionLink: "text-[#ff6b9d] hover:text-[#ff5088] font-medium",
+                    footerActionLink:
+                      "text-[#ff6b9d] hover:text-[#ff5088] font-medium",
                   },
                 }}
               />
@@ -811,7 +947,9 @@ export default function SignInContent() {
                   href="/sign-up/join"
                   className="text-[#ff6b9d] hover:text-[#ff5088] font-semibold transition-colors"
                   onClick={(e) => {
-                    console.log("[SignInContent] 회원가입 페이지로 이동: /sign-up/join");
+                    console.log(
+                      "[SignInContent] 회원가입 페이지로 이동: /sign-up/join",
+                    );
                     router.push("/sign-up/join");
                   }}
                 >
@@ -825,4 +963,3 @@ export default function SignInContent() {
     </>
   );
 }
-
