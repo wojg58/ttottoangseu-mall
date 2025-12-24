@@ -24,16 +24,26 @@ export default function SignInContent() {
   console.log("현재 URL:", window.location.href);
   console.groupEnd();
 
-  // placeholder 텍스트 변경 및 라벨 추가
+  // placeholder 텍스트 변경, 라벨 추가, 필드 간격 조정
   useEffect(() => {
     const updateForm = () => {
       console.log("[SignInContent] 폼 필드 업데이트 중...");
+
+      // "최근 사용" 배지 숨기기
+      const badges = document.querySelectorAll('.cl-lastAuthenticationStrategyBadge');
+      badges.forEach((badge) => {
+        const badgeElement = badge as HTMLElement;
+        if (badgeElement.style.display !== 'none') {
+          console.log("[SignInContent] '최근 사용' 배지 숨김");
+          badgeElement.style.display = 'none';
+        }
+      });
 
       // 아이디 필드 라벨 변경
       const identifierLabel = document.querySelector(
         'label[for="identifier-field"]'
       ) as HTMLLabelElement;
-      if (identifierLabel && identifierLabel.textContent !== "아이디") {
+      if (identifierLabel && !identifierLabel.textContent?.includes("아이디")) {
         console.log("[SignInContent] 아이디 라벨 변경");
         identifierLabel.textContent = "아이디";
       }
@@ -51,7 +61,7 @@ export default function SignInContent() {
       const passwordLabel = document.querySelector(
         'label[for="password-field"]'
       ) as HTMLLabelElement;
-      if (passwordLabel && passwordLabel.textContent !== "비밀번호") {
+      if (passwordLabel && !passwordLabel.textContent?.includes("비밀번호")) {
         console.log("[SignInContent] 비밀번호 라벨 변경");
         passwordLabel.textContent = "비밀번호";
       }
@@ -65,7 +75,7 @@ export default function SignInContent() {
         passwordInput.placeholder = "비밀번호를 입력하세요";
       }
 
-      // 필드 순서 조정: 아이디 → 비밀번호
+      // 필드 간격 조정
       const identifierRow = document.querySelector(
         '.cl-formFieldRow__identifier'
       ) as HTMLElement;
@@ -73,6 +83,17 @@ export default function SignInContent() {
         '.cl-formFieldRow__password'
       ) as HTMLElement;
 
+      if (identifierRow) {
+        identifierRow.style.marginBottom = '1.5rem';
+        identifierRow.style.display = 'block';
+      }
+
+      if (passwordRow) {
+        passwordRow.style.marginBottom = '1.5rem';
+        passwordRow.style.display = 'block';
+      }
+
+      // 필드 순서 조정: 아이디 → 비밀번호
       if (identifierRow && passwordRow) {
         const form = identifierRow.parentElement || passwordRow.parentElement;
         if (form) {
@@ -185,12 +206,18 @@ export default function SignInContent() {
                     socialButtonsBlockButton: "hidden",
                     dividerRow: "hidden",
                     
+                    // 폼 필드 행 - 간격 확보
+                    formFieldRow: "block mb-6",
+                    
+                    // 폼 필드 라벨 행
+                    formFieldLabelRow: "flex justify-between items-center mb-2",
+                    
                     // 폼 필드 라벨
-                    formFieldLabel: "text-[#4a3f48] font-semibold text-sm mb-2 block",
+                    formFieldLabel: "block text-[#4a3f48] font-semibold text-sm",
                     
                     // 입력 필드
                     formFieldInput: 
-                      "w-full px-4 py-3 rounded-xl border-2 border-[#f5d5e3] " +
+                      "block w-full px-4 py-3 mt-1 rounded-xl border-2 border-[#f5d5e3] " +
                       "focus:border-[#ff6b9d] focus:ring-2 focus:ring-[#ff6b9d]/20 " +
                       "transition-all duration-200 text-[#4a3f48] placeholder:text-[#d4b5c8]",
                     
@@ -198,7 +225,7 @@ export default function SignInContent() {
                     formButtonPrimary:
                       "w-full bg-gradient-to-r from-[#ff6b9d] to-[#ff5088] " +
                       "hover:from-[#ff5088] hover:to-[#ff3d77] " +
-                      "text-white font-semibold py-3 rounded-xl " +
+                      "text-white font-semibold py-3 rounded-xl mt-4 " +
                       "transition-all duration-200 shadow-md hover:shadow-lg " +
                       "transform hover:-translate-y-0.5",
                     
@@ -212,8 +239,8 @@ export default function SignInContent() {
                     // 오류 메시지
                     formFieldErrorText: "text-red-500 text-sm mt-1",
                     
-                    // 폼 필드 행
-                    formFieldRow: "mb-5",
+                    // 최근 사용 배지 숨기기
+                    lastAuthenticationStrategyBadge: "hidden",
                   },
                 }}
               />

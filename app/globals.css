@@ -121,7 +121,7 @@
   --color-shop-cream: #fff9f7;
   --color-shop-beige: #f8f6f4;
   --color-shop-text: #4a3f48;
-  --color-shop-text-muted: #8b7d84;
+  --color-shop-text-muted: #6b5d64;
   --color-shop-border: #f5d5e3;
 }
 
@@ -144,7 +144,7 @@
   --secondary: #ffeef5;
   --secondary-foreground: #4a3f48;
   --muted: #f8f6f4;
-  --muted-foreground: #8b7d84;
+  --muted-foreground: #6b5d64;
   --accent: #ff6b9d;
   --accent-foreground: #ffffff;
   --destructive: oklch(0.577 0.245 27.325);
@@ -210,6 +210,115 @@
   }
   main {
     @apply w-full;
+  }
+
+  /* Clerk username 라벨을 "아이디"로 변경 */
+  label[for="username-field"],
+  .cl-formFieldLabel__username-field {
+    font-size: 0 !important;
+    line-height: 1.25rem;
+  }
+  label[for="username-field"]::after,
+  .cl-formFieldLabel__username-field::after {
+    content: "아이디";
+    font-size: 0.875rem;
+    color: #4a3f48;
+    display: inline-block;
+    line-height: 1.25rem;
+  }
+
+  /* Clerk 로그인 페이지에서 이메일 필드 완전히 숨기기 */
+  .cl-formFieldRow__email,
+  .cl-formFieldInput__email,
+  .cl-formFieldLabel__email {
+    display: none !important;
+  }
+
+  /* Clerk 로그인 identifier 필드 라벨을 "아이디"로 변경 */
+  .cl-formFieldLabel[for*="identifier"],
+  label[for*="identifier"],
+  .cl-formFieldLabel__identifier-field {
+    font-size: 0 !important;
+    line-height: 1.25rem;
+    position: relative;
+  }
+  .cl-formFieldLabel[for*="identifier"]::after,
+  label[for*="identifier"]::after,
+  .cl-formFieldLabel__identifier-field::after {
+    content: "아이디";
+    font-size: 0.875rem;
+    color: #4a3f48;
+    display: inline-block;
+    line-height: 1.25rem;
+  }
+
+  /* "최근 사용" 뱃지 숨기기 */
+  .cl-lastAuthenticationStrategyBadge {
+    display: none !important;
+  }
+
+  /* 필드 순서 조정: 아이디 → 비밀번호 */
+  .cl-form,
+  .cl-form > div,
+  form[class*="cl-form"] {
+    display: flex !important;
+    flex-direction: column !important;
+  }
+  .cl-formFieldRow__identifier {
+    order: 1 !important;
+    -webkit-order: 1 !important;
+  }
+  .cl-formFieldRow__password {
+    order: 2 !important;
+    -webkit-order: 2 !important;
+  }
+
+  /* 필드 간격 조정 */
+  .cl-formFieldRow__identifier {
+    margin-bottom: 1rem !important;
+  }
+  .cl-formFieldRow__password {
+    margin-top: 0 !important;
+    margin-bottom: 1rem !important;
+  }
+
+  /* 아이디 필드가 항상 표시되도록 보장 */
+  .cl-formFieldRow__identifier,
+  .cl-formField__identifier,
+  .cl-formFieldInput__identifier,
+  input[name="identifier"],
+  input[id*="identifier"],
+  input[id="identifier-field"] {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+
+  /* Clerk identifier 입력 필드 placeholder 색상 */
+  input[name="identifier"]::placeholder,
+  input[id*="identifier"]::placeholder,
+  input[id="identifier-field"]::placeholder {
+    color: #b8a8b0;
+  }
+
+  /* 비밀번호 필드가 항상 표시되도록 보장 */
+  .cl-formFieldRow__password,
+  .cl-formField__password,
+  .cl-formFieldInput__password,
+  .cl-formFieldInputGroup,
+  input[name="password"],
+  input[id*="password"],
+  input[id="password-field"] {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+
+  /* 비밀번호 placeholder 한국어로 변경 */
+  input[name="password"]::placeholder,
+  input[id*="password"]::placeholder,
+  input[id="password-field"]::placeholder {
+    color: #b8a8b0;
   }
 }
 
@@ -495,4 +604,54 @@
   .wp__phone {
     width: 280px;
   }
+}
+
+/* ========================================
+   Clerk 로그인 폼 스타일 (필드 간격 조정)
+   ======================================== */
+
+/* 로그인 폼 필드 간격 */
+.cl-formFieldRow {
+  margin-bottom: 1.5rem !important;
+  display: block !important;
+}
+
+/* 필드 라벨 행 */
+.cl-formFieldLabelRow {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  margin-bottom: 0.5rem !important;
+}
+
+/* "최근 사용" 배지 숨기기 */
+.cl-lastAuthenticationStrategyBadge {
+  display: none !important;
+}
+
+/* 라벨 스타일 */
+.cl-formFieldLabel {
+  display: block !important;
+  margin-bottom: 0.5rem !important;
+}
+
+/* 입력 필드 */
+.cl-formFieldInput {
+  display: block !important;
+  width: 100% !important;
+  margin-top: 0.25rem !important;
+}
+
+/* 아이디 필드와 비밀번호 필드 간격 */
+.cl-formFieldRow__identifier {
+  margin-bottom: 1.5rem !important;
+}
+
+.cl-formFieldRow__password {
+  margin-bottom: 1.5rem !important;
+}
+
+/* 로그인 버튼 위 간격 */
+.cl-formButtonPrimary {
+  margin-top: 1rem !important;
 }
