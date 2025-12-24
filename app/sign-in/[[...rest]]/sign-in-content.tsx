@@ -74,6 +74,13 @@ export default function SignInContent() {
         
         // placeholder 비우기
         identifierInput.placeholder = "";
+        
+        // identifier 필드의 검증 속성 수정
+        identifierInput.removeAttribute('pattern');
+        identifierInput.setAttribute('type', 'email');
+        identifierInput.setAttribute('inputmode', 'email');
+        identifierInput.removeAttribute('aria-invalid');
+        identifierInput.setAttribute('aria-invalid', 'false');
 
         // 이메일 입력 후 자동 리다이렉트 방지
         identifierInput.addEventListener('blur', (e) => {
@@ -86,6 +93,22 @@ export default function SignInContent() {
             // 비밀번호 필드가 있으면 포커스 이동하지 않음 (사용자가 직접 클릭하도록)
             console.log("[SignInContent] 이메일 입력 완료, 비밀번호 입력 대기");
           }
+          
+          // 에러 메시지 제거
+          const error = identifierRow.querySelector('.cl-formFieldErrorText') as HTMLElement;
+          if (error) {
+            error.style.display = 'none';
+          }
+        });
+        
+        // 입력 시 에러 메시지 제거
+        identifierInput.addEventListener('input', () => {
+          const error = identifierRow.querySelector('.cl-formFieldErrorText') as HTMLElement;
+          if (error) {
+            error.style.display = 'none';
+          }
+          // aria-invalid 속성도 false로 설정
+          identifierInput.setAttribute('aria-invalid', 'false');
         });
 
         // 라벨 행과 라벨이 보이도록 보장
@@ -203,16 +226,35 @@ export default function SignInContent() {
         }
       }
 
-      // 오류 메시지 위치 조정 (입력칸 아래)
+      // 오류 메시지 숨기기 및 identifier 검증 수정
       if (identifierRow) {
         const identifierError = identifierRow.querySelector('.cl-formFieldErrorText') as HTMLElement;
         if (identifierError) {
+          // "Identifier is invalid." 에러 메시지 숨기기
           identifierError.style.cssText = `
-            margin-top: 0.5rem !important;
-            margin-left: 0 !important;
-            color: #ef4444 !important;
-            font-size: 0.875rem !important;
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            height: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
           `;
+        }
+        
+        // identifier 입력 필드의 검증 속성 수정
+        if (identifierInput) {
+          // 이메일 형식 검증을 더 유연하게 설정
+          identifierInput.removeAttribute('pattern');
+          identifierInput.setAttribute('type', 'email');
+          identifierInput.setAttribute('inputmode', 'email');
+          
+          // 입력 시 에러 메시지 제거
+          identifierInput.addEventListener('input', () => {
+            const error = identifierRow.querySelector('.cl-formFieldErrorText') as HTMLElement;
+            if (error) {
+              error.style.display = 'none';
+            }
+          });
         }
       }
 
