@@ -773,7 +773,7 @@ export default function SignInContent() {
               // 에러 메시지 추출
               let errorMessage = "로그인에 실패했습니다.";
               let errorField: "email" | "password" | "general" = "general";
-              
+
               if (err.errors && err.errors.length > 0) {
                 const firstError = err.errors[0];
                 errorMessage =
@@ -856,7 +856,7 @@ export default function SignInContent() {
                 }
                 errorElement.textContent = errorMessage;
                 errorElement.style.display = "block";
-                
+
                 // 입력 필드에 에러 스타일 적용
                 const identifierInput = identifierRow.querySelector(
                   'input[name="identifier"], input[id*="identifier"]',
@@ -889,7 +889,7 @@ export default function SignInContent() {
                 }
                 errorElement.textContent = errorMessage;
                 errorElement.style.display = "block";
-                
+
                 // 입력 필드에 에러 스타일 적용
                 const passwordInput = passwordRow.querySelector(
                   'input[name="password"], input[id*="password"]',
@@ -947,6 +947,19 @@ export default function SignInContent() {
           originalText &&
           (originalText.includes("계속") || originalText.includes("Continue"))
         ) {
+          // cl-internal-2iusy0 클래스를 가진 span 요소 찾아서 변경
+          const continueSpan = loginButton.querySelector(
+            "span.cl-internal-2iusy0, span[class*='cl-internal']",
+          ) as HTMLElement;
+          if (continueSpan) {
+            // SVG 아이콘은 유지하고 텍스트만 변경
+            const svgIcon = continueSpan.querySelector("svg");
+            continueSpan.innerHTML = "로그인";
+            if (svgIcon) {
+              continueSpan.appendChild(svgIcon);
+            }
+          }
+
           // 버튼의 모든 자식 요소를 확인하여 텍스트 변경
           const allSpans = loginButton.querySelectorAll(
             "span, .cl-button__text",
@@ -958,13 +971,21 @@ export default function SignInContent() {
               (spanElement.textContent.includes("계속") ||
                 spanElement.textContent.includes("Continue"))
             ) {
-              spanElement.textContent = "로그인";
+              // SVG 아이콘이 있으면 유지
+              const svgIcon = spanElement.querySelector("svg");
+              spanElement.innerHTML = "로그인";
+              if (svgIcon) {
+                spanElement.appendChild(svgIcon);
+              }
             }
           });
 
-          // 버튼의 직접 텍스트도 변경
-          loginButton.textContent = "로그인";
-          loginButton.innerText = "로그인";
+          // 버튼의 직접 텍스트도 변경 (SVG 아이콘은 유지)
+          const buttonSvg = loginButton.querySelector("svg");
+          loginButton.innerHTML = "로그인";
+          if (buttonSvg) {
+            loginButton.appendChild(buttonSvg);
+          }
 
           // 버튼의 모든 텍스트 노드 찾아서 변경
           const walker = document.createTreeWalker(
