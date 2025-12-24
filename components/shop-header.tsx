@@ -148,7 +148,7 @@ export default function ShopHeader() {
                   <Link href="/sign-in">
                     <Button className="shop-btn-accent text-sm">로그인</Button>
                   </Link>
-                  <Link href="/sign-up">
+                  <Link href="/sign-up/join">
                     <Button className="shop-btn-accent text-sm">회원가입</Button>
                   </Link>
                 </div>
