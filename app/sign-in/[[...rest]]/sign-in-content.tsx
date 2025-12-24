@@ -1,0 +1,243 @@
+/**
+ * @file app/sign-in/[[...rest]]/sign-in-content.tsx
+ * @description 로그인 폼 컨텐츠 컴포넌트
+ *
+ * 주요 기능:
+ * 1. 아이디와 비밀번호로 로그인
+ * 2. 커스텀 디자인의 로그인 폼
+ * 3. 로그인 과정 로깅
+ */
+
+"use client";
+
+import { SignIn, SignedIn, SignedOut } from "@clerk/nextjs";
+import { useSearchParams, useRouter } from "next/navigation";
+import { useEffect } from "react";
+
+export default function SignInContent() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const redirectUrl = searchParams.get("redirect_url") || "/";
+
+  console.group("[SignInContent] 로그인 페이지 초기화");
+  console.log("리다이렉트 URL:", redirectUrl);
+  console.log("현재 URL:", window.location.href);
+  console.groupEnd();
+
+  // placeholder 텍스트 변경 및 라벨 추가
+  useEffect(() => {
+    const updateForm = () => {
+      console.log("[SignInContent] 폼 필드 업데이트 중...");
+
+      // 아이디 필드 라벨 변경
+      const identifierLabel = document.querySelector(
+        'label[for="identifier-field"]'
+      ) as HTMLLabelElement;
+      if (identifierLabel && identifierLabel.textContent !== "아이디") {
+        console.log("[SignInContent] 아이디 라벨 변경");
+        identifierLabel.textContent = "아이디";
+      }
+
+      // 아이디 필드 placeholder 변경
+      const identifierInput = document.querySelector(
+        'input[name="identifier"], input[id="identifier-field"]'
+      ) as HTMLInputElement;
+      if (identifierInput && identifierInput.placeholder !== "아이디를 입력하세요") {
+        console.log("[SignInContent] 아이디 placeholder 변경");
+        identifierInput.placeholder = "아이디를 입력하세요";
+      }
+
+      // 비밀번호 필드 라벨 변경
+      const passwordLabel = document.querySelector(
+        'label[for="password-field"]'
+      ) as HTMLLabelElement;
+      if (passwordLabel && passwordLabel.textContent !== "비밀번호") {
+        console.log("[SignInContent] 비밀번호 라벨 변경");
+        passwordLabel.textContent = "비밀번호";
+      }
+
+      // 비밀번호 필드 placeholder 변경
+      const passwordInput = document.querySelector(
+        'input[name="password"], input[id="password-field"]'
+      ) as HTMLInputElement;
+      if (passwordInput && passwordInput.placeholder !== "비밀번호를 입력하세요") {
+        console.log("[SignInContent] 비밀번호 placeholder 변경");
+        passwordInput.placeholder = "비밀번호를 입력하세요";
+      }
+
+      // 필드 순서 조정: 아이디 → 비밀번호
+      const identifierRow = document.querySelector(
+        '.cl-formFieldRow__identifier'
+      ) as HTMLElement;
+      const passwordRow = document.querySelector(
+        '.cl-formFieldRow__password'
+      ) as HTMLElement;
+
+      if (identifierRow && passwordRow) {
+        const form = identifierRow.parentElement || passwordRow.parentElement;
+        if (form) {
+          const formChildren = Array.from(form.children);
+          const identifierIndex = formChildren.indexOf(identifierRow);
+          const passwordIndex = formChildren.indexOf(passwordRow);
+
+          // 아이디 필드가 비밀번호 필드보다 뒤에 있으면 순서 변경
+          if (identifierIndex > passwordIndex) {
+            console.log("[SignInContent] 필드 순서 변경 중...");
+            form.insertBefore(identifierRow, passwordRow);
+          }
+          // 비밀번호 필드가 아이디 필드 바로 다음에 오도록 보장
+          else if (identifierIndex < passwordIndex - 1) {
+            const nextSibling = identifierRow.nextElementSibling;
+            if (nextSibling && nextSibling !== passwordRow) {
+              console.log("[SignInContent] 비밀번호 필드 위치 조정");
+              form.insertBefore(passwordRow, nextSibling);
+            }
+          }
+        }
+      }
+    };
+
+    // 초기 실행
+    updateForm();
+
+    // MutationObserver로 동적으로 추가되는 요소 감지
+    const observer = new MutationObserver(() => {
+      updateForm();
+    });
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+    });
+
+    // 주기적으로 확인 (Clerk가 동적으로 필드를 추가할 수 있음)
+    const interval = setInterval(updateForm, 500);
+
+    return () => {
+      observer.disconnect();
+      clearInterval(interval);
+    };
+  }, []);
+
+  // 로그인 성공/실패 감지
+  useEffect(() => {
+    const handleSignIn = () => {
+      console.group("[SignInContent] 로그인 시도 감지");
+      console.log("시간:", new Date().toISOString());
+      console.groupEnd();
+    };
+
+    // 폼 제출 이벤트 리스너
+    const form = document.querySelector('form');
+    if (form) {
+      form.addEventListener('submit', handleSignIn);
+      return () => form.removeEventListener('submit', handleSignIn);
+    }
+  }, []);
+
+  // 이미 로그인된 사용자는 홈으로 리다이렉트
+  return (
+    <>
+      <SignedIn>
+        <div className="min-h-screen bg-[#fff9f7] flex items-center justify-center py-12">
+          <div className="text-center">
+            <p className="text-lg text-[#4a3f48] mb-4">
+              이미 로그인되어 있습니다.
+            </p>
+            <button
+              onClick={() => {
+                console.log("[SignInContent] 홈으로 이동");
+                router.push("/");
+              }}
+              className="shop-btn-accent"
+            >
+              홈으로 돌아가기
+            </button>
+          </div>
+        </div>
+      </SignedIn>
+      <SignedOut>
+        <main className="min-h-screen bg-gradient-to-br from-[#fff9f7] to-[#ffe8f0] flex items-center justify-center py-12 px-4">
+          <div className="w-full max-w-md">
+            {/* 헤더 */}
+            <div className="text-center mb-8">
+              <h1 className="text-4xl font-bold text-[#ff6b9d] mb-3 tracking-tight">
+                또또앙스
+              </h1>
+              <p className="text-[#8b7d84] text-base">
+                아이디와 비밀번호를 입력해주세요
+              </p>
+            </div>
+
+            {/* 로그인 폼 카드 */}
+            <div className="bg-white rounded-3xl p-8 shadow-lg border border-[#f5d5e3]">
+              <SignIn
+                routing="path"
+                path="/sign-in"
+                signUpUrl="/sign-up"
+                afterSignInUrl={redirectUrl}
+                forceRedirectUrl={redirectUrl}
+                appearance={{
+                  elements: {
+                    rootBox: "mx-auto",
+                    card: "shadow-none bg-transparent",
+                    headerTitle: "hidden",
+                    headerSubtitle: "hidden",
+                    socialButtonsBlockButton: "hidden",
+                    dividerRow: "hidden",
+                    
+                    // 폼 필드 라벨
+                    formFieldLabel: "text-[#4a3f48] font-semibold text-sm mb-2 block",
+                    
+                    // 입력 필드
+                    formFieldInput: 
+                      "w-full px-4 py-3 rounded-xl border-2 border-[#f5d5e3] " +
+                      "focus:border-[#ff6b9d] focus:ring-2 focus:ring-[#ff6b9d]/20 " +
+                      "transition-all duration-200 text-[#4a3f48] placeholder:text-[#d4b5c8]",
+                    
+                    // 로그인 버튼
+                    formButtonPrimary:
+                      "w-full bg-gradient-to-r from-[#ff6b9d] to-[#ff5088] " +
+                      "hover:from-[#ff5088] hover:to-[#ff3d77] " +
+                      "text-white font-semibold py-3 rounded-xl " +
+                      "transition-all duration-200 shadow-md hover:shadow-lg " +
+                      "transform hover:-translate-y-0.5",
+                    
+                    // 푸터 링크
+                    footerActionLink: "text-[#ff6b9d] hover:text-[#ff5088] font-medium",
+                    
+                    // 기타 요소
+                    identityPreviewText: "text-[#4a3f48]",
+                    identityPreviewEditButton: "text-[#ff6b9d] hover:text-[#ff5088]",
+                    
+                    // 오류 메시지
+                    formFieldErrorText: "text-red-500 text-sm mt-1",
+                    
+                    // 폼 필드 행
+                    formFieldRow: "mb-5",
+                  },
+                }}
+              />
+            </div>
+
+            {/* 회원가입 링크 */}
+            <div className="mt-6 text-center">
+              <p className="text-sm text-[#8b7d84]">
+                계정이 없으신가요?{" "}
+                <a
+                  href="/sign-up"
+                  className="text-[#ff6b9d] hover:text-[#ff5088] font-semibold transition-colors"
+                  onClick={() => {
+                    console.log("[SignInContent] 회원가입 페이지로 이동");
+                  }}
+                >
+                  회원가입하기
+                </a>
+              </p>
+            </div>
+          </div>
+        </main>
+      </SignedOut>
+    </>
+  );
+}
+
