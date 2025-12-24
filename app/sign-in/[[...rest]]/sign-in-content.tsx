@@ -10,7 +10,7 @@
 
 "use client";
 
-import { SignedIn, SignedOut, useAuth, useClerk } from "@clerk/nextjs";
+import { SignIn, SignedIn, SignedOut, useAuth, useClerk } from "@clerk/nextjs";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -19,7 +19,7 @@ export default function SignInContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { isSignedIn, isLoaded } = useAuth();
-  const { signIn } = useClerk();
+  const clerk = useClerk();
   const redirectUrl = searchParams.get("redirect_url") || "/";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -483,15 +483,29 @@ export default function SignInContent() {
     console.group("[SignInContent] 커스텀 이메일/비밀번호 로그인 시도");
     console.log("이메일:", email);
     console.log("시간:", new Date().toISOString());
+    console.log("Clerk 초기화 상태:", clerk ? "초기화됨" : "초기화 안됨");
+    console.log("signIn 사용 가능:", clerk?.signIn ? "예" : "아니오");
     console.groupEnd();
 
     try {
-      if (!signIn) {
-        throw new Error("Clerk signIn이 초기화되지 않았습니다.");
+      // Clerk가 초기화될 때까지 대기 (최대 3초)
+      let attempts = 0;
+      const maxAttempts = 30; // 3초 (100ms * 30)
+      
+      while ((!clerk || !clerk.signIn) && attempts < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        attempts++;
       }
 
+      if (!clerk || !clerk.signIn) {
+        console.error("[SignInContent] Clerk가 초기화되지 않음 (타임아웃)");
+        throw new Error("Clerk가 아직 초기화되지 않았습니다. 페이지를 새로고침해주세요.");
+      }
+
+      console.log("[SignInContent] Clerk 초기화 확인 완료, 로그인 시작");
+
       // 1단계: 이메일로 signIn 생성
-      const signInAttempt = await signIn.create({
+      const signInAttempt = await clerk.signIn.create({
         identifier: email,
       });
 
@@ -572,6 +586,48 @@ export default function SignInContent() {
 
             {/* 로그인 폼 카드 */}
             <div className="bg-white rounded-lg p-8 md:p-12 shadow-sm border border-gray-200 min-h-[500px]">
+              {/* 소셜 로그인 버튼 (Clerk 기본) - 이메일/비밀번호 필드는 숨김 */}
+              <SignIn
+                routing="path"
+                path="/sign-in"
+                signUpUrl={null}
+                afterSignInUrl={redirectUrl}
+                fallbackRedirectUrl={redirectUrl}
+                forceRedirectUrl={redirectUrl}
+                redirectUrl={redirectUrl}
+                appearance={{
+                  elements: {
+                    rootBox: "mx-auto",
+                    card: "shadow-none bg-transparent",
+                    headerTitle: "hidden",
+                    headerSubtitle: "hidden",
+                    // 소셜 버튼 표시
+                    socialButtonsBlockButton: "block",
+                    dividerRow: "block",
+                    
+                    // 이메일/비밀번호 필드 숨기기
+                    formFieldRow__identifier: "hidden",
+                    formFieldRow__password: "hidden",
+                    formFieldRow__email: "hidden",
+                    formFieldRow__username: "hidden",
+                    form: "hidden",
+                    
+                    // 푸터 링크
+                    footerActionLink: "text-[#ff6b9d] hover:text-[#ff5088] font-medium",
+                  },
+                }}
+              />
+
+              {/* 구분선 */}
+              <div className="relative my-6">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-300"></div>
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-2 bg-white text-[#8b7d84]">또는</span>
+                </div>
+              </div>
+
               {/* 커스텀 이메일/비밀번호 로그인 폼 */}
               <form onSubmit={handleEmailPasswordLogin} className="space-y-6">
                   {/* 이메일 주소 입력칸 */}
