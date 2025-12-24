@@ -652,17 +652,27 @@ export default function SignInContent() {
         // 버튼 클릭 이벤트도 가로채기 (폼 제출과 동일한 처리)
         const handleButtonClick = async (e: MouseEvent) => {
           console.log("[SignInContent] 로그인 버튼 클릭 감지");
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation();
+          
           // 폼 제출 이벤트를 트리거하여 handleFormSubmit이 실행되도록
-          const formEvent = new Event('submit', { bubbles: true, cancelable: true });
-          clerkForm.dispatchEvent(formEvent);
+          const formEvent = new SubmitEvent('submit', { bubbles: true, cancelable: true });
+          handleFormSubmit(formEvent);
         };
         
         loginButton.addEventListener('click', handleButtonClick, true);
+        
+        // cleanup 함수에 버튼 클릭 이벤트 리스너 제거 추가
+        return () => {
+          clerkForm.removeEventListener('submit', handleFormSubmit, true);
+          loginButton.removeEventListener('click', handleButtonClick, true);
+        };
+      } else {
+        return () => {
+          clerkForm.removeEventListener('submit', handleFormSubmit, true);
+        };
       }
-
-      return () => {
-        clerkForm.removeEventListener('submit', handleFormSubmit, true);
-      };
     };
 
     // 초기 실행 및 주기적 확인
