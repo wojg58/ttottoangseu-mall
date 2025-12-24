@@ -710,11 +710,23 @@
   box-sizing: border-box !important;
 }
 
-/* 비밀번호 필드와 로그인 버튼 사이 간격을 더 확실하게 */
+/* 비밀번호 필드와 로그인 버튼 사이 간격을 더 확실하게 - 모든 가능한 선택자 사용 */
 .cl-formFieldRow__password + .cl-internal-1pnppin,
-.cl-formFieldRow__password ~ .cl-internal-1pnppin {
+.cl-formFieldRow__password ~ .cl-internal-1pnppin,
+.cl-formFieldRow__password + div,
+.cl-formFieldRow__password ~ div {
   margin-top: 1cm !important;
   margin-top: 37.8px !important; /* 1cm = 37.8px (fallback) */
+  padding-top: 0 !important;
+}
+
+/* 버튼 컨테이너가 비밀번호 필드 다음에 오는 경우 */
+.cl-form .cl-formFieldRow__password ~ div:has(.cl-formButtonPrimary),
+.cl-form .cl-formFieldRow__password ~ div:has(button[type="submit"]),
+.cl-form > div:has(.cl-formButtonPrimary) {
+  margin-top: 1cm !important;
+  margin-top: 37.8px !important; /* 1cm = 37.8px (fallback) */
+  padding-top: 0 !important;
 }
 
 /* 입력 필드 컨테이너 - 위에서 아래로 배치, 명확한 간격 설정 */
@@ -734,7 +746,8 @@
   display: block !important;
   visibility: visible !important;
   opacity: 1 !important;
-  margin-top: 0 !important;
+  margin-top: 1cm !important;
+  margin-top: 37.8px !important; /* 1cm = 37.8px (fallback) */
   margin-bottom: 0 !important;
   width: 100% !important;
   box-sizing: border-box !important;
