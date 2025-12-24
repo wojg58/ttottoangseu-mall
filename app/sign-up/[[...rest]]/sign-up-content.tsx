@@ -17,29 +17,34 @@ export default function SignUpContent() {
 
   console.log("[SignUpContent] 회원가입 폼 렌더링", { redirectUrl });
 
-  // 회원가입 폼 커스터마이징
+  // 회원가입 폼 커스터마이징 - 안전한 방식으로 수정
   useEffect(() => {
+    let isCustomized = false;
+
     const customizeForm = () => {
+      // 이미 커스터마이징이 완료되었으면 더 이상 실행하지 않음
+      if (isCustomized) return;
+
       console.group("[SignUpContent] 폼 필드 커스터마이징");
 
       // 1. lastName 필드를 숨기기
-      const lastNameRow = document.querySelector('.cl-formFieldRow__name') as HTMLElement;
       const lastNameField = document.querySelector('.cl-formField__lastName') as HTMLElement;
-      if (lastNameField) {
+      if (lastNameField && lastNameField.style.display !== 'none') {
         console.log("성(lastName) 필드 숨김");
         lastNameField.style.display = 'none';
       }
 
       // firstName 필드의 라벨을 "이름"으로 변경
       const firstNameLabel = document.querySelector('label[for="firstName-field"]') as HTMLLabelElement;
-      if (firstNameLabel) {
+      if (firstNameLabel && firstNameLabel.textContent !== "이름") {
         console.log("이름 라벨 변경");
         firstNameLabel.textContent = "이름";
       }
 
       // firstName 필드를 전체 너비로
       const firstNameField = document.querySelector('.cl-formField__firstName') as HTMLElement;
-      if (firstNameField && lastNameRow) {
+      const lastNameRow = document.querySelector('.cl-formFieldRow__name') as HTMLElement;
+      if (firstNameField && lastNameRow && firstNameField.style.width !== '100%') {
         console.log("이름 필드를 전체 너비로 설정");
         lastNameRow.style.display = 'block';
         firstNameField.style.width = '100%';
@@ -49,27 +54,33 @@ export default function SignUpContent() {
       const usernameRow = document.querySelector('.cl-formFieldRow__username') as HTMLElement;
       const passwordRow = document.querySelector('.cl-formFieldRow__password') as HTMLElement;
       const emailRow = document.querySelector('.cl-formFieldRow__emailAddress') as HTMLElement;
-      const form = usernameRow?.parentElement;
+      
+      if (usernameRow && passwordRow && emailRow) {
+        const form = usernameRow.parentElement;
+        if (form && !form.hasAttribute('data-customized')) {
+          console.log("필드 순서 재정렬: 아이디 → 비밀번호 → 이메일");
+          
+          // 순서 확인
+          const formChildren = Array.from(form.children);
+          const usernameIndex = formChildren.indexOf(usernameRow);
+          const passwordIndex = formChildren.indexOf(passwordRow);
+          const emailIndex = formChildren.indexOf(emailRow);
 
-      if (form && usernameRow && passwordRow && emailRow) {
-        console.log("필드 순서 재정렬: 아이디 → 비밀번호 → 이메일");
-        
-        // 기존 순서 확인 및 재정렬
-        const formChildren = Array.from(form.children);
-        const usernameIndex = formChildren.indexOf(usernameRow);
-        const passwordIndex = formChildren.indexOf(passwordRow);
-        const emailIndex = formChildren.indexOf(emailRow);
-
-        // 순서가 이미 올바르지 않다면 재정렬
-        if (!(usernameIndex < passwordIndex && passwordIndex < emailIndex)) {
-          // 아이디를 맨 앞으로
-          if (lastNameRow && lastNameRow.parentElement) {
-            lastNameRow.parentElement.insertBefore(usernameRow, lastNameRow.nextSibling);
+          // 순서가 올바르지 않으면 재정렬
+          if (!(usernameIndex < passwordIndex && passwordIndex < emailIndex)) {
+            // 아이디를 맨 앞으로
+            if (lastNameRow && lastNameRow.parentElement) {
+              lastNameRow.parentElement.insertBefore(usernameRow, lastNameRow.nextSibling);
+            }
+            // 비밀번호를 아이디 다음으로
+            usernameRow.parentElement?.insertBefore(passwordRow, usernameRow.nextSibling);
+            // 이메일을 비밀번호 다음으로
+            passwordRow.parentElement?.insertBefore(emailRow, passwordRow.nextSibling);
           }
-          // 비밀번호를 아이디 다음으로
-          usernameRow.parentElement?.insertBefore(passwordRow, usernameRow.nextSibling);
-          // 이메일을 비밀번호 다음으로
-          passwordRow.parentElement?.insertBefore(emailRow, passwordRow.nextSibling);
+          
+          // 커스터마이징 완료 표시
+          form.setAttribute('data-customized', 'true');
+          isCustomized = true;
         }
       }
 
@@ -89,24 +100,13 @@ export default function SignUpContent() {
       console.groupEnd();
     };
 
-    // 초기 실행
-    setTimeout(customizeForm, 100);
-
-    // MutationObserver로 동적 변경 감지
-    const observer = new MutationObserver(() => {
-      customizeForm();
-    });
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true,
-    });
-
-    // 주기적으로 확인 (Clerk가 동적으로 필드를 추가할 수 있음)
-    const interval = setInterval(customizeForm, 1000);
+    // 초기 실행 (여러 번 시도)
+    const timeouts = [100, 300, 500, 1000, 2000].map(delay => 
+      setTimeout(customizeForm, delay)
+    );
 
     return () => {
-      observer.disconnect();
-      clearInterval(interval);
+      timeouts.forEach(timeout => clearTimeout(timeout));
     };
   }, []);
 
