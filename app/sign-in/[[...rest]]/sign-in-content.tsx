@@ -501,36 +501,53 @@ export default function SignInContent() {
 
           if (emailValue && passwordValue) {
             try {
-              // Clerk가 초기화될 때까지 대기 (최대 5초)
+              // Clerk가 초기화될 때까지 대기 (최대 10초)
               let attempts = 0;
-              const maxAttempts = 50; // 5초 (100ms * 50)
+              const maxAttempts = 100; // 10초 (100ms * 100)
               
               console.log("[SignInContent] Clerk 초기화 대기 시작");
-              console.log("isLoaded:", isLoaded);
-              console.log("clerk 존재:", !!clerk);
-              console.log("clerk.signIn 존재:", !!clerk?.signIn);
               
-              // isLoaded가 true이고 clerk.signIn이 있을 때까지 대기
-              while ((!isLoaded || !clerk || !clerk.signIn) && attempts < maxAttempts) {
+              // Clerk가 완전히 초기화될 때까지 대기
+              while (attempts < maxAttempts) {
+                // 현재 상태 확인
+                const currentIsLoaded = isLoaded;
+                const currentClerk = clerk;
+                const hasSignIn = currentClerk?.signIn;
+                
+                if (currentIsLoaded && currentClerk && hasSignIn) {
+                  console.log("[SignInContent] Clerk 초기화 확인 완료");
+                  break;
+                }
+                
                 await new Promise(resolve => setTimeout(resolve, 100));
                 attempts++;
                 
                 // 주기적으로 상태 확인
                 if (attempts % 10 === 0) {
                   console.log(`[SignInContent] 초기화 대기 중... (${attempts * 100}ms)`);
+                  console.log(`  - isLoaded: ${isLoaded}`);
+                  console.log(`  - clerk: ${!!clerk}`);
+                  console.log(`  - signIn: ${!!clerk?.signIn}`);
                 }
               }
 
+              // 최종 확인
               if (!isLoaded || !clerk || !clerk.signIn) {
                 console.error("[SignInContent] Clerk가 초기화되지 않음 (타임아웃)");
                 console.error("최종 상태 - isLoaded:", isLoaded, "clerk:", !!clerk, "signIn:", !!clerk?.signIn);
-                alert("Clerk가 아직 초기화되지 않았습니다. 잠시 후 다시 시도해주세요.");
+                
+                // 페이지 새로고침 제안
+                const shouldReload = confirm("Clerk가 아직 초기화되지 않았습니다. 페이지를 새로고침하시겠습니까?");
+                if (shouldReload) {
+                  window.location.reload();
+                }
                 return;
               }
 
               console.log("[SignInContent] Clerk 초기화 확인 완료, 로그인 시작");
 
               // 1단계: 이메일로 signIn 생성
+              console.log("[SignInContent] SignIn.create 호출 중...");
               const signInAttempt = await clerk.signIn.create({
                 identifier: emailValue,
               });
@@ -538,6 +555,7 @@ export default function SignInContent() {
               console.log("[SignInContent] SignIn 생성 완료, 비밀번호 인증 시도");
 
               // 2단계: 비밀번호로 인증 시도
+              console.log("[SignInContent] attemptFirstFactor 호출 중...");
               const result = await signInAttempt.attemptFirstFactor({
                 strategy: "password",
                 password: passwordValue,
@@ -548,13 +566,40 @@ export default function SignInContent() {
               // 로그인 성공 후 리다이렉트
               if (result.status === "complete") {
                 console.log("[SignInContent] 로그인 완료, 리다이렉트:", redirectUrl);
-                router.push(redirectUrl);
+                // 약간의 딜레이 후 리다이렉트 (세션 동기화 대기)
+                setTimeout(() => {
+                  router.push(redirectUrl);
+                }, 500);
               } else {
+                console.warn("[SignInContent] 로그인 상태가 complete가 아님:", result.status);
                 alert("로그인을 완료할 수 없습니다. 다시 시도해주세요.");
               }
             } catch (err: any) {
               console.error("[SignInContent] 로그인 실패:", err);
-              const errorMessage = err.errors?.[0]?.message || err.message || "로그인에 실패했습니다. 이메일과 비밀번호를 확인해주세요.";
+              console.error("[SignInContent] 에러 상세:", {
+                message: err.message,
+                errors: err.errors,
+                status: err.status,
+                statusCode: err.statusCode,
+              });
+              
+              // 에러 메시지 추출
+              let errorMessage = "로그인에 실패했습니다.";
+              if (err.errors && err.errors.length > 0) {
+                errorMessage = err.errors[0].message || errorMessage;
+              } else if (err.message) {
+                errorMessage = err.message;
+              }
+              
+              // 사용자 친화적인 메시지로 변환
+              if (errorMessage.includes("identifier") || errorMessage.includes("email")) {
+                errorMessage = "이메일 주소를 확인해주세요.";
+              } else if (errorMessage.includes("password") || errorMessage.includes("incorrect")) {
+                errorMessage = "비밀번호가 올바르지 않습니다.";
+              } else if (errorMessage.includes("not found") || errorMessage.includes("존재하지")) {
+                errorMessage = "등록되지 않은 이메일 주소입니다.";
+              }
+              
               alert(errorMessage);
             }
           } else {
