@@ -57,88 +57,44 @@ export default function SignInContent() {
         }
       });
 
-      // 이메일 필드 처리
+      // 아이디 필드 처리
       const identifierRow = document.querySelector('.cl-formFieldRow__identifier') as HTMLElement;
       const identifierInput = document.querySelector(
         'input[name="identifier"], input[id="identifier-field"], input[id*="identifier"]'
       ) as HTMLInputElement;
-      const identifierLabel = document.querySelector(
-        'label[for="identifier-field"], label[for*="identifier"]'
-      ) as HTMLLabelElement;
 
-      if (identifierRow && identifierInput && identifierLabel && !isEmailFieldApplied) {
-        console.log("아이디 필드 DOM 완전 재배치");
+      if (identifierRow && identifierInput && !isEmailFieldApplied) {
+        console.log("아이디 필드 간단 스타일 적용");
         
-        // placeholder 변경
-        identifierInput.placeholder = "example@email.com";
+        // placeholder를 "아이디"로 변경
+        identifierInput.placeholder = "아이디";
 
-        // 라벨 행 찾기
+        // 라벨 숨기기
         const identifierLabelRow = identifierRow.querySelector('.cl-formFieldLabelRow__identifier') as HTMLElement;
-        // 입력칸의 부모 컨테이너 찾기 (cl-internal-17uj465)
-        const inputParentWrapper = identifierInput.parentElement as HTMLElement;
-        
-        if (identifierLabelRow && inputParentWrapper) {
-          // 1. 새로운 라벨 div 생성 (identifierRow 직속 자식으로)
-          const newLabelDiv = document.createElement('div');
-          newLabelDiv.className = 'custom-identifier-label';
-          newLabelDiv.innerHTML = `
-            <label style="display: block; color: #4a3f48; font-weight: 500; font-size: 1rem; margin-bottom: 0.5rem;">
-              <span style="color: #ef4444; margin-right: 4px;">*</span>
-              <span>아이디</span>
-            </label>
-          `;
-          
-          // 2. 새로운 입력칸 div 생성
-          const newInputDiv = document.createElement('div');
-          newInputDiv.className = 'custom-identifier-input';
-          newInputDiv.style.cssText = `margin-bottom: 0.5rem;`;
-          
-          // 3. 원본 입력칸을 새 div로 이동 (클론이 아닌 실제 이동)
-          newInputDiv.appendChild(identifierInput);
-          
-          // 4. 입력 필드 스타일 적용
-          identifierInput.style.cssText = `
-            width: 100% !important;
-            padding: 1rem !important;
-            min-height: 3.5rem !important;
-            border: 1px solid #d1d5db !important;
-            border-radius: 0.5rem !important;
-            font-size: 1rem !important;
-            box-sizing: border-box !important;
-          `;
-          
-          // 5. 안내 문구 생성
-          const hintDiv = document.createElement('p');
-          hintDiv.className = 'email-hint';
-          hintDiv.textContent = '로그인 아이디로 사용할 이메일을 입력해 주세요.';
-          hintDiv.style.cssText = `
-            font-size: 0.875rem;
-            color: #6b7280;
-            margin-top: 0.5rem;
-            margin-bottom: 0;
-          `;
-          
-          // 6. 기존 내용 숨기고 새 구조 추가
-          // 기존 cl-formField 컨테이너 숨기기
-          const formFieldContainer = identifierRow.querySelector('.cl-formField__identifier') as HTMLElement;
-          if (formFieldContainer) {
-            formFieldContainer.style.display = 'none';
-          }
-          
-          // identifierRow 스타일 설정
-          identifierRow.style.cssText = `
-            display: flex !important;
-            flex-direction: column !important;
-            margin-bottom: 1.5rem !important;
-          `;
-          
-          // 7. 새 구조를 identifierRow에 추가
-          identifierRow.appendChild(newLabelDiv);
-          identifierRow.appendChild(newInputDiv);
-          identifierRow.appendChild(hintDiv);
-
-          isEmailFieldApplied = true;
+        if (identifierLabelRow) {
+          identifierLabelRow.style.display = 'none';
         }
+        
+        // 입력 필드 스타일 적용 (심플한 스타일)
+        identifierInput.style.cssText = `
+          width: 100% !important;
+          padding: 0.75rem 1rem !important;
+          min-height: 3rem !important;
+          border: none !important;
+          border-bottom: 1px solid #e5e7eb !important;
+          border-radius: 0 !important;
+          font-size: 1rem !important;
+          box-sizing: border-box !important;
+          background: transparent !important;
+          outline: none !important;
+        `;
+        
+        // identifierRow 스타일
+        identifierRow.style.cssText = `
+          margin-bottom: 0 !important;
+        `;
+
+        isEmailFieldApplied = true;
       }
 
       // 비밀번호 필드 처리
@@ -146,89 +102,39 @@ export default function SignInContent() {
       const passwordInput = document.querySelector(
         'input[name="password"], input[id="password-field"], input[id*="password"]'
       ) as HTMLInputElement;
-      const passwordLabel = document.querySelector(
-        'label[for="password-field"], label[for*="password"]'
-      ) as HTMLLabelElement;
 
-      if (passwordRow && passwordInput && passwordLabel && !isPasswordFieldApplied) {
-        console.log("비밀번호 필드 DOM 완전 재배치");
+      if (passwordRow && passwordInput && !isPasswordFieldApplied) {
+        console.log("비밀번호 필드 간단 스타일 적용");
         
-        // placeholder 변경
-        passwordInput.placeholder = "비밀번호를 입력해주세요";
+        // placeholder를 "비밀번호"로 변경
+        passwordInput.placeholder = "비밀번호";
 
-        // 라벨 행 찾기
+        // 라벨 숨기기
         const passwordLabelRow = passwordRow.querySelector('.cl-formFieldLabelRow__password') as HTMLElement;
-        // 입력칸의 부모 컨테이너 찾기
-        const inputParentWrapper = passwordInput.parentElement as HTMLElement;
-        
-        if (passwordLabelRow && inputParentWrapper) {
-          // 1. 새로운 라벨 div 생성 (passwordRow 직속 자식으로)
-          const newLabelDiv = document.createElement('div');
-          newLabelDiv.className = 'custom-password-label';
-          newLabelDiv.innerHTML = `
-            <label style="display: block; color: #4a3f48; font-weight: 500; font-size: 1rem; margin-bottom: 0.5rem;">
-              <span style="color: #ef4444; margin-right: 4px;">*</span>
-              <span>비밀번호</span>
-            </label>
-          `;
-          
-          // 2. 새로운 입력칸 div 생성
-          const newInputDiv = document.createElement('div');
-          newInputDiv.className = 'custom-password-input';
-          newInputDiv.style.cssText = `margin-bottom: 0.5rem;`;
-          
-          // 3. 원본 입력칸을 새 div로 이동 (클론이 아닌 실제 이동)
-          // 비밀번호 필드는 InputGroup 전체를 이동해야 함 (토글 버튼 포함)
-          const passwordInputGroup = passwordInput.closest('.cl-formFieldInputGroup') as HTMLElement;
-          if (passwordInputGroup) {
-            newInputDiv.appendChild(passwordInputGroup);
-          } else {
-            newInputDiv.appendChild(passwordInput);
-          }
-          
-          // 4. 입력 필드 스타일 적용
-          passwordInput.style.cssText = `
-            width: 100% !important;
-            padding: 1rem !important;
-            min-height: 3.5rem !important;
-            border: 1px solid #d1d5db !important;
-            border-radius: 0.5rem !important;
-            font-size: 1rem !important;
-            box-sizing: border-box !important;
-          `;
-          
-          // 5. 안내 문구 생성
-          const hintDiv = document.createElement('p');
-          hintDiv.className = 'password-hint';
-          hintDiv.textContent = '영문/숫자/특수문자 중 2가지 이상 조합, 8자~16자';
-          hintDiv.style.cssText = `
-            font-size: 0.875rem;
-            color: #6b7280;
-            margin-top: 0.5rem;
-            margin-bottom: 0;
-          `;
-          
-          // 6. 기존 내용 숨기고 새 구조 추가
-          // 기존 cl-formField 컨테이너 숨기기
-          const formFieldContainer = passwordRow.querySelector('.cl-formField__password') as HTMLElement;
-          if (formFieldContainer) {
-            formFieldContainer.style.display = 'none';
-          }
-          
-          // passwordRow 스타일 설정
-          passwordRow.style.cssText = `
-            display: flex !important;
-            flex-direction: column !important;
-            margin-bottom: 1.5rem !important;
-          `;
-          
-          // 7. 새 구조를 passwordRow에 추가
-          passwordRow.appendChild(newLabelDiv);
-          passwordRow.appendChild(newInputDiv);
-          passwordRow.appendChild(hintDiv);
-
-          isPasswordFieldApplied = true;
+        if (passwordLabelRow) {
+          passwordLabelRow.style.display = 'none';
         }
+        
+        // 입력 필드 스타일 적용 (심플한 스타일)
+        passwordInput.style.cssText = `
+          width: 100% !important;
+          padding: 0.75rem 1rem !important;
+          min-height: 3rem !important;
+          border: none !important;
+          border-bottom: 1px solid #e5e7eb !important;
+          border-radius: 0 !important;
+          font-size: 1rem !important;
+          box-sizing: border-box !important;
+          background: transparent !important;
+          outline: none !important;
+        `;
+        
+        // passwordRow 스타일
+        passwordRow.style.cssText = `
+          margin-bottom: 1rem !important;
+        `;
+
+        isPasswordFieldApplied = true;
       }
 
       // 필드 순서: 이메일 → 비밀번호
