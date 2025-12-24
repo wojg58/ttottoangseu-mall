@@ -10,7 +10,7 @@
 
 "use client";
 
-import { SignIn, SignedIn, SignedOut, useAuth, useClerk } from "@clerk/nextjs";
+import { SignIn, SignedIn, SignedOut, useAuth, useClerk, useSignIn } from "@clerk/nextjs";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -20,6 +20,7 @@ export default function SignInContent() {
   const router = useRouter();
   const { isSignedIn, isLoaded } = useAuth();
   const clerk = useClerk();
+  const { signIn, isLoaded: signInLoaded } = useSignIn();
   const redirectUrl = searchParams.get("redirect_url") || "/";
 
   // 클라이언트 사이드에서만 실행 (useEffect 안으로 이동하여 hydration mismatch 방지)
@@ -553,19 +554,21 @@ export default function SignInContent() {
 
               console.log("[SignInContent] Clerk 초기화 대기 시작");
 
-              // Clerk가 완전히 초기화될 때까지 대기
+              // Clerk가 완전히 초기화될 때까지 대기 (useSignIn 훅 사용)
               while (attempts < maxAttempts) {
                 // 현재 상태 확인
                 const currentIsLoaded = isLoaded;
-                // clerk.signIn이 존재하는지 확인 (타입 체크를 더 유연하게)
-                const hasSignIn =
-                  clerk &&
-                  (clerk as any).signIn !== undefined &&
-                  (clerk as any).signIn !== null;
+                const currentSignInLoaded = signInLoaded;
+                const hasSignIn = signIn !== null && signIn !== undefined;
                 const hasSetActive =
                   clerk && typeof clerk.setActive === "function";
 
-                if (currentIsLoaded && clerk && hasSignIn && hasSetActive) {
+                if (
+                  currentIsLoaded &&
+                  currentSignInLoaded &&
+                  hasSignIn &&
+                  hasSetActive
+                ) {
                   console.log("[SignInContent] Clerk 초기화 확인 완료");
                   break;
                 }
@@ -579,39 +582,26 @@ export default function SignInContent() {
                     `[SignInContent] 초기화 대기 중... (${attempts * 100}ms)`,
                   );
                   console.log(`  - isLoaded: ${isLoaded}`);
-                  console.log(`  - clerk: ${!!clerk}`);
-                  console.log(`  - signIn: ${hasSignIn}`);
+                  console.log(`  - signInLoaded: ${signInLoaded}`);
+                  console.log(`  - signIn: ${!!signIn}`);
                   console.log(`  - setActive: ${hasSetActive}`);
-                  // 디버깅: clerk 객체의 실제 구조 확인
-                  if (clerk) {
-                    console.log(
-                      `  - clerk.keys: ${Object.keys(clerk).join(", ")}`,
-                    );
-                    console.log(
-                      `  - clerk.signIn type: ${typeof (clerk as any).signIn}`,
-                    );
-                  }
                 }
               }
 
-              // 최종 확인 - signIn이 없어도 일단 시도해보기 (Clerk가 동적으로 로드될 수 있음)
-              const hasSignInFinal =
-                clerk &&
-                (clerk as any).signIn !== undefined &&
-                (clerk as any).signIn !== null;
-              const hasSetActiveFinal =
-                clerk && typeof clerk.setActive === "function";
-
-              // isLoaded와 clerk만 필수로 확인, signIn은 실제 사용 시점에 확인
-              if (!isLoaded || !clerk) {
+              // 최종 확인
+              if (!isLoaded || !signInLoaded || !signIn || !clerk?.setActive) {
                 console.error(
                   "[SignInContent] Clerk가 초기화되지 않음 (타임아웃)",
                 );
                 console.error(
                   "최종 상태 - isLoaded:",
                   isLoaded,
-                  "clerk:",
-                  !!clerk,
+                  "signInLoaded:",
+                  signInLoaded,
+                  "signIn:",
+                  !!signIn,
+                  "setActive:",
+                  !!clerk?.setActive,
                 );
 
                 // 페이지 새로고침 제안
@@ -624,35 +614,13 @@ export default function SignInContent() {
                 return;
               }
 
-              // signIn이 없으면 경고만 하고 시도해보기
-              if (!hasSignInFinal) {
-                console.warn(
-                  "[SignInContent] clerk.signIn이 아직 준비되지 않았지만 시도합니다.",
-                );
-                console.warn("clerk 객체:", clerk);
-                console.warn("clerk.signIn:", (clerk as any).signIn);
-              }
-
               console.log(
                 "[SignInContent] Clerk 초기화 확인 완료, 로그인 시작",
               );
 
               // 1단계: 이메일로 signIn 생성
-              // signIn이 실제로 존재하는지 최종 확인
-              if (!(clerk as any).signIn) {
-                console.error(
-                  "[SignInContent] clerk.signIn이 존재하지 않습니다. 로그인을 시도할 수 없습니다.",
-                );
-                console.error("clerk 객체:", clerk);
-                console.error("clerk 객체의 키:", Object.keys(clerk || {}));
-                alert(
-                  "로그인 기능을 사용할 수 없습니다. 페이지를 새로고침해주세요.",
-                );
-                return;
-              }
-
               console.log("[SignInContent] SignIn.create 호출 중...");
-              const signInAttempt = await (clerk as any).signIn.create({
+              const signInAttempt = await signIn.create({
                 identifier: emailValue,
               });
 
