@@ -394,30 +394,18 @@ export default function SignInContent() {
           cursor: pointer !important;
         `;
 
-        // 버튼 텍스트를 "로그인"으로 변경
+        // 버튼 텍스트를 "로그인"으로 변경 (아이콘 제거)
         const updateButtonText = () => {
           // cl-internal-2iusy0 클래스를 가진 span 요소 찾아서 변경
           const continueSpan = loginButton.querySelector(
             "span.cl-internal-2iusy0, span[class*='cl-internal']",
           ) as HTMLElement;
           if (continueSpan) {
-            // SVG 아이콘은 유지하고 텍스트만 변경
-            const svgIcon = continueSpan.querySelector("svg");
-            const textNode = Array.from(continueSpan.childNodes).find(
-              (node) => node.nodeType === Node.TEXT_NODE,
-            );
-            if (textNode && textNode.textContent?.includes("계속")) {
-              textNode.textContent = "로그인";
-            } else if (!textNode || !textNode.textContent?.includes("로그인")) {
-              // 텍스트 노드가 없거나 "로그인"이 아니면 직접 변경
-              continueSpan.innerHTML = "로그인";
-              if (svgIcon) {
-                continueSpan.appendChild(svgIcon);
-              }
-            }
+            // SVG 아이콘 제거하고 텍스트만 "로그인"으로 변경
+            continueSpan.innerHTML = "로그인";
           }
 
-          // 모든 span 요소 확인
+          // 모든 span 요소 확인 (아이콘 제거)
           const allSpans = loginButton.querySelectorAll("span");
           allSpans.forEach((span) => {
             const spanElement = span as HTMLElement;
@@ -426,12 +414,15 @@ export default function SignInContent() {
               textContent.includes("계속") ||
               textContent.includes("Continue")
             ) {
-              const svgIcon = spanElement.querySelector("svg");
+              // SVG 아이콘 제거하고 텍스트만 "로그인"으로 변경
               spanElement.innerHTML = "로그인";
-              if (svgIcon) {
-                spanElement.appendChild(svgIcon);
-              }
             }
+          });
+
+          // 버튼 내의 모든 SVG 아이콘 제거 (화살표 아이콘 등)
+          const allSvgs = loginButton.querySelectorAll("svg");
+          allSvgs.forEach((svg) => {
+            svg.remove();
           });
 
           // 버튼의 직접 텍스트 노드도 확인
@@ -995,89 +986,86 @@ export default function SignInContent() {
       // 폼 제출 이벤트 리스너 추가
       clerkForm.addEventListener("submit", handleFormSubmit, true); // capture phase에서 실행
 
-        // 버튼 텍스트를 "로그인"으로 변경 및 클릭 이벤트 가로채기
-        const loginButton = clerkForm.querySelector(
-          '.cl-formButtonPrimary, button[type="submit"]',
-        ) as HTMLButtonElement;
-        if (loginButton) {
-          // 버튼 텍스트를 무조건 "로그인"으로 변경하는 함수
-          const updateButtonText = () => {
-            console.log("[SignInContent] 버튼 텍스트를 '로그인'으로 변경 시도");
+      // 버튼 텍스트를 "로그인"으로 변경 및 클릭 이벤트 가로채기
+      const loginButton = clerkForm.querySelector(
+        '.cl-formButtonPrimary, button[type="submit"]',
+      ) as HTMLButtonElement;
+      if (loginButton) {
+        // 버튼 텍스트를 무조건 "로그인"으로 변경하는 함수
+        const updateButtonText = () => {
+          console.log("[SignInContent] 버튼 텍스트를 '로그인'으로 변경 시도");
 
-            // cl-internal-2iusy0 클래스를 가진 span 요소 찾아서 변경
-            const continueSpan = loginButton.querySelector(
-              "span.cl-internal-2iusy0, span[class*='cl-internal']",
-            ) as HTMLElement;
-            if (continueSpan) {
-              console.log("[SignInContent] cl-internal span 요소 발견, 텍스트 변경");
-              // SVG 아이콘은 유지하고 텍스트만 변경
-              const svgIcon = continueSpan.querySelector("svg");
-              const textNode = Array.from(continueSpan.childNodes).find(
-                (node) => node.nodeType === Node.TEXT_NODE,
-              );
-              if (textNode && textNode.textContent?.includes("계속")) {
-                textNode.textContent = "로그인";
-                console.log("[SignInContent] 텍스트 노드에서 '계속'을 '로그인'으로 변경");
-              } else {
-                // 텍스트 노드가 없거나 이미 변경되지 않은 경우
-                continueSpan.innerHTML = "로그인";
-                if (svgIcon) {
-                  continueSpan.appendChild(svgIcon);
-                }
-                console.log("[SignInContent] span innerHTML을 '로그인'으로 변경");
-              }
-            }
-
-            // 버튼의 모든 span 요소 확인하여 텍스트 변경
-            const allSpans = loginButton.querySelectorAll("span");
-            allSpans.forEach((span) => {
-              const spanElement = span as HTMLElement;
-              const textContent = spanElement.textContent || "";
-              if (
-                textContent.includes("계속") ||
-                textContent.includes("Continue")
-              ) {
-                const svgIcon = spanElement.querySelector("svg");
-                spanElement.innerHTML = "로그인";
-                if (svgIcon) {
-                  spanElement.appendChild(svgIcon);
-                }
-                console.log("[SignInContent] span 요소에서 '계속'을 '로그인'으로 변경");
-              }
-            });
-
-            // 버튼의 모든 텍스트 노드 찾아서 변경
-            const walker = document.createTreeWalker(
-              loginButton,
-              NodeFilter.SHOW_TEXT,
-              null,
+          // cl-internal-2iusy0 클래스를 가진 span 요소 찾아서 변경
+          const continueSpan = loginButton.querySelector(
+            "span.cl-internal-2iusy0, span[class*='cl-internal']",
+          ) as HTMLElement;
+          if (continueSpan) {
+            console.log(
+              "[SignInContent] cl-internal span 요소 발견, 텍스트 변경 및 아이콘 제거",
             );
-            let node;
-            while ((node = walker.nextNode())) {
-              if (
-                node.textContent &&
-                (node.textContent.includes("계속") ||
-                  node.textContent.includes("Continue"))
-              ) {
-                node.textContent = "로그인";
-                console.log("[SignInContent] 텍스트 노드에서 '계속'을 '로그인'으로 변경");
-              }
+            // SVG 아이콘 제거하고 텍스트만 "로그인"으로 변경
+            continueSpan.innerHTML = "로그인";
+            console.log("[SignInContent] span innerHTML을 '로그인'으로 변경 (아이콘 제거)");
+          }
+
+          // 버튼의 모든 span 요소 확인하여 텍스트 변경 (아이콘 제거)
+          const allSpans = loginButton.querySelectorAll("span");
+          allSpans.forEach((span) => {
+            const spanElement = span as HTMLElement;
+            const textContent = spanElement.textContent || "";
+            if (
+              textContent.includes("계속") ||
+              textContent.includes("Continue")
+            ) {
+              // SVG 아이콘 제거하고 텍스트만 "로그인"으로 변경
+              spanElement.innerHTML = "로그인";
+              console.log(
+                "[SignInContent] span 요소에서 '계속'을 '로그인'으로 변경 (아이콘 제거)",
+              );
             }
-          };
+          });
 
-          // 즉시 실행
+          // 버튼 내의 모든 SVG 아이콘 제거 (화살표 아이콘 등)
+          const allSvgs = loginButton.querySelectorAll("svg");
+          allSvgs.forEach((svg) => {
+            svg.remove();
+            console.log("[SignInContent] SVG 아이콘 제거");
+          });
+
+          // 버튼의 모든 텍스트 노드 찾아서 변경
+          const walker = document.createTreeWalker(
+            loginButton,
+            NodeFilter.SHOW_TEXT,
+            null,
+          );
+          let node;
+          while ((node = walker.nextNode())) {
+            if (
+              node.textContent &&
+              (node.textContent.includes("계속") ||
+                node.textContent.includes("Continue"))
+            ) {
+              node.textContent = "로그인";
+              console.log(
+                "[SignInContent] 텍스트 노드에서 '계속'을 '로그인'으로 변경",
+              );
+            }
+          }
+        };
+
+        // 즉시 실행
+        updateButtonText();
+
+        // MutationObserver로 버튼 내용이 변경될 때마다 다시 적용
+        const buttonObserver = new MutationObserver(() => {
           updateButtonText();
+        });
 
-          // MutationObserver로 버튼 내용이 변경될 때마다 다시 적용
-          const buttonObserver = new MutationObserver(() => {
-            updateButtonText();
-          });
-
-          buttonObserver.observe(loginButton, {
-            childList: true,
-            subtree: true,
-            characterData: true,
-          });
+        buttonObserver.observe(loginButton, {
+          childList: true,
+          subtree: true,
+          characterData: true,
+        });
 
         // 버튼 클릭 이벤트도 가로채기 (폼 제출과 동일한 처리)
         const handleButtonClick = async (e: MouseEvent) => {
