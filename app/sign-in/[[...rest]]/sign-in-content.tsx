@@ -25,7 +25,7 @@ export default function SignInContent() {
   console.log("현재 URL:", window.location.href);
   console.groupEnd();
 
-  // 폼 필드를 이미지 디자인대로 2열 레이아웃으로 변경
+  // 폼 필드를 세로 레이아웃으로 변경 (라벨 위, 입력칸 아래)
   useEffect(() => {
     // 이미 적용되었는지 추적하는 플래그
     let isEmailFieldApplied = false;
@@ -46,7 +46,7 @@ export default function SignInContent() {
         return;
       }
 
-      console.group("[SignInContent] 폼 필드 업데이트 - 2열 레이아웃");
+      console.group("[SignInContent] 폼 필드 업데이트 - 세로 레이아웃");
 
       // "최근 사용" 배지 숨기기
       const badges = document.querySelectorAll('.cl-lastAuthenticationStrategyBadge');
@@ -67,18 +67,18 @@ export default function SignInContent() {
       ) as HTMLLabelElement;
 
       if (identifierRow && identifierInput && identifierLabel && !isEmailFieldApplied) {
-        console.log("이메일 필드 2열 레이아웃 적용");
+        console.log("이메일 필드 세로 레이아웃 적용");
         
         // 라벨 변경
         const labelText = identifierLabel.textContent || '';
-        if (!labelText.includes("이메일")) {
+        if (!labelText.includes("아이디")) {
           const asterisk = document.createElement('span');
           asterisk.textContent = '* ';
           asterisk.style.color = '#ef4444';
           asterisk.style.marginRight = '4px';
           
           const labelSpan = document.createElement('span');
-          labelSpan.textContent = '이메일';
+          labelSpan.textContent = '아이디';
           
           identifierLabel.innerHTML = '';
           identifierLabel.appendChild(asterisk);
@@ -96,34 +96,36 @@ export default function SignInContent() {
                                          identifierInput.parentElement as HTMLElement;
 
         if (identifierLabelRow && identifierInputContainer) {
-          // 2열 레이아웃 적용
+          // 세로 레이아웃 적용 (라벨 위, 입력칸 아래)
           identifierRow.style.cssText = `
-            display: grid !important;
-            grid-template-columns: 150px 1fr !important;
-            gap: 1rem !important;
-            align-items: start !important;
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 0.5rem !important;
             margin-bottom: 1.5rem !important;
             margin-top: 0 !important;
           `;
 
+          // 라벨을 맨 위에 배치
           identifierLabelRow.style.cssText = `
-            grid-column: 1 !important;
-            padding-top: 0.75rem !important;
+            order: 1 !important;
             margin: 0 !important;
+            padding: 0 !important;
           `;
 
+          // 입력칸을 라벨 아래에 배치
           identifierInputContainer.style.cssText = `
-            grid-column: 2 !important;
+            order: 2 !important;
             margin: 0 !important;
+            width: 100% !important;
           `;
 
-          // 안내 문구 추가
+          // 안내 문구 추가 (입력칸 아래)
           if (!identifierRow.querySelector('.email-hint')) {
             const emailHint = document.createElement('p');
             emailHint.className = 'email-hint';
             emailHint.textContent = '로그인 아이디로 사용할 이메일을 입력해 주세요.';
             emailHint.style.cssText = `
-              grid-column: 2 !important;
+              order: 3 !important;
               font-size: 0.875rem !important;
               color: #6b7280 !important;
               margin-top: 0.5rem !important;
@@ -146,7 +148,7 @@ export default function SignInContent() {
       ) as HTMLLabelElement;
 
       if (passwordRow && passwordInput && passwordLabel && !isPasswordFieldApplied) {
-        console.log("비밀번호 필드 2열 레이아웃 적용");
+        console.log("비밀번호 필드 세로 레이아웃 적용");
         
         // 라벨 변경
         const labelText = passwordLabel.textContent || '';
@@ -175,34 +177,36 @@ export default function SignInContent() {
                                       passwordInput.parentElement as HTMLElement;
 
         if (passwordLabelRow && passwordInputContainer) {
-          // 2열 레이아웃 적용
+          // 세로 레이아웃 적용 (라벨 위, 입력칸 아래)
           passwordRow.style.cssText = `
-            display: grid !important;
-            grid-template-columns: 150px 1fr !important;
-            gap: 1rem !important;
-            align-items: start !important;
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 0.5rem !important;
             margin-bottom: 1.5rem !important;
             margin-top: 0 !important;
           `;
 
+          // 라벨을 맨 위에 배치
           passwordLabelRow.style.cssText = `
-            grid-column: 1 !important;
-            padding-top: 0.75rem !important;
+            order: 1 !important;
             margin: 0 !important;
+            padding: 0 !important;
           `;
 
+          // 입력칸을 라벨 아래에 배치
           passwordInputContainer.style.cssText = `
-            grid-column: 2 !important;
+            order: 2 !important;
             margin: 0 !important;
+            width: 100% !important;
           `;
 
-          // 안내 문구 추가
+          // 안내 문구 추가 (입력칸 아래)
           if (!passwordRow.querySelector('.password-hint')) {
             const passwordHint = document.createElement('p');
             passwordHint.className = 'password-hint';
             passwordHint.textContent = '영문/숫자/특수문자 중 2가지 이상 조합, 8자~16자';
             passwordHint.style.cssText = `
-              grid-column: 2 !important;
+              order: 3 !important;
               font-size: 0.875rem !important;
               color: #6b7280 !important;
               margin-top: 0.5rem !important;
@@ -229,12 +233,12 @@ export default function SignInContent() {
         }
       }
 
-      // 오류 메시지 위치 조정
+      // 오류 메시지 위치 조정 (입력칸 아래)
       if (identifierRow) {
         const identifierError = identifierRow.querySelector('.cl-formFieldErrorText') as HTMLElement;
-        if (identifierError && identifierError.style.gridColumn !== '2') {
+        if (identifierError) {
           identifierError.style.cssText = `
-            grid-column: 2 !important;
+            order: 4 !important;
             margin-top: 0.5rem !important;
             margin-left: 0 !important;
           `;
@@ -243,9 +247,9 @@ export default function SignInContent() {
 
       if (passwordRow) {
         const passwordError = passwordRow.querySelector('.cl-formFieldErrorText') as HTMLElement;
-        if (passwordError && passwordError.style.gridColumn !== '2') {
+        if (passwordError) {
           passwordError.style.cssText = `
-            grid-column: 2 !important;
+            order: 4 !important;
             margin-top: 0.5rem !important;
             margin-left: 0 !important;
           `;
