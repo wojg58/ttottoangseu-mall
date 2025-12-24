@@ -19,7 +19,7 @@ export default function SignInContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { isSignedIn, isLoaded } = useAuth();
-  const clerk = useClerk();
+  const { signIn: clerkSignIn, setActive } = useClerk();
   const redirectUrl = searchParams.get("redirect_url") || "/";
 
   // 클라이언트 사이드에서만 실행
@@ -513,10 +513,10 @@ export default function SignInContent() {
               while (attempts < maxAttempts) {
                 // 현재 상태 확인
                 const currentIsLoaded = isLoaded;
-                const currentClerk = clerk;
-                const hasSignIn = currentClerk?.signIn;
+                const hasSignIn = clerkSignIn;
+                const hasSetActive = setActive;
                 
-                if (currentIsLoaded && currentClerk && hasSignIn) {
+                if (currentIsLoaded && hasSignIn && hasSetActive) {
                   console.log("[SignInContent] Clerk 초기화 확인 완료");
                   break;
                 }
@@ -534,9 +534,9 @@ export default function SignInContent() {
               }
 
               // 최종 확인
-              if (!isLoaded || !clerk || !clerk.signIn) {
+              if (!isLoaded || !clerkSignIn || !setActive) {
                 console.error("[SignInContent] Clerk가 초기화되지 않음 (타임아웃)");
-                console.error("최종 상태 - isLoaded:", isLoaded, "clerk:", !!clerk, "signIn:", !!clerk?.signIn);
+                console.error("최종 상태 - isLoaded:", isLoaded, "signIn:", !!clerkSignIn, "setActive:", !!setActive);
                 
                 // 페이지 새로고침 제안
                 const shouldReload = confirm("Clerk가 아직 초기화되지 않았습니다. 페이지를 새로고침하시겠습니까?");
@@ -550,7 +550,7 @@ export default function SignInContent() {
 
               // 1단계: 이메일로 signIn 생성
               console.log("[SignInContent] SignIn.create 호출 중...");
-              const signInAttempt = await clerk.signIn.create({
+              const signInAttempt = await clerkSignIn.create({
                 identifier: emailValue,
               });
 
@@ -569,12 +569,31 @@ export default function SignInContent() {
               // 로그인 성공 후 세션 활성화 및 리다이렉트
               if (result.status === "complete") {
                 console.log("[SignInContent] 로그인 완료, 세션 활성화 시작");
+                console.log("[SignInContent] result.createdSessionId:", result.createdSessionId);
+                console.log("[SignInContent] setActive 존재:", !!setActive);
                 
                 // 세션 활성화
-                if (result.createdSessionId && clerk.setActive) {
-                  console.log("[SignInContent] setActive 호출 중, sessionId:", result.createdSessionId);
-                  await clerk.setActive({ session: result.createdSessionId });
-                  console.log("[SignInContent] setActive 완료");
+                if (result.createdSessionId && setActive) {
+                  try {
+                    console.log("[SignInContent] setActive 호출 중, sessionId:", result.createdSessionId);
+                    await setActive({ session: result.createdSessionId });
+                    console.log("[SignInContent] setActive 완료");
+                    
+                    // setActive 후 약간의 딜레이 (세션 동기화 대기)
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    
+                    console.log("[SignInContent] 세션 활성화 완료, isSignedIn 상태 확인");
+                    console.log("[SignInContent] 현재 isSignedIn:", isSignedIn);
+                    console.log("[SignInContent] 현재 isLoaded:", isLoaded);
+                  } catch (setActiveError: any) {
+                    console.error("[SignInContent] setActive 실패:", setActiveError);
+                    alert("세션 활성화에 실패했습니다. 페이지를 새로고침해주세요.");
+                    return;
+                  }
+                } else {
+                  console.warn("[SignInContent] createdSessionId 또는 setActive가 없음");
+                  console.warn("[SignInContent] createdSessionId:", result.createdSessionId);
+                  console.warn("[SignInContent] setActive:", !!setActive);
                 }
                 
                 console.log("[SignInContent] 세션 활성화 완료, isSignedIn 변경 대기");
@@ -691,7 +710,7 @@ export default function SignInContent() {
       clearTimeout(initialTimeout);
       clearInterval(interval);
     };
-  }, [clerk, router, redirectUrl, isLoaded]);
+  }, [clerkSignIn, setActive, router, redirectUrl, isLoaded, isSignedIn]);
 
   // 로그인 성공 후 리다이렉트 처리
   useEffect(() => {
@@ -699,12 +718,17 @@ export default function SignInContent() {
       console.group("[SignInContent] 로그인 성공 감지");
       console.log("리다이렉트 URL로 이동:", redirectUrl);
       console.log("시간:", new Date().toISOString());
+      console.log("isSignedIn:", isSignedIn);
+      console.log("isLoaded:", isLoaded);
       console.groupEnd();
       
       // 리다이렉트 실행 (약간의 딜레이를 두어 사용자 동기화가 완료될 시간을 줌)
       setTimeout(() => {
         router.push(redirectUrl);
       }, 1000);
+    } else if (isLoaded && !isSignedIn) {
+      // 로그인 페이지에 있는데 isSignedIn이 false인 경우 로그만 출력
+      console.log("[SignInContent] isLoaded는 true이지만 isSignedIn이 false입니다.");
     }
   }, [isLoaded, isSignedIn, redirectUrl, router]);
 
