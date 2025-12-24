@@ -45,6 +45,7 @@ export default function SignInContent() {
     let isPasswordFieldApplied = false;
     let updateCount = 0;
     const MAX_UPDATES = 10; // 최대 업데이트 횟수 제한
+    let buttonObserver: MutationObserver | null = null; // 버튼 텍스트 변경을 위한 Observer
 
     const updateForm = () => {
       // 무한 루프 방지: 최대 업데이트 횟수 제한
@@ -396,16 +397,33 @@ export default function SignInContent() {
 
         // 버튼 텍스트를 "로그인"으로 변경 (아이콘 제거)
         const updateButtonText = () => {
-          // cl-internal-2iusy0 클래스를 가진 span 요소 찾아서 변경
+          // 1. cl-internal-2iusy0 클래스를 가진 span 요소를 정확히 찾아서 변경
           const continueSpan = loginButton.querySelector(
-            "span.cl-internal-2iusy0, span[class*='cl-internal']",
+            "span.cl-internal-2iusy0",
           ) as HTMLElement;
           if (continueSpan) {
             // SVG 아이콘 제거하고 텍스트만 "로그인"으로 변경
             continueSpan.innerHTML = "로그인";
           }
 
-          // 모든 span 요소 확인 (아이콘 제거)
+          // 2. cl-internal 클래스를 포함한 모든 span 요소 확인
+          const allInternalSpans = loginButton.querySelectorAll(
+            "span[class*='cl-internal']",
+          );
+          allInternalSpans.forEach((span) => {
+            const spanElement = span as HTMLElement;
+            const textContent = spanElement.textContent || "";
+            if (
+              textContent.includes("계속") ||
+              textContent.includes("Continue") ||
+              !textContent.includes("로그인")
+            ) {
+              // "로그인"이 아닌 경우 무조건 "로그인"으로 변경
+              spanElement.innerHTML = "로그인";
+            }
+          });
+
+          // 3. 모든 span 요소 확인 (아이콘 제거)
           const allSpans = loginButton.querySelectorAll("span");
           allSpans.forEach((span) => {
             const spanElement = span as HTMLElement;
@@ -419,13 +437,13 @@ export default function SignInContent() {
             }
           });
 
-          // 버튼 내의 모든 SVG 아이콘 제거 (화살표 아이콘 등)
+          // 4. 버튼 내의 모든 SVG 아이콘 제거 (화살표 아이콘 등)
           const allSvgs = loginButton.querySelectorAll("svg");
           allSvgs.forEach((svg) => {
             svg.remove();
           });
 
-          // 버튼의 직접 텍스트 노드도 확인
+          // 5. 버튼의 직접 텍스트 노드도 확인
           const walker = document.createTreeWalker(
             loginButton,
             NodeFilter.SHOW_TEXT,
@@ -441,9 +459,30 @@ export default function SignInContent() {
               node.textContent = "로그인";
             }
           }
+
+          // 6. 최종 확인: 버튼의 textContent가 "계속"을 포함하면 강제로 변경
+          const buttonText = loginButton.textContent || "";
+          if (buttonText.includes("계속") || buttonText.includes("Continue")) {
+            // 버튼의 모든 자식 요소를 제거하고 "로그인"만 추가
+            loginButton.innerHTML = "로그인";
+          }
         };
 
         updateButtonText();
+
+        // MutationObserver로 버튼 내용이 변경될 때마다 다시 적용
+        if (buttonObserver) {
+          buttonObserver.disconnect();
+        }
+        buttonObserver = new MutationObserver(() => {
+          updateButtonText();
+        });
+
+        buttonObserver.observe(loginButton, {
+          childList: true,
+          subtree: true,
+          characterData: true,
+        });
 
         // 로그인 버튼 클릭 이벤트 로깅
         loginButton.addEventListener("click", (e) => {
@@ -501,6 +540,9 @@ export default function SignInContent() {
     return () => {
       clearTimeout(initialTimeout);
       observer.disconnect();
+      if (buttonObserver) {
+        buttonObserver.disconnect();
+      }
     };
   }, []);
 
@@ -995,20 +1037,42 @@ export default function SignInContent() {
         const updateButtonText = () => {
           console.log("[SignInContent] 버튼 텍스트를 '로그인'으로 변경 시도");
 
-          // cl-internal-2iusy0 클래스를 가진 span 요소 찾아서 변경
+          // 1. cl-internal-2iusy0 클래스를 가진 span 요소를 정확히 찾아서 변경
           const continueSpan = loginButton.querySelector(
-            "span.cl-internal-2iusy0, span[class*='cl-internal']",
+            "span.cl-internal-2iusy0",
           ) as HTMLElement;
           if (continueSpan) {
             console.log(
-              "[SignInContent] cl-internal span 요소 발견, 텍스트 변경 및 아이콘 제거",
+              "[SignInContent] cl-internal-2iusy0 span 요소 발견, 텍스트 변경 및 아이콘 제거",
             );
             // SVG 아이콘 제거하고 텍스트만 "로그인"으로 변경
             continueSpan.innerHTML = "로그인";
-            console.log("[SignInContent] span innerHTML을 '로그인'으로 변경 (아이콘 제거)");
+            console.log(
+              "[SignInContent] span innerHTML을 '로그인'으로 변경 (아이콘 제거)",
+            );
           }
 
-          // 버튼의 모든 span 요소 확인하여 텍스트 변경 (아이콘 제거)
+          // 2. cl-internal 클래스를 포함한 모든 span 요소 확인
+          const allInternalSpans = loginButton.querySelectorAll(
+            "span[class*='cl-internal']",
+          );
+          allInternalSpans.forEach((span) => {
+            const spanElement = span as HTMLElement;
+            const textContent = spanElement.textContent || "";
+            if (
+              textContent.includes("계속") ||
+              textContent.includes("Continue") ||
+              !textContent.includes("로그인")
+            ) {
+              // "로그인"이 아닌 경우 무조건 "로그인"으로 변경
+              spanElement.innerHTML = "로그인";
+              console.log(
+                "[SignInContent] cl-internal span 요소에서 '로그인'으로 변경",
+              );
+            }
+          });
+
+          // 3. 버튼의 모든 span 요소 확인하여 텍스트 변경 (아이콘 제거)
           const allSpans = loginButton.querySelectorAll("span");
           allSpans.forEach((span) => {
             const spanElement = span as HTMLElement;
@@ -1025,14 +1089,14 @@ export default function SignInContent() {
             }
           });
 
-          // 버튼 내의 모든 SVG 아이콘 제거 (화살표 아이콘 등)
+          // 4. 버튼 내의 모든 SVG 아이콘 제거 (화살표 아이콘 등)
           const allSvgs = loginButton.querySelectorAll("svg");
           allSvgs.forEach((svg) => {
             svg.remove();
             console.log("[SignInContent] SVG 아이콘 제거");
           });
 
-          // 버튼의 모든 텍스트 노드 찾아서 변경
+          // 5. 버튼의 모든 텍스트 노드 찾아서 변경
           const walker = document.createTreeWalker(
             loginButton,
             NodeFilter.SHOW_TEXT,
@@ -1050,6 +1114,17 @@ export default function SignInContent() {
                 "[SignInContent] 텍스트 노드에서 '계속'을 '로그인'으로 변경",
               );
             }
+          }
+
+          // 6. 최종 확인: 버튼의 textContent가 "계속"을 포함하면 강제로 변경
+          const buttonText = loginButton.textContent || "";
+          if (buttonText.includes("계속") || buttonText.includes("Continue")) {
+            // 버튼의 모든 자식 요소를 제거하고 "로그인"만 추가
+            const buttonSvg = loginButton.querySelector("svg");
+            loginButton.innerHTML = "로그인";
+            console.log(
+              "[SignInContent] 버튼 전체 내용을 '로그인'으로 강제 변경",
+            );
           }
         };
 
