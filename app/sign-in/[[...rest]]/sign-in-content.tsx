@@ -100,8 +100,8 @@ export default function SignInContent() {
           identifierRow.style.cssText = `
             display: flex !important;
             flex-direction: column !important;
-            gap: 0.5rem !important;
-            margin-bottom: 1.5rem !important;
+            gap: 0.75rem !important;
+            margin-bottom: 2rem !important;
             margin-top: 0 !important;
           `;
 
@@ -110,14 +110,24 @@ export default function SignInContent() {
             order: 1 !important;
             margin: 0 !important;
             padding: 0 !important;
+            margin-bottom: 0.5rem !important;
           `;
 
-          // 입력칸을 라벨 아래에 배치
+          // 입력칸을 라벨 아래에 배치 (높이 증가)
           identifierInputContainer.style.cssText = `
             order: 2 !important;
             margin: 0 !important;
             width: 100% !important;
           `;
+          
+          // 입력 필드 높이 증가
+          if (identifierInput) {
+            identifierInput.style.cssText = `
+              padding-top: 1rem !important;
+              padding-bottom: 1rem !important;
+              min-height: 3.5rem !important;
+            `;
+          }
 
           // 안내 문구 추가 (입력칸 아래)
           if (!identifierRow.querySelector('.email-hint')) {
@@ -128,7 +138,7 @@ export default function SignInContent() {
               order: 3 !important;
               font-size: 0.875rem !important;
               color: #6b7280 !important;
-              margin-top: 0.5rem !important;
+              margin-top: 0.75rem !important;
               margin-bottom: 0 !important;
             `;
             identifierRow.appendChild(emailHint);
@@ -181,8 +191,8 @@ export default function SignInContent() {
           passwordRow.style.cssText = `
             display: flex !important;
             flex-direction: column !important;
-            gap: 0.5rem !important;
-            margin-bottom: 1.5rem !important;
+            gap: 0.75rem !important;
+            margin-bottom: 2rem !important;
             margin-top: 0 !important;
           `;
 
@@ -191,14 +201,24 @@ export default function SignInContent() {
             order: 1 !important;
             margin: 0 !important;
             padding: 0 !important;
+            margin-bottom: 0.5rem !important;
           `;
 
-          // 입력칸을 라벨 아래에 배치
+          // 입력칸을 라벨 아래에 배치 (높이 증가)
           passwordInputContainer.style.cssText = `
             order: 2 !important;
             margin: 0 !important;
             width: 100% !important;
           `;
+          
+          // 입력 필드 높이 증가
+          if (passwordInput) {
+            passwordInput.style.cssText = `
+              padding-top: 1rem !important;
+              padding-bottom: 1rem !important;
+              min-height: 3.5rem !important;
+            `;
+          }
 
           // 안내 문구 추가 (입력칸 아래)
           if (!passwordRow.querySelector('.password-hint')) {
@@ -209,7 +229,7 @@ export default function SignInContent() {
               order: 3 !important;
               font-size: 0.875rem !important;
               color: #6b7280 !important;
-              margin-top: 0.5rem !important;
+              margin-top: 0.75rem !important;
               margin-bottom: 0 !important;
             `;
             passwordRow.appendChild(passwordHint);
@@ -343,7 +363,7 @@ export default function SignInContent() {
             </div>
 
             {/* 로그인 폼 카드 */}
-            <div className="bg-white rounded-lg p-8 shadow-sm border border-gray-200">
+            <div className="bg-white rounded-lg p-8 md:p-12 shadow-sm border border-gray-200 min-h-[500px]">
               <SignIn
                 routing="path"
                 path="/sign-in"
@@ -360,10 +380,10 @@ export default function SignInContent() {
                     dividerRow: "hidden",
                     
                     // 폼 컨테이너
-                    form: "flex flex-col gap-0",
+                    form: "flex flex-col gap-4",
                     
-                    // 폼 필드 행
-                    formFieldRow: "block mb-0 mt-0",
+                    // 폼 필드 행 (간격 증가)
+                    formFieldRow: "block mb-4 mt-0",
                     
                     // 폼 필드 라벨 행
                     formFieldLabelRow: "flex justify-start items-center mb-0 mt-0",
@@ -371,12 +391,12 @@ export default function SignInContent() {
                     // 폼 필드 라벨
                     formFieldLabel: "block text-[#4a3f48] font-medium text-base",
                     
-                    // 입력 필드
+                    // 입력 필드 (높이 증가)
                     formFieldInput: 
-                      "block w-full px-4 py-3 rounded-lg border border-gray-300 " +
+                      "block w-full px-4 py-4 rounded-lg border border-gray-300 " +
                       "focus:border-[#ff6b9d] focus:ring-2 focus:ring-[#ff6b9d]/20 " +
                       "transition-all duration-200 text-[#4a3f48] placeholder:text-gray-400 " +
-                      "box-border",
+                      "box-border min-h-[3.5rem] text-base",
                     
                     // 로그인 버튼
                     formButtonPrimary:
