@@ -230,10 +230,10 @@ export default function SignInContent() {
                     dividerRow: "hidden",
                     
                     // 폼 컨테이너
-                    form: "flex flex-col gap-4",
+                    form: "flex flex-col gap-6",
                     
-                    // 폼 필드 행
-                    formFieldRow: "block mb-4 mt-0",
+                    // 폼 필드 행 - 겹치지 않도록 명확한 간격 설정
+                    formFieldRow: "block mb-6 mt-0 relative w-full",
                     
                     // 폼 필드 라벨 행 - 숨김
                     formFieldLabelRow: "hidden",

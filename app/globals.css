@@ -273,13 +273,22 @@
     -webkit-order: 2 !important;
   }
 
-  /* 필드 간격 조정 */
+  /* 필드 간격 조정 - 겹치지 않도록 명확한 간격 설정 */
   .cl-formFieldRow__identifier {
-    margin-bottom: 1rem !important;
+    position: relative !important;
+    display: block !important;
+    margin-top: 0 !important;
+    margin-bottom: 1.5rem !important;
+    padding-bottom: 0 !important;
+    clear: both !important;
   }
   .cl-formFieldRow__password {
+    position: relative !important;
+    display: block !important;
     margin-top: 0 !important;
-    margin-bottom: 1rem !important;
+    margin-bottom: 1.5rem !important;
+    padding-top: 0 !important;
+    clear: both !important;
   }
 
   /* 아이디 필드가 항상 표시되도록 보장 */
@@ -618,12 +627,15 @@
   gap: 2rem !important;
 }
 
-/* 로그인 폼 필드 간격 */
+/* 로그인 폼 필드 간격 - 겹치지 않도록 명확한 간격 설정 */
 .cl-formFieldRow {
-  margin-bottom: 2rem !important;
-  margin-top: 0 !important;
+  position: relative !important;
   display: block !important;
+  margin-top: 0 !important;
+  margin-bottom: 1.5rem !important;
   clear: both !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
 }
 
 /* 필드 라벨 행 */
@@ -644,41 +656,62 @@
   opacity: 0 !important;
 }
 
-/* 라벨 스타일 */
+/* 라벨 스타일 - 겹치지 않도록 명확한 간격 설정 */
 .cl-formFieldLabel {
+  position: relative !important;
   display: block !important;
   margin-bottom: 0.75rem !important;
   margin-top: 0 !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
 }
 
-/* 입력 필드 */
+/* 입력 필드 - 겹치지 않도록 명확한 간격 설정 */
 .cl-formFieldInput {
+  position: relative !important;
   display: block !important;
   width: 100% !important;
   margin-top: 0.5rem !important;
   margin-bottom: 0 !important;
   box-sizing: border-box !important;
+  z-index: 1 !important;
 }
 
-/* 아이디 필드 간격 */
+/* 아이디 필드 간격 - 겹치지 않도록 명확한 간격 설정 */
 .cl-formFieldRow__identifier {
-  margin-bottom: 2rem !important;
+  position: relative !important;
+  display: block !important;
   margin-top: 0 !important;
-  padding-bottom: 1rem !important;
+  margin-bottom: 1.5rem !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  clear: both !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
 }
 
-/* 비밀번호 필드 간격 */
+/* 비밀번호 필드 간격 - 겹치지 않도록 명확한 간격 설정 */
 .cl-formFieldRow__password {
-  margin-top: 1rem !important;
-  margin-bottom: 2rem !important;
-  padding-top: 1rem !important;
+  position: relative !important;
+  display: block !important;
+  margin-top: 0 !important;
+  margin-bottom: 1.5rem !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  clear: both !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
 }
 
-/* 입력 필드 컨테이너 */
+/* 입력 필드 컨테이너 - 겹치지 않도록 명확한 간격 설정 */
 .cl-formFieldInput__identifier,
 .cl-formFieldInput__password {
+  position: relative !important;
+  display: block !important;
   margin-top: 0.5rem !important;
-  margin-bottom: 1rem !important;
+  margin-bottom: 0 !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
 }
 
 /* 로그인 버튼 위 간격 */
@@ -689,4 +722,22 @@
 /* 비밀번호 필드 액션 */
 .cl-formFieldAction {
   margin-top: 0.5rem !important;
+}
+
+/* 필드 컨테이너 - 겹치지 않도록 명확한 간격 설정 */
+.cl-formField {
+  position: relative !important;
+  display: block !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  box-sizing: border-box !important;
+}
+
+/* 필드 행 내부 요소들 - 겹치지 않도록 명확한 간격 설정 */
+.cl-formFieldRow > * {
+  position: relative !important;
+  display: block !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
 }
