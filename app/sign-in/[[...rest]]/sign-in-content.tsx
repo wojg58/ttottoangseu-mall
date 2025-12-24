@@ -515,7 +515,7 @@ export default function SignInContent() {
                 또또앙스
               </h1>
               <p className="text-[#8b7d84] text-base">
-                아이디와 비밀번호를 입력해주세요
+                이메일주소와 비밀번호를 입력해주세요
               </p>
             </div>
 
