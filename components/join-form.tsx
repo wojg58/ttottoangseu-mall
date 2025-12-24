@@ -14,13 +14,11 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Separator } from "@/components/ui/separator";
 import { saveMemberAdditionalInfo } from "@/actions/member-actions";
 import logger from "@/lib/logger";
-import type { MemberType, CompanyType, Gender } from "@/types/member";
+import type { Gender } from "@/types/member";
 
 // 비밀번호 찾기 질문 목록
 const PASSWORD_HINTS = [
@@ -34,10 +32,8 @@ const PASSWORD_HINTS = [
 // 유효성 검사 스키마
 const joinSchema = z
   .object({
-    // 회원 구분
-    member_type: z.enum(["p", "c", "f"], {
-      required_error: "회원 구분을 선택해주세요.",
-    }),
+    // 회원 구분 (기본값: 개인회원)
+    member_type: z.enum(["p", "c", "f"]).default("p"),
     company_type: z.enum(["p", "c"]).optional(),
 
     // 기본 정보
@@ -112,7 +108,6 @@ export default function JoinForm() {
     },
   });
 
-  const memberType = watch("member_type");
   const agreeService = watch("agree_service");
   const isSms = watch("is_sms");
   const isNewsMail = watch("is_news_mail");
@@ -236,87 +231,6 @@ export default function JoinForm() {
       />
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
-        {/* ===== 회원 인증 섹션 ===== */}
-        <section>
-          <div className="bg-gray-50 p-4 rounded-lg mb-4">
-            <h2 className="text-xl font-bold mb-2">회원 인증</h2>
-          </div>
-
-          <div className="space-y-4">
-            <div>
-              <Label className="flex items-center gap-2 mb-3">
-                <span className="text-red-500">*</span>
-                회원 구분
-              </Label>
-              <RadioGroup
-                value={watch("member_type")}
-                onValueChange={(value) =>
-                  setValue("member_type", value as MemberType)
-                }
-                className="flex gap-4"
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="p" id="member-personal" />
-                  <Label htmlFor="member-personal" className="cursor-pointer">
-                    개인회원
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="c" id="member-business" />
-                  <Label htmlFor="member-business" className="cursor-pointer">
-                    사업자회원
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="f" id="member-foreigner" />
-                  <Label htmlFor="member-foreigner" className="cursor-pointer">
-                    외국인회원
-                  </Label>
-                </div>
-              </RadioGroup>
-              {errors.member_type && (
-                <p className="text-sm text-red-500 mt-1">
-                  {errors.member_type.message}
-                </p>
-              )}
-            </div>
-
-            {/* 사업자 구분 (사업자회원 선택 시) */}
-            {memberType === "c" && (
-              <div>
-                <Label className="flex items-center gap-2 mb-3">
-                  <span className="text-red-500">*</span>
-                  사업자 구분
-                </Label>
-                <RadioGroup
-                  value={watch("company_type") || "p"}
-                  onValueChange={(value) =>
-                    setValue("company_type", value as CompanyType)
-                  }
-                  className="flex gap-4"
-                >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="p" id="company-personal" />
-                    <Label htmlFor="company-personal" className="cursor-pointer">
-                      개인사업자
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="c" id="company-corporation" />
-                    <Label
-                      htmlFor="company-corporation"
-                      className="cursor-pointer"
-                    >
-                      법인사업자
-                    </Label>
-                  </div>
-                </RadioGroup>
-              </div>
-            )}
-          </div>
-        </section>
-
-        <Separator />
 
         {/* ===== 기본 정보 섹션 ===== */}
         <section>
