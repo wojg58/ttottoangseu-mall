@@ -501,18 +501,30 @@ export default function SignInContent() {
 
           if (emailValue && passwordValue) {
             try {
-              // Clerk가 초기화될 때까지 대기 (최대 3초)
+              // Clerk가 초기화될 때까지 대기 (최대 5초)
               let attempts = 0;
-              const maxAttempts = 30; // 3초 (100ms * 30)
+              const maxAttempts = 50; // 5초 (100ms * 50)
               
-              while ((!clerk || !clerk.signIn) && attempts < maxAttempts) {
+              console.log("[SignInContent] Clerk 초기화 대기 시작");
+              console.log("isLoaded:", isLoaded);
+              console.log("clerk 존재:", !!clerk);
+              console.log("clerk.signIn 존재:", !!clerk?.signIn);
+              
+              // isLoaded가 true이고 clerk.signIn이 있을 때까지 대기
+              while ((!isLoaded || !clerk || !clerk.signIn) && attempts < maxAttempts) {
                 await new Promise(resolve => setTimeout(resolve, 100));
                 attempts++;
+                
+                // 주기적으로 상태 확인
+                if (attempts % 10 === 0) {
+                  console.log(`[SignInContent] 초기화 대기 중... (${attempts * 100}ms)`);
+                }
               }
 
-              if (!clerk || !clerk.signIn) {
+              if (!isLoaded || !clerk || !clerk.signIn) {
                 console.error("[SignInContent] Clerk가 초기화되지 않음 (타임아웃)");
-                alert("Clerk가 아직 초기화되지 않았습니다. 페이지를 새로고침해주세요.");
+                console.error("최종 상태 - isLoaded:", isLoaded, "clerk:", !!clerk, "signIn:", !!clerk?.signIn);
+                alert("Clerk가 아직 초기화되지 않았습니다. 잠시 후 다시 시도해주세요.");
                 return;
               }
 
@@ -600,7 +612,7 @@ export default function SignInContent() {
       clearTimeout(initialTimeout);
       clearInterval(interval);
     };
-  }, [clerk, router, redirectUrl]);
+  }, [clerk, router, redirectUrl, isLoaded]);
 
   // 로그인 성공 후 리다이렉트 처리
   useEffect(() => {
