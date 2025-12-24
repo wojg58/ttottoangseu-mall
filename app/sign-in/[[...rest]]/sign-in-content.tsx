@@ -559,11 +559,11 @@ export default function SignInContent() {
               <p className="text-sm text-[#8b7d84]">
                 계정이 없으신가요?{" "}
                 <Link
-                  href="/sign-up"
+                  href="/sign-up/join"
                   className="text-[#ff6b9d] hover:text-[#ff5088] font-semibold transition-colors"
                   onClick={(e) => {
-                    console.log("[SignInContent] 회원가입 페이지로 이동");
-                    router.push("/sign-up");
+                    console.log("[SignInContent] 회원가입 페이지로 이동: /sign-up/join");
+                    router.push("/sign-up/join");
                   }}
                 >
                   회원가입하기
