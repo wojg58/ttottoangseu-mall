@@ -126,6 +126,24 @@ export default function SignInContent() {
         }
       }
 
+      // 로그인 버튼이 보이도록 보장
+      const loginButton = document.querySelector('.cl-formButtonPrimary, button[type="submit"]') as HTMLElement;
+      if (loginButton) {
+        console.log("로그인 버튼 스타일 적용");
+        loginButton.style.cssText = `
+          position: relative !important;
+          display: block !important;
+          visibility: visible !important;
+          opacity: 1 !important;
+          margin-top: 2rem !important;
+          width: 100% !important;
+          box-sizing: border-box !important;
+          z-index: 1 !important;
+        `;
+      } else {
+        console.log("로그인 버튼을 찾을 수 없음");
+      }
+
       console.groupEnd();
     };
 

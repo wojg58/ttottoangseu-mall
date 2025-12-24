@@ -714,9 +714,17 @@
   box-sizing: border-box !important;
 }
 
-/* 로그인 버튼 위 간격 */
+/* 로그인 버튼 - 명확하게 표시되도록 스타일 설정 */
 .cl-formButtonPrimary {
+  position: relative !important;
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
   margin-top: 2rem !important;
+  margin-bottom: 0 !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  z-index: 1 !important;
 }
 
 /* 비밀번호 필드 액션 */
