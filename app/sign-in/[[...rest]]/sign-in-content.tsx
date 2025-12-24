@@ -664,22 +664,29 @@ export default function SignInContent() {
                     await clerk.setActive({ session: result.createdSessionId });
                     console.log("[SignInContent] setActive 완료");
 
-                    // setActive 후 약간의 딜레이 (세션 동기화 대기)
-                    await new Promise((resolve) => setTimeout(resolve, 500));
+                    // setActive 후 세션 동기화를 위해 약간의 딜레이
+                    await new Promise((resolve) => setTimeout(resolve, 1000));
 
                     console.log(
-                      "[SignInContent] 세션 활성화 완료, isSignedIn 상태 확인",
+                      "[SignInContent] 세션 활성화 완료, 리다이렉트 시작",
                     );
-                    console.log("[SignInContent] 현재 isSignedIn:", isSignedIn);
-                    console.log("[SignInContent] 현재 isLoaded:", isLoaded);
+                    // window.location.href를 사용하여 전체 페이지 리로드로 세션 상태를 확실히 반영
+                    // 이렇게 하면 구글 로그인과 동일하게 세션이 확실히 활성화됨
+                    window.location.href = redirectUrl;
                   } catch (setActiveError: any) {
                     console.error(
                       "[SignInContent] setActive 실패:",
                       setActiveError,
                     );
+                    console.error("[SignInContent] 에러 상세:", {
+                      message: setActiveError.message,
+                      errors: setActiveError.errors,
+                      status: setActiveError.status,
+                    });
                     alert(
                       "세션 활성화에 실패했습니다. 페이지를 새로고침해주세요.",
                     );
+                    window.location.reload();
                     return;
                   }
                 } else {
@@ -694,13 +701,13 @@ export default function SignInContent() {
                     "[SignInContent] setActive:",
                     !!clerk?.setActive,
                   );
+                  
+                  // createdSessionId가 없으면 페이지 새로고침으로 세션 상태 확인
+                  console.log(
+                    "[SignInContent] 페이지 새로고침으로 세션 상태 확인",
+                  );
+                  window.location.href = redirectUrl;
                 }
-
-                console.log(
-                  "[SignInContent] 세션 활성화 완료, isSignedIn 변경 대기",
-                );
-                // 리다이렉트는 useEffect에서 isSignedIn이 true가 되면 자동으로 처리됨
-                // 여기서는 세션 활성화만 하고, 리다이렉트는 기다리지 않음
               } else {
                 console.warn(
                   "[SignInContent] 로그인 상태가 complete가 아님:",
