@@ -27,7 +27,25 @@ export default function SignInContent() {
 
   // 폼 필드를 이미지 디자인대로 2열 레이아웃으로 변경
   useEffect(() => {
+    // 이미 적용되었는지 추적하는 플래그
+    let isEmailFieldApplied = false;
+    let isPasswordFieldApplied = false;
+    let updateCount = 0;
+    const MAX_UPDATES = 10; // 최대 업데이트 횟수 제한
+
     const updateForm = () => {
+      // 무한 루프 방지: 최대 업데이트 횟수 제한
+      if (updateCount >= MAX_UPDATES) {
+        console.log("[SignInContent] 최대 업데이트 횟수 도달, 업데이트 중지");
+        return;
+      }
+      updateCount++;
+
+      // 이미 적용된 필드는 건너뛰기
+      if (isEmailFieldApplied && isPasswordFieldApplied) {
+        return;
+      }
+
       console.group("[SignInContent] 폼 필드 업데이트 - 2열 레이아웃");
 
       // "최근 사용" 배지 숨기기
@@ -35,20 +53,25 @@ export default function SignInContent() {
       badges.forEach((badge) => {
         const badgeElement = badge as HTMLElement;
         if (badgeElement.style.display !== 'none') {
-          console.log("'최근 사용' 배지 숨김");
           badgeElement.style.display = 'none';
         }
       });
 
-      // 이메일 필드 라벨 변경 및 필수 표시 추가
+      // 이메일 필드 처리
+      const identifierRow = document.querySelector('.cl-formFieldRow__identifier') as HTMLElement;
+      const identifierInput = document.querySelector(
+        'input[name="identifier"], input[id="identifier-field"], input[id*="identifier"]'
+      ) as HTMLInputElement;
       const identifierLabel = document.querySelector(
         'label[for="identifier-field"], label[for*="identifier"]'
       ) as HTMLLabelElement;
-      if (identifierLabel) {
+
+      if (identifierRow && identifierInput && identifierLabel && !isEmailFieldApplied) {
+        console.log("이메일 필드 2열 레이아웃 적용");
+        
+        // 라벨 변경
         const labelText = identifierLabel.textContent || '';
         if (!labelText.includes("이메일")) {
-          console.log("이메일 라벨 변경");
-          // 기존 텍스트를 숨기고 새 텍스트 추가
           const asterisk = document.createElement('span');
           asterisk.textContent = '* ';
           asterisk.style.color = '#ef4444';
@@ -61,64 +84,19 @@ export default function SignInContent() {
           identifierLabel.appendChild(asterisk);
           identifierLabel.appendChild(labelSpan);
         }
-      }
 
-      // 이메일 필드 placeholder 변경
-      const identifierInput = document.querySelector(
-        'input[name="identifier"], input[id="identifier-field"], input[id*="identifier"]'
-      ) as HTMLInputElement;
-      if (identifierInput && identifierInput.placeholder !== "example@email.com") {
-        console.log("이메일 placeholder 변경");
-        identifierInput.placeholder = "example@email.com";
-      }
-
-      // 비밀번호 필드 라벨 변경 및 필수 표시 추가
-      const passwordLabel = document.querySelector(
-        'label[for="password-field"], label[for*="password"]'
-      ) as HTMLLabelElement;
-      if (passwordLabel) {
-        const labelText = passwordLabel.textContent || '';
-        if (!labelText.includes("비밀번호")) {
-          console.log("비밀번호 라벨 변경");
-          // 기존 텍스트를 숨기고 새 텍스트 추가
-          const asterisk = document.createElement('span');
-          asterisk.textContent = '* ';
-          asterisk.style.color = '#ef4444';
-          asterisk.style.marginRight = '4px';
-          
-          const labelSpan = document.createElement('span');
-          labelSpan.textContent = '비밀번호';
-          
-          passwordLabel.innerHTML = '';
-          passwordLabel.appendChild(asterisk);
-          passwordLabel.appendChild(labelSpan);
+        // placeholder 변경
+        if (identifierInput.placeholder !== "example@email.com") {
+          identifierInput.placeholder = "example@email.com";
         }
-      }
 
-      // 비밀번호 필드 placeholder 변경
-      const passwordInput = document.querySelector(
-        'input[name="password"], input[id="password-field"], input[id*="password"]'
-      ) as HTMLInputElement;
-      if (passwordInput && passwordInput.placeholder !== "비밀번호를 입력해주세요") {
-        console.log("비밀번호 placeholder 변경");
-        passwordInput.placeholder = "비밀번호를 입력해주세요";
-      }
-
-      // ===== 2열 레이아웃 구현 =====
-      const identifierRow = document.querySelector('.cl-formFieldRow__identifier') as HTMLElement;
-      const passwordRow = document.querySelector('.cl-formFieldRow__password') as HTMLElement;
-
-      // 이메일 필드: 2열 레이아웃 (라벨 왼쪽, 입력 필드 오른쪽)
-      if (identifierRow) {
-        console.log("이메일 필드 2열 레이아웃 적용");
-        
         // 라벨과 입력 필드 컨테이너 찾기
         const identifierLabelRow = identifierRow.querySelector('.cl-formFieldLabelRow__identifier') as HTMLElement;
-        const identifierInputContainer = identifierInput?.closest('.cl-formFieldInputGroup') as HTMLElement || 
-                                         identifierInput?.parentElement as HTMLElement;
+        const identifierInputContainer = identifierInput.closest('.cl-formFieldInputGroup') as HTMLElement || 
+                                         identifierInput.parentElement as HTMLElement;
 
         if (identifierLabelRow && identifierInputContainer) {
-          // 기존 구조를 테이블 형태로 변경
+          // 2열 레이아웃 적용
           identifierRow.style.cssText = `
             display: grid !important;
             grid-template-columns: 150px 1fr !important;
@@ -128,23 +106,20 @@ export default function SignInContent() {
             margin-top: 0 !important;
           `;
 
-          // 라벨을 왼쪽 열에 배치
           identifierLabelRow.style.cssText = `
             grid-column: 1 !important;
             padding-top: 0.75rem !important;
             margin: 0 !important;
           `;
 
-          // 입력 필드를 오른쪽 열에 배치
           identifierInputContainer.style.cssText = `
             grid-column: 2 !important;
             margin: 0 !important;
           `;
 
-          // 안내 문구 추가 (이메일 필드 아래)
-          let emailHint = identifierRow.querySelector('.email-hint') as HTMLElement;
-          if (!emailHint) {
-            emailHint = document.createElement('p');
+          // 안내 문구 추가
+          if (!identifierRow.querySelector('.email-hint')) {
+            const emailHint = document.createElement('p');
             emailHint.className = 'email-hint';
             emailHint.textContent = '로그인 아이디로 사용할 이메일을 입력해 주세요.';
             emailHint.style.cssText = `
@@ -157,29 +132,50 @@ export default function SignInContent() {
             identifierRow.appendChild(emailHint);
           }
 
-          // 오류 메시지도 2열 레이아웃에 맞게 조정
-          const identifierError = identifierRow.querySelector('.cl-formFieldErrorText') as HTMLElement;
-          if (identifierError) {
-            identifierError.style.cssText = `
-              grid-column: 2 !important;
-              margin-top: 0.5rem !important;
-              margin-left: 0 !important;
-            `;
-          }
+          isEmailFieldApplied = true;
         }
       }
 
-      // 비밀번호 필드: 2열 레이아웃 (라벨 왼쪽, 입력 필드 오른쪽)
-      if (passwordRow) {
+      // 비밀번호 필드 처리
+      const passwordRow = document.querySelector('.cl-formFieldRow__password') as HTMLElement;
+      const passwordInput = document.querySelector(
+        'input[name="password"], input[id="password-field"], input[id*="password"]'
+      ) as HTMLInputElement;
+      const passwordLabel = document.querySelector(
+        'label[for="password-field"], label[for*="password"]'
+      ) as HTMLLabelElement;
+
+      if (passwordRow && passwordInput && passwordLabel && !isPasswordFieldApplied) {
         console.log("비밀번호 필드 2열 레이아웃 적용");
         
+        // 라벨 변경
+        const labelText = passwordLabel.textContent || '';
+        if (!labelText.includes("비밀번호")) {
+          const asterisk = document.createElement('span');
+          asterisk.textContent = '* ';
+          asterisk.style.color = '#ef4444';
+          asterisk.style.marginRight = '4px';
+          
+          const labelSpan = document.createElement('span');
+          labelSpan.textContent = '비밀번호';
+          
+          passwordLabel.innerHTML = '';
+          passwordLabel.appendChild(asterisk);
+          passwordLabel.appendChild(labelSpan);
+        }
+
+        // placeholder 변경
+        if (passwordInput.placeholder !== "비밀번호를 입력해주세요") {
+          passwordInput.placeholder = "비밀번호를 입력해주세요";
+        }
+
         // 라벨과 입력 필드 컨테이너 찾기
         const passwordLabelRow = passwordRow.querySelector('.cl-formFieldLabelRow__password') as HTMLElement;
-        const passwordInputContainer = passwordInput?.closest('.cl-formFieldInputGroup') as HTMLElement || 
-                                      passwordInput?.parentElement as HTMLElement;
+        const passwordInputContainer = passwordInput.closest('.cl-formFieldInputGroup') as HTMLElement || 
+                                      passwordInput.parentElement as HTMLElement;
 
         if (passwordLabelRow && passwordInputContainer) {
-          // 기존 구조를 테이블 형태로 변경
+          // 2열 레이아웃 적용
           passwordRow.style.cssText = `
             display: grid !important;
             grid-template-columns: 150px 1fr !important;
@@ -189,23 +185,20 @@ export default function SignInContent() {
             margin-top: 0 !important;
           `;
 
-          // 라벨을 왼쪽 열에 배치
           passwordLabelRow.style.cssText = `
             grid-column: 1 !important;
             padding-top: 0.75rem !important;
             margin: 0 !important;
           `;
 
-          // 입력 필드를 오른쪽 열에 배치
           passwordInputContainer.style.cssText = `
             grid-column: 2 !important;
             margin: 0 !important;
           `;
 
-          // 안내 문구 추가 (비밀번호 필드 아래)
-          let passwordHint = passwordRow.querySelector('.password-hint') as HTMLElement;
-          if (!passwordHint) {
-            passwordHint = document.createElement('p');
+          // 안내 문구 추가
+          if (!passwordRow.querySelector('.password-hint')) {
+            const passwordHint = document.createElement('p');
             passwordHint.className = 'password-hint';
             passwordHint.textContent = '영문/숫자/특수문자 중 2가지 이상 조합, 8자~16자';
             passwordHint.style.cssText = `
@@ -218,20 +211,12 @@ export default function SignInContent() {
             passwordRow.appendChild(passwordHint);
           }
 
-          // 오류 메시지도 2열 레이아웃에 맞게 조정
-          const passwordError = passwordRow.querySelector('.cl-formFieldErrorText') as HTMLElement;
-          if (passwordError) {
-            passwordError.style.cssText = `
-              grid-column: 2 !important;
-              margin-top: 0.5rem !important;
-              margin-left: 0 !important;
-            `;
-          }
+          isPasswordFieldApplied = true;
         }
       }
 
       // 필드 순서: 이메일 → 비밀번호
-      if (identifierRow && passwordRow) {
+      if (identifierRow && passwordRow && isEmailFieldApplied && isPasswordFieldApplied) {
         const form = identifierRow.parentElement;
         if (form) {
           const formChildren = Array.from(form.children);
@@ -239,33 +224,67 @@ export default function SignInContent() {
           const passwordIndex = formChildren.indexOf(passwordRow);
 
           if (identifierIndex > passwordIndex) {
-            console.log("이메일 필드를 비밀번호 필드 앞으로 이동");
             form.insertBefore(identifierRow, passwordRow);
           }
+        }
+      }
+
+      // 오류 메시지 위치 조정
+      if (identifierRow) {
+        const identifierError = identifierRow.querySelector('.cl-formFieldErrorText') as HTMLElement;
+        if (identifierError && identifierError.style.gridColumn !== '2') {
+          identifierError.style.cssText = `
+            grid-column: 2 !important;
+            margin-top: 0.5rem !important;
+            margin-left: 0 !important;
+          `;
+        }
+      }
+
+      if (passwordRow) {
+        const passwordError = passwordRow.querySelector('.cl-formFieldErrorText') as HTMLElement;
+        if (passwordError && passwordError.style.gridColumn !== '2') {
+          passwordError.style.cssText = `
+            grid-column: 2 !important;
+            margin-top: 0.5rem !important;
+            margin-left: 0 !important;
+          `;
         }
       }
 
       console.groupEnd();
     };
 
-    // 초기 실행
-    setTimeout(updateForm, 100);
+    // 초기 실행 (지연 시간을 늘려 Clerk가 완전히 렌더링된 후 실행)
+    const initialTimeout = setTimeout(updateForm, 500);
 
-    // MutationObserver로 동적으로 추가되는 요소 감지
+    // MutationObserver는 더 구체적으로 타겟팅하고, throttle 적용
+    let lastUpdateTime = 0;
+    const THROTTLE_MS = 2000; // 2초마다 최대 1회만 업데이트
+
     const observer = new MutationObserver(() => {
-      updateForm();
-    });
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true,
+      const now = Date.now();
+      if (now - lastUpdateTime > THROTTLE_MS && (!isEmailFieldApplied || !isPasswordFieldApplied)) {
+        lastUpdateTime = now;
+        updateForm();
+      }
     });
 
-    // 주기적으로 확인 (Clerk가 동적으로 필드를 추가할 수 있음)
-    const interval = setInterval(updateForm, 1000);
+    // Clerk 폼이 렌더링될 컨테이너만 관찰
+    const formContainer = document.querySelector('.cl-rootBox, .cl-card, form');
+    if (formContainer) {
+      observer.observe(formContainer, {
+        childList: true,
+        subtree: true,
+        attributes: false, // 속성 변경은 무시
+      });
+    }
+
+    // 주기적 확인은 제거 (MutationObserver로 충분)
 
     return () => {
+      clearTimeout(initialTimeout);
       observer.disconnect();
-      clearInterval(interval);
     };
   }, []);
 
