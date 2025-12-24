@@ -281,6 +281,7 @@
     display: block !important;
     margin-top: 0 !important;
     margin-bottom: 1cm !important;
+    margin-bottom: 37.8px !important; /* 1cm = 37.8px (fallback) */
     padding-top: 0 !important;
     clear: both !important;
   }
@@ -632,6 +633,12 @@
   box-sizing: border-box !important;
 }
 
+/* 비밀번호 필드는 1cm 간격으로 오버라이드 */
+.cl-formFieldRow.cl-formFieldRow__password {
+  margin-bottom: 1cm !important;
+  margin-bottom: 37.8px !important; /* 1cm = 37.8px (fallback) */
+}
+
 /* 필드 라벨 행 - 위에서 아래로 배치 */
 .cl-formFieldLabelRow {
   position: relative !important;
@@ -695,11 +702,19 @@
   display: block !important;
   margin-top: 0 !important;
   margin-bottom: 1cm !important;
+  margin-bottom: 37.8px !important; /* 1cm = 37.8px (fallback for browsers that don't support cm) */
   padding-top: 0 !important;
   padding-bottom: 0 !important;
   clear: both !important;
   width: 100% !important;
   box-sizing: border-box !important;
+}
+
+/* 비밀번호 필드와 로그인 버튼 사이 간격을 더 확실하게 */
+.cl-formFieldRow__password + .cl-internal-1pnppin,
+.cl-formFieldRow__password ~ .cl-internal-1pnppin {
+  margin-top: 1cm !important;
+  margin-top: 37.8px !important; /* 1cm = 37.8px (fallback) */
 }
 
 /* 입력 필드 컨테이너 - 위에서 아래로 배치, 명확한 간격 설정 */

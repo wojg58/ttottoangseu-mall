@@ -109,12 +109,12 @@ export default function SignInContent() {
         // placeholder 비우기
         passwordInput.placeholder = "";
 
-        // 비밀번호 필드 행의 하단 간격을 1cm로 설정
+        // 비밀번호 필드 행의 하단 간격을 1cm로 설정 (px 단위 fallback 포함)
         passwordRow.style.cssText = `
           position: relative !important;
           display: block !important;
           margin-top: 0 !important;
-          margin-bottom: 1cm !important;
+          margin-bottom: 37.8px !important;
           padding-top: 0 !important;
           padding-bottom: 0 !important;
           clear: both !important;
@@ -185,8 +185,10 @@ export default function SignInContent() {
         }
       }
 
-      // 로그인 버튼이 보이도록 보장 (간격은 비밀번호 필드의 margin-bottom으로 처리)
+      // 로그인 버튼이 보이도록 보장 및 간격 확인
       const loginButton = document.querySelector('.cl-formButtonPrimary, button[type="submit"]') as HTMLElement;
+      const loginButtonContainer = loginButton?.closest('.cl-internal-1pnppin') as HTMLElement;
+      
       if (loginButton) {
         console.log("로그인 버튼 스타일 적용");
         loginButton.style.cssText = `
@@ -202,6 +204,14 @@ export default function SignInContent() {
         `;
       } else {
         console.log("로그인 버튼을 찾을 수 없음");
+      }
+
+      // 로그인 버튼 컨테이너에도 간격 설정 (1cm = 37.8px)
+      if (loginButtonContainer) {
+        console.log("로그인 버튼 컨테이너 간격 설정 - 1cm");
+        loginButtonContainer.style.cssText = `
+          margin-top: 37.8px !important;
+        `;
       }
 
       console.groupEnd();
