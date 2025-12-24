@@ -22,7 +22,7 @@ interface PaymentSuccessPageProps {
 }
 
 // 실제 결제 처리 컴포넌트
-async function PaymentSuccessHandler({ searchParams }: PaymentSuccessPageProps) {
+async function PaymentSuccessHandler({ searchParams }: PaymentSuccessPageProps): Promise<never> {
   const params = await searchParams;
   const { paymentKey, orderId, amount } = params;
 

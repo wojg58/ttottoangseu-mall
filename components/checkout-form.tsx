@@ -307,7 +307,6 @@ export default function CheckoutForm({
             console.groupEnd();
 
             setOrderNumber(order.order_number);
-            setShowPaymentWidget(true);
 
             // 주문 아이템에서 금액 정보 계산
             const itemsSubtotal = order.items.reduce(

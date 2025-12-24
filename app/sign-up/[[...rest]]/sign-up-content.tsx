@@ -7,6 +7,7 @@
 
 import { SignUp, SignedIn, SignedOut } from "@clerk/nextjs";
 import { useSearchParams, useRouter } from "next/navigation";
+import Link from "next/link";
 
 export default function SignUpContent() {
   const searchParams = useSearchParams();
@@ -51,14 +52,6 @@ export default function SignUpContent() {
             signInUrl="/sign-in"
             afterSignUpUrl={redirectUrl}
             forceRedirectUrl={redirectUrl}
-            additionalFields={[
-              {
-                name: "username",
-                label: "아이디",
-                placeholder: "아이디를 입력해주세요",
-                required: true,
-              },
-            ]}
             appearance={{
               elements: {
                 rootBox: "mx-auto",
@@ -82,12 +75,12 @@ export default function SignUpContent() {
         <div className="mt-6 text-center">
           <p className="text-sm text-[#8b7d84]">
             이미 계정이 있으신가요?{" "}
-            <a
+            <Link
               href="/sign-in"
               className="text-[#ff6b9d] hover:text-[#ff5088] font-medium"
             >
               로그인하기
-            </a>
+            </Link>
           </p>
         </div>
       </div>

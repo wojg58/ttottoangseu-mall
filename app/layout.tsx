@@ -30,19 +30,19 @@ export const metadata: Metadata = {
 };
 
 // Clerk localization 커스터마이징 - "사용자 이름"을 "아이디"로 변경
-const customKoKR = {
+const customKoKR: any = {
   ...koKR,
   formFieldLabel__username: "아이디",
   formFieldLabel__identifier: "아이디",
   // 중첩 구조도 시도
   formFields: {
-    ...koKR.formFields,
+    ...(koKR as any).formFields,
     username: {
-      ...(koKR.formFields as any)?.username,
+      ...((koKR as any).formFields as any)?.username,
       label: "아이디",
     },
     identifier: {
-      ...(koKR.formFields as any)?.identifier,
+      ...((koKR as any).formFields as any)?.identifier,
       label: "아이디",
     },
   },

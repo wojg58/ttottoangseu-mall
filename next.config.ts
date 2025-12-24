@@ -23,14 +23,9 @@ const nextConfig: NextConfig = {
     minimumCacheTTL: 60,
   },
   // Server Actions body 크기 제한 증가 (이미지 일괄 업로드용)
-  // Next.js 15에서는 serverActions 설정 사용
-  serverActions: {
-    bodySizeLimit: "50mb", // 기본 1MB에서 50MB로 증가
-  },
-  // Next.js 15 이전 버전 호환성을 위한 experimental 설정도 추가
   experimental: {
     serverActions: {
-      bodySizeLimit: "50mb",
+      bodySizeLimit: "50mb", // 기본 1MB에서 50MB로 증가
     },
   },
 };

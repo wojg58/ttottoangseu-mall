@@ -12,6 +12,7 @@
 
 import { SignIn, SignedIn, SignedOut } from "@clerk/nextjs";
 import { useSearchParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import { useEffect } from "react";
 
 export default function SignInContent() {
@@ -274,7 +275,7 @@ export default function SignInContent() {
             <div className="mt-6 text-center">
               <p className="text-sm text-[#8b7d84]">
                 계정이 없으신가요?{" "}
-                <a
+                <Link
                   href="/sign-up"
                   className="text-[#ff6b9d] hover:text-[#ff5088] font-semibold transition-colors"
                   onClick={() => {
@@ -282,7 +283,7 @@ export default function SignInContent() {
                   }}
                 >
                   회원가입하기
-                </a>
+                </Link>
               </p>
             </div>
           </div>

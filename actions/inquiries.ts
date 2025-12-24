@@ -133,8 +133,16 @@ export async function getProductInquiries(productId: string) {
       return { success: false, error: error.message, data: [] };
     }
 
-    console.log("문의 조회 성공, 개수:", data?.length || 0);
-    return { success: true, data: (data || []) as Inquiry[] };
+    // Supabase 관계 쿼리 결과를 Inquiry 타입으로 변환
+    const inquiries: Inquiry[] = (data || []).map((item: any) => ({
+      ...item,
+      user: Array.isArray(item.user) && item.user.length > 0 
+        ? item.user[0] 
+        : item.user || null,
+    }));
+
+    console.log("문의 조회 성공, 개수:", inquiries.length);
+    return { success: true, data: inquiries };
   } catch (error) {
     console.error("문의 조회 예외:", error);
     return {

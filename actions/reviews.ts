@@ -135,8 +135,16 @@ export async function getProductReviews(productId: string) {
       return { success: false, error: error.message, data: [] };
     }
 
-    console.log("리뷰 조회 성공, 개수:", data?.length || 0);
-    return { success: true, data: (data || []) as Review[] };
+    // Supabase 관계 쿼리 결과를 Review 타입으로 변환
+    const reviews: Review[] = (data || []).map((item: any) => ({
+      ...item,
+      user: Array.isArray(item.user) && item.user.length > 0 
+        ? item.user[0] 
+        : item.user || null,
+    }));
+
+    console.log("리뷰 조회 성공, 개수:", reviews.length);
+    return { success: true, data: reviews };
   } catch (error) {
     console.error("리뷰 조회 예외:", error);
     return {

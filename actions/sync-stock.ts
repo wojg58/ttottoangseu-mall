@@ -19,7 +19,7 @@
 "use server";
 
 import { getSmartStoreApiClient } from "@/lib/utils/smartstore-api";
-import { createServiceRoleClient } from "@/lib/supabase/service-role";
+import { getServiceRoleClient } from "@/lib/supabase/service-role";
 import { logger } from "@/lib/logger";
 
 export interface SyncStockResult {
@@ -42,10 +42,10 @@ export async function syncProductStock(
 
   try {
     // 1. Supabase에서 해당 상품 조회
-    const supabase = await createServiceRoleClient();
+    const supabase = getServiceRoleClient();
     const { data: product, error: findError } = await supabase
       .from("products")
-      .select("id, name, stock")
+      .select("id, name, stock, status")
       .eq("smartstore_product_id", smartstoreProductId)
       .eq("deleted_at", null)
       .single();
@@ -153,7 +153,7 @@ export async function syncAllStocks(): Promise<SyncStockResult> {
 
   try {
     // 1. Supabase에서 동기화 대상 상품 조회
-    const supabase = await createServiceRoleClient();
+    const supabase = getServiceRoleClient();
     const { data: products, error: findError } = await supabase
       .from("products")
       .select("id, name, smartstore_product_id")
