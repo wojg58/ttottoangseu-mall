@@ -75,6 +75,19 @@ export default function SignInContent() {
         // placeholder 비우기
         identifierInput.placeholder = "";
 
+        // 이메일 입력 후 자동 리다이렉트 방지
+        identifierInput.addEventListener('blur', (e) => {
+          // 이메일 입력 후 blur 이벤트가 발생해도 페이지 이동을 막지 않음
+          // 대신 비밀번호 필드로 포커스 이동
+          const passwordInput = document.querySelector(
+            'input[name="password"], input[id="password-field"], input[id*="password"]'
+          ) as HTMLInputElement;
+          if (passwordInput && identifierInput.value) {
+            // 비밀번호 필드가 있으면 포커스 이동하지 않음 (사용자가 직접 클릭하도록)
+            console.log("[SignInContent] 이메일 입력 완료, 비밀번호 입력 대기");
+          }
+        });
+
         // 라벨 행과 라벨이 보이도록 보장
         if (identifierLabelRow) {
           identifierLabelRow.style.cssText = `
@@ -316,6 +329,32 @@ export default function SignInContent() {
     }
   }, [redirectUrl]);
 
+  // /sign-in/create로 이동하는 것을 방지
+  useEffect(() => {
+    const preventCreateRedirect = () => {
+      // 현재 URL이 /sign-in/create로 변경되는 것을 감지
+      if (window.location.pathname === '/sign-in/create') {
+        console.group("[SignInContent] /sign-in/create로 이동 감지, 로그인 페이지로 리다이렉트");
+        console.log("시간:", new Date().toISOString());
+        console.groupEnd();
+        
+        // 로그인 페이지로 다시 리다이렉트
+        router.push('/sign-in');
+      }
+    };
+
+    // 주기적으로 URL 확인
+    const interval = setInterval(preventCreateRedirect, 500);
+    
+    // popstate 이벤트 리스너 (뒤로가기/앞으로가기)
+    window.addEventListener('popstate', preventCreateRedirect);
+    
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('popstate', preventCreateRedirect);
+    };
+  }, [router]);
+
   // 로그인 성공 후 리다이렉트 처리
   useEffect(() => {
     if (isLoaded && isSignedIn) {
@@ -372,7 +411,9 @@ export default function SignInContent() {
                 path="/sign-in"
                 signUpUrl="/sign-up"
                 afterSignInUrl={redirectUrl}
+                fallbackRedirectUrl={redirectUrl}
                 forceRedirectUrl={redirectUrl}
+                redirectUrl={redirectUrl}
                 appearance={{
                   elements: {
                     rootBox: "mx-auto",
