@@ -334,15 +334,19 @@ export default function SignInContent() {
     const preventSecondPageRedirect = () => {
       const currentPath = window.location.pathname;
       
-      // /sign-in/create 또는 다른 두 번째 입력 페이지로 이동하는 것을 감지
-      if (currentPath.includes('/sign-in/') && currentPath !== '/sign-in') {
+      // /sign-in/create, /sign-up, 또는 다른 두 번째 입력 페이지로 이동하는 것을 감지
+      if (
+        (currentPath.includes('/sign-in/') && currentPath !== '/sign-in') ||
+        currentPath === '/sign-up' ||
+        currentPath.includes('/sign-up/')
+      ) {
         console.group("[SignInContent] 두 번째 입력 페이지로 이동 감지, 로그인 페이지로 리다이렉트");
         console.log("현재 경로:", currentPath);
         console.log("시간:", new Date().toISOString());
         console.groupEnd();
         
         // 로그인 페이지로 다시 리다이렉트
-        router.push('/sign-in');
+        router.replace('/sign-in');
       }
     };
 
@@ -428,7 +432,7 @@ export default function SignInContent() {
               <SignIn
                 routing="path"
                 path="/sign-in"
-                signUpUrl="/sign-up"
+                signUpUrl={null}
                 afterSignInUrl={redirectUrl}
                 fallbackRedirectUrl={redirectUrl}
                 forceRedirectUrl={redirectUrl}
