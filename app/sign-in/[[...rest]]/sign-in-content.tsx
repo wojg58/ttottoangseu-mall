@@ -561,8 +561,9 @@ export default function SignInContent() {
                 <Link
                   href="/sign-up"
                   className="text-[#ff6b9d] hover:text-[#ff5088] font-semibold transition-colors"
-                  onClick={() => {
+                  onClick={(e) => {
                     console.log("[SignInContent] 회원가입 페이지로 이동");
+                    router.push("/sign-up");
                   }}
                 >
                   회원가입하기
