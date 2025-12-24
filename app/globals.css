@@ -751,7 +751,7 @@
   box-sizing: border-box !important;
 }
 
-/* 로그인 버튼 - 명확하게 표시되도록 스타일 설정 (1cm 간격) */
+/* 로그인 버튼 - 명확하게 표시되도록 스타일 설정 (1cm 간격) 및 클릭 가능하도록 */
 .cl-formButtonPrimary {
   position: relative !important;
   display: block !important;
@@ -763,6 +763,16 @@
   width: 100% !important;
   box-sizing: border-box !important;
   z-index: 1 !important;
+  pointer-events: auto !important;
+  cursor: pointer !important;
+}
+
+/* 로그인 버튼이 비활성화되지 않도록 보장 */
+.cl-formButtonPrimary:disabled,
+button[type="submit"]:disabled {
+  pointer-events: auto !important;
+  cursor: pointer !important;
+  opacity: 1 !important;
 }
 
 /* 비밀번호 필드 액션 */

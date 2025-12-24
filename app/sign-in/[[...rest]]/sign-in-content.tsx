@@ -10,7 +10,7 @@
 
 "use client";
 
-import { SignIn, SignedIn, SignedOut } from "@clerk/nextjs";
+import { SignIn, SignedIn, SignedOut, useAuth } from "@clerk/nextjs";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useEffect } from "react";
@@ -18,6 +18,7 @@ import { useEffect } from "react";
 export default function SignInContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { isSignedIn, isLoaded } = useAuth();
   const redirectUrl = searchParams.get("redirect_url") || "/";
 
   // 클라이언트 사이드에서만 실행
@@ -215,11 +216,19 @@ export default function SignInContent() {
       }
 
       // 로그인 버튼이 보이도록 보장 및 간격 확인
-      const loginButton = document.querySelector('.cl-formButtonPrimary, button[type="submit"]') as HTMLElement;
+      const loginButton = document.querySelector('.cl-formButtonPrimary, button[type="submit"]') as HTMLButtonElement;
       const loginButtonContainer = loginButton?.closest('.cl-internal-1pnppin') as HTMLElement;
       
       if (loginButton) {
-        console.log("로그인 버튼 스타일 적용");
+        console.log("로그인 버튼 스타일 적용 및 클릭 가능하도록 설정");
+        
+        // 로그인 버튼을 클릭 가능하도록 설정
+        loginButton.removeAttribute('disabled');
+        loginButton.removeAttribute('tabindex');
+        loginButton.setAttribute('tabindex', '0');
+        loginButton.setAttribute('aria-disabled', 'false');
+        loginButton.type = 'submit';
+        
         loginButton.style.cssText = `
           position: relative !important;
           display: block !important;
@@ -230,7 +239,18 @@ export default function SignInContent() {
           width: 100% !important;
           box-sizing: border-box !important;
           z-index: 1 !important;
+          pointer-events: auto !important;
+          cursor: pointer !important;
         `;
+        
+        // 로그인 버튼 클릭 이벤트 로깅
+        loginButton.addEventListener('click', (e) => {
+          console.group("[SignInContent] 로그인 버튼 클릭");
+          console.log("시간:", new Date().toISOString());
+          console.log("버튼 타입:", loginButton.type);
+          console.log("버튼 disabled:", loginButton.disabled);
+          console.groupEnd();
+        });
       } else {
         console.log("로그인 버튼을 찾을 수 없음");
       }
@@ -279,21 +299,37 @@ export default function SignInContent() {
     };
   }, []);
 
-  // 로그인 성공/실패 감지
+  // 로그인 성공/실패 감지 및 리다이렉트 처리
   useEffect(() => {
-    const handleSignIn = () => {
+    const handleSignIn = (e: Event) => {
       console.group("[SignInContent] 로그인 시도 감지");
       console.log("시간:", new Date().toISOString());
+      console.log("리다이렉트 URL:", redirectUrl);
       console.groupEnd();
     };
 
     // 폼 제출 이벤트 리스너
-    const form = document.querySelector('form');
+    const form = document.querySelector('form.cl-form');
     if (form) {
       form.addEventListener('submit', handleSignIn);
       return () => form.removeEventListener('submit', handleSignIn);
     }
-  }, []);
+  }, [redirectUrl]);
+
+  // 로그인 성공 후 리다이렉트 처리
+  useEffect(() => {
+    if (isLoaded && isSignedIn) {
+      console.group("[SignInContent] 로그인 성공 감지");
+      console.log("리다이렉트 URL로 이동:", redirectUrl);
+      console.log("시간:", new Date().toISOString());
+      console.groupEnd();
+      
+      // 리다이렉트 실행 (약간의 딜레이를 두어 사용자 동기화가 완료될 시간을 줌)
+      setTimeout(() => {
+        router.push(redirectUrl);
+      }, 1000);
+    }
+  }, [isLoaded, isSignedIn, redirectUrl, router]);
 
   // 이미 로그인된 사용자는 홈으로 리다이렉트
   return (
