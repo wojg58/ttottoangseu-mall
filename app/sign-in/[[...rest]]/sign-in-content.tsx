@@ -528,8 +528,8 @@ export default function SignInContent() {
                 if (attempts % 10 === 0) {
                   console.log(`[SignInContent] 초기화 대기 중... (${attempts * 100}ms)`);
                   console.log(`  - isLoaded: ${isLoaded}`);
-                  console.log(`  - clerk: ${!!clerk}`);
-                  console.log(`  - signIn: ${!!clerk?.signIn}`);
+                  console.log(`  - signIn: ${!!clerkSignIn}`);
+                  console.log(`  - setActive: ${!!setActive}`);
                 }
               }
 
