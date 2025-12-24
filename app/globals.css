@@ -227,11 +227,12 @@
     line-height: 1.25rem;
   }
 
-  /* Clerk 로그인 페이지에서 이메일 필드 완전히 숨기기 */
+  /* Clerk 로그인 페이지에서 이메일 필드 표시 (identifier 필드 사용) */
+  /* 이메일 필드는 identifier 필드로 대체되므로 숨기지 않음 */
   .cl-formFieldRow__email,
   .cl-formFieldInput__email,
   .cl-formFieldLabel__email {
-    display: none !important;
+    /* display: none !important; */ /* 제거 - 이메일 필드 표시 */
   }
 
   /* Clerk 로그인 identifier 필드 라벨 - 실제 라벨 텍스트 사용 */
@@ -286,7 +287,7 @@
     clear: both !important;
   }
 
-  /* 아이디 필드가 항상 표시되도록 보장 */
+  /* 아이디 필드가 항상 표시되도록 보장 및 활성화 */
   .cl-formFieldRow__identifier,
   .cl-formField__identifier,
   .cl-formFieldInput__identifier,
@@ -296,6 +297,18 @@
     display: block !important;
     visibility: visible !important;
     opacity: 1 !important;
+    pointer-events: auto !important;
+    cursor: text !important;
+  }
+  
+  /* 이메일 주소 입력칸 컨테이너 표시 및 활성화 */
+  .cl-formFieldRow__identifier .cl-formField,
+  .cl-formFieldRow__identifier .cl-formFieldInput,
+  .cl-formFieldRow__identifier .cl-formFieldInput__identifier {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
   }
 
   /* Clerk identifier 입력 필드 placeholder 색상 */
@@ -348,6 +361,16 @@
     pointer-events: auto !important;
     cursor: text !important;
     opacity: 1 !important;
+  }
+  
+  /* 비밀번호 입력칸 컨테이너 표시 및 활성화 */
+  .cl-formFieldRow__password .cl-formField,
+  .cl-formFieldRow__password .cl-formFieldInput,
+  .cl-formFieldRow__password .cl-formFieldInput__password {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
   }
 
   /* 비밀번호 placeholder 한국어로 변경 */
@@ -772,7 +795,7 @@
   box-sizing: border-box !important;
 }
 
-/* 로그인 버튼 - 명확하게 표시되도록 스타일 설정 (1cm 간격) 및 클릭 가능하도록 */
+/* 로그인 버튼 - 명확하게 표시되도록 스타일 설정 (1cm 간격) 및 클릭 가능하도록, 빨간색 */
 .cl-formButtonPrimary {
   position: relative !important;
   display: block !important;
@@ -786,6 +809,12 @@
   z-index: 1 !important;
   pointer-events: auto !important;
   cursor: pointer !important;
+  background-color: #dc2626 !important; /* red-600 */
+  color: white !important;
+}
+
+.cl-formButtonPrimary:hover {
+  background-color: #b91c1c !important; /* red-700 */
 }
 
 /* 로그인 버튼이 비활성화되지 않도록 보장 */
