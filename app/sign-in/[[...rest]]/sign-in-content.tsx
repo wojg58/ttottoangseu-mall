@@ -564,14 +564,22 @@ export default function SignInContent() {
               });
 
               console.log("[SignInContent] 로그인 성공, 상태:", result.status);
+              console.log("[SignInContent] result 전체:", result);
               
-              // 로그인 성공 후 리다이렉트
+              // 로그인 성공 후 세션 활성화 및 리다이렉트
               if (result.status === "complete") {
-                console.log("[SignInContent] 로그인 완료, 리다이렉트:", redirectUrl);
-                // 약간의 딜레이 후 리다이렉트 (세션 동기화 대기)
-                setTimeout(() => {
-                  router.push(redirectUrl);
-                }, 500);
+                console.log("[SignInContent] 로그인 완료, 세션 활성화 시작");
+                
+                // 세션 활성화
+                if (result.createdSessionId && clerk.setActive) {
+                  console.log("[SignInContent] setActive 호출 중, sessionId:", result.createdSessionId);
+                  await clerk.setActive({ session: result.createdSessionId });
+                  console.log("[SignInContent] setActive 완료");
+                }
+                
+                console.log("[SignInContent] 세션 활성화 완료, isSignedIn 변경 대기");
+                // 리다이렉트는 useEffect에서 isSignedIn이 true가 되면 자동으로 처리됨
+                // 여기서는 세션 활성화만 하고, 리다이렉트는 기다리지 않음
               } else {
                 console.warn("[SignInContent] 로그인 상태가 complete가 아님:", result.status);
                 alert("로그인을 완료할 수 없습니다. 다시 시도해주세요.");
