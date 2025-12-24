@@ -67,7 +67,7 @@ export default function SignInContent() {
       ) as HTMLLabelElement;
 
       if (identifierRow && identifierInput && identifierLabel && !isEmailFieldApplied) {
-        console.log("이메일 필드 세로 레이아웃 적용");
+        console.log("아이디 필드 DOM 재배치");
         
         // 라벨 변경
         const labelText = identifierLabel.textContent || '';
@@ -90,58 +90,57 @@ export default function SignInContent() {
           identifierInput.placeholder = "example@email.com";
         }
 
-        // 라벨과 입력 필드 컨테이너 찾기
+        // 라벨 행과 입력 컨테이너 찾기
         const identifierLabelRow = identifierRow.querySelector('.cl-formFieldLabelRow__identifier') as HTMLElement;
-        const identifierInputContainer = identifierInput.closest('.cl-formFieldInputGroup') as HTMLElement || 
-                                         identifierInput.parentElement as HTMLElement;
-
-        if (identifierLabelRow && identifierInputContainer) {
-          // 세로 레이아웃 적용 (라벨 위, 입력칸 아래)
+        const identifierInputWrapper = identifierInput.closest('.cl-internal-17uj465') as HTMLElement || 
+                                       identifierInput.parentElement?.parentElement as HTMLElement;
+        
+        if (identifierLabelRow && identifierInputWrapper) {
+          // identifierRow의 스타일 설정
           identifierRow.style.cssText = `
             display: flex !important;
             flex-direction: column !important;
-            gap: 0.75rem !important;
-            margin-bottom: 2rem !important;
-            margin-top: 0 !important;
-          `;
-
-          // 라벨을 맨 위에 배치
-          identifierLabelRow.style.cssText = `
-            order: 1 !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            margin-bottom: 0.5rem !important;
-          `;
-
-          // 입력칸을 라벨 아래에 배치 (높이 증가)
-          identifierInputContainer.style.cssText = `
-            order: 2 !important;
-            margin: 0 !important;
-            width: 100% !important;
+            margin-bottom: 1.5rem !important;
           `;
           
-          // 입력 필드 높이 증가
-          if (identifierInput) {
-            identifierInput.style.cssText = `
-              padding-top: 1rem !important;
-              padding-bottom: 1rem !important;
-              min-height: 3.5rem !important;
-            `;
-          }
-
+          // 라벨 행의 스타일 (맨 위에)
+          identifierLabelRow.style.cssText = `
+            margin-bottom: 0.75rem !important;
+            display: block !important;
+          `;
+          
+          // 입력 컨테이너의 스타일
+          identifierInputWrapper.style.cssText = `
+            display: block !important;
+            margin: 0 !important;
+          `;
+          
+          // 입력 필드 스타일
+          identifierInput.style.cssText = `
+            width: 100% !important;
+            padding: 1rem !important;
+            min-height: 3.5rem !important;
+            border: 1px solid #d1d5db !important;
+            border-radius: 0.5rem !important;
+            font-size: 1rem !important;
+            box-sizing: border-box !important;
+          `;
+          
+          // ** 핵심: 라벨 행을 identifierRow의 맨 앞에 직접 이동 **
+          identifierRow.insertBefore(identifierLabelRow, identifierRow.firstChild);
+          
           // 안내 문구 추가 (입력칸 아래)
           if (!identifierRow.querySelector('.email-hint')) {
-            const emailHint = document.createElement('p');
-            emailHint.className = 'email-hint';
-            emailHint.textContent = '로그인 아이디로 사용할 이메일을 입력해 주세요.';
-            emailHint.style.cssText = `
-              order: 3 !important;
+            const hintContainer = document.createElement('p');
+            hintContainer.className = 'email-hint';
+            hintContainer.textContent = '로그인 아이디로 사용할 이메일을 입력해 주세요.';
+            hintContainer.style.cssText = `
               font-size: 0.875rem !important;
               color: #6b7280 !important;
-              margin-top: 0.75rem !important;
+              margin-top: 0.5rem !important;
               margin-bottom: 0 !important;
             `;
-            identifierRow.appendChild(emailHint);
+            identifierRow.appendChild(hintContainer);
           }
 
           isEmailFieldApplied = true;
@@ -158,7 +157,7 @@ export default function SignInContent() {
       ) as HTMLLabelElement;
 
       if (passwordRow && passwordInput && passwordLabel && !isPasswordFieldApplied) {
-        console.log("비밀번호 필드 세로 레이아웃 적용");
+        console.log("비밀번호 필드 DOM 재배치");
         
         // 라벨 변경
         const labelText = passwordLabel.textContent || '';
@@ -181,58 +180,57 @@ export default function SignInContent() {
           passwordInput.placeholder = "비밀번호를 입력해주세요";
         }
 
-        // 라벨과 입력 필드 컨테이너 찾기
+        // 라벨 행과 입력 컨테이너 찾기
         const passwordLabelRow = passwordRow.querySelector('.cl-formFieldLabelRow__password') as HTMLElement;
-        const passwordInputContainer = passwordInput.closest('.cl-formFieldInputGroup') as HTMLElement || 
-                                      passwordInput.parentElement as HTMLElement;
-
-        if (passwordLabelRow && passwordInputContainer) {
-          // 세로 레이아웃 적용 (라벨 위, 입력칸 아래)
+        const passwordInputWrapper = passwordInput.closest('.cl-formFieldInputGroup') as HTMLElement || 
+                                    passwordInput.parentElement as HTMLElement;
+        
+        if (passwordLabelRow && passwordInputWrapper) {
+          // passwordRow의 스타일 설정
           passwordRow.style.cssText = `
             display: flex !important;
             flex-direction: column !important;
-            gap: 0.75rem !important;
-            margin-bottom: 2rem !important;
-            margin-top: 0 !important;
-          `;
-
-          // 라벨을 맨 위에 배치
-          passwordLabelRow.style.cssText = `
-            order: 1 !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            margin-bottom: 0.5rem !important;
-          `;
-
-          // 입력칸을 라벨 아래에 배치 (높이 증가)
-          passwordInputContainer.style.cssText = `
-            order: 2 !important;
-            margin: 0 !important;
-            width: 100% !important;
+            margin-bottom: 1.5rem !important;
           `;
           
-          // 입력 필드 높이 증가
-          if (passwordInput) {
-            passwordInput.style.cssText = `
-              padding-top: 1rem !important;
-              padding-bottom: 1rem !important;
-              min-height: 3.5rem !important;
-            `;
-          }
-
+          // 라벨 행의 스타일 (맨 위에)
+          passwordLabelRow.style.cssText = `
+            margin-bottom: 0.75rem !important;
+            display: block !important;
+          `;
+          
+          // 입력 컨테이너의 스타일
+          passwordInputWrapper.style.cssText = `
+            display: block !important;
+            margin: 0 !important;
+          `;
+          
+          // 입력 필드 스타일
+          passwordInput.style.cssText = `
+            width: 100% !important;
+            padding: 1rem !important;
+            min-height: 3.5rem !important;
+            border: 1px solid #d1d5db !important;
+            border-radius: 0.5rem !important;
+            font-size: 1rem !important;
+            box-sizing: border-box !important;
+          `;
+          
+          // ** 핵심: 라벨 행을 passwordRow의 맨 앞에 직접 이동 **
+          passwordRow.insertBefore(passwordLabelRow, passwordRow.firstChild);
+          
           // 안내 문구 추가 (입력칸 아래)
           if (!passwordRow.querySelector('.password-hint')) {
-            const passwordHint = document.createElement('p');
-            passwordHint.className = 'password-hint';
-            passwordHint.textContent = '영문/숫자/특수문자 중 2가지 이상 조합, 8자~16자';
-            passwordHint.style.cssText = `
-              order: 3 !important;
+            const hintContainer = document.createElement('p');
+            hintContainer.className = 'password-hint';
+            hintContainer.textContent = '영문/숫자/특수문자 중 2가지 이상 조합, 8자~16자';
+            hintContainer.style.cssText = `
               font-size: 0.875rem !important;
               color: #6b7280 !important;
-              margin-top: 0.75rem !important;
+              margin-top: 0.5rem !important;
               margin-bottom: 0 !important;
             `;
-            passwordRow.appendChild(passwordHint);
+            passwordRow.appendChild(hintContainer);
           }
 
           isPasswordFieldApplied = true;
@@ -258,9 +256,10 @@ export default function SignInContent() {
         const identifierError = identifierRow.querySelector('.cl-formFieldErrorText') as HTMLElement;
         if (identifierError) {
           identifierError.style.cssText = `
-            order: 4 !important;
             margin-top: 0.5rem !important;
             margin-left: 0 !important;
+            color: #ef4444 !important;
+            font-size: 0.875rem !important;
           `;
         }
       }
@@ -269,9 +268,10 @@ export default function SignInContent() {
         const passwordError = passwordRow.querySelector('.cl-formFieldErrorText') as HTMLElement;
         if (passwordError) {
           passwordError.style.cssText = `
-            order: 4 !important;
             margin-top: 0.5rem !important;
             margin-left: 0 !important;
+            color: #ef4444 !important;
+            font-size: 0.875rem !important;
           `;
         }
       }
