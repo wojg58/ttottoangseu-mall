@@ -107,10 +107,26 @@ export default function SignInContent() {
       const passwordLabel = passwordRow?.querySelector('.cl-formFieldLabel__password-field') as HTMLElement;
 
       if (passwordRow && passwordInput && !isPasswordFieldApplied) {
-        console.log("비밀번호 필드 스타일 적용 - 1cm 간격");
+        console.log("비밀번호 필드 스타일 적용 - 1cm 간격 및 입력 가능하도록 설정");
         
         // placeholder 비우기
         passwordInput.placeholder = "";
+
+        // 비밀번호 필드를 입력 가능하도록 설정
+        passwordInput.removeAttribute('disabled');
+        passwordInput.removeAttribute('readonly');
+        passwordInput.removeAttribute('tabindex');
+        passwordInput.setAttribute('tabindex', '0');
+        passwordInput.setAttribute('aria-disabled', 'false');
+        passwordInput.style.pointerEvents = 'auto';
+        passwordInput.style.cursor = 'text';
+        
+        // 비밀번호 필드 스타일 - 입력 가능하도록
+        passwordInput.style.cssText += `
+          pointer-events: auto !important;
+          cursor: text !important;
+          opacity: 1 !important;
+        `;
 
         // 비밀번호 필드 행의 하단 간격을 1cm로 설정 (px 단위 fallback 포함)
         passwordRow.style.cssText = `
@@ -144,6 +160,16 @@ export default function SignInContent() {
             font-weight: 500 !important;
             color: #4a3f48 !important;
           `;
+        }
+
+        // 비밀번호 표시/숨김 버튼도 활성화
+        const showPasswordButton = passwordRow.querySelector('.cl-formFieldInputShowPasswordButton') as HTMLElement;
+        if (showPasswordButton) {
+          showPasswordButton.removeAttribute('tabindex');
+          showPasswordButton.setAttribute('tabindex', '0');
+          showPasswordButton.style.pointerEvents = 'auto';
+          showPasswordButton.style.cursor = 'pointer';
+          console.log("비밀번호 표시/숨김 버튼 활성화");
         }
 
         isPasswordFieldApplied = true;

@@ -305,7 +305,7 @@
     color: #b8a8b0;
   }
 
-  /* 비밀번호 필드가 항상 표시되도록 보장 */
+  /* 비밀번호 필드가 항상 표시되도록 보장 및 입력 가능하도록 설정 */
   .cl-formFieldRow__password,
   .cl-formField__password,
   .cl-formFieldInput__password,
@@ -315,6 +315,17 @@
   input[id="password-field"] {
     display: block !important;
     visibility: visible !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    cursor: text !important;
+  }
+  
+  /* 비밀번호 입력 필드가 비활성화되지 않도록 보장 */
+  input[name="password"]:disabled,
+  input[id*="password"]:disabled,
+  input[id="password-field"]:disabled {
+    pointer-events: auto !important;
+    cursor: text !important;
     opacity: 1 !important;
   }
 
