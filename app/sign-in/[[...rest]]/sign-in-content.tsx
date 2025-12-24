@@ -20,10 +20,13 @@ export default function SignInContent() {
   const router = useRouter();
   const redirectUrl = searchParams.get("redirect_url") || "/";
 
-  console.group("[SignInContent] 로그인 페이지 초기화");
-  console.log("리다이렉트 URL:", redirectUrl);
-  console.log("현재 URL:", window.location.href);
-  console.groupEnd();
+  // 클라이언트 사이드에서만 실행
+  if (typeof window !== "undefined") {
+    console.group("[SignInContent] 로그인 페이지 초기화");
+    console.log("리다이렉트 URL:", redirectUrl);
+    console.log("현재 URL:", window.location.href);
+    console.groupEnd();
+  }
 
   // 폼 필드를 세로 레이아웃으로 변경 (라벨 위, 입력칸 아래)
   useEffect(() => {
