@@ -10,7 +10,14 @@
 
 "use client";
 
-import { SignIn, SignedIn, SignedOut, useAuth, useClerk, useSignIn } from "@clerk/nextjs";
+import {
+  SignIn,
+  SignedIn,
+  SignedOut,
+  useAuth,
+  useClerk,
+  useSignIn,
+} from "@clerk/nextjs";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -846,7 +853,7 @@ export default function SignInContent() {
       clearTimeout(initialTimeout);
       clearInterval(interval);
     };
-  }, [clerk, router, redirectUrl, isLoaded, isSignedIn]);
+  }, [clerk, signIn, signInLoaded, router, redirectUrl, isLoaded, isSignedIn]);
 
   // 로그인 성공 후 리다이렉트 처리
   useEffect(() => {
