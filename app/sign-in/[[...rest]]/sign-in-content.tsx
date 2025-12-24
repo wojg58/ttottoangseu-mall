@@ -104,10 +104,23 @@ export default function SignInContent() {
       const passwordLabel = passwordRow?.querySelector('.cl-formFieldLabel__password-field') as HTMLElement;
 
       if (passwordRow && passwordInput && !isPasswordFieldApplied) {
-        console.log("비밀번호 필드 스타일 적용");
+        console.log("비밀번호 필드 스타일 적용 - 1cm 간격");
         
         // placeholder 비우기
         passwordInput.placeholder = "";
+
+        // 비밀번호 필드 행의 하단 간격을 1cm로 설정
+        passwordRow.style.cssText = `
+          position: relative !important;
+          display: block !important;
+          margin-top: 0 !important;
+          margin-bottom: 1cm !important;
+          padding-top: 0 !important;
+          padding-bottom: 0 !important;
+          clear: both !important;
+          width: 100% !important;
+          box-sizing: border-box !important;
+        `;
 
         // 라벨 행과 라벨이 보이도록 보장
         if (passwordLabelRow) {
@@ -172,16 +185,16 @@ export default function SignInContent() {
         }
       }
 
-      // 로그인 버튼이 보이도록 보장 및 간격 조정 (1cm)
+      // 로그인 버튼이 보이도록 보장 (간격은 비밀번호 필드의 margin-bottom으로 처리)
       const loginButton = document.querySelector('.cl-formButtonPrimary, button[type="submit"]') as HTMLElement;
       if (loginButton) {
-        console.log("로그인 버튼 스타일 적용 - 1cm 간격");
+        console.log("로그인 버튼 스타일 적용");
         loginButton.style.cssText = `
           position: relative !important;
           display: block !important;
           visibility: visible !important;
           opacity: 1 !important;
-          margin-top: 1cm !important;
+          margin-top: 0 !important;
           margin-bottom: 0 !important;
           width: 100% !important;
           box-sizing: border-box !important;
