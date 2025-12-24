@@ -271,6 +271,21 @@ export default function SignInContent() {
           console.log("비밀번호 표시/숨김 버튼 활성화");
         }
 
+        // 입력 시 에러 메시지 제거
+        passwordInput.addEventListener("input", () => {
+          const error = passwordRow.querySelector(
+            ".cl-formFieldErrorText, .custom-error-message",
+          ) as HTMLElement;
+          if (error) {
+            error.style.display = "none";
+          }
+          // aria-invalid 속성도 false로 설정
+          passwordInput.setAttribute("aria-invalid", "false");
+          // 에러 스타일 제거
+          passwordInput.style.borderColor = "";
+          passwordInput.style.borderWidth = "";
+        });
+
         isPasswordFieldApplied = true;
       }
 
@@ -556,7 +571,10 @@ export default function SignInContent() {
           console.log("  - 이메일 값 (trimmed):", emailValue);
           console.log("  - 이메일 값 길이:", emailValue.length);
           console.log("  - 비밀번호 입력됨:", passwordValue ? "예" : "아니오");
-          console.log("  - 비밀번호 값 길이:", passwordValue ? passwordValue.length : 0);
+          console.log(
+            "  - 비밀번호 값 길이:",
+            passwordValue ? passwordValue.length : 0,
+          );
 
           if (emailValue && passwordValue) {
             try {
@@ -633,13 +651,19 @@ export default function SignInContent() {
               // 1단계: 이메일로 signIn 생성
               console.log("[SignInContent] SignIn.create 호출 중...");
               console.log("[SignInContent] 전달할 identifier:", emailValue);
-              console.log("[SignInContent] identifier 타입:", typeof emailValue);
-              console.log("[SignInContent] identifier 길이:", emailValue.length);
-              
+              console.log(
+                "[SignInContent] identifier 타입:",
+                typeof emailValue,
+              );
+              console.log(
+                "[SignInContent] identifier 길이:",
+                emailValue.length,
+              );
+
               const signInAttempt = await signIn.create({
                 identifier: emailValue,
               });
-              
+
               console.log("[SignInContent] SignIn.create 응답:", signInAttempt);
 
               console.log(
@@ -737,25 +761,35 @@ export default function SignInContent() {
                 status: err.status,
                 statusCode: err.statusCode,
               });
-              
+
               // 에러 코드 확인
               const errorCode = err.errors?.[0]?.code;
               console.error("[SignInContent] 에러 코드:", errorCode);
-              console.error("[SignInContent] 에러 전체 객체:", JSON.stringify(err, null, 2));
+              console.error(
+                "[SignInContent] 에러 전체 객체:",
+                JSON.stringify(err, null, 2),
+              );
 
               // 에러 메시지 추출
               let errorMessage = "로그인에 실패했습니다.";
+              let errorField: "email" | "password" | "general" = "general";
+              
               if (err.errors && err.errors.length > 0) {
                 const firstError = err.errors[0];
-                errorMessage = firstError.message || firstError.longMessage || errorMessage;
-                
+                errorMessage =
+                  firstError.message || firstError.longMessage || errorMessage;
+
                 // 에러 코드 기반 처리
                 if (errorCode === "form_identifier_not_found") {
-                  errorMessage = "등록되지 않은 이메일 주소입니다. 회원가입을 먼저 진행해주세요.";
+                  errorMessage =
+                    "등록되지 않은 이메일 주소입니다. 회원가입을 먼저 진행해주세요.";
+                  errorField = "email";
                 } else if (errorCode === "form_password_incorrect") {
                   errorMessage = "비밀번호가 올바르지 않습니다.";
+                  errorField = "password";
                 } else if (errorCode === "form_identifier_invalid") {
                   errorMessage = "이메일 주소 형식이 올바르지 않습니다.";
+                  errorField = "email";
                 }
               } else if (err.message) {
                 errorMessage = err.message;
@@ -770,6 +804,7 @@ export default function SignInContent() {
               ) {
                 if (!errorCode || errorCode !== "form_identifier_not_found") {
                   errorMessage = "이메일 주소를 확인해주세요.";
+                  errorField = "email";
                 }
               } else if (
                 errorMessage.includes("password") ||
@@ -777,10 +812,116 @@ export default function SignInContent() {
               ) {
                 if (!errorCode || errorCode !== "form_password_incorrect") {
                   errorMessage = "비밀번호가 올바르지 않습니다.";
+                  errorField = "password";
                 }
               }
 
-              alert(errorMessage);
+              // 에러 메시지를 Clerk 폼에 표시
+              const identifierRow = clerkForm.querySelector(
+                ".cl-formFieldRow__identifier",
+              ) as HTMLElement;
+              const passwordRow = clerkForm.querySelector(
+                ".cl-formFieldRow__password",
+              ) as HTMLElement;
+
+              // 기존 에러 메시지 제거
+              const existingErrors = clerkForm.querySelectorAll(
+                ".cl-formFieldErrorText, .custom-error-message",
+              );
+              existingErrors.forEach((error) => {
+                (error as HTMLElement).style.display = "none";
+              });
+
+              // 에러 메시지 표시
+              if (errorField === "email" && identifierRow) {
+                // 이메일 필드에 에러 표시
+                let errorElement = identifierRow.querySelector(
+                  ".custom-error-message",
+                ) as HTMLElement;
+                if (!errorElement) {
+                  errorElement = document.createElement("div");
+                  errorElement.className = "custom-error-message";
+                  errorElement.style.cssText = `
+                    color: #dc2626;
+                    font-size: 0.875rem;
+                    margin-top: 0.5rem;
+                    display: block;
+                  `;
+                  const identifierInput = identifierRow.querySelector(
+                    'input[name="identifier"], input[id*="identifier"]',
+                  );
+                  if (identifierInput && identifierInput.parentElement) {
+                    identifierInput.parentElement.appendChild(errorElement);
+                  }
+                }
+                errorElement.textContent = errorMessage;
+                errorElement.style.display = "block";
+                
+                // 입력 필드에 에러 스타일 적용
+                const identifierInput = identifierRow.querySelector(
+                  'input[name="identifier"], input[id*="identifier"]',
+                ) as HTMLInputElement;
+                if (identifierInput) {
+                  identifierInput.style.borderColor = "#dc2626";
+                  identifierInput.style.borderWidth = "1px";
+                  identifierInput.setAttribute("aria-invalid", "true");
+                }
+              } else if (errorField === "password" && passwordRow) {
+                // 비밀번호 필드에 에러 표시
+                let errorElement = passwordRow.querySelector(
+                  ".custom-error-message",
+                ) as HTMLElement;
+                if (!errorElement) {
+                  errorElement = document.createElement("div");
+                  errorElement.className = "custom-error-message";
+                  errorElement.style.cssText = `
+                    color: #dc2626;
+                    font-size: 0.875rem;
+                    margin-top: 0.5rem;
+                    display: block;
+                  `;
+                  const passwordInput = passwordRow.querySelector(
+                    'input[name="password"], input[id*="password"]',
+                  );
+                  if (passwordInput && passwordInput.parentElement) {
+                    passwordInput.parentElement.appendChild(errorElement);
+                  }
+                }
+                errorElement.textContent = errorMessage;
+                errorElement.style.display = "block";
+                
+                // 입력 필드에 에러 스타일 적용
+                const passwordInput = passwordRow.querySelector(
+                  'input[name="password"], input[id*="password"]',
+                ) as HTMLInputElement;
+                if (passwordInput) {
+                  passwordInput.style.borderColor = "#dc2626";
+                  passwordInput.style.borderWidth = "1px";
+                  passwordInput.setAttribute("aria-invalid", "true");
+                }
+              } else {
+                // 일반 에러는 폼 상단에 표시
+                let generalError = clerkForm.querySelector(
+                  ".custom-general-error",
+                ) as HTMLElement;
+                if (!generalError) {
+                  generalError = document.createElement("div");
+                  generalError.className = "custom-general-error";
+                  generalError.style.cssText = `
+                    color: #dc2626;
+                    font-size: 0.875rem;
+                    margin-bottom: 1rem;
+                    padding: 0.75rem;
+                    background-color: #fef2f2;
+                    border: 1px solid #fecaca;
+                    border-radius: 0.5rem;
+                    display: block;
+                  `;
+                  clerkForm.insertBefore(generalError, clerkForm.firstChild);
+                }
+                generalError.textContent = errorMessage;
+                generalError.style.display = "block";
+              }
             }
           } else {
             alert("이메일과 비밀번호를 모두 입력해주세요.");
