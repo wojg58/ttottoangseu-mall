@@ -477,12 +477,14 @@ export default function SignInContent() {
 
       // 폼 제출 이벤트 가로채기
       const handleFormSubmit = async (e: SubmitEvent) => {
+        console.group("[SignInContent] Clerk 폼 제출 가로채기 - 바로 로그인 처리");
+        console.log("시간:", new Date().toISOString());
+        console.log("이벤트 타입:", e.type);
+        
+        // 기본 동작 방지
         e.preventDefault();
         e.stopPropagation();
         e.stopImmediatePropagation();
-
-        console.group("[SignInContent] Clerk 폼 제출 가로채기 - 바로 로그인 처리");
-        console.log("시간:", new Date().toISOString());
         
         // Clerk 폼에서 이메일과 비밀번호 추출
         const identifierInput = clerkForm.querySelector(
