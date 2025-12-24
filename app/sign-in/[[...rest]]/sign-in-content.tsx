@@ -10,7 +10,7 @@
 
 "use client";
 
-import { SignIn, SignedIn, SignedOut, useAuth } from "@clerk/nextjs";
+import { SignIn, SignedIn, SignedOut, useAuth, useClerk } from "@clerk/nextjs";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -19,6 +19,7 @@ export default function SignInContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { isSignedIn, isLoaded } = useAuth();
+  const clerk = useClerk();
   const redirectUrl = searchParams.get("redirect_url") || "/";
 
   // 클라이언트 사이드에서만 실행
@@ -468,7 +469,138 @@ export default function SignInContent() {
     };
   }, [router]);
 
+  // Clerk 폼 제출을 가로채서 바로 로그인 처리
+  useEffect(() => {
+    const interceptClerkFormSubmit = () => {
+      const clerkForm = document.querySelector('form.cl-form') as HTMLFormElement;
+      if (!clerkForm) return;
 
+      // 폼 제출 이벤트 가로채기
+      const handleFormSubmit = async (e: SubmitEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+
+        console.group("[SignInContent] Clerk 폼 제출 가로채기 - 바로 로그인 처리");
+        console.log("시간:", new Date().toISOString());
+        
+        // Clerk 폼에서 이메일과 비밀번호 추출
+        const identifierInput = clerkForm.querySelector(
+          'input[name="identifier"], input[id="identifier-field"], input[id*="identifier"], input[type="email"]'
+        ) as HTMLInputElement;
+        const passwordInput = clerkForm.querySelector(
+          'input[name="password"], input[id="password-field"], input[id*="password"], input[type="password"]'
+        ) as HTMLInputElement;
+
+        if (identifierInput && passwordInput) {
+          const emailValue = identifierInput.value.trim();
+          const passwordValue = passwordInput.value;
+
+          console.log("이메일:", emailValue);
+          console.log("비밀번호 입력됨:", passwordValue ? "예" : "아니오");
+
+          if (emailValue && passwordValue) {
+            try {
+              // Clerk가 초기화될 때까지 대기 (최대 3초)
+              let attempts = 0;
+              const maxAttempts = 30; // 3초 (100ms * 30)
+              
+              while ((!clerk || !clerk.signIn) && attempts < maxAttempts) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+                attempts++;
+              }
+
+              if (!clerk || !clerk.signIn) {
+                console.error("[SignInContent] Clerk가 초기화되지 않음 (타임아웃)");
+                alert("Clerk가 아직 초기화되지 않았습니다. 페이지를 새로고침해주세요.");
+                return;
+              }
+
+              console.log("[SignInContent] Clerk 초기화 확인 완료, 로그인 시작");
+
+              // 1단계: 이메일로 signIn 생성
+              const signInAttempt = await clerk.signIn.create({
+                identifier: emailValue,
+              });
+
+              console.log("[SignInContent] SignIn 생성 완료, 비밀번호 인증 시도");
+
+              // 2단계: 비밀번호로 인증 시도
+              const result = await signInAttempt.attemptFirstFactor({
+                strategy: "password",
+                password: passwordValue,
+              });
+
+              console.log("[SignInContent] 로그인 성공, 상태:", result.status);
+              
+              // 로그인 성공 후 리다이렉트
+              if (result.status === "complete") {
+                console.log("[SignInContent] 로그인 완료, 리다이렉트:", redirectUrl);
+                router.push(redirectUrl);
+              } else {
+                alert("로그인을 완료할 수 없습니다. 다시 시도해주세요.");
+              }
+            } catch (err: any) {
+              console.error("[SignInContent] 로그인 실패:", err);
+              const errorMessage = err.errors?.[0]?.message || err.message || "로그인에 실패했습니다. 이메일과 비밀번호를 확인해주세요.";
+              alert(errorMessage);
+            }
+          } else {
+            alert("이메일과 비밀번호를 모두 입력해주세요.");
+          }
+        }
+
+        console.groupEnd();
+        return false;
+      };
+
+      // 폼 제출 이벤트 리스너 추가
+      clerkForm.addEventListener('submit', handleFormSubmit, true); // capture phase에서 실행
+
+      // 버튼 텍스트를 "로그인"으로 변경
+      const loginButton = clerkForm.querySelector('.cl-formButtonPrimary, button[type="submit"]') as HTMLButtonElement;
+      if (loginButton) {
+        // 모든 자식 요소의 텍스트를 확인하고 변경
+        const buttonText = loginButton.querySelector('.cl-button__text, span, .cl-internal-*') as HTMLElement;
+        if (buttonText) {
+          buttonText.textContent = "로그인";
+        }
+        
+        // 버튼의 직접 텍스트도 변경
+        const originalText = loginButton.textContent || loginButton.innerText;
+        if (originalText && (originalText.includes("계속") || originalText.includes("Continue"))) {
+          loginButton.textContent = "로그인";
+          loginButton.innerText = "로그인";
+        }
+        
+        // 버튼의 모든 텍스트 노드 찾아서 변경
+        const walker = document.createTreeWalker(
+          loginButton,
+          NodeFilter.SHOW_TEXT,
+          null
+        );
+        let node;
+        while (node = walker.nextNode()) {
+          if (node.textContent && (node.textContent.includes("계속") || node.textContent.includes("Continue"))) {
+            node.textContent = "로그인";
+          }
+        }
+      }
+
+      return () => {
+        clerkForm.removeEventListener('submit', handleFormSubmit, true);
+      };
+    };
+
+    // 초기 실행 및 주기적 확인
+    const initialTimeout = setTimeout(interceptClerkFormSubmit, 500);
+    const interval = setInterval(interceptClerkFormSubmit, 1000);
+
+    return () => {
+      clearTimeout(initialTimeout);
+      clearInterval(interval);
+    };
+  }, [clerk, router, redirectUrl]);
 
   // 로그인 성공 후 리다이렉트 처리
   useEffect(() => {
@@ -540,12 +672,13 @@ export default function SignInContent() {
                     socialButtonsBlockButton: "block",
                     dividerRow: "block",
                     
-                    // 이메일/비밀번호 필드 숨기기
-                    formFieldRow__identifier: "hidden",
-                    formFieldRow__password: "hidden",
-                    formFieldRow__email: "hidden",
-                    formFieldRow__username: "hidden",
-                    form: "hidden",
+                    // 이메일/비밀번호 필드 표시
+                    formFieldRow__identifier: "block",
+                    formFieldRow__password: "block",
+                    form: "block",
+                    
+                    // 로그인 버튼 스타일
+                    formButtonPrimary: "w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-3 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md",
                     
                     // 푸터 링크
                     footerActionLink: "text-[#ff6b9d] hover:text-[#ff5088] font-medium",

@@ -813,6 +813,17 @@
   color: white !important;
 }
 
+/* 로그인 버튼 텍스트를 "로그인"으로 변경 */
+.cl-formButtonPrimary .cl-button__text::after,
+.cl-formButtonPrimary span::after {
+  content: "로그인" !important;
+}
+
+.cl-formButtonPrimary .cl-button__text,
+.cl-formButtonPrimary span {
+  font-size: 0 !important;
+}
+
 .cl-formButtonPrimary:hover {
   background-color: #b91c1c !important; /* red-700 */
 }
