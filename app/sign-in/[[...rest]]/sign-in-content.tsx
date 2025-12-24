@@ -228,9 +228,29 @@ export default function SignInContent() {
 
       // 오류 메시지 숨기기 및 identifier 검증 수정
       if (identifierRow) {
+        // identifier 입력 필드가 항상 보이도록 보장
+        if (identifierInput) {
+          identifierInput.style.cssText += `
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+          `;
+        }
+        
+        // identifier 필드 컨테이너도 보이도록 보장
+        const identifierField = identifierRow.querySelector('.cl-formField__identifier') as HTMLElement;
+        if (identifierField) {
+          identifierField.style.cssText += `
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+          `;
+        }
+        
+        // 에러 메시지만 숨기기 (입력 필드는 숨기지 않음)
         const identifierError = identifierRow.querySelector('.cl-formFieldErrorText') as HTMLElement;
         if (identifierError) {
-          // "Identifier is invalid." 에러 메시지 숨기기
+          // "Identifier is invalid." 에러 메시지만 숨기기
           identifierError.style.cssText = `
             display: none !important;
             visibility: hidden !important;
@@ -239,22 +259,6 @@ export default function SignInContent() {
             margin: 0 !important;
             padding: 0 !important;
           `;
-        }
-        
-        // identifier 입력 필드의 검증 속성 수정
-        if (identifierInput) {
-          // 이메일 형식 검증을 더 유연하게 설정
-          identifierInput.removeAttribute('pattern');
-          identifierInput.setAttribute('type', 'email');
-          identifierInput.setAttribute('inputmode', 'email');
-          
-          // 입력 시 에러 메시지 제거
-          identifierInput.addEventListener('input', () => {
-            const error = identifierRow.querySelector('.cl-formFieldErrorText') as HTMLElement;
-            if (error) {
-              error.style.display = 'none';
-            }
-          });
         }
       }
 

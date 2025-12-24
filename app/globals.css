@@ -305,15 +305,25 @@
     color: #b8a8b0;
   }
   
-  /* Clerk identifier 에러 메시지 숨기기 */
+  /* Clerk identifier 에러 메시지만 숨기기 (입력 필드는 숨기지 않음) */
   .cl-formFieldRow__identifier .cl-formFieldErrorText,
-  .cl-formField__identifier .cl-formFieldErrorText {
+  .cl-formField__identifier .cl-formFieldErrorText,
+  .cl-formFieldRow__identifier .cl-internal-5ur8x {
     display: none !important;
     visibility: hidden !important;
     opacity: 0 !important;
     height: 0 !important;
     margin: 0 !important;
     padding: 0 !important;
+  }
+  
+  /* 입력 필드는 항상 보이도록 보장 */
+  .cl-formFieldRow__identifier .cl-formFieldInput__identifier,
+  .cl-formFieldRow__identifier input[name="identifier"],
+  .cl-formFieldRow__identifier input[id="identifier-field"] {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
   }
 
   /* 비밀번호 필드가 항상 표시되도록 보장 및 입력 가능하도록 설정 */
