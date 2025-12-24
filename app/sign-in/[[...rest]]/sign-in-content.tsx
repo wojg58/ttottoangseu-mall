@@ -616,7 +616,7 @@ export default function SignInContent() {
       // 폼 제출 이벤트 리스너 추가
       clerkForm.addEventListener('submit', handleFormSubmit, true); // capture phase에서 실행
 
-      // 버튼 텍스트를 "로그인"으로 변경
+      // 버튼 텍스트를 "로그인"으로 변경 및 클릭 이벤트 가로채기
       const loginButton = clerkForm.querySelector('.cl-formButtonPrimary, button[type="submit"]') as HTMLButtonElement;
       if (loginButton) {
         // 버튼의 직접 텍스트 변경 (가장 확실한 방법)
@@ -648,6 +648,16 @@ export default function SignInContent() {
             }
           }
         }
+        
+        // 버튼 클릭 이벤트도 가로채기 (폼 제출과 동일한 처리)
+        const handleButtonClick = async (e: MouseEvent) => {
+          console.log("[SignInContent] 로그인 버튼 클릭 감지");
+          // 폼 제출 이벤트를 트리거하여 handleFormSubmit이 실행되도록
+          const formEvent = new Event('submit', { bubbles: true, cancelable: true });
+          clerkForm.dispatchEvent(formEvent);
+        };
+        
+        loginButton.addEventListener('click', handleButtonClick, true);
       }
 
       return () => {
