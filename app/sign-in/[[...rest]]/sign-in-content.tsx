@@ -62,12 +62,35 @@ export default function SignInContent() {
       const identifierInput = document.querySelector(
         'input[name="identifier"], input[id="identifier-field"], input[id*="identifier"]'
       ) as HTMLInputElement;
+      const identifierLabelRow = identifierRow?.querySelector('.cl-formFieldLabelRow__identifier') as HTMLElement;
+      const identifierLabel = identifierRow?.querySelector('.cl-formFieldLabel__identifier-field') as HTMLElement;
 
       if (identifierRow && identifierInput && !isEmailFieldApplied) {
         console.log("아이디 필드 스타일 적용");
         
         // placeholder 비우기
         identifierInput.placeholder = "";
+
+        // 라벨 행과 라벨이 보이도록 보장
+        if (identifierLabelRow) {
+          identifierLabelRow.style.cssText = `
+            display: block !important;
+            margin-bottom: 0.5rem !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+          `;
+        }
+        if (identifierLabel) {
+          identifierLabel.style.cssText = `
+            display: block !important;
+            margin-bottom: 0.5rem !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            font-size: 0.875rem !important;
+            font-weight: 500 !important;
+            color: #4a3f48 !important;
+          `;
+        }
 
         isEmailFieldApplied = true;
       }
@@ -77,12 +100,35 @@ export default function SignInContent() {
       const passwordInput = document.querySelector(
         'input[name="password"], input[id="password-field"], input[id*="password"]'
       ) as HTMLInputElement;
+      const passwordLabelRow = passwordRow?.querySelector('.cl-formFieldLabelRow__password') as HTMLElement;
+      const passwordLabel = passwordRow?.querySelector('.cl-formFieldLabel__password-field') as HTMLElement;
 
       if (passwordRow && passwordInput && !isPasswordFieldApplied) {
         console.log("비밀번호 필드 스타일 적용");
         
         // placeholder 비우기
         passwordInput.placeholder = "";
+
+        // 라벨 행과 라벨이 보이도록 보장
+        if (passwordLabelRow) {
+          passwordLabelRow.style.cssText = `
+            display: block !important;
+            margin-bottom: 0.5rem !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+          `;
+        }
+        if (passwordLabel) {
+          passwordLabel.style.cssText = `
+            display: block !important;
+            margin-bottom: 0.5rem !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            font-size: 0.875rem !important;
+            font-weight: 500 !important;
+            color: #4a3f48 !important;
+          `;
+        }
 
         isPasswordFieldApplied = true;
       }
@@ -248,16 +294,16 @@ export default function SignInContent() {
                     dividerRow: "hidden",
                     
                     // 폼 컨테이너
-                    form: "flex flex-col gap-6",
+                    form: "flex flex-col gap-0",
                     
                     // 폼 필드 행 - 겹치지 않도록 명확한 간격 설정
                     formFieldRow: "block mb-6 mt-0 relative w-full",
                     
-                    // 폼 필드 라벨 행 - 숨김
-                    formFieldLabelRow: "hidden",
+                    // 폼 필드 라벨 행 - 표시
+                    formFieldLabelRow: "block mb-2",
                     
-                    // 폼 필드 라벨 - 숨김
-                    formFieldLabel: "hidden",
+                    // 폼 필드 라벨 - 표시
+                    formFieldLabel: "block text-sm font-medium text-[#4a3f48] mb-2",
                     
                     // 입력 필드
                     formFieldInput: 
