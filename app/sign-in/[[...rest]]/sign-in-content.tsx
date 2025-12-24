@@ -19,7 +19,7 @@ export default function SignInContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { isSignedIn, isLoaded } = useAuth();
-  const { signIn: clerkSignIn, setActive } = useClerk();
+  const clerk = useClerk();
   const redirectUrl = searchParams.get("redirect_url") || "/";
 
   // 클라이언트 사이드에서만 실행 (useEffect 안으로 이동하여 hydration mismatch 방지)
@@ -513,10 +513,10 @@ export default function SignInContent() {
               while (attempts < maxAttempts) {
                 // 현재 상태 확인
                 const currentIsLoaded = isLoaded;
-                const hasSignIn = clerkSignIn;
-                const hasSetActive = setActive;
+                const hasSignIn = clerk?.signIn;
+                const hasSetActive = clerk?.setActive;
                 
-                if (currentIsLoaded && hasSignIn && hasSetActive) {
+                if (currentIsLoaded && clerk && hasSignIn && hasSetActive) {
                   console.log("[SignInContent] Clerk 초기화 확인 완료");
                   break;
                 }
@@ -528,15 +528,16 @@ export default function SignInContent() {
                 if (attempts % 10 === 0) {
                   console.log(`[SignInContent] 초기화 대기 중... (${attempts * 100}ms)`);
                   console.log(`  - isLoaded: ${isLoaded}`);
-                  console.log(`  - signIn: ${!!clerkSignIn}`);
-                  console.log(`  - setActive: ${!!setActive}`);
+                  console.log(`  - clerk: ${!!clerk}`);
+                  console.log(`  - signIn: ${!!clerk?.signIn}`);
+                  console.log(`  - setActive: ${!!clerk?.setActive}`);
                 }
               }
 
               // 최종 확인
-              if (!isLoaded || !clerkSignIn || !setActive) {
+              if (!isLoaded || !clerk || !clerk.signIn || !clerk.setActive) {
                 console.error("[SignInContent] Clerk가 초기화되지 않음 (타임아웃)");
-                console.error("최종 상태 - isLoaded:", isLoaded, "signIn:", !!clerkSignIn, "setActive:", !!setActive);
+                console.error("최종 상태 - isLoaded:", isLoaded, "clerk:", !!clerk, "signIn:", !!clerk?.signIn, "setActive:", !!clerk?.setActive);
                 
                 // 페이지 새로고침 제안
                 const shouldReload = confirm("Clerk가 아직 초기화되지 않았습니다. 페이지를 새로고침하시겠습니까?");
@@ -550,7 +551,7 @@ export default function SignInContent() {
 
               // 1단계: 이메일로 signIn 생성
               console.log("[SignInContent] SignIn.create 호출 중...");
-              const signInAttempt = await clerkSignIn.create({
+              const signInAttempt = await clerk.signIn.create({
                 identifier: emailValue,
               });
 
@@ -573,10 +574,10 @@ export default function SignInContent() {
                 console.log("[SignInContent] setActive 존재:", !!setActive);
                 
                 // 세션 활성화
-                if (result.createdSessionId && setActive) {
+                if (result.createdSessionId && clerk.setActive) {
                   try {
                     console.log("[SignInContent] setActive 호출 중, sessionId:", result.createdSessionId);
-                    await setActive({ session: result.createdSessionId });
+                    await clerk.setActive({ session: result.createdSessionId });
                     console.log("[SignInContent] setActive 완료");
                     
                     // setActive 후 약간의 딜레이 (세션 동기화 대기)
@@ -593,7 +594,7 @@ export default function SignInContent() {
                 } else {
                   console.warn("[SignInContent] createdSessionId 또는 setActive가 없음");
                   console.warn("[SignInContent] createdSessionId:", result.createdSessionId);
-                  console.warn("[SignInContent] setActive:", !!setActive);
+                  console.warn("[SignInContent] setActive:", !!clerk?.setActive);
                 }
                 
                 console.log("[SignInContent] 세션 활성화 완료, isSignedIn 변경 대기");
@@ -710,7 +711,7 @@ export default function SignInContent() {
       clearTimeout(initialTimeout);
       clearInterval(interval);
     };
-  }, [clerkSignIn, setActive, router, redirectUrl, isLoaded, isSignedIn]);
+  }, [clerk, router, redirectUrl, isLoaded, isSignedIn]);
 
   // 로그인 성공 후 리다이렉트 처리
   useEffect(() => {
