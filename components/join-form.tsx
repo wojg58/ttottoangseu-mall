@@ -236,230 +236,274 @@ export default function JoinForm() {
 
         {/* ===== 기본 정보 섹션 ===== */}
         <section>
-          <div className="space-y-6">
-            {/* 이메일 */}
-            <div>
-              <Label htmlFor="email" className="flex items-center gap-2 mb-2">
-                <span className="text-red-500">*</span>
-                이메일 (로그인 아이디)
-              </Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="example@email.com"
-                {...register("email")}
-                className={errors.email ? "border-red-500" : ""}
-              />
-              {errors.email && (
-                <p className="text-sm text-red-500 mt-1">
-                  {errors.email.message}
-                </p>
-              )}
-              <p className="text-sm text-gray-500 mt-1">
-                로그인 아이디로 사용할 이메일을 입력해 주세요.
-              </p>
-            </div>
+          <div className="bg-gray-50 p-4 rounded-lg mb-4">
+            <h2 className="text-xl font-bold">기본정보</h2>
+            <p className="text-sm text-gray-600 mt-1">
+              <span className="text-red-500">*</span> 필수입력사항
+            </p>
+          </div>
 
-            {/* 비밀번호 */}
-            <div>
-              <Label htmlFor="password" className="flex items-center gap-2 mb-2">
-                <span className="text-red-500">*</span>
-                비밀번호
-              </Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="비밀번호를 입력해주세요"
-                {...register("password")}
-                className={errors.password ? "border-red-500" : ""}
-              />
-              {errors.password && (
-                <p className="text-sm text-red-500 mt-1">
-                  {errors.password.message}
-                </p>
-              )}
-              <p className="text-sm text-gray-500 mt-1">
-                영문/숫자/특수문자 중 2가지 이상 조합, 8자~16자
-              </p>
-            </div>
+          <div className="border border-gray-200 rounded-lg overflow-hidden">
+            <table className="w-full border-collapse">
+              <colgroup>
+                <col style={{ width: "190px" }} />
+                <col style={{ width: "auto" }} />
+              </colgroup>
+              <tbody>
+                {/* 이메일 */}
+                <tr className="border-b border-gray-200">
+                  <th className="bg-gray-50 px-4 py-3 text-left font-medium border-r border-gray-200">
+                    <span className="flex items-center gap-2">
+                      <span className="text-red-500">*</span>
+                      이메일
+                    </span>
+                  </th>
+                  <td className="px-4 py-3">
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="example@email.com"
+                      {...register("email")}
+                      className={`w-full ${errors.email ? "border-red-500" : ""}`}
+                    />
+                    {errors.email && (
+                      <p className="text-sm text-red-500 mt-1">
+                        {errors.email.message}
+                      </p>
+                    )}
+                    <p className="text-sm text-gray-500 mt-1">
+                      로그인 아이디로 사용할 이메일을 입력해 주세요.
+                    </p>
+                  </td>
+                </tr>
 
-            {/* 비밀번호 확인 */}
-            <div>
-              <Label
-                htmlFor="password_confirm"
-                className="flex items-center gap-2 mb-2"
-              >
-                <span className="text-red-500">*</span>
-                비밀번호 확인
-              </Label>
-              <Input
-                id="password_confirm"
-                type="password"
-                placeholder="비밀번호를 다시 입력해주세요"
-                {...register("password_confirm")}
-                className={errors.password_confirm ? "border-red-500" : ""}
-              />
-              {errors.password_confirm && (
-                <p className="text-sm text-red-500 mt-1">
-                  {errors.password_confirm.message}
-                </p>
-              )}
-            </div>
+                {/* 비밀번호 */}
+                <tr className="border-b border-gray-200">
+                  <th className="bg-gray-50 px-4 py-3 text-left font-medium border-r border-gray-200">
+                    <span className="flex items-center gap-2">
+                      <span className="text-red-500">*</span>
+                      비밀번호
+                    </span>
+                  </th>
+                  <td className="px-4 py-3">
+                    <Input
+                      id="password"
+                      type="password"
+                      placeholder="비밀번호를 입력해주세요"
+                      {...register("password")}
+                      className={`w-full ${errors.password ? "border-red-500" : ""}`}
+                    />
+                    {errors.password && (
+                      <p className="text-sm text-red-500 mt-1">
+                        {errors.password.message}
+                      </p>
+                    )}
+                    <p className="text-sm text-gray-500 mt-1">
+                      영문/숫자/특수문자 중 2가지 이상 조합, 8자~16자
+                    </p>
+                  </td>
+                </tr>
 
-            {/* 비밀번호 찾기 질문 */}
-            <div>
-              <Label htmlFor="hint" className="flex items-center gap-2 mb-2">
-                <span className="text-red-500">*</span>
-                비밀번호 찾기 질문
-              </Label>
-              <Select
-                value={watch("hint")}
-                onValueChange={(value) => setValue("hint", value)}
-              >
-                <SelectTrigger className={errors.hint ? "border-red-500" : ""}>
-                  <SelectValue placeholder="질문을 선택해주세요" />
-                </SelectTrigger>
-                <SelectContent>
-                  {PASSWORD_HINTS.map((hint) => (
-                    <SelectItem key={hint.value} value={hint.value}>
-                      {hint.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {errors.hint && (
-                <p className="text-sm text-red-500 mt-1">
-                  {errors.hint.message}
-                </p>
-              )}
-            </div>
+                {/* 비밀번호 확인 */}
+                <tr className="border-b border-gray-200">
+                  <th className="bg-gray-50 px-4 py-3 text-left font-medium border-r border-gray-200">
+                    <span className="flex items-center gap-2">
+                      <span className="text-red-500">*</span>
+                      비밀번호 확인
+                    </span>
+                  </th>
+                  <td className="px-4 py-3">
+                    <Input
+                      id="password_confirm"
+                      type="password"
+                      placeholder="비밀번호를 다시 입력해주세요"
+                      {...register("password_confirm")}
+                      className={`w-full ${errors.password_confirm ? "border-red-500" : ""}`}
+                    />
+                    {errors.password_confirm && (
+                      <p className="text-sm text-red-500 mt-1">
+                        {errors.password_confirm.message}
+                      </p>
+                    )}
+                  </td>
+                </tr>
 
-            {/* 비밀번호 찾기 답변 */}
-            <div>
-              <Label
-                htmlFor="hint_answer"
-                className="flex items-center gap-2 mb-2"
-              >
-                <span className="text-red-500">*</span>
-                비밀번호 찾기 답변
-              </Label>
-              <Input
-                id="hint_answer"
-                type="text"
-                placeholder="답변을 입력해주세요"
-                {...register("hint_answer")}
-                className={errors.hint_answer ? "border-red-500" : ""}
-              />
-              {errors.hint_answer && (
-                <p className="text-sm text-red-500 mt-1">
-                  {errors.hint_answer.message}
-                </p>
-              )}
-            </div>
+                {/* 비밀번호 찾기 질문 */}
+                <tr className="border-b border-gray-200">
+                  <th className="bg-gray-50 px-4 py-3 text-left font-medium border-r border-gray-200">
+                    <span className="flex items-center gap-2">
+                      <span className="text-red-500">*</span>
+                      비밀번호 확인 질문
+                    </span>
+                  </th>
+                  <td className="px-4 py-3">
+                    <Select
+                      value={watch("hint")}
+                      onValueChange={(value) => setValue("hint", value)}
+                    >
+                      <SelectTrigger className={errors.hint ? "border-red-500" : ""}>
+                        <SelectValue placeholder="질문을 선택해주세요" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {PASSWORD_HINTS.map((hint) => (
+                          <SelectItem key={hint.value} value={hint.value}>
+                            {hint.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {errors.hint && (
+                      <p className="text-sm text-red-500 mt-1">
+                        {errors.hint.message}
+                      </p>
+                    )}
+                  </td>
+                </tr>
 
-            {/* 이름 */}
-            <div>
-              <Label htmlFor="name" className="flex items-center gap-2 mb-2">
-                <span className="text-red-500">*</span>
-                이름
-              </Label>
-              <Input
-                id="name"
-                type="text"
-                placeholder="이름을 입력해주세요"
-                {...register("name")}
-                className={errors.name ? "border-red-500" : ""}
-              />
-              {errors.name && (
-                <p className="text-sm text-red-500 mt-1">{errors.name.message}</p>
-              )}
-            </div>
+                {/* 비밀번호 찾기 답변 */}
+                <tr className="border-b border-gray-200">
+                  <th className="bg-gray-50 px-4 py-3 text-left font-medium border-r border-gray-200">
+                    <span className="flex items-center gap-2">
+                      <span className="text-red-500">*</span>
+                      비밀번호 확인 답변
+                    </span>
+                  </th>
+                  <td className="px-4 py-3">
+                    <Input
+                      id="hint_answer"
+                      type="text"
+                      placeholder="답변을 입력해주세요"
+                      {...register("hint_answer")}
+                      className={`w-full ${errors.hint_answer ? "border-red-500" : ""}`}
+                    />
+                    {errors.hint_answer && (
+                      <p className="text-sm text-red-500 mt-1">
+                        {errors.hint_answer.message}
+                      </p>
+                    )}
+                  </td>
+                </tr>
 
-            {/* 주소 */}
-            <div>
-              <Label className="flex items-center gap-2 mb-2">
-                <span className="text-red-500">*</span>
-                주소
-              </Label>
-              <div className="space-y-2">
-                {/* 우편번호 */}
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="우편번호"
-                    {...register("postcode")}
-                    readOnly
-                    className={errors.postcode ? "border-red-500" : ""}
-                  />
-                  <Button type="button" onClick={openPostcode} variant="outline">
-                    주소검색
-                  </Button>
-                </div>
-                {errors.postcode && (
-                  <p className="text-sm text-red-500">
-                    {errors.postcode.message}
-                  </p>
-                )}
+                {/* 이름 */}
+                <tr className="border-b border-gray-200">
+                  <th className="bg-gray-50 px-4 py-3 text-left font-medium border-r border-gray-200">
+                    <span className="flex items-center gap-2">
+                      <span className="text-red-500">*</span>
+                      이름
+                    </span>
+                  </th>
+                  <td className="px-4 py-3">
+                    <Input
+                      id="name"
+                      type="text"
+                      placeholder="이름을 입력해주세요"
+                      {...register("name")}
+                      className={`w-full ${errors.name ? "border-red-500" : ""}`}
+                    />
+                    {errors.name && (
+                      <p className="text-sm text-red-500 mt-1">{errors.name.message}</p>
+                    )}
+                  </td>
+                </tr>
 
-                {/* 기본 주소 */}
-                <Input
-                  placeholder="기본 주소"
-                  {...register("addr1")}
-                  readOnly
-                  className={errors.addr1 ? "border-red-500" : ""}
-                />
-                {errors.addr1 && (
-                  <p className="text-sm text-red-500">{errors.addr1.message}</p>
-                )}
+                {/* 주소 */}
+                <tr className="border-b border-gray-200">
+                  <th className="bg-gray-50 px-4 py-3 text-left font-medium border-r border-gray-200">
+                    <span className="flex items-center gap-2">
+                      <span className="text-red-500">*</span>
+                      주소
+                    </span>
+                  </th>
+                  <td className="px-4 py-3">
+                    <div className="space-y-2">
+                      {/* 우편번호 */}
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="우편번호"
+                          {...register("postcode")}
+                          readOnly
+                          className={`flex-1 ${errors.postcode ? "border-red-500" : ""}`}
+                        />
+                        <Button type="button" onClick={openPostcode} variant="outline">
+                          주소검색
+                        </Button>
+                      </div>
+                      {errors.postcode && (
+                        <p className="text-sm text-red-500">
+                          {errors.postcode.message}
+                        </p>
+                      )}
 
-                {/* 나머지 주소 */}
-                <Input
-                  placeholder="나머지 주소 (상세주소를 입력해주세요)"
-                  {...register("addr2")}
-                  className={errors.addr2 ? "border-red-500" : ""}
-                />
-                {errors.addr2 && (
-                  <p className="text-sm text-red-500">{errors.addr2.message}</p>
-                )}
-              </div>
-            </div>
+                      {/* 기본 주소 */}
+                      <Input
+                        placeholder="기본 주소"
+                        {...register("addr1")}
+                        readOnly
+                        className={`w-full ${errors.addr1 ? "border-red-500" : ""}`}
+                      />
+                      {errors.addr1 && (
+                        <p className="text-sm text-red-500">{errors.addr1.message}</p>
+                      )}
 
-            {/* 일반전화 (선택) */}
-            <div>
-              <Label htmlFor="phone" className="mb-2 block">
-                일반전화
-              </Label>
-              <Input
-                id="phone"
-                type="text"
-                placeholder="예: 02-1234-5678"
-                {...register("phone")}
-              />
-              {errors.phone && (
-                <p className="text-sm text-red-500 mt-1">
-                  {errors.phone.message}
-                </p>
-              )}
-            </div>
+                      {/* 나머지 주소 */}
+                      <Input
+                        placeholder="나머지 주소 (상세주소를 입력해주세요)"
+                        {...register("addr2")}
+                        className={`w-full ${errors.addr2 ? "border-red-500" : ""}`}
+                      />
+                      {errors.addr2 && (
+                        <p className="text-sm text-red-500">{errors.addr2.message}</p>
+                      )}
+                    </div>
+                  </td>
+                </tr>
 
-            {/* 휴대전화 */}
-            <div>
-              <Label htmlFor="mobile" className="flex items-center gap-2 mb-2">
-                <span className="text-red-500">*</span>
-                휴대전화
-              </Label>
-              <Input
-                id="mobile"
-                type="text"
-                placeholder="예: 010-1234-5678"
-                {...register("mobile")}
-                className={errors.mobile ? "border-red-500" : ""}
-              />
-              {errors.mobile && (
-                <p className="text-sm text-red-500 mt-1">
-                  {errors.mobile.message}
-                </p>
-              )}
-            </div>
+                {/* 일반전화 (선택) */}
+                <tr className="border-b border-gray-200">
+                  <th className="bg-gray-50 px-4 py-3 text-left font-medium border-r border-gray-200">
+                    일반전화
+                  </th>
+                  <td className="px-4 py-3">
+                    <Input
+                      id="phone"
+                      type="text"
+                      placeholder="예: 02-1234-5678"
+                      {...register("phone")}
+                      className="w-full"
+                    />
+                    {errors.phone && (
+                      <p className="text-sm text-red-500 mt-1">
+                        {errors.phone.message}
+                      </p>
+                    )}
+                  </td>
+                </tr>
+
+                {/* 휴대전화 */}
+                <tr className="border-b border-gray-200">
+                  <th className="bg-gray-50 px-4 py-3 text-left font-medium border-r border-gray-200">
+                    <span className="flex items-center gap-2">
+                      <span className="text-red-500">*</span>
+                      휴대전화
+                    </span>
+                  </th>
+                  <td className="px-4 py-3">
+                    <Input
+                      id="mobile"
+                      type="text"
+                      placeholder="예: 010-1234-5678"
+                      {...register("mobile")}
+                      className={`w-full ${errors.mobile ? "border-red-500" : ""}`}
+                    />
+                    {errors.mobile && (
+                      <p className="text-sm text-red-500 mt-1">
+                        {errors.mobile.message}
+                      </p>
+                    )}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </section>
 
@@ -469,79 +513,95 @@ export default function JoinForm() {
         <section>
           <div className="bg-gray-50 p-4 rounded-lg mb-4">
             <h2 className="text-xl font-bold">
-              추가 정보 <span className="text-sm font-normal">(선택)</span>
+              추가정보 <span className="text-sm font-normal">(선택)</span>
             </h2>
           </div>
 
-          <div className="space-y-6">
-            {/* 성별 */}
-            <div>
-              <Label className="mb-3 block">성별</Label>
-              <RadioGroup
-                value={watch("gender") || ""}
-                onValueChange={(value) => setValue("gender", value as Gender)}
-                className="flex gap-4"
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="M" id="gender-male" />
-                  <Label htmlFor="gender-male" className="cursor-pointer">
-                    남자
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="F" id="gender-female" />
-                  <Label htmlFor="gender-female" className="cursor-pointer">
-                    여자
-                  </Label>
-                </div>
-              </RadioGroup>
-            </div>
+          <div className="border border-gray-200 rounded-lg overflow-hidden">
+            <table className="w-full border-collapse">
+              <colgroup>
+                <col style={{ width: "190px" }} />
+                <col style={{ width: "auto" }} />
+              </colgroup>
+              <tbody>
+                {/* 성별 */}
+                <tr className="border-b border-gray-200">
+                  <th className="bg-gray-50 px-4 py-3 text-left font-medium border-r border-gray-200">
+                    성별
+                  </th>
+                  <td className="px-4 py-3">
+                    <RadioGroup
+                      value={watch("gender") || ""}
+                      onValueChange={(value) => setValue("gender", value as Gender)}
+                      className="flex gap-4"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="M" id="gender-male" />
+                        <Label htmlFor="gender-male" className="cursor-pointer">
+                          남자
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="F" id="gender-female" />
+                        <Label htmlFor="gender-female" className="cursor-pointer">
+                          여자
+                        </Label>
+                      </div>
+                    </RadioGroup>
+                  </td>
+                </tr>
 
-            {/* 생년월일 */}
-            <div>
-              <Label className="mb-2 block">생년월일</Label>
-              <div className="flex gap-2 items-center flex-wrap">
-                <Input
-                  placeholder="년 (예: 1990)"
-                  {...register("birth_year")}
-                  maxLength={4}
-                  className="w-32"
-                />
-                <span>년</span>
-                <Input
-                  placeholder="월 (예: 01)"
-                  {...register("birth_month")}
-                  maxLength={2}
-                  className="w-24"
-                />
-                <span>월</span>
-                <Input
-                  placeholder="일 (예: 01)"
-                  {...register("birth_day")}
-                  maxLength={2}
-                  className="w-24"
-                />
-                <span>일</span>
-              </div>
-              <div className="flex gap-4 mt-2">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    checked={watch("is_solar_calendar") === true}
-                    onChange={() => setValue("is_solar_calendar", true)}
-                  />
-                  <span>양력</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    checked={watch("is_solar_calendar") === false}
-                    onChange={() => setValue("is_solar_calendar", false)}
-                  />
-                  <span>음력</span>
-                </label>
-              </div>
-            </div>
+                {/* 생년월일 */}
+                <tr className="border-b border-gray-200">
+                  <th className="bg-gray-50 px-4 py-3 text-left font-medium border-r border-gray-200">
+                    생년월일
+                  </th>
+                  <td className="px-4 py-3">
+                    <div className="flex gap-2 items-center flex-wrap">
+                      <Input
+                        placeholder="년 (예: 1990)"
+                        {...register("birth_year")}
+                        maxLength={4}
+                        className="w-32"
+                      />
+                      <span>년</span>
+                      <Input
+                        placeholder="월 (예: 01)"
+                        {...register("birth_month")}
+                        maxLength={2}
+                        className="w-24"
+                      />
+                      <span>월</span>
+                      <Input
+                        placeholder="일 (예: 01)"
+                        {...register("birth_day")}
+                        maxLength={2}
+                        className="w-24"
+                      />
+                      <span>일</span>
+                    </div>
+                    <div className="flex gap-4 mt-2">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          checked={watch("is_solar_calendar") === true}
+                          onChange={() => setValue("is_solar_calendar", true)}
+                        />
+                        <span>양력</span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          checked={watch("is_solar_calendar") === false}
+                          onChange={() => setValue("is_solar_calendar", false)}
+                        />
+                        <span>음력</span>
+                      </label>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </section>
 

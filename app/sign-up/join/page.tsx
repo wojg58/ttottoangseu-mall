@@ -21,14 +21,11 @@ import JoinForm from "@/components/join-form";
 export default function JoinPage() {
   return (
     <main className="min-h-screen bg-gray-50 py-12">
-      <div className="container mx-auto px-4 max-w-4xl">
+      <div className="container mx-auto px-4 max-w-5xl">
         <div className="bg-white rounded-lg shadow-md p-8">
           {/* 페이지 제목 */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-center mb-2">회원 가입</h1>
-            <p className="text-center text-gray-600">
-              또또앙스의 회원이 되어 다양한 혜택을 누리세요
-            </p>
+          <div className="mb-8 text-center">
+            <h1 className="text-3xl font-bold mb-2">회원 가입</h1>
           </div>
 
           {/* 회원가입 폼 */}

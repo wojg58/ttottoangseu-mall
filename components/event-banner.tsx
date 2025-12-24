@@ -35,7 +35,7 @@ export default function EventBanner() {
       </Link>
 
       {/* 신규가입 쿠폰 */}
-      <Link href="/events/signup" className="event-banner-link">
+      <Link href="/sign-up/join" className="event-banner-link">
         <div className="event-banner blue">
           <div className="text">
             <h3>신규가입 시 1천원 쿠폰 증정</h3>
