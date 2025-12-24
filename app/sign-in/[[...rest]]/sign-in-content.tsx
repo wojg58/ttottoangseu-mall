@@ -617,29 +617,33 @@ export default function SignInContent() {
       // 버튼 텍스트를 "로그인"으로 변경
       const loginButton = clerkForm.querySelector('.cl-formButtonPrimary, button[type="submit"]') as HTMLButtonElement;
       if (loginButton) {
-        // 모든 자식 요소의 텍스트를 확인하고 변경
-        const buttonText = loginButton.querySelector('.cl-button__text, span, .cl-internal-*') as HTMLElement;
-        if (buttonText) {
-          buttonText.textContent = "로그인";
-        }
-        
-        // 버튼의 직접 텍스트도 변경
-        const originalText = loginButton.textContent || loginButton.innerText;
+        // 버튼의 직접 텍스트 변경 (가장 확실한 방법)
+        const originalText = loginButton.textContent || loginButton.innerText || "";
         if (originalText && (originalText.includes("계속") || originalText.includes("Continue"))) {
+          // 버튼의 모든 자식 요소를 확인하여 텍스트 변경
+          const allSpans = loginButton.querySelectorAll('span, .cl-button__text');
+          allSpans.forEach((span) => {
+            const spanElement = span as HTMLElement;
+            if (spanElement.textContent && (spanElement.textContent.includes("계속") || spanElement.textContent.includes("Continue"))) {
+              spanElement.textContent = "로그인";
+            }
+          });
+          
+          // 버튼의 직접 텍스트도 변경
           loginButton.textContent = "로그인";
           loginButton.innerText = "로그인";
-        }
-        
-        // 버튼의 모든 텍스트 노드 찾아서 변경
-        const walker = document.createTreeWalker(
-          loginButton,
-          NodeFilter.SHOW_TEXT,
-          null
-        );
-        let node;
-        while (node = walker.nextNode()) {
-          if (node.textContent && (node.textContent.includes("계속") || node.textContent.includes("Continue"))) {
-            node.textContent = "로그인";
+          
+          // 버튼의 모든 텍스트 노드 찾아서 변경
+          const walker = document.createTreeWalker(
+            loginButton,
+            NodeFilter.SHOW_TEXT,
+            null
+          );
+          let node;
+          while (node = walker.nextNode()) {
+            if (node.textContent && (node.textContent.includes("계속") || node.textContent.includes("Continue"))) {
+              node.textContent = "로그인";
+            }
           }
         }
       }
