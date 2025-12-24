@@ -694,7 +694,7 @@
   position: relative !important;
   display: block !important;
   margin-top: 0 !important;
-  margin-bottom: 2rem !important;
+  margin-bottom: 2.5rem !important;
   padding-top: 0 !important;
   padding-bottom: 0 !important;
   clear: both !important;
@@ -719,7 +719,7 @@
   display: block !important;
   visibility: visible !important;
   opacity: 1 !important;
-  margin-top: 2rem !important;
+  margin-top: 2.5rem !important;
   margin-bottom: 0 !important;
   width: 100% !important;
   box-sizing: border-box !important;

@@ -172,7 +172,7 @@ export default function SignInContent() {
         }
       }
 
-      // 로그인 버튼이 보이도록 보장
+      // 로그인 버튼이 보이도록 보장 및 간격 조정
       const loginButton = document.querySelector('.cl-formButtonPrimary, button[type="submit"]') as HTMLElement;
       if (loginButton) {
         console.log("로그인 버튼 스타일 적용");
@@ -181,7 +181,8 @@ export default function SignInContent() {
           display: block !important;
           visibility: visible !important;
           opacity: 1 !important;
-          margin-top: 2rem !important;
+          margin-top: 2.5rem !important;
+          margin-bottom: 0 !important;
           width: 100% !important;
           box-sizing: border-box !important;
           z-index: 1 !important;
@@ -315,7 +316,7 @@ export default function SignInContent() {
                     // 로그인 버튼
                     formButtonPrimary:
                       "w-full bg-[#ff6b9d] hover:bg-[#ff5088] " +
-                      "text-white font-semibold py-3 rounded-lg mt-8 " +
+                      "text-white font-semibold py-3 rounded-lg mt-10 " +
                       "transition-all duration-200 shadow-sm hover:shadow-md",
                     
                     // 푸터 링크
