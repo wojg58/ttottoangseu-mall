@@ -236,13 +236,6 @@ export default function JoinForm() {
 
         {/* ===== 기본 정보 섹션 ===== */}
         <section>
-          <div className="bg-gray-50 p-4 rounded-lg mb-4 flex justify-between items-center">
-            <h2 className="text-xl font-bold">기본 정보</h2>
-            <p className="text-sm text-gray-600">
-              <span className="text-red-500">*</span> 필수입력사항
-            </p>
-          </div>
-
           <div className="space-y-6">
             {/* 이메일 */}
             <div>
