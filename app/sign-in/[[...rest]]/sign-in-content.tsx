@@ -66,8 +66,8 @@ export default function SignInContent() {
       if (identifierRow && identifierInput && !isEmailFieldApplied) {
         console.log("아이디 필드 간단 스타일 적용");
         
-        // placeholder를 "아이디"로 변경
-        identifierInput.placeholder = "아이디";
+        // placeholder 비우기
+        identifierInput.placeholder = "";
 
         // 라벨 숨기기
         const identifierLabelRow = identifierRow.querySelector('.cl-formFieldLabelRow__identifier') as HTMLElement;
@@ -80,13 +80,13 @@ export default function SignInContent() {
           width: 100% !important;
           padding: 0.75rem 1rem !important;
           min-height: 3rem !important;
-          border: none !important;
-          border-bottom: 1px solid #e5e7eb !important;
-          border-radius: 0 !important;
+          border: 1px solid #e5e7eb !important;
+          border-radius: 0.25rem !important;
           font-size: 1rem !important;
           box-sizing: border-box !important;
-          background: transparent !important;
+          background: white !important;
           outline: none !important;
+          margin-bottom: 0.75rem !important;
         `;
         
         // identifierRow 스타일
@@ -106,8 +106,8 @@ export default function SignInContent() {
       if (passwordRow && passwordInput && !isPasswordFieldApplied) {
         console.log("비밀번호 필드 간단 스타일 적용");
         
-        // placeholder를 "비밀번호"로 변경
-        passwordInput.placeholder = "비밀번호";
+        // placeholder 비우기
+        passwordInput.placeholder = "";
 
         // 라벨 숨기기
         const passwordLabelRow = passwordRow.querySelector('.cl-formFieldLabelRow__password') as HTMLElement;
@@ -120,12 +120,11 @@ export default function SignInContent() {
           width: 100% !important;
           padding: 0.75rem 1rem !important;
           min-height: 3rem !important;
-          border: none !important;
-          border-bottom: 1px solid #e5e7eb !important;
-          border-radius: 0 !important;
+          border: 1px solid #e5e7eb !important;
+          border-radius: 0.25rem !important;
           font-size: 1rem !important;
           box-sizing: border-box !important;
-          background: transparent !important;
+          background: white !important;
           outline: none !important;
         `;
         
