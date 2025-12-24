@@ -329,12 +329,15 @@ export default function SignInContent() {
     }
   }, [redirectUrl]);
 
-  // /sign-in/create로 이동하는 것을 방지
+  // 두 번째 입력 페이지로 이동하는 것을 방지
   useEffect(() => {
-    const preventCreateRedirect = () => {
-      // 현재 URL이 /sign-in/create로 변경되는 것을 감지
-      if (window.location.pathname === '/sign-in/create') {
-        console.group("[SignInContent] /sign-in/create로 이동 감지, 로그인 페이지로 리다이렉트");
+    const preventSecondPageRedirect = () => {
+      const currentPath = window.location.pathname;
+      
+      // /sign-in/create 또는 다른 두 번째 입력 페이지로 이동하는 것을 감지
+      if (currentPath.includes('/sign-in/') && currentPath !== '/sign-in') {
+        console.group("[SignInContent] 두 번째 입력 페이지로 이동 감지, 로그인 페이지로 리다이렉트");
+        console.log("현재 경로:", currentPath);
         console.log("시간:", new Date().toISOString());
         console.groupEnd();
         
@@ -344,14 +347,30 @@ export default function SignInContent() {
     };
 
     // 주기적으로 URL 확인
-    const interval = setInterval(preventCreateRedirect, 500);
+    const interval = setInterval(preventSecondPageRedirect, 300);
     
     // popstate 이벤트 리스너 (뒤로가기/앞으로가기)
-    window.addEventListener('popstate', preventCreateRedirect);
+    window.addEventListener('popstate', preventSecondPageRedirect);
+    
+    // pushstate/replacestate 이벤트 감지
+    const originalPushState = history.pushState;
+    const originalReplaceState = history.replaceState;
+    
+    history.pushState = function(...args) {
+      originalPushState.apply(history, args);
+      setTimeout(preventSecondPageRedirect, 0);
+    };
+    
+    history.replaceState = function(...args) {
+      originalReplaceState.apply(history, args);
+      setTimeout(preventSecondPageRedirect, 0);
+    };
     
     return () => {
       clearInterval(interval);
-      window.removeEventListener('popstate', preventCreateRedirect);
+      window.removeEventListener('popstate', preventSecondPageRedirect);
+      history.pushState = originalPushState;
+      history.replaceState = originalReplaceState;
     };
   }, [router]);
 
