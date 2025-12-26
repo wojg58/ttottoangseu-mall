@@ -63,6 +63,55 @@ export default function SignInContent() {
 
       console.group("[SignInContent] 폼 필드 업데이트 - 세로 레이아웃");
 
+      // 소셜 버튼 컨테이너를 가로 배치로 변경
+      const socialButtonsRoot = document.querySelector(
+        ".cl-socialButtonsRoot",
+      ) as HTMLElement;
+      if (socialButtonsRoot) {
+        socialButtonsRoot.style.cssText = `
+          display: flex !important;
+          flex-direction: row !important;
+          gap: 0.75rem !important;
+          width: 100% !important;
+        `;
+      }
+
+      // 각 소셜 버튼 컨테이너도 flex로 설정
+      const socialButtons = document.querySelectorAll(
+        ".cl-socialButtons",
+      ) as NodeListOf<HTMLElement>;
+      socialButtons.forEach((container) => {
+        container.style.cssText = `
+          display: flex !important;
+          flex: 1 !important;
+          width: 100% !important;
+          min-width: 0 !important;
+        `;
+      });
+
+      // 소셜 버튼들도 flex로 설정
+      const socialButtonsBlockButton = document.querySelectorAll(
+        ".cl-socialButtonsBlockButton",
+      ) as NodeListOf<HTMLElement>;
+      socialButtonsBlockButton.forEach((button) => {
+        button.style.cssText += `
+          width: 100% !important;
+          min-width: 0 !important;
+          flex: 1 !important;
+        `;
+      });
+
+      const socialButtonsIconButton = document.querySelectorAll(
+        ".cl-socialButtonsIconButton",
+      ) as NodeListOf<HTMLElement>;
+      socialButtonsIconButton.forEach((button) => {
+        button.style.cssText += `
+          width: 100% !important;
+          min-width: 0 !important;
+          flex: 1 !important;
+        `;
+      });
+
       // "최근 사용" 배지 숨기기
       const badges = document.querySelectorAll(
         ".cl-lastAuthenticationStrategyBadge",
@@ -73,6 +122,35 @@ export default function SignInContent() {
           badgeElement.style.display = "none";
         }
       });
+
+      // Clerk 에러 메시지 숨기기 (OAuth 콜백 후 발생하는 에러)
+      const hideErrorAlerts = () => {
+        const errorAlerts = document.querySelectorAll(
+          ".cl-alert, .cl-alertText, [role='alert'], .cl-formFieldErrorText",
+        );
+        errorAlerts.forEach((alert) => {
+          const alertElement = alert as HTMLElement;
+          const alertText = alertElement.textContent || "";
+          // "Unable to complete action" 에러 메시지 숨기기
+          if (
+            alertText.includes("Unable to complete action") ||
+            alertText.includes("문제가 지속되면") ||
+            alertText.includes("If the problem persists")
+          ) {
+            console.log("[SignInContent] Clerk 에러 메시지 숨김:", alertText);
+            alertElement.style.cssText = `
+              display: none !important;
+              visibility: hidden !important;
+              opacity: 0 !important;
+              height: 0 !important;
+              margin: 0 !important;
+              padding: 0 !important;
+            `;
+          }
+        });
+      };
+
+      hideErrorAlerts();
 
       // 아이디 필드 처리
       const identifierRow = document.querySelector(
@@ -538,12 +616,43 @@ export default function SignInContent() {
 
     // 주기적 확인은 제거 (MutationObserver로 충분)
 
+    // 에러 메시지 주기적 확인 및 숨기기
+    const hideErrorAlerts = () => {
+      const errorAlerts = document.querySelectorAll(
+        ".cl-alert, .cl-alertText, [role='alert'], .cl-formFieldErrorText",
+      );
+      errorAlerts.forEach((alert) => {
+        const alertElement = alert as HTMLElement;
+        const alertText = alertElement.textContent || "";
+        // "Unable to complete action" 에러 메시지 숨기기
+        if (
+          alertText.includes("Unable to complete action") ||
+          alertText.includes("문제가 지속되면") ||
+          alertText.includes("If the problem persists")
+        ) {
+          console.log("[SignInContent] Clerk 에러 메시지 숨김:", alertText);
+          alertElement.style.cssText = `
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            height: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          `;
+        }
+      });
+    };
+
+    // 주기적으로 에러 메시지 확인 및 숨기기
+    const errorCheckInterval = setInterval(hideErrorAlerts, 500);
+
     return () => {
       clearTimeout(initialTimeout);
       observer.disconnect();
       if (buttonObserver) {
         buttonObserver.disconnect();
       }
+      clearInterval(errorCheckInterval);
     };
   }, []);
 
@@ -1419,13 +1528,20 @@ export default function SignInContent() {
                     // Clerk의 authenticateWithRedirect를 사용하여 카카오 로그인
                     // Custom provider의 경우 전략 이름이 다를 수 있으므로 여러 옵션 시도
                     // 타입 오류를 피하기 위해 any 사용
+
+                    // Clerk 대시보드에서 설정한 Custom OAuth provider 이름 확인 필요
+                    // 일반적으로 "oauth_custom_{provider_name}" 형식
+                    // 예: Clerk 대시보드에서 provider name을 "kakao"로 설정했다면 "oauth_custom_kakao"
                     const possibleStrategies = [
-                      "oauth_custom_kakao", // Custom provider 일반적인 형식
+                      "oauth_custom_kakao", // Custom provider 일반적인 형식 (가장 일반적)
+                      "oauth_custom_custom_kakao", // 이중 custom 접두사
                       "oauth_kakao", // Social provider 형식
                       "kakao", // 단순 형식
                     ];
 
                     let lastError: any = null;
+                    let allErrors: string[] = [];
+
                     for (const strategy of possibleStrategies) {
                       try {
                         console.log(
@@ -1441,20 +1557,40 @@ export default function SignInContent() {
                         );
                         return; // 성공하면 함수 종료
                       } catch (strategyError: any) {
+                        const errorMsg =
+                          strategyError.message || String(strategyError);
                         console.warn(
                           `[SignInContent] 전략 ${strategy} 실패:`,
-                          strategyError.message,
+                          errorMsg,
                         );
+                        allErrors.push(`${strategy}: ${errorMsg}`);
                         lastError = strategyError;
                         // 다음 전략 시도
                         continue;
                       }
                     }
 
-                    // 모든 전략이 실패한 경우
-                    throw (
-                      lastError ||
-                      new Error("카카오 로그인 전략을 찾을 수 없습니다.")
+                    // 모든 전략이 실패한 경우 - 더 자세한 에러 정보 제공
+                    console.error(
+                      "[SignInContent] 모든 카카오 로그인 전략 실패:",
+                      allErrors,
+                    );
+
+                    // Clerk 대시보드 설정 확인 안내 메시지
+                    const errorMessage =
+                      lastError?.message ||
+                      "카카오 로그인 전략을 찾을 수 없습니다.";
+                    throw new Error(
+                      `${errorMessage}\n\n` +
+                        `가능한 원인:\n` +
+                        `1. Clerk 대시보드에서 카카오 Custom OAuth provider가 설정되지 않았습니다.\n` +
+                        `2. Custom OAuth provider의 이름이 코드와 일치하지 않습니다.\n` +
+                        `3. 카카오 개발자 콘솔에서 OAuth 설정이 올바르지 않습니다.\n\n` +
+                        `해결 방법:\n` +
+                        `1. Clerk Dashboard → User & Authentication → Social Connections → Custom OAuth\n` +
+                        `2. Provider name을 확인하고 코드의 전략 이름과 일치시켜주세요.\n` +
+                        `3. 시도한 전략: ${possibleStrategies.join(", ")}\n\n` +
+                        `에러 상세:\n${allErrors.join("\n")}`,
                     );
                   } catch (error: any) {
                     console.error("[SignInContent] 카카오 로그인 실패:", error);

@@ -213,6 +213,44 @@ export async function confirmPayment({
       console.log("[confirmPayment] ✅ 주문 상태 업데이트 완료");
     }
 
+    // 8. 네이버 동기화 큐 적재 (직접 호출 X, AWS Worker용)
+    console.log("[confirmPayment] 네이버 동기화 큐 적재 중...");
+    try {
+      const { data: orderItems } = await supabase
+        .from("order_items")
+        .select(`quantity, product:products(id, smartstore_product_id, stock)`)
+        .eq("order_id", orderId);
+
+      if (orderItems) {
+        const queueData = orderItems
+          // 네이버 연동 상품만 필터링
+          .filter((item: any) => item.product && item.product.smartstore_product_id)
+          .map((item: any) => ({
+            product_id: item.product.id,
+            smartstore_id: item.product.smartstore_product_id,
+            target_stock: item.product.stock, // 이미 차감된 최종 재고
+            status: 'pending'
+          }));
+
+        if (queueData.length > 0) {
+          const { error: queueError } = await supabase
+            .from('naver_sync_queue')
+            .insert(queueData);
+
+          if (queueError) {
+            console.error("[confirmPayment] ❌ 큐 적재 실패:", queueError);
+          } else {
+            console.log(`[confirmPayment] ✅ AWS Worker용 큐 적재 완료: ${queueData.length}건`);
+          }
+        } else {
+          console.log("[confirmPayment] 네이버 연동 상품 없음 (큐 적재 스킵)");
+        }
+      }
+    } catch (e) {
+      console.error("[confirmPayment] ❌ 큐 적재 실패 (결제는 성공):", e);
+      // 큐 적재 실패해도 결제는 성공했으므로 계속 진행
+    }
+
     console.log("[confirmPayment] 🎉 결제 승인 프로세스 완료!");
     
     return {

@@ -6,6 +6,7 @@ import { Gowun_Dodum, Plus_Jakarta_Sans, Noto_Sans_KR } from "next/font/google";
 import ShopHeader from "@/components/shop-header";
 import ShopFooter from "@/components/shop-footer";
 import { SyncUserProvider } from "@/components/providers/sync-user-provider";
+import { AuthSessionSync } from "@/components/auth-session-sync";
 import ChatWidgetWrapper from "@/components/chatbot/chat-widget-wrapper";
 import MarketingScripts from "@/components/marketing-scripts";
 import "./globals.css";
@@ -93,6 +94,7 @@ export default function RootLayout({
           suppressHydrationWarning
         >
           <SyncUserProvider>
+            <AuthSessionSync />
             <ShopHeader />
             <div className="flex-1">{children}</div>
             <ShopFooter />

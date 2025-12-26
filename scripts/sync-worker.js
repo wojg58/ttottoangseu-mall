@@ -1,0 +1,415 @@
+/**
+ * scripts/sync-worker.js
+ * AWS EC2에서 24시간 실행될 스크립트입니다.
+ */
+require("dotenv").config();
+const { createClient } = require("@supabase/supabase-js");
+const crypto = require("crypto");
+const bcrypt = require("bcrypt");
+
+// 환경변수 로드
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const NAVER_CLIENT_ID = process.env.NAVER_SMARTSTORE_CLIENT_ID;
+const NAVER_CLIENT_SECRET = process.env.NAVER_SMARTSTORE_CLIENT_SECRET;
+
+if (!SUPABASE_URL || !SERVICE_KEY) {
+  console.error("❌ 환경변수 누락!");
+  process.exit(1);
+}
+
+const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
+let accessToken = null;
+let tokenExpiresAt = 0;
+
+// 네이버 토큰 발급
+async function getNaverToken() {
+  if (accessToken && Date.now() < tokenExpiresAt) return accessToken;
+
+  console.log("🔑 토큰 갱신 중...");
+
+  if (!NAVER_CLIENT_ID || !NAVER_CLIENT_SECRET) {
+    throw new Error("네이버 API 인증 정보가 없습니다.");
+  }
+
+  // 네이버 커머스 API 토큰 엔드포인트
+  // https://apicenter.commerce.naver.com/docs/commerce-api/current/exchange-sellers-auth
+  const tokenUrl = "https://api.commerce.naver.com/external/v1/oauth2/token";
+
+  // 네이버 커머스 API 요구 파라미터 준비
+  const timestamp = Date.now();
+  const type = "SELF";
+  const accountId = process.env.NAVER_SMARTSTORE_ACCOUNT_ID || "";
+
+  // client_secret_sign 생성 (네이버 API 문서 방식)
+  // 1. password = clientId_timestamp 형식으로 생성
+  // 2. bcrypt.hashSync(password, clientSecret) - clientSecret을 salt로 사용
+  // 3. 결과를 base64로 인코딩
+  const password = `${NAVER_CLIENT_ID}_${timestamp}`;
+  let clientSecretSign;
+  try {
+    const hashed = bcrypt.hashSync(password, NAVER_CLIENT_SECRET);
+    clientSecretSign = Buffer.from(hashed, "utf-8").toString("base64");
+  } catch (error) {
+    throw new Error(`client_secret_sign 생성 실패: ${error.message}`);
+  }
+
+  // 요청 바디 준비
+  const requestBodyParams = {
+    grant_type: "client_credentials",
+    client_id: NAVER_CLIENT_ID,
+    client_secret: NAVER_CLIENT_SECRET,
+    timestamp: timestamp.toString(),
+    client_secret_sign: clientSecretSign,
+    type: type,
+  };
+
+  if (accountId) {
+    requestBodyParams.account_id = accountId;
+  }
+
+  const requestBody = new URLSearchParams(requestBodyParams);
+
+  try {
+    const res = await fetch(tokenUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: requestBody,
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      accessToken = data.access_token;
+      tokenExpiresAt = Date.now() + (data.expires_in - 60) * 1000;
+      console.log("✅ 토큰 발급 성공");
+      return accessToken;
+    } else {
+      const errorText = await res.text();
+      throw new Error(
+        `토큰 발급 실패: ${res.status} - ${errorText.substring(0, 200)}`,
+      );
+    }
+  } catch (error) {
+    console.error("❌ 토큰 발급 실패:", error.message);
+    throw error;
+  }
+}
+
+const delay = (ms) => new Promise((r) => setTimeout(r, ms));
+
+async function run() {
+  console.log("🚀 AWS Worker Started...");
+  while (true) {
+    try {
+      // 1. 작업 조회
+      const { data: jobs } = await supabase
+        .from("naver_sync_queue")
+        .select("*")
+        .eq("status", "pending")
+        .order("created_at", { ascending: true })
+        .limit(10);
+
+      if (jobs && jobs.length > 0) {
+        console.log(`📦 ${jobs.length}건 처리 시작`);
+
+        for (const job of jobs) {
+          // 2. 처리 중 표시
+          await supabase
+            .from("naver_sync_queue")
+            .update({ status: "processing" })
+            .eq("id", job.id);
+
+          try {
+            const token = await getNaverToken();
+
+            // 3-1. 채널 상품 정보 조회
+            // 네이버 커머스 API: 채널 상품 수정 (재고 변경)
+            // https://apicenter.commerce.naver.com/docs/commerce-api/current/update-channel-product-product
+            // PUT /external/v2/products/channel-products/{channelProductNo}
+            console.log(
+              `[INFO] 재고 변경 시작 - channelProductNo: ${job.smartstore_id}, target_stock: ${job.target_stock}`,
+            );
+
+            let channelProductData = null;
+
+            try {
+              console.log(`[INFO] 채널 상품 조회 시도: ${job.smartstore_id}`);
+              const channelRes = await fetch(
+                `https://api.commerce.naver.com/external/v2/products/channel-products/${job.smartstore_id}`,
+                {
+                  method: "GET",
+                  headers: {
+                    Authorization: `Bearer ${token}`,
+                    Accept: "application/json;charset=UTF-8",
+                  },
+                },
+              );
+
+              console.log(
+                `[INFO] 채널 상품 조회 응답 상태: ${channelRes.status}`,
+              );
+
+              if (channelRes.ok) {
+                const channelData = await channelRes.json();
+                console.log(
+                  `[INFO] 채널 상품 조회 응답 데이터:`,
+                  JSON.stringify(channelData, null, 2),
+                );
+
+                // channelProduct 데이터 찾기
+                if (channelData.data) {
+                  channelProductData = channelData.data;
+                } else if (channelData.smartstoreChannelProduct) {
+                  channelProductData = channelData;
+                } else {
+                  channelProductData = channelData;
+                }
+
+                console.log(`[INFO] 채널 상품 데이터 획득 성공`);
+              } else {
+                const errorText = await channelRes.text();
+                console.log(
+                  `[INFO] 채널 상품 조회 실패 (${
+                    channelRes.status
+                  }): ${errorText.substring(0, 200)}`,
+                );
+                throw new Error(
+                  `채널 상품 조회 실패: ${
+                    channelRes.status
+                  } - ${errorText.substring(0, 200)}`,
+                );
+              }
+            } catch (e) {
+              console.log(`[INFO] 채널 상품 조회 예외: ${e.message}`);
+              throw e;
+            }
+
+            // 3-2. 채널 상품 재고 변경 API 호출
+            // 네이버 커머스 API: 채널 상품 수정 (재고 변경)
+            // https://apicenter.commerce.naver.com/docs/commerce-api/current/update-channel-product-product
+            // PUT /external/v2/products/channel-products/{channelProductNo}
+            console.log(
+              `[INFO] 채널 상품 재고 변경 시도: ${job.smartstore_id} -> ${job.target_stock}개`,
+            );
+
+            // 채널 상품 수정 API 요청 본문 구조
+            // { originProduct: {...}, customerBenefit: {...}, smartstoreChannelProduct: {...}, windowChannelProduct: {...} }
+            // 채널 상품 조회 응답에서 전체 구조를 가져와서 재고만 업데이트
+            // 옵션이 있는 상품의 경우 optionInfo.optionCombinations[].stockQuantity를 변경해야 함
+            let requestBody;
+            const originProductData =
+              channelProductData.originProduct ||
+              channelProductData.data?.originProduct;
+
+            if (originProductData) {
+              // originProduct 복사
+              const updatedOriginProduct = {
+                ...originProductData,
+                stockQuantity: job.target_stock,
+              };
+
+              // 옵션이 있는 상품의 경우 optionInfo.optionCombinations[].stockQuantity도 업데이트
+              const hasOptions =
+                originProductData.detailAttribute?.optionInfo
+                  ?.optionCombinations &&
+                originProductData.detailAttribute.optionInfo.optionCombinations
+                  .length > 0;
+
+              if (hasOptions) {
+                console.log(
+                  `[INFO] 옵션이 있는 상품 감지: ${originProductData.detailAttribute.optionInfo.optionCombinations.length}개 옵션`,
+                );
+                const optionCombinations =
+                  originProductData.detailAttribute.optionInfo
+                    .optionCombinations;
+                const totalCurrentStock = optionCombinations.reduce(
+                  (sum, opt) => sum + (opt.stockQuantity || 0),
+                  0,
+                );
+
+                // 옵션별 재고를 비율에 따라 분배
+                const updatedOptionCombinations = optionCombinations.map(
+                  (opt) => {
+                    if (totalCurrentStock > 0) {
+                      // 비율에 따라 분배
+                      const ratio = opt.stockQuantity / totalCurrentStock;
+                      const newStock = Math.floor(job.target_stock * ratio);
+                      return { ...opt, stockQuantity: newStock };
+                    } else {
+                      // 현재 재고가 0이면 첫 번째 옵션에 전체 재고 할당
+                      return {
+                        ...opt,
+                        stockQuantity:
+                          opt === optionCombinations[0] ? job.target_stock : 0,
+                      };
+                    }
+                  },
+                );
+
+                // 나머지 재고를 첫 번째 옵션에 추가 (반올림 오차 보정)
+                const allocatedStock = updatedOptionCombinations.reduce(
+                  (sum, opt) => sum + opt.stockQuantity,
+                  0,
+                );
+                if (
+                  allocatedStock < job.target_stock &&
+                  optionCombinations.length > 0
+                ) {
+                  updatedOptionCombinations[0].stockQuantity +=
+                    job.target_stock - allocatedStock;
+                }
+
+                updatedOriginProduct.detailAttribute = {
+                  ...originProductData.detailAttribute,
+                  optionInfo: {
+                    ...originProductData.detailAttribute.optionInfo,
+                    optionCombinations: updatedOptionCombinations,
+                  },
+                };
+
+                console.log(
+                  `[INFO] 옵션별 재고 업데이트: 총 ${job.target_stock}개`,
+                );
+                updatedOptionCombinations.forEach((opt, idx) => {
+                  console.log(
+                    `[INFO]   옵션 ${idx + 1} (${opt.optionName1 || opt.id}): ${
+                      opt.stockQuantity
+                    }개`,
+                  );
+                });
+              } else {
+                console.log(
+                  `[INFO] 옵션이 없는 상품: originProduct.stockQuantity만 업데이트 (${job.target_stock}개)`,
+                );
+              }
+
+              requestBody = {
+                originProduct: updatedOriginProduct,
+              };
+
+              // customerBenefit이 있으면 포함
+              const customerBenefit =
+                channelProductData.customerBenefit ||
+                channelProductData.data?.customerBenefit;
+              if (customerBenefit) {
+                requestBody.customerBenefit = customerBenefit;
+              }
+
+              // smartstoreChannelProduct가 있으면 포함
+              const smartstoreChannelProduct =
+                channelProductData.smartstoreChannelProduct ||
+                channelProductData.data?.smartstoreChannelProduct;
+              if (smartstoreChannelProduct) {
+                requestBody.smartstoreChannelProduct = smartstoreChannelProduct;
+              }
+
+              // windowChannelProduct가 있고 channelNo가 있으면 포함 (필수 필드)
+              const windowChannelProduct =
+                channelProductData.windowChannelProduct ||
+                channelProductData.data?.windowChannelProduct;
+              if (windowChannelProduct && windowChannelProduct.channelNo) {
+                requestBody.windowChannelProduct = windowChannelProduct;
+              }
+            } else {
+              // originProduct가 없는 경우 최소한의 구조로 생성
+              requestBody = {
+                originProduct: {
+                  stockQuantity: job.target_stock,
+                },
+              };
+            }
+
+            console.log(
+              `[INFO] 요청 본문 (stockQuantity: ${job.target_stock}):`,
+              JSON.stringify(
+                {
+                  originProduct: {
+                    ...requestBody.originProduct,
+                    stockQuantity: requestBody.originProduct.stockQuantity,
+                  },
+                  hasCustomerBenefit: !!requestBody.customerBenefit,
+                  hasSmartstoreChannelProduct:
+                    !!requestBody.smartstoreChannelProduct,
+                  hasWindowChannelProduct: !!requestBody.windowChannelProduct,
+                },
+                null,
+                2,
+              ),
+            );
+
+            const res = await fetch(
+              `https://api.commerce.naver.com/external/v2/products/channel-products/${job.smartstore_id}`,
+              {
+                method: "PUT",
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                  "Content-Type": "application/json",
+                  Accept: "application/json;charset=UTF-8",
+                },
+                body: JSON.stringify(requestBody),
+              },
+            );
+
+            console.log(`[INFO] 재고 변경 API 응답 상태: ${res.status}`);
+
+            const responseText = await res.text();
+            console.log(
+              `[INFO] 재고 변경 API 응답 본문:`,
+              responseText.substring(0, 500),
+            );
+
+            if (!res.ok) {
+              throw new Error(
+                `재고 변경 실패: ${res.status} - ${responseText}`,
+              );
+            }
+
+            // 응답 파싱 시도
+            let responseData = null;
+            try {
+              responseData = JSON.parse(responseText);
+              console.log(
+                `[INFO] 재고 변경 API 응답 데이터:`,
+                JSON.stringify(responseData, null, 2),
+              );
+            } catch (e) {
+              console.log(`[INFO] 응답 파싱 실패 (텍스트 응답일 수 있음)`);
+            }
+
+            // 4. 성공 처리
+            await supabase
+              .from("naver_sync_queue")
+              .update({ status: "done", processed_at: new Date() })
+              .eq("id", job.id);
+
+            // 응답에서 실제 변경된 재고 확인
+            const actualStock =
+              responseData?.data?.originProduct?.stockQuantity ||
+              responseData?.originProduct?.stockQuantity ||
+              job.target_stock;
+
+            console.log(
+              `✅ [OK] 상품 ${job.smartstore_id} -> 요청: ${job.target_stock}개, 응답: ${actualStock}개`,
+            );
+          } catch (err) {
+            console.error(`❌ [FAIL] Job ${job.id}:`, err.message);
+            await supabase
+              .from("naver_sync_queue")
+              .update({ status: "failed", message: err.message })
+              .eq("id", job.id);
+          }
+          // ★ Rate Limit: 1초 대기
+          await delay(1000);
+        }
+      } else {
+        // 작업 없으면 5초 대기
+        await delay(5000);
+      }
+    } catch (e) {
+      console.error("Worker Error:", e);
+      await delay(5000);
+    }
+  }
+}
+
+run();

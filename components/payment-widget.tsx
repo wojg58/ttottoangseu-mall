@@ -19,6 +19,7 @@ import {
   loadPaymentWidget,
 } from "@tosspayments/payment-widget-sdk";
 import { Button } from "@/components/ui/button";
+import logger from "@/lib/logger";
 
 interface PaymentWidgetProps {
   orderId: string;
@@ -44,16 +45,20 @@ export default function PaymentWidget({
   const [cashReceipt, setCashReceipt] = useState<"신청" | "신청안함">("신청안함");
 
   useEffect(() => {
-    console.group("[PaymentWidget] 초기화");
-    console.log("주문 ID:", orderId);
-    console.log("주문번호:", orderNumber);
-    console.log("결제 금액:", amount);
+    logger.group("[PaymentWidget] 결제 위젯 초기화 시작");
+    logger.debug("주문 정보:", {
+      orderId,
+      orderNumber,
+      amount: amount.toLocaleString("ko-KR") + "원",
+      customerName,
+      customerEmail,
+    });
 
     const initializePaymentWidget = async () => {
       try {
         // 클라이언트 키는 환경 변수에서 가져옴
         const clientKey = process.env.NEXT_PUBLIC_TOSS_PAYMENTS_CLIENT_KEY;
-        console.log("[PaymentWidget] 클라이언트 키 확인:", {
+        logger.debug("[PaymentWidget] 클라이언트 키 확인:", {
           exists: !!clientKey,
           startsWithTest: clientKey?.startsWith("test_"),
           length: clientKey?.length,
@@ -63,40 +68,44 @@ export default function PaymentWidget({
           throw new Error("TossPayments 클라이언트 키가 설정되지 않았습니다.");
         }
 
-        console.log("[PaymentWidget] 결제 위젯 로드 시작", {
-          clientKey: clientKey.substring(0, 10) + "...",
+        logger.debug("[PaymentWidget] 결제 위젯 로드 시작", {
+          clientKeyPrefix: clientKey.substring(0, 10) + "...",
           customerEmail,
         });
         
         const paymentWidget = await loadPaymentWidget(clientKey, customerEmail);
         paymentWidgetRef.current = paymentWidget;
-        console.log("[PaymentWidget] 결제 위젯 인스턴스 생성 완료");
+        logger.debug("[PaymentWidget] ✅ 결제 위젯 인스턴스 생성 완료");
 
         setIsLoading(false);
-        console.log("결제 위젯 초기화 완료");
-        console.groupEnd();
+        logger.debug("[PaymentWidget] ✅ 결제 위젯 초기화 완료");
+        logger.groupEnd();
       } catch (err) {
-        console.error("결제 위젯 초기화 에러:", err);
+        logger.error("[PaymentWidget] ❌ 결제 위젯 초기화 에러:", err);
         setError(
           err instanceof Error
             ? err.message
             : "결제 위젯 초기화에 실패했습니다.",
         );
         setIsLoading(false);
-        console.groupEnd();
+        logger.groupEnd();
       }
     };
 
     initializePaymentWidget();
-  }, [orderId, orderNumber, amount, customerEmail]);
+  }, [orderId, orderNumber, amount, customerEmail, customerName]);
 
   const handlePayment = async () => {
-    console.group("[PaymentWidget] 결제 요청");
-    console.log("주문 ID:", orderId);
-    console.log("주문번호:", orderNumber);
-    console.log("결제 금액:", amount);
-    console.log("결제 수단:", paymentMethod);
-    console.log("결제 위젯 상태:", {
+    logger.group("[PaymentWidget] 결제 요청 시작");
+    logger.debug("결제 정보:", {
+      orderId,
+      orderNumber,
+      amount: amount.toLocaleString("ko-KR") + "원",
+      paymentMethod,
+      customerName,
+      customerEmail,
+    });
+    logger.debug("결제 위젯 상태:", {
       paymentWidget: !!paymentWidgetRef.current,
       isLoading,
       error,
@@ -104,33 +113,35 @@ export default function PaymentWidget({
 
     // 계좌이체 선택 시 입금자명 검증
     if (paymentMethod === "계좌이체" && !depositorName.trim()) {
+      logger.warn("[PaymentWidget] 입금자명 미입력");
       alert("입금자명을 입력해주세요.");
-      console.groupEnd();
+      logger.groupEnd();
       return;
     }
 
     if (!paymentWidgetRef.current) {
-      console.error("결제 위젯이 초기화되지 않았습니다.");
+      logger.error("[PaymentWidget] ❌ 결제 위젯이 초기화되지 않음");
       alert("결제 위젯을 불러오는 중입니다. 잠시 후 다시 시도해주세요.");
-      console.groupEnd();
+      logger.groupEnd();
       return;
     }
 
     if (isLoading) {
-      console.error("결제 위젯이 아직 로딩 중입니다.");
+      logger.error("[PaymentWidget] ❌ 결제 위젯이 아직 로딩 중");
       alert("결제 위젯을 불러오는 중입니다. 잠시 후 다시 시도해주세요.");
-      console.groupEnd();
+      logger.groupEnd();
       return;
     }
 
     if (error) {
-      console.error("결제 위젯 초기화 에러:", error);
+      logger.error("[PaymentWidget] ❌ 결제 위젯 초기화 에러:", error);
       alert(`결제 위젯 오류: ${error}`);
-      console.groupEnd();
+      logger.groupEnd();
       return;
     }
 
     try {
+      logger.debug("[PaymentWidget] 결제 요청 API 호출 시작");
       // 결제 요청 API 호출 (결제 정보 저장)
       const response = await fetch("/api/payments", {
         method: "POST",
@@ -149,11 +160,14 @@ export default function PaymentWidget({
       const data = await response.json();
 
       if (!response.ok || !data.success) {
+        logger.error("[PaymentWidget] ❌ 결제 요청 API 실패:", data);
         throw new Error(data.message || "결제 요청에 실패했습니다.");
       }
 
-      console.log("결제 요청 성공, 결제 위젯 실행");
-      console.log("결제 정보:", data);
+      logger.debug("[PaymentWidget] ✅ 결제 요청 API 성공:", {
+        paymentId: data.paymentId,
+        orderId: data.orderId,
+      });
 
       // 결제 위젯 실행 (TossPayments 위젯이 자동으로 결제 처리)
       // orderId는 원래 주문 ID를 사용해야 함 (paymentId가 아님)
@@ -168,18 +182,22 @@ export default function PaymentWidget({
         easyPay: paymentMethod === "카드" ? "토스페이" : undefined,
       };
 
-      console.log("[PaymentWidget] requestPayment 호출:", paymentRequest);
-      console.log("[PaymentWidget] 선택된 결제수단:", paymentMethod);
+      logger.debug("[PaymentWidget] TossPayments 결제 위젯 실행:", {
+        orderId: paymentRequest.orderId,
+        orderName: paymentRequest.orderName,
+        paymentMethod,
+        successUrl: paymentRequest.successUrl,
+        failUrl: paymentRequest.failUrl,
+      });
       
       try {
-        console.log("[PaymentWidget] requestPayment 호출 직전");
+        logger.debug("[PaymentWidget] requestPayment 호출 직전");
         const result = await paymentWidgetRef.current.requestPayment(paymentRequest);
-        console.log("[PaymentWidget] requestPayment 성공, 결과:", result);
+        logger.debug("[PaymentWidget] ✅ requestPayment 성공 (리다이렉트 예정):", result);
         // requestPayment는 Promise를 반환하지만, 실제로는 결제 페이지로 리다이렉트되므로
         // 여기까지 도달하는 경우는 드뭅니다.
       } catch (paymentError) {
-        console.error("[PaymentWidget] requestPayment 에러:", paymentError);
-        console.error("[PaymentWidget] 에러 상세:", {
+        logger.error("[PaymentWidget] ❌ requestPayment 에러:", {
           name: paymentError instanceof Error ? paymentError.name : undefined,
           message: paymentError instanceof Error ? paymentError.message : String(paymentError),
           stack: paymentError instanceof Error ? paymentError.stack : undefined,
@@ -187,17 +205,16 @@ export default function PaymentWidget({
         throw paymentError;
       }
 
-      console.groupEnd();
+      logger.groupEnd();
     } catch (err) {
-      console.error("결제 요청 에러:", err);
-      const errorMessage = err instanceof Error ? err.message : "결제 요청에 실패했습니다.";
-      console.error("[PaymentWidget] 에러 상세:", {
+      logger.error("[PaymentWidget] ❌ 결제 요청 전체 프로세스 에러:", {
         error: err,
-        message: errorMessage,
+        message: err instanceof Error ? err.message : String(err),
         stack: err instanceof Error ? err.stack : undefined,
       });
+      const errorMessage = err instanceof Error ? err.message : "결제 요청에 실패했습니다.";
       alert(errorMessage);
-      console.groupEnd();
+      logger.groupEnd();
     }
   };
 
@@ -233,7 +250,7 @@ export default function PaymentWidget({
               value="카드"
               checked={paymentMethod === "카드"}
               onChange={(e) => {
-                console.log("[결제수단] 신용카드 결제 선택");
+                logger.debug("[PaymentWidget] 결제수단 선택: 신용카드");
                 setPaymentMethod(e.target.value as "카드");
               }}
               className="w-4 h-4 text-[#ff6b9d] border-[#f5d5e3] focus:ring-[#ff6b9d]"
@@ -248,7 +265,7 @@ export default function PaymentWidget({
               value="계좌이체"
               checked={paymentMethod === "계좌이체"}
               onChange={(e) => {
-                console.log("[결제수단] 에스크로(실시간 계좌이체) 선택");
+                logger.debug("[PaymentWidget] 결제수단 선택: 에스크로(실시간 계좌이체)");
                 setPaymentMethod(e.target.value as "계좌이체");
               }}
               className="w-4 h-4 text-[#ff6b9d] border-[#f5d5e3] focus:ring-[#ff6b9d]"
@@ -270,7 +287,7 @@ export default function PaymentWidget({
               type="text"
               value={depositorName}
               onChange={(e) => {
-                console.log("[입금자명] 입력:", e.target.value);
+                logger.debug("[PaymentWidget] 입금자명 입력:", e.target.value.substring(0, 1) + "***");
                 setDepositorName(e.target.value);
               }}
               placeholder=""
@@ -285,7 +302,7 @@ export default function PaymentWidget({
               id="escrow"
               checked={useEscrow}
               onChange={(e) => {
-                console.log("[에스크로] 체크:", e.target.checked);
+                logger.debug("[PaymentWidget] 에스크로 서비스:", e.target.checked ? "적용" : "미적용");
                 setUseEscrow(e.target.checked);
               }}
               className="w-4 h-4 text-[#ff6b9d] border-[#d4d4d4] rounded focus:ring-[#ff6b9d] mt-0.5"
@@ -313,7 +330,7 @@ export default function PaymentWidget({
                   value="신청"
                   checked={cashReceipt === "신청"}
                   onChange={(e) => {
-                    console.log("[현금영수증] 신청 선택");
+                    logger.debug("[PaymentWidget] 현금영수증: 신청");
                     setCashReceipt(e.target.value as "신청");
                   }}
                   className="w-4 h-4 text-[#ff6b9d] border-[#d4d4d4] focus:ring-[#ff6b9d]"
@@ -328,7 +345,7 @@ export default function PaymentWidget({
                   value="신청안함"
                   checked={cashReceipt === "신청안함"}
                   onChange={(e) => {
-                    console.log("[현금영수증] 신청안함 선택");
+                    logger.debug("[PaymentWidget] 현금영수증: 신청안함");
                     setCashReceipt(e.target.value as "신청안함");
                   }}
                   className="w-4 h-4 text-[#ff6b9d] border-[#d4d4d4] focus:ring-[#ff6b9d]"

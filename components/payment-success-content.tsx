@@ -35,7 +35,12 @@ export default function PaymentSuccessContent() {
 
     const confirmPayment = async () => {
       try {
-        logger.debug("결제 승인 API 호출");
+        logger.debug("[PaymentSuccessContent] 결제 승인 API 호출 시작", {
+          paymentKey: paymentKey?.substring(0, 10) + "...",
+          orderId,
+          amount: Number(amount).toLocaleString("ko-KR") + "원",
+        });
+        
         const response = await fetch("/api/payments/confirm", {
           method: "POST",
           headers: {
@@ -48,10 +53,19 @@ export default function PaymentSuccessContent() {
           }),
         });
 
+        logger.debug("[PaymentSuccessContent] 결제 승인 API 응답 수신", {
+          status: response.status,
+          ok: response.ok,
+        });
+
         const data = await response.json();
 
         if (!response.ok || !data.success) {
-          logger.error("결제 승인 실패:", data);
+          logger.error("[PaymentSuccessContent] ❌ 결제 승인 실패:", {
+            success: data.success,
+            message: data.message,
+            status: response.status,
+          });
           router.push(
             `/payments/fail?message=${encodeURIComponent(data.message || "결제 승인에 실패했습니다.")}`
           );
@@ -59,12 +73,21 @@ export default function PaymentSuccessContent() {
           return;
         }
 
-        logger.debug("결제 승인 성공:", data);
+        logger.debug("[PaymentSuccessContent] ✅ 결제 승인 성공:", {
+          orderNumber: data.orderNumber || orderId.substring(0, 8),
+          paymentKey: data.paymentKey?.substring(0, 10) + "...",
+        });
+        logger.debug("[PaymentSuccessContent] 네이버 동기화 큐는 서버에서 자동 처리됩니다.");
+        
         setOrderNumber(data.orderNumber || orderId.substring(0, 8));
         setIsLoading(false);
         logger.groupEnd();
       } catch (error) {
-        logger.error("결제 승인 처리 에러:", error);
+        logger.error("[PaymentSuccessContent] ❌ 결제 승인 처리 에러:", {
+          error,
+          message: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+        });
         router.push("/payments/fail?message=결제 처리 중 오류가 발생했습니다.");
         logger.groupEnd();
       }

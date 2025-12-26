@@ -403,6 +403,7 @@ export async function importProducts(
             stock: createInput.stock,
             is_featured: createInput.is_featured,
             is_new: createInput.is_new,
+            smartstore_product_id: productData.smartstore_product_id || null,
           })
           .select("id")
           .single();

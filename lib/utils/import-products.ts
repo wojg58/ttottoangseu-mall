@@ -49,6 +49,11 @@ export interface SmartStoreProductRow {
   베스트상품?: string | boolean;
   신상품?: string | boolean;
   메모?: string;
+  
+  // 네이버 스마트스토어 연동
+  스마트스토어상품ID?: string;
+  "스마트스토어 상품 ID"?: string; // 공백 포함 컬럼명 지원
+  smartstore_product_id?: string; // 영문 컬럼명 지원
 }
 
 // 변환된 상품 데이터 타입
@@ -79,6 +84,9 @@ export interface ParsedProductData {
   // 플래그
   is_featured: boolean;
   is_new: boolean;
+
+  // 네이버 스마트스토어 연동
+  smartstore_product_id?: string | null;
 
   // 원본 데이터 (에러 추적용)
   raw_data?: SmartStoreProductRow;
@@ -276,6 +284,13 @@ function convertToProductData(
       const isFeatured = parseBoolean(row.베스트상품);
       const isNew = parseBoolean(row.신상품);
 
+      // 네이버 스마트스토어 상품 ID 파싱 (여러 컬럼명 지원)
+      const smartstoreProductId = 
+        row.스마트스토어상품ID?.trim() || 
+        row["스마트스토어 상품 ID"]?.trim() || 
+        row.smartstore_product_id?.trim() || 
+        null;
+
       products.push({
         name,
         slug,
@@ -290,6 +305,7 @@ function convertToProductData(
         variants: variants.length > 0 ? variants : undefined,
         is_featured: isFeatured,
         is_new: isNew,
+        smartstore_product_id: smartstoreProductId || null,
         raw_data: row,
         row_number: rowNumber,
       });

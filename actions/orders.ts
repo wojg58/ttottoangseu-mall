@@ -254,6 +254,63 @@ export async function createOrder(input: CreateOrderInput): Promise<{
         .eq("id", product.id);
     }
 
+    // 네이버 동기화 큐 적재 (재고 차감 후, 결제 성공 여부와 관계없이)
+    logger.info("[createOrder] 네이버 동기화 큐 적재 시작");
+    try {
+      const { data: orderItems, error: orderItemsError } = await supabase
+        .from("order_items")
+        .select(`quantity, product:products(id, smartstore_product_id, stock)`)
+        .eq("order_id", order.id);
+
+      if (orderItemsError) {
+        logger.error("[createOrder] ❌ order_items 조회 실패:", orderItemsError);
+      } else {
+        logger.info(`[createOrder] order_items 조회 완료: ${orderItems?.length || 0}건`);
+        
+        if (orderItems && orderItems.length > 0) {
+          logger.info("[createOrder] 주문 상품 상세:", orderItems.map((item: any) => ({
+            quantity: item.quantity,
+            productId: item.product?.id,
+            smartstoreId: item.product?.smartstore_product_id || "없음",
+            stock: item.product?.stock,
+          })));
+
+          const queueData = orderItems
+            // 네이버 연동 상품만 필터링
+            .filter((item: any) => item.product && item.product.smartstore_product_id)
+            .map((item: any) => ({
+              product_id: item.product.id,
+              smartstore_id: item.product.smartstore_product_id,
+              target_stock: item.product.stock, // 이미 차감된 최종 재고
+              status: 'pending'
+            }));
+
+          logger.info(`[createOrder] 네이버 연동 상품 필터링 결과: ${queueData.length}건`);
+
+          if (queueData.length > 0) {
+            logger.info("[createOrder] 큐에 추가할 데이터:", queueData);
+            const { error: queueError, data: insertedData } = await supabase
+              .from('naver_sync_queue')
+              .insert(queueData)
+              .select();
+
+            if (queueError) {
+              logger.error("[createOrder] ❌ 네이버 동기화 큐 적재 실패:", queueError);
+            } else {
+              logger.info(`[createOrder] ✅ 네이버 동기화 큐 적재 완료: ${queueData.length}건`, insertedData);
+            }
+          } else {
+            logger.info("[createOrder] 네이버 연동 상품 없음 (smartstore_product_id가 없는 상품만 있음)");
+          }
+        } else {
+          logger.warn("[createOrder] order_items가 비어있음");
+        }
+      }
+    } catch (e) {
+      logger.error("[createOrder] ❌ 네이버 동기화 큐 적재 실패 (주문은 성공):", e);
+      // 큐 적재 실패해도 주문은 성공했으므로 계속 진행
+    }
+
     // 장바구니 비우기
     await supabase.from("cart_items").delete().eq("cart_id", cart.id);
 

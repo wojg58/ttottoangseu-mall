@@ -852,18 +852,34 @@ button[type="submit"]:disabled {
   box-sizing: border-box !important;
 }
 
-/* 소셜 버튼 컨테이너 - 2열 그리드로 배치 */
-.cl-socialButtons {
-  display: grid !important;
-  grid-template-columns: repeat(2, 1fr) !important;
+/* 소셜 버튼 루트 컨테이너 - 가로 배치 */
+.cl-socialButtonsRoot {
+  display: flex !important;
+  flex-direction: row !important;
   gap: 0.75rem !important;
   width: 100% !important;
 }
 
-/* 소셜 버튼 아이콘 버튼 - 그리드 아이템으로 설정 */
+/* 소셜 버튼 컨테이너 - 각 버튼이 같은 행에 배치되도록 */
+.cl-socialButtons {
+  display: flex !important;
+  flex: 1 !important;
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+/* 소셜 버튼 블록 버튼 (Google 등) - 가로 배치 */
+.cl-socialButtonsBlockButton {
+  width: 100% !important;
+  min-width: 0 !important;
+  flex: 1 !important;
+}
+
+/* 소셜 버튼 아이콘 버튼 (GitHub 등) - 가로 배치 */
 .cl-socialButtonsIconButton {
   width: 100% !important;
   min-width: 0 !important;
+  flex: 1 !important;
 }
 
 /* 카카오 로그인 버튼 - 클릭 가능하도록 보장 */

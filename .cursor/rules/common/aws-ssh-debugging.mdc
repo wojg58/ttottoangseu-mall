@@ -13,30 +13,33 @@ alwaysApply: false
 ### SSH Key Management
 
 - **SSH 키 파일 권한 설정 (Windows)**:
+
   ```powershell
   # 상속된 권한 제거
   icacls "aws_server.pem" /inheritance:d
-  
+
   # Authenticated Users 제거
   icacls "aws_server.pem" /remove "NT AUTHORITY\Authenticated Users"
-  
+
   # Users 그룹 제거
   icacls "aws_server.pem" /remove "BUILTIN\Users"
-  
+
   # 현재 사용자에게 읽기 전용 권한 부여
   icacls "aws_server.pem" /grant:r "${env:USERNAME}:(R)"
   ```
 
 - **SSH 연결 명령어**:
+
   ```bash
   ssh -i "aws_server.pem" ubuntu@<SERVER_IP>
   ```
 
 - **파일 전송 (SCP)**:
+
   ```bash
   # 단일 파일 업로드
   scp -i "aws_server.pem" <local_file> ubuntu@<SERVER_IP>:~/<remote_path>
-  
+
   # 예시: sync-worker.js 업로드
   scp -i "aws_server.pem" scripts/sync-worker.js ubuntu@15.165.148.244:~/ttottoangseu-mall/scripts/sync-worker.js
   ```
@@ -44,25 +47,27 @@ alwaysApply: false
 ### Server Environment Setup
 
 - **Node.js 설치 (Ubuntu)**:
+
   ```bash
   curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
   sudo apt-get install -y nodejs
   ```
 
 - **PM2 프로세스 관리**:
+
   ```bash
   # PM2 전역 설치
   sudo npm install -g pm2
-  
+
   # 프로세스 시작
   pm2 start scripts/sync-worker.js --name "naver-worker"
-  
+
   # 프로세스 재시작 (환경 변수 업데이트 포함)
   pm2 restart naver-worker --update-env
-  
+
   # 로그 확인
   pm2 logs naver-worker --lines 100 --nostream
-  
+
   # PM2 설정 저장 및 자동 시작 설정
   pm2 save
   pm2 startup
@@ -75,11 +80,15 @@ alwaysApply: false
 프로덕션 환경에서는 로그 레벨을 명확히 구분하고, 불필요한 디버그 로그는 제거합니다.
 
 - **INFO**: 중요한 비즈니스 로직 실행 단계
+
   ```javascript
-  console.log(`[INFO] 재고 변경 시작 - channelProductNo: ${job.smartstore_id}, target_stock: ${job.target_stock}`);
+  console.log(
+    `[INFO] 재고 변경 시작 - channelProductNo: ${job.smartstore_id}, target_stock: ${job.target_stock}`,
+  );
   ```
 
 - **ERROR**: 에러 발생 시 (항상 에러 객체와 컨텍스트 포함)
+
   ```javascript
   console.error(`[ERROR] 재고 변경 실패: ${res.status} - ${errorText}`, error);
   ```
@@ -93,6 +102,7 @@ alwaysApply: false
 ### Structured Logging
 
 - **로그 포맷**: `[LEVEL] 메시지 - 컨텍스트 정보`
+
   ```javascript
   console.log(`[INFO] 채널 상품 조회 시도: ${job.smartstore_id}`);
   console.log(`[INFO] 채널 상품 조회 응답 상태: ${channelRes.status}`);
@@ -107,25 +117,35 @@ alwaysApply: false
 ### Logging for Different Scenarios
 
 - **옵션이 있는 상품 vs 없는 상품**:
+
   ```javascript
   if (hasOptions) {
     console.log(`[INFO] 옵션이 있는 상품 감지: ${optionCount}개 옵션`);
     // 옵션별 재고 분배 로직
   } else {
-    console.log(`[INFO] 옵션이 없는 상품: originProduct.stockQuantity만 업데이트 (${targetStock}개)`);
+    console.log(
+      `[INFO] 옵션이 없는 상품: originProduct.stockQuantity만 업데이트 (${targetStock}개)`,
+    );
   }
   ```
 
 - **API 응답 로깅**:
+
   ```javascript
   console.log(`[INFO] 재고 변경 API 응답 상태: ${res.status}`);
   const responseText = await res.text();
-  console.log(`[INFO] 재고 변경 API 응답 본문:`, responseText.substring(0, 500));
-  
+  console.log(
+    `[INFO] 재고 변경 API 응답 본문:`,
+    responseText.substring(0, 500),
+  );
+
   // 성공 시 응답 데이터 파싱 및 로깅
   if (res.ok) {
     const responseData = JSON.parse(responseText);
-    console.log(`[INFO] 재고 변경 API 응답 데이터:`, JSON.stringify(responseData, null, 2));
+    console.log(
+      `[INFO] 재고 변경 API 응답 데이터:`,
+      JSON.stringify(responseData, null, 2),
+    );
   }
   ```
 
@@ -134,11 +154,13 @@ alwaysApply: false
 ### Remote Debugging Workflow
 
 1. **문제 발생 시 로그 확인**:
+
    ```bash
    ssh -i "aws_server.pem" ubuntu@<SERVER_IP> "pm2 logs naver-worker --lines 200 --nostream"
    ```
 
 2. **특정 키워드로 로그 필터링**:
+
    ```bash
    ssh -i "aws_server.pem" ubuntu@<SERVER_IP> "pm2 logs naver-worker --lines 500 --nostream | grep -A 20 '재고 변경 API 응답'"
    ```
@@ -151,11 +173,12 @@ alwaysApply: false
 ### Code Update & Deployment
 
 1. **로컬에서 코드 수정 후 서버에 배포**:
+
    ```bash
    # 1. 로컬 파일 수정
    # 2. 서버에 파일 업로드
    scp -i "aws_server.pem" scripts/sync-worker.js ubuntu@15.165.148.244:~/ttottoangseu-mall/scripts/sync-worker.js
-   
+
    # 3. PM2 재시작 (환경 변수 포함)
    ssh -i "aws_server.pem" ubuntu@15.165.148.244 "cd ttottoangseu-mall && pm2 restart naver-worker --update-env"
    ```
@@ -168,16 +191,17 @@ alwaysApply: false
 ### Error Handling Patterns
 
 - **API 호출 에러 처리**:
+
   ```javascript
   try {
     const res = await fetch(apiUrl, options);
-    
+
     if (!res.ok) {
       const errorText = await res.text();
       console.error(`[ERROR] API 호출 실패: ${res.status} - ${errorText}`);
       throw new Error(`API 호출 실패: ${res.status} - ${errorText}`);
     }
-    
+
     const data = await res.json();
     console.log(`[INFO] API 호출 성공:`, JSON.stringify(data, null, 2));
     return data;
@@ -190,8 +214,11 @@ alwaysApply: false
 - **데이터 검증 및 에러 처리**:
   ```javascript
   if (!channelProductData || !channelProductData.originProduct) {
-    console.error(`[ERROR] 채널 상품 데이터가 유효하지 않음:`, channelProductData);
-    throw new Error('채널 상품 데이터가 유효하지 않습니다');
+    console.error(
+      `[ERROR] 채널 상품 데이터가 유효하지 않음:`,
+      channelProductData,
+    );
+    throw new Error("채널 상품 데이터가 유효하지 않습니다");
   }
   ```
 
@@ -218,10 +245,11 @@ alwaysApply: false
 ### Environment Variables
 
 - **서버의 `.env` 파일 관리**:
+
   ```bash
   # 로컬 .env 파일을 서버에 복사
   scp -i "aws_server.pem" .env ubuntu@15.165.148.244:~/ttottoangseu-mall/.env
-  
+
   # PM2 재시작 시 환경 변수 업데이트
   pm2 restart naver-worker --update-env
   ```
@@ -241,17 +269,17 @@ async function apiRequestWithRetry(url, options, maxRetries = 3) {
     try {
       console.log(`[INFO] API 요청 시도 ${attempt}/${maxRetries}: ${url}`);
       const res = await fetch(url, options);
-      
+
       if (res.ok) {
         return await res.json();
       }
-      
+
       if (attempt < maxRetries) {
         console.log(`[INFO] 재시도 대기 중... (${attempt}/${maxRetries})`);
-        await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+        await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
         continue;
       }
-      
+
       throw new Error(`API 요청 실패: ${res.status}`);
     } catch (error) {
       if (attempt === maxRetries) {
@@ -267,11 +295,17 @@ async function apiRequestWithRetry(url, options, maxRetries = 3) {
 
 ```javascript
 // 데이터 변환 전후 로깅
-console.log(`[INFO] 데이터 변환 시작 - 원본 데이터:`, JSON.stringify(originalData, null, 2));
+console.log(
+  `[INFO] 데이터 변환 시작 - 원본 데이터:`,
+  JSON.stringify(originalData, null, 2),
+);
 
 const transformedData = transformData(originalData);
 
-console.log(`[INFO] 데이터 변환 완료 - 변환된 데이터:`, JSON.stringify(transformedData, null, 2));
+console.log(
+  `[INFO] 데이터 변환 완료 - 변환된 데이터:`,
+  JSON.stringify(transformedData, null, 2),
+);
 ```
 
 ## Security Considerations
@@ -281,19 +315,21 @@ console.log(`[INFO] 데이터 변환 완료 - 변환된 데이터:`, JSON.string
 - **프로덕션 로그에 민감한 정보(비밀번호, 토큰 등) 포함하지 않음**
 - **API 키나 비밀번호는 로그에서 마스킹 처리**:
   ```javascript
-  const maskedSecret = secret.substring(0, 4) + '***';
+  const maskedSecret = secret.substring(0, 4) + "***";
   console.log(`[INFO] Secret: ${maskedSecret}`);
   ```
 
 ## Monitoring & Alerts
 
 - **PM2 모니터링**:
+
   ```bash
   pm2 status
   pm2 monit
   ```
 
 - **로그 파일 크기 모니터링**:
+
   ```bash
   ssh -i "aws_server.pem" ubuntu@<SERVER_IP> "du -sh ~/.pm2/logs/*"
   ```
@@ -308,15 +344,19 @@ console.log(`[INFO] 데이터 변환 완료 - 변환된 데이터:`, JSON.string
 ### Common Issues
 
 1. **"Permissions for 'aws_server.pem' are too open"**
+
    - 해결: Windows에서 `icacls` 명령어로 권한 수정
 
 2. **"Module not found" 에러**
+
    - 해결: 서버에서 `npm install` 실행
 
 3. **환경 변수가 업데이트되지 않음**
+
    - 해결: `pm2 restart <process> --update-env` 사용
 
 4. **로그가 너무 많음**
+
    - 해결: DEBUG 레벨 로그 제거, 로그 로테이션 설정
 
 5. **API 응답이 예상과 다름**
