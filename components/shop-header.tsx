@@ -15,11 +15,11 @@
 
 "use client";
 
-import { SignedOut, SignedIn, UserButton, useClerk } from "@clerk/nextjs";
+import { SignedOut, SignedIn, UserButton } from "@clerk/nextjs";
 import Link from "next/link";
 import Image from "next/image";
 import { Search, ShoppingCart, Heart, Menu, X } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,10 +41,7 @@ export default function ShopHeader() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [mounted, setMounted] = useState(false);
-  const [showLoginModal, setShowLoginModal] = useState(false);
   const router = useRouter();
-  const clerk = useClerk();
-  const modalRef = useRef<HTMLDivElement>(null);
 
   console.log("[ShopHeader] 렌더링");
 
@@ -52,44 +49,6 @@ export default function ShopHeader() {
   useEffect(() => {
     setMounted(true);
   }, []);
-
-  // 모달 외부 클릭 시 닫기
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        modalRef.current &&
-        !modalRef.current.contains(event.target as Node)
-      ) {
-        setShowLoginModal(false);
-      }
-    };
-
-    if (showLoginModal) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [showLoginModal]);
-
-  // 카카오 로그인 처리
-  const handleKakaoLogin = async () => {
-    console.group("[ShopHeader] 카카오 로그인 시작");
-    try {
-      console.log("[ShopHeader] 카카오 로그인 버튼 클릭");
-      await clerk.authenticateWithRedirect({
-        strategy: "oauth_kakao",
-        redirectUrl: "/",
-        redirectUrlComplete: "/",
-      });
-      console.log("[ShopHeader] 카카오 로그인 리다이렉트 완료");
-    } catch (error) {
-      console.error("[ShopHeader] 카카오 로그인 실패:", error);
-      alert("카카오 로그인에 실패했습니다. 다시 시도해주세요.");
-    }
-    console.groupEnd();
-  };
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -185,63 +144,13 @@ export default function ShopHeader() {
                 </div>
               </SignedIn>
               <SignedOut>
-                <div className="flex items-center gap-2 relative">
-                  <Button
-                    className="shop-btn-accent text-sm"
-                    onClick={() => {
-                      console.log("[ShopHeader] 로그인 버튼 클릭");
-                      setShowLoginModal(true);
-                    }}
-                  >
-                    로그인
-                  </Button>
+                <div className="flex items-center gap-2">
+                  <Link href="/sign-in">
+                    <Button className="shop-btn-accent text-sm">로그인</Button>
+                  </Link>
                   <Link href="/sign-up/join">
                     <Button className="shop-btn-accent text-sm">회원가입</Button>
                   </Link>
-
-                  {/* 카카오 로그인 모달 */}
-                  {showLoginModal && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-                      <div
-                        ref={modalRef}
-                        className="bg-white rounded-lg p-6 shadow-xl max-w-sm w-full mx-4"
-                      >
-                        <div className="flex justify-between items-center mb-4">
-                          <h2 className="text-xl font-bold text-[#4a3f48]">
-                            로그인
-                          </h2>
-                          <button
-                            onClick={() => {
-                              console.log("[ShopHeader] 모달 닫기");
-                              setShowLoginModal(false);
-                            }}
-                            className="text-gray-400 hover:text-gray-600"
-                            aria-label="닫기"
-                          >
-                            <X className="w-6 h-6" />
-                          </button>
-                        </div>
-                        <div className="space-y-3">
-                          <button
-                            onClick={handleKakaoLogin}
-                            className="w-full bg-[#FEE500] hover:bg-[#FDD835] text-black font-semibold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
-                          >
-                            <span className="text-lg">카카오계정 로그인</span>
-                          </button>
-                          <Link
-                            href="/sign-in"
-                            onClick={() => {
-                              console.log("[ShopHeader] 이메일 로그인으로 이동");
-                              setShowLoginModal(false);
-                            }}
-                            className="block w-full text-center text-[#ff6b9d] hover:text-[#ff5088] font-medium text-sm py-2"
-                          >
-                            이메일로 로그인
-                          </Link>
-                        </div>
-                      </div>
-                    </div>
-                  )}
                 </div>
               </SignedOut>
 

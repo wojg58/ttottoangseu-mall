@@ -20,7 +20,7 @@ import {
 } from "@clerk/nextjs";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 
 export default function SignInContent() {
   const searchParams = useSearchParams();
@@ -29,6 +29,7 @@ export default function SignInContent() {
   const clerk = useClerk();
   const { signIn, isLoaded: signInLoaded } = useSignIn();
   const redirectUrl = searchParams.get("redirect_url") || "/";
+  const kakaoButtonRef = useRef<HTMLButtonElement>(null);
 
   // 클라이언트 사이드에서만 실행 (useEffect 안으로 이동하여 hydration mismatch 방지)
   useEffect(() => {
@@ -1182,6 +1183,100 @@ export default function SignInContent() {
     };
   }, [clerk, signIn, signInLoaded, router, redirectUrl, isLoaded, isSignedIn]);
 
+  // Clerk가 자동으로 생성한 카카오 버튼 삭제
+  useEffect(() => {
+    const removeClerkKakaoButton = () => {
+      // Clerk가 자동으로 생성한 카카오 버튼 찾기
+      const clerkKakaoButton = document.querySelector(
+        ".cl-socialButtonsIconButton__custom_kakao, button[class*='custom_kakao']",
+      ) as HTMLElement;
+
+      if (clerkKakaoButton) {
+        console.log("[SignInContent] Clerk 자동 생성 카카오 버튼 삭제");
+        clerkKakaoButton.remove();
+      }
+    };
+
+    // 초기 실행 및 주기적 확인
+    const initialTimeout = setTimeout(removeClerkKakaoButton, 500);
+    const interval = setInterval(removeClerkKakaoButton, 1000);
+
+    return () => {
+      clearTimeout(initialTimeout);
+      clearInterval(interval);
+    };
+  }, []);
+
+  // 카카오 버튼을 이메일 주소 필드 위에 삽입
+  useEffect(() => {
+    const insertKakaoButton = () => {
+      // 이메일 주소 필드 행을 찾기
+      const identifierFieldRow = document.querySelector(
+        ".cl-formFieldRow__identifier",
+      ) as HTMLElement;
+      const kakaoButton = kakaoButtonRef.current;
+
+      if (identifierFieldRow && kakaoButton) {
+        // 이미 삽입되어 있는지 확인
+        const parent = kakaoButton.parentElement;
+        if (
+          parent &&
+          parent.contains(identifierFieldRow) &&
+          identifierFieldRow.previousSibling === kakaoButton
+        ) {
+          // 이미 올바른 위치에 있으면 리턴
+          return;
+        }
+
+        // 기존 위치에서 제거
+        if (kakaoButton.parentElement) {
+          kakaoButton.parentElement.removeChild(kakaoButton);
+        }
+
+        console.log("[SignInContent] 카카오 버튼을 이메일 주소 필드 위에 삽입");
+
+        // 카카오 버튼을 보이도록 설정
+        kakaoButton.classList.remove("hidden");
+
+        // 버튼이 클릭 가능하도록 스타일 강제 적용
+        kakaoButton.style.cssText += `
+          display: block !important;
+          visibility: visible !important;
+          opacity: 1 !important;
+          pointer-events: auto !important;
+          cursor: pointer !important;
+          z-index: 10 !important;
+        `;
+
+        // 버튼이 비활성화되지 않도록 보장
+        kakaoButton.removeAttribute("disabled");
+        kakaoButton.setAttribute("tabindex", "0");
+        kakaoButton.setAttribute("aria-disabled", "false");
+
+        // 이메일 주소 필드 행의 부모 요소를 찾아서 그 앞에 삽입
+        const formContainer = identifierFieldRow.parentElement;
+        if (formContainer) {
+          formContainer.insertBefore(kakaoButton, identifierFieldRow);
+        } else {
+          // 부모가 없으면 identifierFieldRow 앞에 직접 삽입
+          identifierFieldRow.parentNode?.insertBefore(
+            kakaoButton,
+            identifierFieldRow,
+          );
+        }
+      }
+    };
+
+    // 초기 실행 및 주기적 확인
+    const initialTimeout = setTimeout(insertKakaoButton, 500);
+    const interval = setInterval(insertKakaoButton, 1000);
+
+    return () => {
+      clearTimeout(initialTimeout);
+      clearInterval(interval);
+    };
+  }, []);
+
   // 로그인 성공 후 리다이렉트 처리
   useEffect(() => {
     if (isLoaded && isSignedIn) {
@@ -1240,56 +1335,6 @@ export default function SignInContent() {
 
             {/* 로그인 폼 카드 */}
             <div className="bg-white rounded-lg p-8 md:p-12 shadow-sm border border-gray-200 min-h-[500px]">
-              {/* 카카오계정 로그인 버튼 */}
-              <button
-                onClick={async () => {
-                  console.group("[SignInContent] 카카오 로그인 버튼 클릭");
-                  console.log("시간:", new Date().toISOString());
-                  console.log("리다이렉트 URL:", redirectUrl);
-
-                  try {
-                    if (!clerk || !signIn) {
-                      console.error(
-                        "[SignInContent] Clerk 또는 signIn이 초기화되지 않음",
-                      );
-                      alert(
-                        "로그인 기능을 준비하는 중입니다. 잠시 후 다시 시도해주세요.",
-                      );
-                      console.groupEnd();
-                      return;
-                    }
-
-                    console.log("[SignInContent] 카카오 로그인 시작");
-                    // Clerk의 authenticateWithRedirect를 사용하여 카카오 로그인
-                    // 타입 오류를 피하기 위해 any 사용 (Clerk에서 카카오 전략이 타입에 포함되지 않을 수 있음)
-                    await (signIn.authenticateWithRedirect as any)({
-                      strategy: "oauth_kakao",
-                      redirectUrl: redirectUrl,
-                      redirectUrlComplete: redirectUrl,
-                    });
-                    console.log(
-                      "[SignInContent] 카카오 로그인 리다이렉트 완료",
-                    );
-                  } catch (error: any) {
-                    console.error("[SignInContent] 카카오 로그인 실패:", error);
-                    console.error("[SignInContent] 에러 상세:", {
-                      message: error.message,
-                      errors: error.errors,
-                      status: error.status,
-                    });
-                    alert("카카오 로그인에 실패했습니다. 다시 시도해주세요.");
-                  } finally {
-                    console.groupEnd();
-                  }
-                }}
-                className="w-full bg-[#FEE500] hover:bg-[#FDD835] text-black font-semibold py-3 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md mb-4 flex items-center justify-center"
-                style={{
-                  backgroundColor: "#FEE500",
-                }}
-              >
-                카카오계정 로그인
-              </button>
-
               {/* 소셜 로그인 버튼 (Clerk 기본) - 이메일/비밀번호 필드는 숨김 */}
               <SignIn
                 routing="path"
@@ -1324,6 +1369,126 @@ export default function SignInContent() {
                   },
                 }}
               />
+
+              {/* 카카오계정 로그인 버튼 (소셜 버튼 컨테이너에 동적으로 삽입) */}
+              <button
+                ref={kakaoButtonRef}
+                onClick={async () => {
+                  console.group("[SignInContent] 카카오 로그인 버튼 클릭");
+                  console.log("시간:", new Date().toISOString());
+                  console.log("리다이렉트 URL:", redirectUrl);
+
+                  try {
+                    // Clerk 초기화 대기
+                    if (!isLoaded || !signInLoaded) {
+                      console.warn(
+                        "[SignInContent] Clerk가 아직 초기화 중입니다. 잠시 후 다시 시도해주세요.",
+                      );
+                      alert(
+                        "로그인 기능을 준비하는 중입니다. 잠시 후 다시 시도해주세요.",
+                      );
+                      console.groupEnd();
+                      return;
+                    }
+
+                    if (!clerk || !signIn) {
+                      console.error(
+                        "[SignInContent] Clerk 또는 signIn이 초기화되지 않음",
+                        {
+                          clerk: !!clerk,
+                          signIn: !!signIn,
+                          isLoaded,
+                          signInLoaded,
+                        },
+                      );
+                      alert(
+                        "로그인 기능을 준비하는 중입니다. 잠시 후 다시 시도해주세요.",
+                      );
+                      console.groupEnd();
+                      return;
+                    }
+
+                    console.log("[SignInContent] 카카오 로그인 시작");
+                    console.log("[SignInContent] Clerk 상태:", {
+                      isLoaded,
+                      signInLoaded,
+                      hasClerk: !!clerk,
+                      hasSignIn: !!signIn,
+                    });
+
+                    // Clerk의 authenticateWithRedirect를 사용하여 카카오 로그인
+                    // Custom provider의 경우 전략 이름이 다를 수 있으므로 여러 옵션 시도
+                    // 타입 오류를 피하기 위해 any 사용
+                    const possibleStrategies = [
+                      "oauth_custom_kakao", // Custom provider 일반적인 형식
+                      "oauth_kakao", // Social provider 형식
+                      "kakao", // 단순 형식
+                    ];
+
+                    let lastError: any = null;
+                    for (const strategy of possibleStrategies) {
+                      try {
+                        console.log(
+                          `[SignInContent] 카카오 로그인 시도 - 전략: ${strategy}`,
+                        );
+                        await (signIn.authenticateWithRedirect as any)({
+                          strategy: strategy,
+                          redirectUrl: redirectUrl,
+                          redirectUrlComplete: redirectUrl,
+                        });
+                        console.log(
+                          `[SignInContent] 카카오 로그인 리다이렉트 완료 - 전략: ${strategy}`,
+                        );
+                        return; // 성공하면 함수 종료
+                      } catch (strategyError: any) {
+                        console.warn(
+                          `[SignInContent] 전략 ${strategy} 실패:`,
+                          strategyError.message,
+                        );
+                        lastError = strategyError;
+                        // 다음 전략 시도
+                        continue;
+                      }
+                    }
+
+                    // 모든 전략이 실패한 경우
+                    throw (
+                      lastError ||
+                      new Error("카카오 로그인 전략을 찾을 수 없습니다.")
+                    );
+                  } catch (error: any) {
+                    console.error("[SignInContent] 카카오 로그인 실패:", error);
+                    console.error("[SignInContent] 에러 상세:", {
+                      message: error.message,
+                      errors: error.errors,
+                      status: error.status,
+                      stack: error.stack,
+                    });
+
+                    // 더 구체적인 에러 메시지
+                    let errorMessage =
+                      "카카오 로그인에 실패했습니다. 다시 시도해주세요.";
+                    if (error.errors && error.errors.length > 0) {
+                      const firstError = error.errors[0];
+                      if (firstError.message) {
+                        errorMessage = firstError.message;
+                      }
+                    } else if (error.message) {
+                      errorMessage = error.message;
+                    }
+
+                    alert(errorMessage);
+                  } finally {
+                    console.groupEnd();
+                  }
+                }}
+                className="w-full bg-[#FEE500] hover:bg-[#FDD835] text-black font-semibold py-3 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md mb-4 flex items-center justify-center hidden"
+                style={{
+                  backgroundColor: "#FEE500",
+                }}
+              >
+                카카오계정 로그인
+              </button>
             </div>
 
             {/* 회원가입 링크 */}

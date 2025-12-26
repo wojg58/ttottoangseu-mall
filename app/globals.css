@@ -847,3 +847,36 @@ button[type="submit"]:disabled {
   width: 100% !important;
   box-sizing: border-box !important;
 }
+
+/* 소셜 버튼 컨테이너 - 2열 그리드로 배치 */
+.cl-socialButtons {
+  display: grid !important;
+  grid-template-columns: repeat(2, 1fr) !important;
+  gap: 0.75rem !important;
+  width: 100% !important;
+}
+
+/* 소셜 버튼 아이콘 버튼 - 그리드 아이템으로 설정 */
+.cl-socialButtonsIconButton {
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+/* 카카오 로그인 버튼 - 클릭 가능하도록 보장 */
+button[style*="background-color: rgb(254, 229, 0)"],
+button[style*="background-color: #FEE500"] {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  cursor: pointer !important;
+  z-index: 10 !important;
+}
+
+/* 카카오 버튼이 비활성화되지 않도록 보장 */
+button[style*="background-color: rgb(254, 229, 0)"]:disabled,
+button[style*="background-color: #FEE500"]:disabled {
+  pointer-events: auto !important;
+  cursor: pointer !important;
+  opacity: 1 !important;
+}

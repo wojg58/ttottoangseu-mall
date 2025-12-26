@@ -73,34 +73,78 @@ export async function POST(request: Request) {
 
     console.log("저장할 데이터:", userData);
 
-    // 먼저 기존 사용자 조회 (삭제되지 않은 사용자만)
-    const { data: existingUser, error: fetchError } = await supabase
-      .from("users")
-      .select("*")
-      .eq("clerk_user_id", clerkUser.id)
-      .is("deleted_at", null)
-      .maybeSingle();
+    // 먼저 clerk_user_id로 기존 사용자 조회 (삭제되지 않은 사용자만)
+    console.log("🔍 clerk_user_id로 사용자 조회 중...");
+    const { data: existingUserByClerkId, error: fetchErrorByClerkId } =
+      await supabase
+        .from("users")
+        .select("*")
+        .eq("clerk_user_id", clerkUser.id)
+        .is("deleted_at", null)
+        .maybeSingle();
 
-    if (fetchError) {
-      console.error("❌ 사용자 조회 에러:", fetchError);
+    if (fetchErrorByClerkId) {
+      console.error("❌ 사용자 조회 에러:", fetchErrorByClerkId);
       console.groupEnd();
       return NextResponse.json(
-        { error: "Failed to fetch user", details: fetchError.message },
+        {
+          error: "Failed to fetch user",
+          details: fetchErrorByClerkId.message,
+        },
         { status: 500 },
       );
+    }
+
+    let existingUser = existingUserByClerkId;
+
+    // clerk_user_id로 찾지 못했고, 이메일이 있는 경우 이메일로도 조회
+    if (!existingUser && userData.email) {
+      console.log("🔍 이메일로 사용자 조회 중...");
+      const { data: existingUserByEmail, error: fetchErrorByEmail } =
+        await supabase
+          .from("users")
+          .select("*")
+          .eq("email", userData.email)
+          .is("deleted_at", null)
+          .maybeSingle();
+
+      if (fetchErrorByEmail) {
+        console.error("❌ 이메일로 사용자 조회 에러:", fetchErrorByEmail);
+        // 이메일 조회 실패는 치명적이지 않으므로 계속 진행
+      } else if (existingUserByEmail) {
+        console.log(
+          "⚠️ 같은 이메일을 가진 사용자 발견, clerk_user_id 연결 중...",
+        );
+        existingUser = existingUserByEmail;
+      }
     }
 
     let result;
     if (existingUser) {
       // 기존 사용자 업데이트
       console.log("기존 사용자 발견, 업데이트 중...");
+      const updateData: {
+        name: string;
+        email: string;
+        role: string;
+        clerk_user_id?: string;
+      } = {
+        name: userData.name,
+        email: userData.email,
+        role: userData.role,
+      };
+
+      // clerk_user_id가 없거나 다른 경우 업데이트
+      if (existingUser.clerk_user_id !== clerkUser.id) {
+        console.log(
+          `clerk_user_id 업데이트: ${existingUser.clerk_user_id} → ${clerkUser.id}`,
+        );
+        updateData.clerk_user_id = clerkUser.id;
+      }
+
       const { data, error: updateError } = await supabase
         .from("users")
-        .update({
-          name: userData.name,
-          email: userData.email,
-          role: userData.role,
-        })
+        .update(updateData)
         .eq("id", existingUser.id)
         .select()
         .single();
