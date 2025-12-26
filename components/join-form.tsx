@@ -126,7 +126,6 @@ export default function JoinForm() {
   const openPostcode = () => {
     if (typeof window === "undefined") return;
 
-    // @ts-ignore
     new window.daum.Postcode({
       oncomplete: function (data: any) {
         setValue("postcode", data.zonecode);
@@ -652,7 +651,7 @@ export default function JoinForm() {
                   권리·의무 및 책임사항을 규정함을 목적으로 합니다.
                 </p>
                 <p className="mt-2">
-                  제2조(정의) ① "몰"이란 또또앙스가 재화 또는 용역을 이용자에게
+                  제2조(정의) ① &quot;몰&quot;이란 또또앙스가 재화 또는 용역을 이용자에게
                   제공하기 위하여 컴퓨터 등 정보통신설비를 이용하여 재화 등을
                   거래할 수 있도록 설정한 가상의 영업장을 말합니다.
                 </p>

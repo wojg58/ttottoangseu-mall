@@ -1482,9 +1482,10 @@ export default function SignInContent() {
                     console.groupEnd();
                   }
                 }}
-                className="w-full bg-[#FEE500] hover:bg-[#FDD835] text-black font-semibold py-3 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md mb-4 flex items-center justify-center hidden"
+                className="w-full bg-[#FEE500] hover:bg-[#FDD835] text-black font-semibold h-8 py-2 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md mb-4 flex items-center justify-center hidden"
                 style={{
                   backgroundColor: "#FEE500",
+                  height: "32px",
                 }}
               >
                 카카오계정 로그인
