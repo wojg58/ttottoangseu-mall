@@ -46,14 +46,15 @@ export default function ShopFooter() {
             <div className="flex items-center gap-3 mb-4">
               <Image
                 src="/character.png"
-                alt="또또앙스"
+                alt="또또앙스 로고"
                 width={100}
                 height={100}
                 className="object-contain"
                 sizes="100px"
+                aria-hidden="true"
               />
               <div>
-                <h3 className="text-[45px] font-bold brand-text-logo text-[#4a3f48]">또또앙스</h3>
+                <h2 className="text-[45px] font-bold brand-text-logo text-[#4a3f48]">또또앙스</h2>
               </div>
             </div>
             <div className="text-[#4a3f48] text-sm leading-relaxed whitespace-pre-line">

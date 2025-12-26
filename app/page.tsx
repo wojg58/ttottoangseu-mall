@@ -300,12 +300,14 @@ export default async function HomePage() {
       <div className="fixed inset-0 -z-10">
         <Image
           src="/f.jpg"
-          alt="배경"
+          alt=""
           fill
           className="object-cover"
           sizes="100vw"
           quality={75}
           fetchPriority="low"
+          loading="lazy"
+          aria-hidden="true"
         />
       </div>
       {/* 배경 오버레이 (텍스트 가독성을 위해) */}
@@ -331,10 +333,10 @@ export default async function HomePage() {
                     귀여운 정품 캐릭터 키덜트 소품샵
                   </span>
                 </div>
-                <h1 className="text-3xl md:text-5xl font-bold text-black mb-4 leading-tight">
+                <h2 className="text-3xl md:text-5xl font-bold text-black mb-4 leading-tight">
                   두근거리는 설렘을{" "}
                   <span className="text-shop-rose">선물하세요</span> 💕
-                </h1>
+                </h2>
                 <p
                   className="text-black mb-6 text-xl font-[var(--font-noto-sans-kr)]"
                   style={{
@@ -364,12 +366,12 @@ export default async function HomePage() {
                   <div className="relative w-full h-full flex items-center justify-center">
                     <Image
                       src="/kity.png"
-                      alt="또또앙스"
+                      alt="또또앙스 캐릭터"
                       width={600}
                       height={600}
                       className="w-full h-full object-contain"
                       priority
-                      quality={90}
+                      quality={85}
                       fetchPriority="high"
                       sizes="(max-width: 768px) 100vw, 600px"
                     />

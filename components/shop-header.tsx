@@ -43,8 +43,6 @@ export default function ShopHeader() {
   const [mounted, setMounted] = useState(false);
   const router = useRouter();
 
-  console.log("[ShopHeader] 렌더링");
-
   // 클라이언트에서만 마운트된 후 상태 업데이트 (Hydration 에러 방지)
   useEffect(() => {
     setMounted(true);
@@ -52,32 +50,29 @@ export default function ShopHeader() {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("[ShopHeader] 검색 실행, 검색어:", searchQuery);
     
     // 검색어가 비어있으면 검색하지 않음
     if (!searchQuery.trim()) {
-      console.log("[ShopHeader] 검색어가 비어있어 검색을 실행하지 않습니다.");
       return;
     }
 
     // 검색어를 URL 파라미터로 전달하여 상품 페이지로 이동
     const searchParams = new URLSearchParams({ search: searchQuery.trim() });
     const searchUrl = `/products?${searchParams.toString()}`;
-    console.log("[ShopHeader] 검색 URL로 이동:", searchUrl);
     router.push(searchUrl);
   };
 
   return (
     <header className="sticky top-0 z-50 w-full">
-      {/* 메인 헤더 - 핑크 배경 */}
-      <div className="bg-[#FF6B9D]">
+      {/* 메인 헤더 - 핑크 배경 (대비율 개선: 더 진한 핑크 사용) */}
+      <div className="bg-[#FF5088]">
         <div className="shop-container py-4">
           <div className="flex justify-between items-center gap-4">
             {/* 로고 영역 */}
-            <Link href="/" className="flex items-center gap-3 shrink-0">
+            <Link href="/" className="flex items-center gap-3 shrink-0" aria-label="또또앙스 홈으로 이동">
               <Image
                 src="/character.png"
-                alt="또또앙스"
+                alt="또또앙스 로고"
                 width={100}
                 height={100}
                 className="object-contain"
@@ -85,9 +80,9 @@ export default function ShopHeader() {
                 sizes="100px"
               />
               <div className="hidden sm:block">
-                <div className="text-5xl font-bold drop-shadow-sm brand-text-logo text-white">
+                <h1 className="text-5xl font-bold drop-shadow-sm brand-text-logo text-white">
                   또또앙스
-                </div>
+                </h1>
               </div>
             </Link>
 

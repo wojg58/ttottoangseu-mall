@@ -28,6 +28,13 @@ const nextConfig: NextConfig = {
       bodySizeLimit: "50mb", // 기본 1MB에서 50MB로 증가
     },
   },
+  // 성능 최적화: 컴파일러 옵션
+  compiler: {
+    // 프로덕션에서 console.log 제거 (성능 최적화)
+    removeConsole: process.env.NODE_ENV === "production" ? {
+      exclude: ["error", "warn"], // error와 warn은 유지
+    } : false,
+  },
 };
 
 export default nextConfig;

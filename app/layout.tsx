@@ -11,12 +11,13 @@ import MarketingScripts from "@/components/marketing-scripts";
 import "./globals.css";
 
 // Google Fonts 최적화 - 한글 서브셋 포함
+// preload는 첫 번째 폰트만 활성화하여 FCP 개선
 const gowunDodum = Gowun_Dodum({
   subsets: ["latin"],
   weight: ["400"],
   display: "swap",
   variable: "--font-gowun-dodum",
-  preload: true,
+  preload: true, // 첫 번째 폰트만 preload
 });
 
 const plusJakartaSans = Plus_Jakarta_Sans({
@@ -24,7 +25,7 @@ const plusJakartaSans = Plus_Jakarta_Sans({
   weight: ["400", "500", "600", "700"],
   display: "swap",
   variable: "--font-plus-jakarta-sans",
-  preload: true,
+  preload: false, // 성능 최적화: preload 비활성화
 });
 
 // Nanum Gothic 대신 Noto Sans KR 사용 (더 나은 최적화 지원)
@@ -33,7 +34,7 @@ const notoSansKR = Noto_Sans_KR({
   weight: ["400", "500", "600", "700"],
   display: "swap",
   variable: "--font-noto-sans-kr",
-  preload: true,
+  preload: false, // 성능 최적화: preload 비활성화
 });
 
 export const metadata: Metadata = {
@@ -99,6 +100,25 @@ export default function RootLayout({
           </SyncUserProvider>
           {/* 마케팅 스크립트 - 페이지 로드 후 lazyOnload로 로드 */}
           <MarketingScripts />
+          {/* Clerk iframe 접근성 개선 */}
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `
+                // Clerk iframe에 title 추가
+                if (typeof window !== 'undefined') {
+                  const observer = new MutationObserver(() => {
+                    const clerkIframes = document.querySelectorAll('iframe[src*="clerk"]');
+                    clerkIframes.forEach((iframe) => {
+                      if (!iframe.getAttribute('title')) {
+                        iframe.setAttribute('title', 'Clerk 인증 서비스');
+                      }
+                    });
+                  });
+                  observer.observe(document.body, { childList: true, subtree: true });
+                }
+              `,
+            }}
+          />
         </body>
       </html>
     </ClerkProvider>

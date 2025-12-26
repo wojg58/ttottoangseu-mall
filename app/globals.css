@@ -123,6 +123,10 @@
   --color-shop-text: #4a3f48;
   --color-shop-text-muted: #6b5d64;
   --color-shop-border: #f5d5e3;
+  
+  /* 접근성 개선: 대비율 향상을 위한 색상 조정 */
+  --color-shop-text-dark: #2a2325; /* 더 어두운 텍스트 (대비율 개선) */
+  --color-shop-rose-contrast: #ff5088; /* 더 진한 핑크 (대비율 개선) */
 }
 
 :root {

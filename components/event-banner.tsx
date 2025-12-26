@@ -14,8 +14,6 @@ import Link from "next/link";
 import "./event-banner.css";
 
 export default function EventBanner() {
-  console.log("[EventBanner] 이벤트 배너 렌더링");
-
   return (
     <section className="event-wrapper">
       {/* 리뷰 이벤트 */}

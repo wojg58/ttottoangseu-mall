@@ -43,12 +43,13 @@ export default function MarketingScripts() {
               // 쿠키 사용 최소화 및 프라이버시 보호 설정
               gtag('config', '${gaId}', {
                 'anonymize_ip': true,
-                'cookie_flags': 'SameSite=None;Secure',
+                'cookie_flags': 'SameSite=Lax;Secure', // SameSite=Lax로 변경 (서드 파티 쿠키 문제 완화)
                 'cookie_expires': 63072000, // 2년
                 'cookie_update': true,
                 'cookie_domain': 'auto',
                 'allow_google_signals': false, // 광고 개인화 비활성화
-                'allow_ad_personalization_signals': false
+                'allow_ad_personalization_signals': false,
+                // 'storage': 'none' // 주석 처리 (GA4는 storage 옵션을 지원하지 않음)
               });
             `}
           </Script>
