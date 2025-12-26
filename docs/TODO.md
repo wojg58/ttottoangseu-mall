@@ -35,6 +35,7 @@
 - [x] 사용자 동기화 API 라우트 (`app/api/sync-user/route.ts`)
 - [x] SyncUserProvider 구현 (`components/providers/sync-user-provider.tsx`)
 - [x] 로그인/회원가입 페이지 (Clerk 기본 페이지 사용)
+- [x] 카카오 로그인 버튼 UI 구현 및 활성화 - `app/sign-in/[[...rest]]/sign-in-content.tsx`
 - [x] 로그아웃 기능 구현 (Clerk UserButton 사용)
 - [x] 인증 상태 확인 및 리다이렉트 로직
 
@@ -125,14 +126,14 @@
 
 ### TossPayments 연동
 
-- [ ] TossPayments SDK 설치 및 설정
-- [ ] 결제 위젯 컴포넌트
-- [ ] 결제 요청 API (`app/api/payments/route.ts`)
-- [ ] 결제 승인 처리 (`app/api/payments/confirm/route.ts`)
-- [ ] 결제 실패/취소 처리
-- [ ] 결제 완료 페이지 (`app/payments/success/page.tsx`)
-- [ ] 결제 실패 페이지 (`app/payments/fail/page.tsx`)
-- [ ] 결제 정보 저장 (`payments` 테이블)
+- [x] TossPayments SDK 설치 및 설정
+- [x] 결제 위젯 컴포넌트 - `components/payment-widget.tsx`
+- [x] 결제 요청 API (`app/api/payments/route.ts`)
+- [x] 결제 승인 처리 (`app/api/payments/confirm/route.ts`)
+- [x] 결제 실패/취소 처리
+- [x] 결제 완료 페이지 (`app/payments/success/page.tsx`)
+- [x] 결제 실패 페이지 (`app/payments/fail/page.tsx`)
+- [x] 결제 정보 저장 (`payments` 테이블)
 
 ### 주문 내역
 
@@ -141,12 +142,12 @@
 - [x] 주문 내역 리스트 - `app/mypage/orders/page.tsx`
 - [x] 주문 상세 페이지 (`app/mypage/orders/[id]/page.tsx`)
 - [x] 주문 상태 표시
-- [ ] 주문 취소 기능 (상태별 제한)
+- [ ] 주문 취소 기능 (상태별 제한) - 우선순위 낮음
 
 ### 관리자 대시보드 - 상품 관리
 
 - [x] 관리자 권한 체크 미들웨어/유틸 - `actions/admin.ts` (`isAdmin()`)
-- [ ] 관리자 대시보드 레이아웃 (`app/admin/layout.tsx`) - 없음, 각 페이지에서 개별 체크
+- [x] 관리자 대시보드 레이아웃 (`app/admin/layout.tsx`) - 없음, 각 페이지에서 개별 체크 (의도적으로 생략)
 - [x] 상품 목록 페이지 (`app/admin/products/page.tsx`)
 - [x] 상품 등록 페이지 (`app/admin/products/new/page.tsx`)
 - [x] 상품 수정 페이지 (`app/admin/products/[id]/page.tsx`)
@@ -161,7 +162,7 @@
 ### 관리자 대시보드 - 주문 관리
 
 - [x] 주문 목록 페이지 (`app/admin/orders/page.tsx`)
-- [ ] 주문 상세 페이지 (`app/admin/orders/[id]/page.tsx`)
+- [ ] 주문 상세 페이지 (`app/admin/orders/[id]/page.tsx`) - 우선순위 낮음
 - [x] 주문 상태 업데이트 - `actions/admin.ts` (`updateOrderStatus()`)
 - [x] 배송 정보 입력 (운송장 번호, 배송 상태) - `actions/admin.ts`
 - [x] 주문 통계 (대시보드 메인) - `app/admin/page.tsx` (`getDashboardStats()`)
