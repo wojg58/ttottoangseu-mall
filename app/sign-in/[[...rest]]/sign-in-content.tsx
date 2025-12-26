@@ -1240,6 +1240,56 @@ export default function SignInContent() {
 
             {/* 로그인 폼 카드 */}
             <div className="bg-white rounded-lg p-8 md:p-12 shadow-sm border border-gray-200 min-h-[500px]">
+              {/* 카카오계정 로그인 버튼 */}
+              <button
+                onClick={async () => {
+                  console.group("[SignInContent] 카카오 로그인 버튼 클릭");
+                  console.log("시간:", new Date().toISOString());
+                  console.log("리다이렉트 URL:", redirectUrl);
+
+                  try {
+                    if (!clerk || !signIn) {
+                      console.error(
+                        "[SignInContent] Clerk 또는 signIn이 초기화되지 않음",
+                      );
+                      alert(
+                        "로그인 기능을 준비하는 중입니다. 잠시 후 다시 시도해주세요.",
+                      );
+                      console.groupEnd();
+                      return;
+                    }
+
+                    console.log("[SignInContent] 카카오 로그인 시작");
+                    // Clerk의 authenticateWithRedirect를 사용하여 카카오 로그인
+                    // 타입 오류를 피하기 위해 any 사용 (Clerk에서 카카오 전략이 타입에 포함되지 않을 수 있음)
+                    await (signIn.authenticateWithRedirect as any)({
+                      strategy: "oauth_kakao",
+                      redirectUrl: redirectUrl,
+                      redirectUrlComplete: redirectUrl,
+                    });
+                    console.log(
+                      "[SignInContent] 카카오 로그인 리다이렉트 완료",
+                    );
+                  } catch (error: any) {
+                    console.error("[SignInContent] 카카오 로그인 실패:", error);
+                    console.error("[SignInContent] 에러 상세:", {
+                      message: error.message,
+                      errors: error.errors,
+                      status: error.status,
+                    });
+                    alert("카카오 로그인에 실패했습니다. 다시 시도해주세요.");
+                  } finally {
+                    console.groupEnd();
+                  }
+                }}
+                className="w-full bg-[#FEE500] hover:bg-[#FDD835] text-black font-semibold py-3 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md mb-4 flex items-center justify-center"
+                style={{
+                  backgroundColor: "#FEE500",
+                }}
+              >
+                카카오계정 로그인
+              </button>
+
               {/* 소셜 로그인 버튼 (Clerk 기본) - 이메일/비밀번호 필드는 숨김 */}
               <SignIn
                 routing="path"
