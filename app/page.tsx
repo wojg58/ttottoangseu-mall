@@ -296,7 +296,7 @@ export default async function HomePage() {
 
   return (
     <main className="relative min-h-screen">
-      {/* 배경 이미지 */}
+      {/* 배경 이미지 - LCP가 아니므로 priority 제거 */}
       <div className="fixed inset-0 -z-10">
         <Image
           src="/f.jpg"
@@ -304,8 +304,8 @@ export default async function HomePage() {
           fill
           className="object-cover"
           sizes="100vw"
-          priority
-          quality={90}
+          quality={75}
+          fetchPriority="low"
         />
       </div>
       {/* 배경 오버레이 (텍스트 가독성을 위해) */}
@@ -369,6 +369,8 @@ export default async function HomePage() {
                       height={600}
                       className="w-full h-full object-contain"
                       priority
+                      quality={90}
+                      fetchPriority="high"
                       sizes="(max-width: 768px) 100vw, 600px"
                     />
                   </div>
