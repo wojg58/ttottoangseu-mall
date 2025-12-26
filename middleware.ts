@@ -18,20 +18,55 @@ export default async function middleware(
   event: NextFetchEvent
 ) {
   try {
+    let response: NextResponse;
+
     // 환경 변수가 없으면 경고만 출력하고 계속 진행
     if (!hasClerkKeys) {
       console.warn(
         "⚠️ Clerk 환경 변수가 설정되지 않았습니다. 미들웨어가 비활성화됩니다."
       );
-      return NextResponse.next();
+      response = NextResponse.next();
+    } else if (clerkMiddlewareHandler) {
+      // Clerk 미들웨어 실행
+      response = await clerkMiddlewareHandler(req, event);
+    } else {
+      response = NextResponse.next();
     }
 
-    // Clerk 미들웨어 실행
-    if (clerkMiddlewareHandler) {
-      return await clerkMiddlewareHandler(req, event);
-    }
+    // 보안 헤더 추가 (Chrome DevTools Issues 패널 문제 해결)
+    const headers = new Headers(response.headers);
+    
+    // Content Security Policy - 서드 파티 스크립트 허용 (필요한 도메인만)
+    const csp = [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com https://cdn.channel.io https://channels.angel.co",
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      "font-src 'self' https://fonts.gstatic.com data:",
+      "img-src 'self' data: https: blob:",
+      "connect-src 'self' https://www.google-analytics.com https://analytics.google.com https://*.clerk.accounts.dev https://*.supabase.co https://api.channel.io",
+      "frame-src 'self' https://*.clerk.accounts.dev https://channels.angel.co",
+      "object-src 'none'",
+      "base-uri 'self'",
+      "form-action 'self'",
+      "frame-ancestors 'none'",
+      "upgrade-insecure-requests",
+    ].join("; ");
 
-    return NextResponse.next();
+    headers.set("Content-Security-Policy", csp);
+    
+    // 기타 보안 헤더
+    headers.set("X-Content-Type-Options", "nosniff");
+    headers.set("X-Frame-Options", "DENY");
+    headers.set("X-XSS-Protection", "1; mode=block");
+    headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+    headers.set("Permissions-Policy", "geolocation=(), microphone=(), camera=()");
+
+    // 응답에 헤더 적용
+    return new NextResponse(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers,
+    });
   } catch (error) {
     console.error("❌ 미들웨어 실행 중 에러 발생:", error);
     
