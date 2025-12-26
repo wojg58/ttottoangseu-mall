@@ -142,6 +142,15 @@ export default function ShopHeader() {
                         avatarBox: "w-9 h-9 border-2 border-white",
                       },
                     }}
+                    userProfileProps={{
+                      appearance: {
+                        elements: {
+                          rootBox: {
+                            title: "사용자 프로필",
+                          },
+                        },
+                      },
+                    }}
                   />
                 </div>
               </SignedIn>

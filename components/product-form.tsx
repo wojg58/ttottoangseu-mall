@@ -689,6 +689,7 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
                             ? "bg-[#ff6b9d] text-white"
                             : "bg-white text-[#4a3f48] hover:bg-[#fad2e6]"
                         }`}
+                        aria-label="굵게"
                       >
                         <strong>B</strong>
                       </button>
@@ -702,6 +703,7 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
                             ? "bg-[#ff6b9d] text-white"
                             : "bg-white text-[#4a3f48] hover:bg-[#fad2e6]"
                         }`}
+                        aria-label="기울임"
                       >
                         <em>I</em>
                       </button>
@@ -719,6 +721,7 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
                             ? "bg-[#ff6b9d] text-white"
                             : "bg-white text-[#4a3f48] hover:bg-[#fad2e6]"
                         }`}
+                        aria-label="제목 1"
                       >
                         H1
                       </button>
@@ -736,6 +739,7 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
                             ? "bg-[#ff6b9d] text-white"
                             : "bg-white text-[#4a3f48] hover:bg-[#fad2e6]"
                         }`}
+                        aria-label="제목 2"
                       >
                         H2
                       </button>
@@ -749,6 +753,7 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
                             ? "bg-[#ff6b9d] text-white"
                             : "bg-white text-[#4a3f48] hover:bg-[#fad2e6]"
                         }`}
+                        aria-label="글머리 기호 목록"
                       >
                         • 목록
                       </button>
@@ -762,6 +767,7 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
                             ? "bg-[#ff6b9d] text-white"
                             : "bg-white text-[#4a3f48] hover:bg-[#fad2e6]"
                         }`}
+                        aria-label="번호 목록"
                       >
                         1. 목록
                       </button>
@@ -780,7 +786,7 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
                             ? "bg-[#ff6b9d] text-white"
                             : "bg-white text-[#4a3f48] hover:bg-[#fad2e6]"
                         }`}
-                        title="제목 3"
+                        aria-label="제목 3"
                       >
                         H3
                       </button>
@@ -796,7 +802,7 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
                               .run();
                           }}
                           className="w-10 h-8 rounded cursor-pointer border border-[#f5d5e3]"
-                          title="텍스트 색상"
+                          aria-label="텍스트 색상"
                           defaultValue="#4a3f48"
                         />
                       </div>
@@ -812,7 +818,7 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
                               .run();
                           }}
                           className="w-10 h-8 rounded cursor-pointer border border-[#f5d5e3]"
-                          title="배경 색상"
+                          aria-label="배경 색상"
                           defaultValue="#ffffff"
                         />
                       </div>
@@ -827,7 +833,7 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
                             ? "bg-[#ff6b9d] text-white"
                             : "bg-white text-[#4a3f48] hover:bg-[#fad2e6]"
                         }`}
-                        title="왼쪽 정렬"
+                        aria-label="왼쪽 정렬"
                       >
                         ⬅
                       </button>
@@ -842,7 +848,7 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
                             ? "bg-[#ff6b9d] text-white"
                             : "bg-white text-[#4a3f48] hover:bg-[#fad2e6]"
                         }`}
-                        title="가운데 정렬"
+                        aria-label="가운데 정렬"
                       >
                         ⬌
                       </button>
@@ -857,7 +863,7 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
                             ? "bg-[#ff6b9d] text-white"
                             : "bg-white text-[#4a3f48] hover:bg-[#fad2e6]"
                         }`}
-                        title="오른쪽 정렬"
+                        aria-label="오른쪽 정렬"
                       >
                         ➡
                       </button>
@@ -872,7 +878,7 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
                             ? "bg-[#ff6b9d] text-white"
                             : "bg-white text-[#4a3f48] hover:bg-[#fad2e6]"
                         }`}
-                        title="인용구"
+                        aria-label="인용구"
                       >
                         &quot;
                       </button>
@@ -883,7 +889,7 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
                           editor?.chain().focus().setHorizontalRule().run()
                         }
                         className="px-3 py-1 rounded text-sm bg-white text-[#4a3f48] hover:bg-[#fad2e6]"
-                        title="구분선"
+                        aria-label="구분선"
                       >
                         ─
                       </button>
@@ -897,7 +903,8 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
                               ? "bg-[#ff6b9d] text-white"
                               : "bg-white text-[#4a3f48] hover:bg-[#fad2e6]"
                           }`}
-                          title="기호 삽입"
+                          aria-label="기호 삽입"
+                          aria-expanded={showSymbolMenu}
                         >
                           기호
                         </button>
@@ -912,7 +919,7 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
                                   setShowSymbolMenu(false);
                                 }}
                                 className="px-2 py-2 rounded text-sm bg-white text-[#4a3f48] hover:bg-[#ffeef5] border border-[#f5d5e3]"
-                                title="저작권"
+                                aria-label="저작권"
                               >
                                 ©
                               </button>
@@ -923,7 +930,7 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
                                   setShowSymbolMenu(false);
                                 }}
                                 className="px-2 py-2 rounded text-sm bg-white text-[#4a3f48] hover:bg-[#ffeef5] border border-[#f5d5e3]"
-                                title="등록상표"
+                                aria-label="등록상표"
                               >
                                 ®
                               </button>
@@ -934,7 +941,7 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
                                   setShowSymbolMenu(false);
                                 }}
                                 className="px-2 py-2 rounded text-sm bg-white text-[#4a3f48] hover:bg-[#ffeef5] border border-[#f5d5e3]"
-                                title="상표"
+                                aria-label="상표"
                               >
                                 ™
                               </button>
@@ -946,7 +953,7 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
                                   setShowSymbolMenu(false);
                                 }}
                                 className="px-2 py-2 rounded text-sm bg-white text-[#4a3f48] hover:bg-[#ffeef5] border border-[#f5d5e3]"
-                                title="섭씨"
+                                aria-label="섭씨"
                               >
                                 ℃
                               </button>
@@ -957,7 +964,7 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
                                   setShowSymbolMenu(false);
                                 }}
                                 className="px-2 py-2 rounded text-sm bg-white text-[#4a3f48] hover:bg-[#ffeef5] border border-[#f5d5e3]"
-                                title="화씨"
+                                aria-label="화씨"
                               >
                                 ℉
                               </button>
@@ -969,7 +976,7 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
                                   setShowSymbolMenu(false);
                                 }}
                                 className="px-2 py-2 rounded text-sm bg-white text-[#4a3f48] hover:bg-[#ffeef5] border border-[#f5d5e3]"
-                                title="곱하기"
+                                aria-label="곱하기"
                               >
                                 ×
                               </button>
@@ -980,7 +987,7 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
                                   setShowSymbolMenu(false);
                                 }}
                                 className="px-2 py-2 rounded text-sm bg-white text-[#4a3f48] hover:bg-[#ffeef5] border border-[#f5d5e3]"
-                                title="나누기"
+                                aria-label="나누기"
                               >
                                 ÷
                               </button>
@@ -991,7 +998,7 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
                                   setShowSymbolMenu(false);
                                 }}
                                 className="px-2 py-2 rounded text-sm bg-white text-[#4a3f48] hover:bg-[#ffeef5] border border-[#f5d5e3]"
-                                title="플러스마이너스"
+                                aria-label="플러스마이너스"
                               >
                                 ±
                               </button>
@@ -1002,7 +1009,7 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
                                   setShowSymbolMenu(false);
                                 }}
                                 className="px-2 py-2 rounded text-sm bg-white text-[#4a3f48] hover:bg-[#ffeef5] border border-[#f5d5e3]"
-                                title="거의 같음"
+                                aria-label="거의 같음"
                               >
                                 ≈
                               </button>
@@ -1014,7 +1021,7 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
                                   setShowSymbolMenu(false);
                                 }}
                                 className="px-2 py-2 rounded text-sm bg-white text-[#4a3f48] hover:bg-[#ffeef5] border border-[#f5d5e3]"
-                                title="오른쪽 화살표"
+                                aria-label="오른쪽 화살표"
                               >
                                 →
                               </button>
@@ -1025,7 +1032,7 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
                                   setShowSymbolMenu(false);
                                 }}
                                 className="px-2 py-2 rounded text-sm bg-white text-[#4a3f48] hover:bg-[#ffeef5] border border-[#f5d5e3]"
-                                title="왼쪽 화살표"
+                                aria-label="왼쪽 화살표"
                               >
                                 ←
                               </button>
@@ -1036,7 +1043,7 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
                                   setShowSymbolMenu(false);
                                 }}
                                 className="px-2 py-2 rounded text-sm bg-white text-[#4a3f48] hover:bg-[#ffeef5] border border-[#f5d5e3]"
-                                title="위 화살표"
+                                aria-label="위 화살표"
                               >
                                 ↑
                               </button>
@@ -1047,7 +1054,7 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
                                   setShowSymbolMenu(false);
                                 }}
                                 className="px-2 py-2 rounded text-sm bg-white text-[#4a3f48] hover:bg-[#ffeef5] border border-[#f5d5e3]"
-                                title="아래 화살표"
+                                aria-label="아래 화살표"
                               >
                                 ↓
                               </button>
@@ -1059,7 +1066,7 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
                                   setShowSymbolMenu(false);
                                 }}
                                 className="px-2 py-2 rounded text-sm bg-white text-[#4a3f48] hover:bg-[#ffeef5] border border-[#f5d5e3]"
-                                title="체크"
+                                aria-label="체크"
                               >
                                 ✓
                               </button>
@@ -1070,7 +1077,7 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
                                   setShowSymbolMenu(false);
                                 }}
                                 className="px-2 py-2 rounded text-sm bg-white text-[#4a3f48] hover:bg-[#ffeef5] border border-[#f5d5e3]"
-                                title="엑스"
+                                aria-label="엑스"
                               >
                                 ✗
                               </button>
@@ -1082,7 +1089,7 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
                                   setShowSymbolMenu(false);
                                 }}
                                 className="px-2 py-2 rounded text-sm bg-white text-[#4a3f48] hover:bg-[#ffeef5] border border-[#f5d5e3]"
-                                title="하트"
+                                aria-label="하트"
                               >
                                 ♥
                               </button>
@@ -1093,7 +1100,7 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
                                   setShowSymbolMenu(false);
                                 }}
                                 className="px-2 py-2 rounded text-sm bg-white text-[#4a3f48] hover:bg-[#ffeef5] border border-[#f5d5e3]"
-                                title="별"
+                                aria-label="별"
                               >
                                 ★
                               </button>
@@ -1104,7 +1111,7 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
                                   setShowSymbolMenu(false);
                                 }}
                                 className="px-2 py-2 rounded text-sm bg-white text-[#4a3f48] hover:bg-[#ffeef5] border border-[#f5d5e3]"
-                                title="빈 별"
+                                aria-label="빈 별"
                               >
                                 ☆
                               </button>
@@ -1116,7 +1123,7 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
                                   setShowSymbolMenu(false);
                                 }}
                                 className="px-2 py-2 rounded text-sm bg-white text-[#4a3f48] hover:bg-[#ffeef5] border border-[#f5d5e3]"
-                                title="유로"
+                                aria-label="유로"
                               >
                                 €
                               </button>
@@ -1127,7 +1134,7 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
                                   setShowSymbolMenu(false);
                                 }}
                                 className="px-2 py-2 rounded text-sm bg-white text-[#4a3f48] hover:bg-[#ffeef5] border border-[#f5d5e3]"
-                                title="달러"
+                                aria-label="달러"
                               >
                                 $
                               </button>
@@ -1138,7 +1145,7 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
                                   setShowSymbolMenu(false);
                                 }}
                                 className="px-2 py-2 rounded text-sm bg-white text-[#4a3f48] hover:bg-[#ffeef5] border border-[#f5d5e3]"
-                                title="엔"
+                                aria-label="엔"
                               >
                                 ¥
                               </button>
@@ -1149,7 +1156,7 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
                                   setShowSymbolMenu(false);
                                 }}
                                 className="px-2 py-2 rounded text-sm bg-white text-[#4a3f48] hover:bg-[#ffeef5] border border-[#f5d5e3]"
-                                title="파운드"
+                                aria-label="파운드"
                               >
                                 £
                               </button>
@@ -1161,7 +1168,7 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
                                   setShowSymbolMenu(false);
                                 }}
                                 className="px-2 py-2 rounded text-sm bg-white text-[#4a3f48] hover:bg-[#ffeef5] border border-[#f5d5e3]"
-                                title="원문자 1"
+                                aria-label="원문자 1"
                               >
                                 ①
                               </button>
@@ -1172,7 +1179,7 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
                                   setShowSymbolMenu(false);
                                 }}
                                 className="px-2 py-2 rounded text-sm bg-white text-[#4a3f48] hover:bg-[#ffeef5] border border-[#f5d5e3]"
-                                title="원문자 2"
+                                aria-label="원문자 2"
                               >
                                 ②
                               </button>
@@ -1183,7 +1190,7 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
                                   setShowSymbolMenu(false);
                                 }}
                                 className="px-2 py-2 rounded text-sm bg-white text-[#4a3f48] hover:bg-[#ffeef5] border border-[#f5d5e3]"
-                                title="원문자 3"
+                                aria-label="원문자 3"
                               >
                                 ③
                               </button>
@@ -1194,7 +1201,7 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
                                   setShowSymbolMenu(false);
                                 }}
                                 className="px-2 py-2 rounded text-sm bg-white text-[#4a3f48] hover:bg-[#ffeef5] border border-[#f5d5e3]"
-                                title="원문자 4"
+                                aria-label="원문자 4"
                               >
                                 ④
                               </button>
@@ -1205,7 +1212,7 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
                                   setShowSymbolMenu(false);
                                 }}
                                 className="px-2 py-2 rounded text-sm bg-white text-[#4a3f48] hover:bg-[#ffeef5] border border-[#f5d5e3]"
-                                title="원문자 5"
+                                aria-label="원문자 5"
                               >
                                 ⑤
                               </button>
@@ -1217,7 +1224,7 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
                                   setShowSymbolMenu(false);
                                 }}
                                 className="px-2 py-2 rounded text-sm bg-white text-[#4a3f48] hover:bg-[#ffeef5] border border-[#f5d5e3]"
-                                title="말줄임표"
+                                aria-label="말줄임표"
                               >
                                 …
                               </button>
@@ -1228,7 +1235,7 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
                                   setShowSymbolMenu(false);
                                 }}
                                 className="px-2 py-2 rounded text-sm bg-white text-[#4a3f48] hover:bg-[#ffeef5] border border-[#f5d5e3]"
-                                title="대시"
+                                aria-label="대시"
                               >
                                 —
                               </button>
@@ -1239,7 +1246,7 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
                                   setShowSymbolMenu(false);
                                 }}
                                 className="px-2 py-2 rounded text-sm bg-white text-[#4a3f48] hover:bg-[#ffeef5] border border-[#f5d5e3]"
-                                title="불릿"
+                                aria-label="불릿"
                               >
                                 •
                               </button>
@@ -1254,7 +1261,7 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
                           editor?.chain().focus().liftListItem("listItem").run()
                         }
                         className="px-3 py-1 rounded text-sm bg-white text-[#4a3f48] hover:bg-[#fad2e6]"
-                        title="내어쓰기"
+                        aria-label="내어쓰기"
                       >
                         ⬅
                       </button>
@@ -1264,7 +1271,7 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
                           editor?.chain().focus().sinkListItem("listItem").run()
                         }
                         className="px-3 py-1 rounded text-sm bg-white text-[#4a3f48] hover:bg-[#fad2e6]"
-                        title="들여쓰기"
+                        aria-label="들여쓰기"
                       >
                         ➡
                       </button>
@@ -1373,7 +1380,7 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
                             ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                             : "bg-white text-[#4a3f48] hover:bg-[#fad2e6]"
                         }`}
-                        title="이미지 업로드"
+                        aria-label="이미지 업로드"
                       >
                         {isUploadingImage ? "업로드 중..." : "이미지"}
                       </button>
@@ -1396,7 +1403,7 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
                             ? "bg-[#ff6b9d] text-white"
                             : "bg-white text-[#4a3f48] hover:bg-[#fad2e6]"
                         }`}
-                        title="링크 삽입"
+                        aria-label="링크 삽입"
                       >
                         링크
                       </button>
@@ -1407,7 +1414,7 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
                           editor?.chain().focus().unsetAllMarks().run()
                         }
                         className="px-3 py-1 rounded text-sm bg-white text-[#4a3f48] hover:bg-[#fad2e6]"
-                        title="서식 지우기"
+                        aria-label="서식 지우기"
                       >
                         ✕
                       </button>
@@ -1415,7 +1422,7 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
                       <button
                         type="button"
                         className="px-3 py-1 rounded text-sm bg-white text-[#4a3f48] hover:bg-[#fad2e6]"
-                        title="맞춤법 검사 (브라우저 기본 기능 - 자동 활성화)"
+                        aria-label="맞춤법 검사 (브라우저 기본 기능 - 자동 활성화)"
                       >
                         맞춤법
                       </button>
@@ -1426,7 +1433,7 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
                           editor?.chain().focus().clearNodes().run()
                         }
                         className="px-3 py-1 rounded text-sm bg-white text-[#4a3f48] hover:bg-[#fad2e6]"
-                        title="초기화"
+                        aria-label="초기화"
                       >
                         초기화
                       </button>
@@ -1684,7 +1691,7 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
                             });
                           }}
                           className="bg-[#ff6b9d] text-white rounded p-1 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[#ff5088]"
-                          title="위로 이동"
+                          aria-label="위로 이동"
                         >
                           <ChevronUp className="w-3 h-3" />
                         </button>
@@ -1718,7 +1725,7 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
                             });
                           }}
                           className="bg-[#ff6b9d] text-white rounded p-1 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[#ff5088]"
-                          title="아래로 이동"
+                          aria-label="아래로 이동"
                         >
                           <ChevronDown className="w-3 h-3" />
                         </button>
