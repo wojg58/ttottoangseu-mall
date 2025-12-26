@@ -7,6 +7,7 @@ import ShopHeader from "@/components/shop-header";
 import ShopFooter from "@/components/shop-footer";
 import { SyncUserProvider } from "@/components/providers/sync-user-provider";
 import ChatWidgetWrapper from "@/components/chatbot/chat-widget-wrapper";
+import MarketingScripts from "@/components/marketing-scripts";
 import "./globals.css";
 
 // Google Fonts 최적화 - 한글 서브셋 포함
@@ -96,6 +97,8 @@ export default function RootLayout({
             <ShopFooter />
             <ChatWidgetWrapper />
           </SyncUserProvider>
+          {/* 마케팅 스크립트 - 페이지 로드 후 lazyOnload로 로드 */}
+          <MarketingScripts />
         </body>
       </html>
     </ClerkProvider>
