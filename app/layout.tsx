@@ -1,12 +1,39 @@
 import type { Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
 import { koKR } from "@clerk/localizations";
+import { Gowun_Dodum, Plus_Jakarta_Sans, Noto_Sans_KR } from "next/font/google";
 
 import ShopHeader from "@/components/shop-header";
 import ShopFooter from "@/components/shop-footer";
 import { SyncUserProvider } from "@/components/providers/sync-user-provider";
 import ChatWidgetWrapper from "@/components/chatbot/chat-widget-wrapper";
 import "./globals.css";
+
+// Google Fonts 최적화 - 한글 서브셋 포함
+const gowunDodum = Gowun_Dodum({
+  subsets: ["latin"],
+  weight: ["400"],
+  display: "swap",
+  variable: "--font-gowun-dodum",
+  preload: true,
+});
+
+const plusJakartaSans = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
+  variable: "--font-plus-jakarta-sans",
+  preload: true,
+});
+
+// Nanum Gothic 대신 Noto Sans KR 사용 (더 나은 최적화 지원)
+const notoSansKR = Noto_Sans_KR({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
+  variable: "--font-noto-sans-kr",
+  preload: true,
+});
 
 export const metadata: Metadata = {
   title: "또또앙스 | 캐릭터 굿즈 전문 쇼핑몰",
@@ -55,20 +82,14 @@ export default function RootLayout({
 }>) {
   return (
     <ClerkProvider localization={customKoKR}>
-      <html lang="ko">
-        <head>
-          <link rel="preconnect" href="https://fonts.googleapis.com" />
-          <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-          <link
-            href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
-            rel="stylesheet"
-          />
-          <link
-            href="http://fonts.googleapis.com/earlyaccess/nanumgothic.css"
-            rel="stylesheet"
-          />
-        </head>
-        <body className="antialiased min-h-screen flex flex-col" suppressHydrationWarning>
+      <html
+        lang="ko"
+        className={`${gowunDodum.variable} ${plusJakartaSans.variable} ${notoSansKR.variable}`}
+      >
+        <body
+          className="antialiased min-h-screen flex flex-col"
+          suppressHydrationWarning
+        >
           <SyncUserProvider>
             <ShopHeader />
             <div className="flex-1">{children}</div>

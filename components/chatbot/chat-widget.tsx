@@ -277,6 +277,7 @@ export function ChatWidget() {
           width={150} 
           height={150} 
           priority 
+          sizes="150px"
           className="transition-transform duration-300"
         />
       </button>

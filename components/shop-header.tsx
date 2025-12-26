@@ -81,6 +81,8 @@ export default function ShopHeader() {
                 width={100}
                 height={100}
                 className="object-contain"
+                priority
+                sizes="100px"
               />
               <div className="hidden sm:block">
                 <div className="text-5xl font-bold drop-shadow-sm brand-text-logo text-white">
@@ -196,6 +198,7 @@ export default function ShopHeader() {
                           width={20}
                           height={20}
                           className="inline-block mr-1"
+                          sizes="20px"
                         />
                         {category.name}
                       </>
@@ -239,6 +242,7 @@ export default function ShopHeader() {
                           width={32}
                           height={32}
                           className="rounded"
+                          sizes="32px"
                         />
                       </div>
                     ) : (

@@ -69,6 +69,7 @@ export default function CategorySection({ categories }: CategorySectionProps) {
                         width={40}
                         height={40}
                         className="rounded-full object-cover"
+                        sizes="40px"
                       />
                     ) : (
                       <span className="text-2xl">

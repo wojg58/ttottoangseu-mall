@@ -295,12 +295,19 @@ export default async function HomePage() {
   const { featuredProducts, allProducts } = await getProducts();
 
   return (
-    <main
-      className="relative min-h-screen bg-cover bg-center bg-fixed bg-no-repeat"
-      style={{
-        backgroundImage: "url('/f.jpg')",
-      }}
-    >
+    <main className="relative min-h-screen">
+      {/* 배경 이미지 */}
+      <div className="fixed inset-0 -z-10">
+        <Image
+          src="/f.jpg"
+          alt="배경"
+          fill
+          className="object-cover"
+          sizes="100vw"
+          priority
+          quality={90}
+        />
+      </div>
       {/* 배경 오버레이 (텍스트 가독성을 위해) */}
       <div className="absolute inset-0 bg-white/30 backdrop-blur-[2px] pointer-events-none"></div>
       <div className="relative z-10">
@@ -329,9 +336,8 @@ export default async function HomePage() {
                   <span className="text-shop-rose">선물하세요</span> 💕
                 </h1>
                 <p
-                  className="text-black mb-6 text-xl"
+                  className="text-black mb-6 text-xl font-[var(--font-noto-sans-kr)]"
                   style={{
-                    fontFamily: "Nanum Gothic, system-ui, sans-serif",
                     fontWeight: "bold",
                   }}
                 >
@@ -362,6 +368,8 @@ export default async function HomePage() {
                       width={600}
                       height={600}
                       className="w-full h-full object-contain"
+                      priority
+                      sizes="(max-width: 768px) 100vw, 600px"
                     />
                   </div>
                 </div>

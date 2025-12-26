@@ -9,9 +9,11 @@
  *
  * @dependencies
  * - CSS: app/globals.css의 .wp 클래스들
+ * - next/image: 이미지 최적화
  */
 
 import Link from "next/link";
+import Image from "next/image";
 
 type Props = {
   src: string; // 배경화면 이미지 URL (모바일용 - 폰 화면에 표시)
@@ -32,19 +34,31 @@ export default function WallpaperPreview({
   return (
     <section className="wp">
       {/* 블러 배경 */}
-      <div
-        className="wp__bg"
-        style={{ backgroundImage: `url(${backgroundImage})` }}
-      />
+      <div className="wp__bg relative overflow-hidden">
+        <Image
+          src={backgroundImage}
+          alt="배경화면 배경"
+          fill
+          className="object-cover"
+          sizes="100vw"
+          priority
+        />
+      </div>
 
       {/* 콘텐츠 */}
       <div className="wp__inner">
         <div className="wp__phone">
           {/* 폰 화면(배경화면) */}
-          <div
-            className="wp__screen"
-            style={{ backgroundImage: `url(${src})` }}
-          />
+          <div className="wp__screen relative overflow-hidden">
+            <Image
+              src={src}
+              alt="배경화면 미리보기"
+              fill
+              className="object-cover"
+              sizes="(max-width: 768px) 50vw, 400px"
+              priority
+            />
+          </div>
 
           {/* 노치 */}
           <div className="wp__notch" />

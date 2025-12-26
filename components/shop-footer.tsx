@@ -50,6 +50,7 @@ export default function ShopFooter() {
                 width={100}
                 height={100}
                 className="object-contain"
+                sizes="100px"
               />
               <div>
                 <h3 className="text-[45px] font-bold brand-text-logo text-[#4a3f48]">또또앙스</h3>

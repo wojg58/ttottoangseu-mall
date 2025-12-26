@@ -127,7 +127,7 @@
 
 :root {
   --radius: 0.625rem;
-  --font-shop: "LineSeed", "Gowun Dodum", system-ui, sans-serif;
+  --font-shop: "LineSeed", var(--font-gowun-dodum), var(--font-noto-sans-kr), system-ui, sans-serif;
 
   /* 색상 변수 */
   --color-white: #ffffff;

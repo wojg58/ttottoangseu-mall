@@ -46,6 +46,7 @@ export default function WallpaperDownloadPage() {
                 fill
                 className="object-contain"
                 sizes="(max-width: 768px) 100vw, 40vw"
+                priority
               />
             </div>
             <a
@@ -70,6 +71,7 @@ export default function WallpaperDownloadPage() {
                 fill
                 className="object-contain"
                 sizes="(max-width: 768px) 100vw, 60vw"
+                priority
               />
             </div>
             <a
