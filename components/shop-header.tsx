@@ -220,7 +220,7 @@ export default function ShopHeader() {
       </div>
 
       {/* 카테고리 네비게이션 */}
-      <nav className="bg-[#ffb6d5] border-b border-[#ffa8c9] hidden lg:block">
+      <nav className="bg-[#ffd6e8] border-b border-[#ffc8dc] hidden lg:block">
         <div className="shop-container">
           <div className="flex items-center justify-between">
             <ul className="flex items-center justify-center gap-2 md:gap-4 lg:gap-6 flex-nowrap overflow-x-auto">
@@ -285,7 +285,7 @@ export default function ShopHeader() {
 
       {/* 모바일 메뉴 */}
       {isMobileMenuOpen && (
-        <nav className="bg-white border-b border-[#ffa8c9] lg:hidden">
+        <nav className="bg-white border-b border-[#ffc8dc] lg:hidden">
           <div className="shop-container py-4">
             <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               {CATEGORIES.map((category) => (
