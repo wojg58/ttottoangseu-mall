@@ -95,8 +95,8 @@ export default function ShopFooter() {
         </div>
       </div>
 
-      {/* 저작권 섹션 (검정색 배경) */}
-      <div className="bg-black text-white py-3 md:py-4">
+      {/* 저작권 섹션 (핑크색 배경) */}
+      <div className="bg-[#FF5088] text-white py-3 md:py-4">
         <div className="shop-container">
           <p className="text-center text-xs md:text-[15px] text-white">
             © 2024 또또앙스. All rights reserved.
