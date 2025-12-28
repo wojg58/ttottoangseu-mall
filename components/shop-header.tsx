@@ -15,10 +15,10 @@
 
 "use client";
 
-import { SignedOut, SignedIn, UserButton } from "@clerk/nextjs";
+import { SignedOut, SignedIn, SignOutButton } from "@clerk/nextjs";
 import Link from "next/link";
 import Image from "next/image";
-import { Search, ShoppingCart, Heart, Menu, X, ArrowRight, LogIn, UserPlus, User } from "lucide-react";
+import { Search, ShoppingCart, Heart, Menu, X, ArrowRight, LogIn, UserPlus, User, LogOut } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -80,10 +80,51 @@ export default function ShopHeader() {
       <header className="sticky top-0 z-50 w-full">
         {/* 메인 헤더 - 핑크 배경 (대비율 개선: 더 진한 핑크 사용) */}
         <div className="bg-[#FF5088]">
-        <div className="shop-container py-2 md:py-0 md:h-[120px]">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 md:gap-4 w-full">
-            {/* 로고 영역 - 상단 중앙 배치 (모바일) / 중앙 배치 (데스크톱) */}
-            <Link href="/" className="flex items-center justify-center gap-2 sm:gap-3 shrink-0 md:absolute md:left-1/2 md:-translate-x-1/2 order-1 md:order-none" aria-label="또또앙스 홈으로 이동">
+        <div className="shop-container h-[80px] sm:h-[100px] md:h-[120px] flex items-center">
+          <div className="relative flex justify-between items-center gap-2 md:gap-4 w-full">
+            {/* 왼쪽 소셜 미디어 바로가기 아이콘 */}
+            <div className="flex-1 flex items-center gap-2">
+              {/* 네이버 스마트스토어 */}
+              <a
+                href="https://smartstore.naver.com/ttottoangseu"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center w-9 h-9 hover:opacity-80 transition-opacity"
+                aria-label="네이버 스마트스토어 바로가기"
+              >
+                <Image
+                  src="/icons/icon-smartstore.png"
+                  alt="네이버 스마트스토어 바로가기"
+                  width={28}
+                  height={28}
+                  className="object-contain block"
+                  sizes="28px"
+                  priority
+                />
+              </a>
+
+              {/* 인스타그램 */}
+              <a
+                href="https://www.instagram.com/ttottoangseu_shop/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center w-9 h-9 hover:opacity-80 transition-opacity"
+                aria-label="인스타그램 바로가기"
+              >
+                <Image
+                  src="/icons/icon_instagram.png"
+                  alt="인스타그램 바로가기"
+                  width={26}
+                  height={26}
+                  className="object-contain block"
+                  sizes="26px"
+                  priority
+                />
+              </a>
+            </div>
+
+            {/* 로고 영역 - 중앙 배치 */}
+            <Link href="/" className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2 sm:gap-3 shrink-0" aria-label="또또앙스 홈으로 이동">
               <Image
                 src="/character.png"
                 alt="또또앙스 로고"
@@ -100,51 +141,8 @@ export default function ShopHeader() {
               </div>
             </Link>
 
-            {/* 하단 영역: 왼쪽 소셜 미디어 + 오른쪽 메뉴 아이콘 */}
-            <div className="flex justify-between items-center gap-2 md:gap-4 w-full order-2 md:order-none">
-              {/* 왼쪽 소셜 미디어 바로가기 아이콘 */}
-              <div className="flex items-center gap-2 md:flex-1">
-                {/* 네이버 스마트스토어 */}
-                <a
-                  href="https://smartstore.naver.com/ttottoangseu"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center w-9 h-9 hover:opacity-80 transition-opacity"
-                  aria-label="네이버 스마트스토어 바로가기"
-                >
-                  <Image
-                    src="/icons/icon-smartstore.png"
-                    alt="네이버 스마트스토어 바로가기"
-                    width={28}
-                    height={28}
-                    className="object-contain block"
-                    sizes="28px"
-                    priority
-                  />
-                </a>
-
-                {/* 인스타그램 */}
-                <a
-                  href="https://www.instagram.com/ttottoangseu_shop/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center w-9 h-9 hover:opacity-80 transition-opacity"
-                  aria-label="인스타그램 바로가기"
-                >
-                  <Image
-                    src="/icons/icon_instagram.png"
-                    alt="인스타그램 바로가기"
-                    width={26}
-                    height={26}
-                    className="object-contain block"
-                    sizes="26px"
-                    priority
-                  />
-                </a>
-              </div>
-
-              {/* 우측 아이콘들 */}
-              <div className="flex justify-end items-center gap-2 md:gap-3 md:flex-1">
+            {/* 우측 아이콘들 */}
+            <div className="flex-1 flex justify-end items-center gap-2 md:gap-3">
               <SignedOut>
                 {/* 로그인 */}
                 <Link
@@ -176,6 +174,20 @@ export default function ShopHeader() {
                 <User className="w-5 h-5 md:w-6 md:h-6" />
                 <span className="text-[10px] md:text-xs">마이페이지</span>
               </Link>
+
+              {/* 로그아웃 - 로그인한 사용자만 표시 */}
+              <SignedIn>
+                <SignOutButton>
+                  <button
+                    type="button"
+                    className="flex flex-col items-center justify-center gap-1 text-white hover:opacity-80 transition-opacity min-w-[50px]"
+                    aria-label="로그아웃"
+                  >
+                    <LogOut className="w-5 h-5 md:w-6 md:h-6" />
+                    <span className="text-[10px] md:text-xs">로그아웃</span>
+                  </button>
+                </SignOutButton>
+              </SignedIn>
 
               {/* 장바구니 - 항상 표시 */}
               <Link
