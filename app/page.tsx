@@ -314,66 +314,53 @@ export default async function HomePage() {
       <div className="absolute inset-0 bg-white/30 backdrop-blur-[2px] pointer-events-none"></div>
       <div className="relative z-10">
         {/* 히어로 배너 + 카테고리 섹션 */}
-        <section className="relative py-12 md:py-20">
+        <section className="relative py-8 md:py-20">
           <div className="shop-container">
-            {/* 히어로 배너 */}
-            <div className="flex flex-col md:flex-row items-center gap-8 mb-16">
-              <div
-                className="flex-1 text-center md:text-left"
-                style={{ width: "700px", maxWidth: "700px", minWidth: "700px" }}
-              >
+            {/* 히어로 배너 - 모바일 우선 */}
+            <div className="flex flex-col gap-6 mb-12 md:flex-row md:items-center md:gap-8 md:mb-16">
+              <div className="text-center md:text-left md:flex-1">
                 <div
-                  className="inline-flex items-center gap-2 rounded-full px-4 py-2 mb-4"
+                  className="inline-flex items-center gap-2 rounded-full px-3 py-2 mb-4"
                   style={{
                     backgroundColor: "white",
                   }}
                 >
                   <Sparkles className="w-4 h-4 text-shop-rose" />
-                  <span className="text-[18px] text-black font-medium">
+                  <span className="text-sm md:text-lg text-black font-medium">
                     귀여운 정품 캐릭터 키덜트 소품샵
                   </span>
                 </div>
-                <h2 className="text-3xl md:text-5xl font-bold text-black mb-4 leading-tight">
+                <h2 className="text-2xl md:text-4xl lg:text-5xl font-bold text-black mb-4 leading-tight">
                   두근거리는 설렘을{" "}
                   <span className="text-shop-rose">선물하세요</span> 💕
                 </h2>
-                <p
-                  className="text-black mb-6 text-xl font-[var(--font-noto-sans-kr)]"
-                  style={{
-                    fontWeight: "bold",
-                  }}
-                >
+                <p className="text-black mb-6 text-base md:text-lg font-bold leading-relaxed">
                   산리오, 짱구, 유키오 등 사랑스러운 캐릭터 굿즈를 만나보세요.
-                  <br />
+                  <br className="hidden md:inline" />
                   인형 키링, 파우치, 완구, 스티커 등 다양한 아이템이 가득!
                 </p>
               </div>
-              <div className="flex-1 relative">
-                <div
-                  className="relative w-[600px] h-[600px] mx-auto"
-                  style={{ marginLeft: "-100px" }}
-                >
-                  {/* 장식적인 원들 */}
-                  <div
-                    className="absolute w-32 h-32 bg-shop-rose/20 rounded-full"
-                    style={{
-                      left: "50%",
-                      top: "50%",
-                      transform:
-                        "translate(calc(50% - 300px), calc(50% + 70px))",
-                    }}
+              <div className="w-full max-w-xs mx-auto md:max-w-md lg:max-w-lg md:flex-1">
+                <div className="relative w-full aspect-square">
+                  {/* 장식적인 원들 - 데스크탑에서만 표시 */}
+                  <div className="hidden lg:block absolute w-32 h-32 bg-shop-rose/20 rounded-full"
+                       style={{
+                         left: "50%",
+                         top: "50%",
+                         transform: "translate(calc(50% - 200px), calc(50% + 50px))",
+                       }}
                   />
                   <div className="relative w-full h-full flex items-center justify-center">
                     <Image
                       src="/kity.png"
                       alt="또또앙스 캐릭터"
-                      width={600}
-                      height={600}
-                      className="w-full h-full object-contain"
+                      width={400}
+                      height={400}
+                      className="w-full h-auto md:h-full object-cover md:object-contain"
                       priority
                       quality={85}
                       fetchPriority="high"
-                      sizes="(max-width: 768px) 100vw, 600px"
+                      sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 400px"
                     />
                   </div>
                 </div>
@@ -405,7 +392,7 @@ export default async function HomePage() {
 
             {featuredProducts.length > 0 ? (
               <>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-4 gap-4 md:gap-6">
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4">
                   {featuredProducts.map((product, index) => (
                     <ProductCard
                       key={product.id}

@@ -66,8 +66,8 @@ export default function ShopHeader() {
     <header className="sticky top-0 z-50 w-full">
       {/* 메인 헤더 - 핑크 배경 (대비율 개선: 더 진한 핑크 사용) */}
       <div className="bg-[#FF5088]">
-        <div className="shop-container py-4">
-          <div className="flex justify-between items-center gap-4">
+        <div className="shop-container py-3 md:py-4">
+          <div className="flex justify-between items-center gap-2 md:gap-4">
             {/* 로고 영역 */}
             <Link href="/" className="flex items-center gap-3 shrink-0" aria-label="또또앙스 홈으로 이동">
               <Image
@@ -87,54 +87,54 @@ export default function ShopHeader() {
             </Link>
 
             {/* 검색 바 */}
-            <form onSubmit={handleSearch} className="flex-1 max-w-md mx-4">
+            <form onSubmit={handleSearch} className="flex-1 max-w-xs md:max-w-sm mx-2 md:mx-4">
               <div className="relative">
                 <Input
                   type="text"
                   placeholder="검색어를 입력해주세요"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-4 pr-10 py-2 rounded-full border-none bg-white text-[#4a3f48] placeholder:text-[#b8a8b0] focus-visible:ring-2 focus-visible:ring-white/50"
+                  className="w-full pl-3 pr-9 py-2 rounded-full border-none bg-white text-[#4a3f48] placeholder:text-[#b8a8b0] focus-visible:ring-2 focus-visible:ring-white/50 text-sm"
                 />
                 <button
                   type="submit"
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white hover:text-white/80 transition-colors min-w-[48px] min-h-[48px] flex items-center justify-center"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-white hover:text-white/80 transition-colors min-w-[36px] min-h-[36px] flex items-center justify-center"
                   aria-label="검색"
                 >
-                  <Search className="w-5 h-5" />
+                  <Search className="w-4 h-4" />
                 </button>
               </div>
             </form>
 
             {/* 우측 아이콘들 */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 md:gap-2">
               <SignedIn>
                 <Link
                   href="/wishlist"
-                  className="p-3 min-w-[48px] min-h-[48px] text-white hover:bg-white/20 rounded-full transition-colors hidden sm:flex items-center justify-center"
+                  className="p-2 md:p-3 min-w-[40px] md:min-w-[48px] min-h-[40px] md:min-h-[48px] text-white hover:bg-white/20 rounded-full transition-colors hidden md:flex items-center justify-center"
                   aria-label="찜하기 목록"
                 >
-                  <Heart className="w-5 h-5" />
+                  <Heart className="w-4 h-4 md:w-5 md:h-5" />
                 </Link>
                 <Link
                   href="/cart"
-                  className="p-3 min-w-[48px] min-h-[48px] text-white hover:bg-white/20 rounded-full transition-colors relative flex items-center justify-center"
+                  className="p-2 md:p-3 min-w-[40px] md:min-w-[48px] min-h-[40px] md:min-h-[48px] text-white hover:bg-white/20 rounded-full transition-colors relative flex items-center justify-center"
                   aria-label="장바구니"
                 >
-                  <ShoppingCart className="w-5 h-5" />
+                  <ShoppingCart className="w-4 h-4 md:w-5 md:h-5" />
                   {/* TODO: 장바구니 아이템 개수 표시 */}
                 </Link>
                 <Link
                   href="/mypage"
-                  className="p-2 text-white hover:bg-white/20 rounded-full transition-colors"
+                  className="hidden md:block p-2 text-white hover:bg-white/20 rounded-full transition-colors"
                 >
                   <span className="text-sm">마이페이지</span>
                 </Link>
-                <div className="ml-2">
+                <div className="ml-1 md:ml-2">
                   <UserButton
                     appearance={{
                       elements: {
-                        avatarBox: "w-9 h-9 border-2 border-white",
+                        avatarBox: "w-8 h-8 md:w-9 md:h-9 border-2 border-white",
                       },
                     }}
                     userProfileProps={{
@@ -150,12 +150,12 @@ export default function ShopHeader() {
                 </div>
               </SignedIn>
               <SignedOut>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1 md:gap-2">
                   <Link href="/sign-in">
-                    <Button className="shop-btn-accent text-sm">로그인</Button>
+                    <Button className="shop-btn-accent text-xs md:text-sm px-3 md:px-6">로그인</Button>
                   </Link>
                   <Link href="/sign-up/join">
-                    <Button className="shop-btn-accent text-sm">회원가입</Button>
+                    <Button className="shop-btn-accent text-xs md:text-sm px-3 md:px-6">회원가입</Button>
                   </Link>
                 </div>
               </SignedOut>
@@ -180,7 +180,7 @@ export default function ShopHeader() {
       {/* 카테고리 네비게이션 */}
       <nav className="bg-[#fad2e6] border-b border-[#f5d5e3] hidden lg:block">
         <div className="shop-container">
-          <ul className="flex items-center justify-center gap-8">
+          <ul className="flex items-center justify-center gap-4 md:gap-6 lg:gap-8">
             {CATEGORIES.map((category) => (
               <li key={category.slug}>
                 <Link
@@ -224,7 +224,7 @@ export default function ShopHeader() {
       {mounted && isMobileMenuOpen && (
         <nav className="bg-white border-b border-[#f5d5e3] lg:hidden">
           <div className="shop-container py-4">
-            <ul className="grid grid-cols-3 gap-2">
+            <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               {CATEGORIES.map((category) => (
                 <li key={category.slug}>
                   <Link
@@ -236,23 +236,23 @@ export default function ShopHeader() {
                         : `/products/category/${category.slug}`
                     }
                     onClick={() => setIsMobileMenuOpen(false)}
-                    className="block text-center py-3 px-2 rounded-lg bg-[#ffeef5] text-[#4a3f48] hover:bg-[#FF6B9D] hover:text-white transition-colors text-sm"
+                    className="flex flex-col items-center justify-center text-center p-3 rounded-lg bg-[#ffeef5] text-[#4a3f48] hover:bg-[#FF6B9D] hover:text-white transition-colors text-xs min-h-[80px]"
                   >
                     {category.slug === "best" ? (
-                      <div className="flex justify-center mb-1">
+                      <div className="flex justify-center mb-2">
                         <Image
                           src="/best.png"
                           alt="베스트"
-                          width={32}
-                          height={32}
+                          width={24}
+                          height={24}
                           className="rounded"
-                          sizes="32px"
+                          sizes="24px"
                         />
                       </div>
                     ) : (
-                      <span className="text-lg">{category.emoji || "📦"}</span>
+                      <span className="text-xl mb-1">{category.emoji || "📦"}</span>
                     )}
-                    <p className="mt-1">{category.name}</p>
+                    <p className="leading-tight">{category.name}</p>
                   </Link>
                 </li>
               ))}

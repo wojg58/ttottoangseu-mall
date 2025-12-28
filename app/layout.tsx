@@ -50,6 +50,7 @@ export const metadata: Metadata = {
     "굿즈 쇼핑몰",
     "또또앙스",
   ],
+  viewport: "width=device-width, initial-scale=1.0",
   openGraph: {
     title: "또또앙스 | 캐릭터 굿즈 전문 쇼핑몰",
     description:

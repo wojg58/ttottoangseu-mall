@@ -208,12 +208,67 @@
   * {
     @apply border-border outline-ring/50;
   }
+
+  /* 모바일 우선: 기본적으로 모바일 스타일 적용 */
+  html {
+    font-size: 16px;
+  }
+
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-shop);
+    /* 가로 스크롤 방지 */
+    overflow-x: hidden;
   }
+
   main {
     @apply w-full;
+  }
+
+  /* 모든 이미지에 반응형 적용 */
+  img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  /* 텍스트 줄바꿈 자연스럽게 처리 */
+  * {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    hyphens: auto;
+  }
+
+  /* 버튼 텍스트 줄바꿈 방지 및 자연스러운 표시 */
+  button, .btn, [role="button"] {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* 긴 텍스트가 있는 경우에만 줄바꿈 허용 */
+  h1, h2, h3, h4, h5, h6, p, span, div {
+    line-height: 1.4;
+  }
+
+  /* 모바일에서 긴 텍스트 처리 */
+  @media (max-width: 767px) {
+    h1, h2, h3 {
+      word-break: break-word;
+      line-height: 1.3;
+    }
+
+    p, span {
+      line-height: 1.5;
+    }
+  }
+
+  /* 데스크탑 이상에서 body 여백 제거 (컨테이너가 처리) */
+  @media (min-width: 768px) {
+    body {
+      padding-left: 0;
+      padding-right: 0;
+    }
   }
 
   /* Clerk username 라벨을 "아이디"로 변경 */
@@ -387,8 +442,67 @@
 
 /* 또또앙스 쇼핑몰 커스텀 스타일 */
 @layer components {
+  /* 컨테이너 클래스 */
+  .container {
+    max-width: 1200px;
+    padding: 0 16px;
+    margin: 0 auto;
+  }
+
+  /* 모든 요소에 box-sizing 적용 */
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
+  /* 가로 스크롤 방지 */
+  html, body {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  /* 모바일 우선: max-width + padding 방식 */
   .shop-container {
-    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+    width: 100%;
+    max-width: 100%;
+    margin: 0 auto;
+    padding-left: 16px;
+    padding-right: 16px;
+    box-sizing: border-box;
+  }
+
+  /* 390px 이상 (작은 모바일) */
+  @media (min-width: 390px) {
+    .shop-container {
+      padding-left: 20px;
+      padding-right: 20px;
+    }
+  }
+
+  /* 768px 이상 (태블릿) */
+  @media (min-width: 768px) {
+    .shop-container {
+      max-width: 768px;
+      padding-left: 24px;
+      padding-right: 24px;
+    }
+  }
+
+  /* 1024px 이상 (데스크탑) */
+  @media (min-width: 1024px) {
+    .shop-container {
+      max-width: 1024px;
+      padding-left: 32px;
+      padding-right: 32px;
+    }
+  }
+
+  /* 1280px 이상 (큰 데스크탑) */
+  @media (min-width: 1280px) {
+    .shop-container {
+      max-width: 1280px;
+      padding-left: 40px;
+      padding-right: 40px;
+    }
   }
 
   .shop-btn-primary {
@@ -448,6 +562,21 @@
 
   .cl-avatarImage {
     filter: grayscale(100%);
+  }
+
+  /* 미디어 쿼리 */
+  @media (max-width: 768px) {
+    .container {
+      padding: 0 16px;
+    }
+
+    h1 {
+      font-size: 1.6rem;
+    }
+
+    button {
+      width: 100%;
+    }
   }
 }
 
