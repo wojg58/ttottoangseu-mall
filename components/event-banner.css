@@ -154,13 +154,9 @@
     padding: 16px 20px;
   }
 
+  /* 모바일에서 쿠폰 부분 숨김 - 이미지의 글씨만 보이도록 */
   .coupon {
-    align-self: flex-end;
-    padding: 10px 16px;
-  }
-
-  .coupon strong {
-    font-size: 20px;
+    display: none;
   }
 
   .event-banner h3 {

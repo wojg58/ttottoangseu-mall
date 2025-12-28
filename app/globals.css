@@ -791,6 +791,25 @@
   .wp__actions {
     max-width: 100%;
     text-align: center;
+    transform: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .wp__btns {
+    justify-content: center;
+    width: 100%;
+  }
+
+  /* 모바일에서 핸드폰 이미지 클릭 가능하도록 */
+  .wp__phone {
+    cursor: pointer;
+    transition: transform 0.2s ease;
+  }
+
+  .wp__phone:active {
+    transform: scale(0.98);
   }
 
   .wp__phone {

@@ -20,7 +20,7 @@ import {
 } from "@clerk/nextjs";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useRef } from "react";
 
 export default function SignInContent() {
   const searchParams = useSearchParams();
@@ -200,7 +200,7 @@ export default function SignInContent() {
         identifierInput.setAttribute("aria-invalid", "false");
 
         // 이메일 입력 후 자동 리다이렉트 방지
-        identifierInput.addEventListener("blur", (e) => {
+        identifierInput.addEventListener("blur", () => {
           // 이메일 입력 후 blur 이벤트가 발생해도 페이지 이동을 막지 않음
           // 대신 비밀번호 필드로 포커스 이동
           const passwordInput = document.querySelector(
@@ -564,7 +564,7 @@ export default function SignInContent() {
         });
 
         // 로그인 버튼 클릭 이벤트 로깅
-        loginButton.addEventListener("click", (e) => {
+        loginButton.addEventListener("click", () => {
           console.group("[SignInContent] 로그인 버튼 클릭");
           console.log("시간:", new Date().toISOString());
           console.log("버튼 타입:", loginButton.type);
@@ -658,7 +658,7 @@ export default function SignInContent() {
 
   // 로그인 성공/실패 감지 및 리다이렉트 처리
   useEffect(() => {
-    const handleSignIn = (e: Event) => {
+    const handleSignIn = () => {
       console.group("[SignInContent] 로그인 시도 감지");
       console.log("시간:", new Date().toISOString());
       console.log("리다이렉트 URL:", redirectUrl);
@@ -1230,7 +1230,6 @@ export default function SignInContent() {
           const buttonText = loginButton.textContent || "";
           if (buttonText.includes("계속") || buttonText.includes("Continue")) {
             // 버튼의 모든 자식 요소를 제거하고 "로그인"만 추가
-            const buttonSvg = loginButton.querySelector("svg");
             loginButton.innerHTML = "로그인";
             console.log(
               "[SignInContent] 버튼 전체 내용을 '로그인'으로 강제 변경",
@@ -1540,7 +1539,7 @@ export default function SignInContent() {
                     ];
 
                     let lastError: any = null;
-                    let allErrors: string[] = [];
+                    const allErrors: string[] = [];
 
                     for (const strategy of possibleStrategies) {
                       try {
@@ -1635,7 +1634,7 @@ export default function SignInContent() {
                 <Link
                   href="/sign-up/join"
                   className="text-[#ff6b9d] hover:text-[#ff5088] font-semibold transition-colors"
-                  onClick={(e) => {
+                  onClick={() => {
                     console.log(
                       "[SignInContent] 회원가입 페이지로 이동: /sign-up/join",
                     );

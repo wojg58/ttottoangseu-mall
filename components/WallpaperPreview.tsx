@@ -47,7 +47,7 @@ export default function WallpaperPreview({
 
       {/* 콘텐츠 */}
       <div className="wp__inner">
-        <div className="wp__phone">
+        <Link href="/wallpaper" className="wp__phone md:pointer-events-none">
           {/* 폰 화면(배경화면) */}
           <div className="wp__screen relative overflow-hidden">
             <Image
@@ -62,7 +62,7 @@ export default function WallpaperPreview({
 
           {/* 노치 */}
           <div className="wp__notch" />
-        </div>
+        </Link>
 
         <div className="wp__actions">
           <h2 className="wp__title">{title}</h2>

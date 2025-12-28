@@ -317,8 +317,9 @@ export default async function HomePage() {
         <section className="relative py-8 md:py-20">
           <div className="shop-container">
             {/* 히어로 배너 - 모바일 우선 */}
-            <div className="flex flex-col gap-6 mb-12 md:flex-row md:items-center md:gap-8 md:mb-16">
-              <div className="text-center md:text-left md:flex-1">
+            <div className="flex flex-col gap-8 mb-12 md:flex-row md:items-center md:gap-8 md:mb-16">
+              {/* 텍스트 영역 - 모바일에서 먼저 표시 */}
+              <div className="text-center md:text-left md:flex-1 order-1 md:order-none w-full">
                 <div
                   className="inline-flex items-center gap-2 rounded-full px-3 py-2 mb-4"
                   style={{
@@ -334,14 +335,15 @@ export default async function HomePage() {
                   두근거리는 설렘을{" "}
                   <span className="text-shop-rose">선물하세요</span> 💕
                 </h2>
-                <p className="text-black mb-6 text-base md:text-lg font-bold leading-relaxed">
+                <p className="text-black mb-12 md:mb-6 text-base md:text-lg font-bold leading-relaxed">
                   산리오, 짱구, 유키오 등 사랑스러운 캐릭터 굿즈를 만나보세요.
                   <br className="hidden md:inline" />
                   인형 키링, 파우치, 완구, 스티커 등 다양한 아이템이 가득!
                 </p>
               </div>
-              <div className="w-full max-w-xs mx-auto md:max-w-md lg:max-w-lg md:flex-1">
-                <div className="relative w-full aspect-square">
+              {/* 이미지 영역 - 모바일에서 텍스트 아래에 표시 */}
+              <div className="w-full max-w-[160px] mx-auto md:max-w-md lg:max-w-lg md:flex-1 order-2 md:order-none mt-4 md:mt-0">
+                <div className="relative w-full aspect-square max-h-[160px] md:max-h-none">
                   {/* 장식적인 원들 - 데스크탑에서만 표시 */}
                   <div className="hidden lg:block absolute w-32 h-32 bg-shop-rose/20 rounded-full"
                        style={{
@@ -360,7 +362,7 @@ export default async function HomePage() {
                       priority
                       quality={85}
                       fetchPriority="high"
-                      sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 400px"
+                      sizes="(max-width: 768px) 160px, (max-width: 1024px) 50vw, 400px"
                     />
                   </div>
                 </div>

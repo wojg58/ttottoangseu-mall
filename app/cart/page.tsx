@@ -11,6 +11,11 @@ import { getCartItems } from "@/actions/cart";
 import CartItemList from "@/components/cart-item-list";
 import CartSummary from "@/components/cart-summary";
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1.0,
+};
+
 export default async function CartPage() {
   const { userId } = await auth();
 

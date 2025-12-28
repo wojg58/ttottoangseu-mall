@@ -264,7 +264,7 @@ export function ChatWidget() {
       {/* Floating Button */}
       <button
         type="button"
-        className="fixed bottom-6 right-6 z-50 w-[150px] h-[150px] transition-all duration-300 ease-out flex items-center justify-center bg-transparent hover:opacity-90 hover:scale-110 hover:rotate-12 active:scale-95"
+        className="fixed bottom-4 right-0 md:bottom-6 md:right-6 z-50 w-[120px] h-[120px] md:w-[150px] md:h-[150px] transition-all duration-300 ease-out flex items-center justify-center bg-transparent hover:opacity-90 hover:scale-110 hover:rotate-12 active:scale-95"
         onClick={() => {
           console.log("[ChatWidget] open");
           setOpen(true);
@@ -277,13 +277,13 @@ export function ChatWidget() {
           width={150} 
           height={150} 
           priority 
-          sizes="150px"
-          className="transition-transform duration-300"
+          sizes="(max-width: 768px) 120px, 150px"
+          className="w-full h-full transition-transform duration-300"
         />
       </button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="w-[430px] h-[730px] max-w-none p-0 overflow-hidden fixed right-6 bottom-6 top-auto left-auto translate-x-0 translate-y-0 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95">
+        <DialogContent className="w-[calc(100vw-32px)] md:w-[430px] h-[730px] max-w-none p-0 overflow-hidden fixed right-4 md:right-6 bottom-4 md:bottom-6 top-auto left-auto translate-x-0 translate-y-0 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95">
           <DialogHeader className="px-4 py-3 bg-[#ffeef5] border-b border-pink-100">
             <DialogTitle className="text-[#4a3f48]">또또앙스 상담 챗봇</DialogTitle>
           </DialogHeader>

@@ -29,8 +29,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import PaymentWidget from "@/components/payment-widget";
-import OrderCancelButton from "@/components/order-cancel-button";
 
 // Daum Postcode API 타입 정의
 declare global {
@@ -244,6 +242,7 @@ export default function CheckoutForm({
 }: CheckoutFormProps) {
   const [isPending, startTransition] = useTransition();
   const searchParams = useSearchParams();
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [orderId, setOrderId] = useState<string | null>(null);
   const [orderNumber, setOrderNumber] = useState<string | null>(null);
   const [coupons, setCoupons] = useState<Coupon[]>([]);
@@ -251,7 +250,6 @@ export default function CheckoutForm({
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<"카드" | "계좌이체" | null>(null);
   const [depositorName, setDepositorName] = useState("");
   const [useEscrow, setUseEscrow] = useState(false);
-  const [cashReceipt, setCashReceipt] = useState<"신청" | "신청안함">("신청안함");
   const [orderData, setOrderData] = useState<{
     subtotal: number;
     shippingFee: number;
@@ -266,7 +264,6 @@ export default function CheckoutForm({
     }>;
   } | null>(null);
   const { user, isLoaded } = useUser();
-  const router = useRouter();
   
   // 배송지 옵션 상태 (true: 회원 정보와 동일, false: 새로운 배송지)
   const [useMemberInfo, setUseMemberInfo] = useState(true);

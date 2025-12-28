@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { ClerkProvider } from "@clerk/nextjs";
 import { koKR } from "@clerk/localizations";
 import { Gowun_Dodum, Plus_Jakarta_Sans, Noto_Sans_KR } from "next/font/google";
@@ -95,7 +96,9 @@ export default function RootLayout({
           suppressHydrationWarning
         >
           <SyncUserProvider>
-            <AuthSessionSync />
+            <Suspense fallback={null}>
+              <AuthSessionSync />
+            </Suspense>
             <ShopHeader />
             <div className="flex-1">{children}</div>
             <ShopFooter />
