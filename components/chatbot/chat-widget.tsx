@@ -264,7 +264,7 @@ export function ChatWidget() {
       {/* Floating Button */}
       <button
         type="button"
-        className="fixed bottom-4 right-0 md:bottom-6 md:right-6 z-50 w-[120px] h-[120px] md:w-[150px] md:h-[150px] transition-all duration-300 ease-out flex items-center justify-center bg-transparent hover:opacity-90 hover:scale-110 hover:rotate-12 active:scale-95"
+        className="fixed bottom-0 right-0 md:bottom-6 md:right-6 z-50 w-[120px] h-[120px] md:w-[150px] md:h-[150px] transition-all duration-300 ease-out flex items-center justify-center bg-transparent hover:opacity-90 hover:scale-110 hover:rotate-12 active:scale-95 p-0 m-0"
         onClick={() => {
           console.log("[ChatWidget] open");
           setOpen(true);
@@ -278,7 +278,7 @@ export function ChatWidget() {
           height={150} 
           priority 
           sizes="(max-width: 768px) 120px, 150px"
-          className="w-full h-full transition-transform duration-300"
+          className="w-full h-full transition-transform duration-300 object-contain"
         />
       </button>
 
