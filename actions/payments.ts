@@ -236,6 +236,7 @@ export async function confirmPayment({
           product_id: string;
           variant_id: string | null;
           smartstore_id: string;
+          smartstore_option_id: number | null;
           target_stock: number;
           status: string;
         }> = [];
@@ -260,6 +261,7 @@ export async function confirmPayment({
               product_id: product.id,
               variant_id: variant.id,
               smartstore_id: variant.smartstore_channel_product_no.toString(),
+              smartstore_option_id: variant.smartstore_option_id,
               target_stock: variant.stock, // 옵션 재고 (이미 차감됨)
               status: 'pending'
             });
@@ -272,6 +274,7 @@ export async function confirmPayment({
               product_id: product.id,
               variant_id: null,
               smartstore_id: product.smartstore_product_id,
+              smartstore_option_id: null,
               target_stock: product.stock, // 상품 재고 (이미 차감됨)
               status: 'pending'
             });
