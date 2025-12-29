@@ -77,16 +77,18 @@ export default function ChatbotLottieLauncher() {
       // 첫 시도일 때만 로그 출력 및 iframe 정보 확인
       if (triedRef.current === 1) {
         console.log("🔎 기존 런처 버튼 찾는 중...");
-        
+
         // iframe 요소들 확인 (디버깅용)
-        const iframes = [...document.querySelectorAll("iframe")].map((f, i) => ({
-          i,
+        const iframes = [...document.querySelectorAll("iframe")].map((f) => ({
           src: f.src,
           id: f.id,
           class: f.className,
-          rect: f.getBoundingClientRect(),
+          w: Math.round(f.getBoundingClientRect().width),
+          h: Math.round(f.getBoundingClientRect().height),
+          right: Math.round(f.getBoundingClientRect().right),
+          bottom: Math.round(f.getBoundingClientRect().bottom),
         }));
-        
+
         if (iframes.length > 0) {
           console.log("📋 발견된 iframe 요소들:", iframes);
         }
