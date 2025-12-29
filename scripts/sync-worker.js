@@ -177,6 +177,10 @@ async function run() {
                   },
                 );
 
+                console.log(
+                  `[INFO] 채널 상품 조회 응답 상태: ${channelRes.status}`,
+                );
+
                 // 429 Rate Limit 발생 시 1~2초 대기 후 재시도
                 if (channelRes.status === 429) {
                   const waitTime = 1000 + Math.random() * 1000; // 1000ms ~ 2000ms
@@ -188,8 +192,38 @@ async function run() {
                   continue;
                 }
 
-                // 429가 아니면 루프 종료
-                break;
+                // 429가 아니면 응답 처리 후 루프 종료
+                if (channelRes.ok) {
+                  const channelData = await channelRes.json();
+                  console.log(
+                    `[INFO] 채널 상품 조회 응답 데이터:`,
+                    JSON.stringify(channelData, null, 2),
+                  );
+
+                  // channelProduct 데이터 찾기
+                  if (channelData.data) {
+                    channelProductData = channelData.data;
+                  } else if (channelData.smartstoreChannelProduct) {
+                    channelProductData = channelData;
+                  } else {
+                    channelProductData = channelData;
+                  }
+
+                  console.log(`[INFO] 채널 상품 데이터 획득 성공`);
+                  break; // 성공 시 루프 종료
+                } else {
+                  const errorText = await channelRes.text();
+                  console.log(
+                    `[INFO] 채널 상품 조회 실패 (${
+                      channelRes.status
+                    }): ${errorText.substring(0, 200)}`,
+                  );
+                  throw new Error(
+                    `채널 상품 조회 실패: ${
+                      channelRes.status
+                    } - ${errorText.substring(0, 200)}`,
+                  );
+                }
               } catch (fetchError) {
                 console.error(`[ERROR] 채널 상품 조회 예외: ${fetchError.message}`);
                 if (retryCount < maxRetries - 1) {
@@ -202,43 +236,9 @@ async function run() {
               }
             }
 
-              console.log(
-                `[INFO] 채널 상품 조회 응답 상태: ${channelRes.status}`,
-              );
-
-              if (channelRes.ok) {
-                const channelData = await channelRes.json();
-                console.log(
-                  `[INFO] 채널 상품 조회 응답 데이터:`,
-                  JSON.stringify(channelData, null, 2),
-                );
-
-                // channelProduct 데이터 찾기
-                if (channelData.data) {
-                  channelProductData = channelData.data;
-                } else if (channelData.smartstoreChannelProduct) {
-                  channelProductData = channelData;
-                } else {
-                  channelProductData = channelData;
-                }
-
-                console.log(`[INFO] 채널 상품 데이터 획득 성공`);
-              } else {
-                const errorText = await channelRes.text();
-                console.log(
-                  `[INFO] 채널 상품 조회 실패 (${
-                    channelRes.status
-                  }): ${errorText.substring(0, 200)}`,
-                );
-                throw new Error(
-                  `채널 상품 조회 실패: ${
-                    channelRes.status
-                  } - ${errorText.substring(0, 200)}`,
-                );
-              }
-            } catch (e) {
-              console.log(`[INFO] 채널 상품 조회 예외: ${e.message}`);
-              throw e;
+            // channelRes가 null이거나 실패한 경우 처리
+            if (!channelRes || !channelRes.ok) {
+              throw new Error("채널 상품 조회 실패");
             }
 
             // 3-2. 채널 상품 재고 변경 API 호출
