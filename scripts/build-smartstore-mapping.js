@@ -89,8 +89,13 @@ async function getNaverToken() {
   }
 }
 
-// API 호출 래퍼 (401 시 토큰 재발급 + 1회 재시도)
-async function fetchWithRetry(url, options, retried = false) {
+// API 호출 래퍼 (401 시 토큰 재발급 + 1회 재시도, 429 시 exponential backoff)
+async function fetchWithRetry(
+  url,
+  options,
+  retried = false,
+  retryCount = 0,
+) {
   const token = await getNaverToken();
 
   const response = await fetch(url, {
@@ -105,7 +110,17 @@ async function fetchWithRetry(url, options, retried = false) {
   if (response.status === 401 && !retried) {
     console.log("[WARN] 401 발생, 토큰 재발급 후 재시도");
     accessToken = null; // 캐시 무효화
-    return fetchWithRetry(url, options, true);
+    return fetchWithRetry(url, options, true, retryCount);
+  }
+
+  // 429 Rate Limit → exponential backoff로 재시도 (최대 5회)
+  if (response.status === 429 && retryCount < 5) {
+    const waitTime = Math.min(1000 * Math.pow(2, retryCount), 30000); // 최대 30초
+    console.log(
+      `[WARN] 429 Rate Limit 발생, ${waitTime}ms 대기 후 재시도 (${retryCount + 1}/5)`,
+    );
+    await delay(waitTime);
+    return fetchWithRetry(url, options, retried, retryCount + 1);
   }
 
   return response;
@@ -263,8 +278,8 @@ async function getAllSmartstoreProducts() {
         hasMore = false;
       } else {
         page++;
-        // API 레이트 리밋 방지
-        await delay(150);
+        // API 레이트 리밋 방지 (delay 증가)
+        await delay(300);
       }
     } catch (error) {
       console.error(
@@ -564,8 +579,8 @@ async function buildMapping() {
           }
         }
 
-        // API 레이트 리밋 방지
-        await delay(100);
+        // API 레이트 리밋 방지 (delay 증가)
+        await delay(300);
       } catch (error) {
         console.error(`[ERROR] 상품 처리 중 오류: ${error.message}`);
         result.failedCount++;
@@ -818,8 +833,8 @@ async function buildMapping() {
           });
           ourProductNames.add(smartstoreName);
 
-          // API 레이트 리밋 방지
-          await delay(150);
+          // API 레이트 리밋 방지 (delay 증가)
+          await delay(500);
         } catch (error) {
           console.error(
             `[ERROR] 상품 추가 중 오류: ${smartstoreProduct.name} - ${error.message}`,
