@@ -172,25 +172,33 @@ function extractOptionStocks(channelProductData) {
 
 const delay = (ms) => new Promise((r) => setTimeout(r, ms));
 
-// 스마트스토어 API에서 모든 상품 목록 가져오기 (페이지네이션)
+// 스마트스토어 API에서 모든 상품 목록 가져오기 (v1/products/search API 사용)
 async function getAllSmartstoreProducts() {
   const allProducts = [];
   let page = 1;
-  const pageSize = 100;
+  const pageSize = 500; // 최대 500까지 가능
   let hasMore = true;
 
-  console.log("[INFO] 📦 스마트스토어 API에서 모든 상품 목록 가져오는 중...");
+  console.log("[INFO] 📦 스마트스토어 API에서 상품 목록 가져오는 중...");
 
   while (hasMore) {
-    const token = await getNaverToken();
-    const url = `${BASE_URL}/v1/products?page=${page}&size=${pageSize}`;
-
     try {
+      // 상품 목록 검색 API (POST)
+      // https://api.commerce.naver.com/external/v1/products/search
+      const url = `${BASE_URL}/v1/products/search`;
+
+      const requestBody = {
+        page: page,
+        size: pageSize,
+        // 전체 목록 조회 시 빈 객체도 가능하지만, 페이지네이션을 위해 page/size 지정
+      };
+
       const response = await fetchWithRetry(url, {
-        method: "GET",
+        method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
+        body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) {
@@ -198,35 +206,65 @@ async function getAllSmartstoreProducts() {
         console.error(
           `[ERROR] 상품 목록 조회 실패 (페이지 ${page}): ${
             response.status
-          } - ${errorText.substring(0, 200)}`,
+          } - ${errorText.substring(0, 300)}`,
         );
         break;
       }
 
       const data = await response.json();
 
-      if (data.code !== "SUCCESS") {
-        console.error(
-          `[ERROR] 상품 목록 조회 실패 (페이지 ${page}): ${data.code} - ${data.message}`,
-        );
-        break;
+      // 응답 구조 확인 (첫 페이지에서만 출력)
+      if (page === 1 && allProducts.length === 0) {
+        console.log("[DEBUG] 응답 키:", Object.keys(data));
+        if (data.contents && data.contents.length > 0) {
+          console.log(
+            "[DEBUG] 첫 번째 상품 구조:",
+            JSON.stringify(data.contents[0], null, 2).substring(0, 500),
+          );
+        }
       }
 
-      const products = data.data?.products || [];
-      allProducts.push(...products);
+      // 응답 구조: { contents: [...], ... }
+      // contents 배열의 각 항목은 { originProductNo, channelProducts: [...] } 형태
+      // channelProducts 배열의 각 항목이 실제 채널 상품 정보
+      const originProducts = data.contents || [];
 
+      // 각 원상품의 channelProducts를 평탄화하여 저장 (품절 상품 제외)
+      for (const originProduct of originProducts) {
+        if (
+          originProduct.channelProducts &&
+          Array.isArray(originProduct.channelProducts)
+        ) {
+          // 품절 상품 필터링: 판매중이고 재고가 있는 상품만
+          const activeChannelProducts = originProduct.channelProducts.filter(
+            (cp) => {
+              const isOnSale = cp.statusType === "SALE"; // 판매중
+              const hasStock = (cp.stockQuantity || 0) > 0; // 재고 있음
+              const isDisplayed = cp.channelProductDisplayStatusType === "ON"; // 표시 상태 ON
+              return isOnSale && hasStock && isDisplayed;
+            },
+          );
+          allProducts.push(...activeChannelProducts);
+        }
+      }
+
+      const totalChannelProducts = originProducts.reduce(
+        (sum, op) => sum + (op.channelProducts?.length || 0),
+        0,
+      );
+      const activeChannelProducts = allProducts.length;
       console.log(
-        `[INFO] 페이지 ${page}: ${products.length}개 상품 조회 (누적: ${allProducts.length}개)`,
+        `[INFO] 페이지 ${page}: ${originProducts.length}개 원상품, ${totalChannelProducts}개 채널상품 (품절 제외: ${activeChannelProducts}개, 누적: ${allProducts.length}개)`,
       );
 
-      // 다음 페이지가 있는지 확인
-      const totalCount = data.data?.totalCount || 0;
-      hasMore = page * pageSize < totalCount;
-
-      if (hasMore) {
+      // 다음 페이지 확인
+      if (originProducts.length < pageSize) {
+        // 더 이상 데이터가 없음
+        hasMore = false;
+      } else {
         page++;
         // API 레이트 리밋 방지
-        await delay(100);
+        await delay(150);
       }
     } catch (error) {
       console.error(
@@ -260,7 +298,7 @@ async function buildMapping() {
   try {
     // 1. 우리 DB의 판매중인 모든 상품 가져오기 (페이지네이션)
     console.log("\n[INFO] 📋 우리 DB의 판매중인 상품 조회 중...");
-    
+
     const allOurProducts = [];
     const pageSize = 100;
     let page = 0;
@@ -288,7 +326,9 @@ async function buildMapping() {
 
       allOurProducts.push(...products);
       console.log(
-        `[INFO] 페이지 ${page + 1}: ${products.length}개 상품 조회 (누적: ${allOurProducts.length}개)`,
+        `[INFO] 페이지 ${page + 1}: ${products.length}개 상품 조회 (누적: ${
+          allOurProducts.length
+        }개)`,
       );
 
       if (products.length < pageSize) {
@@ -304,14 +344,18 @@ async function buildMapping() {
       return result;
     }
 
-    console.log(`[INFO] ✅ 우리 DB 판매중인 상품: ${allOurProducts.length}개\n`);
+    console.log(
+      `[INFO] ✅ 우리 DB 판매중인 상품: ${allOurProducts.length}개\n`,
+    );
 
     result.totalProducts = allOurProducts.length;
 
     // 2. 스마트스토어 API에서 모든 상품 목록 가져오기 (매칭용)
     console.log("\n[INFO] 📦 스마트스토어 API에서 상품 목록 가져오는 중...");
     const smartstoreProducts = await getAllSmartstoreProducts();
-    console.log(`[INFO] ✅ 스마트스토어 상품: ${smartstoreProducts.length}개\n`);
+    console.log(
+      `[INFO] ✅ 스마트스토어 상품: ${smartstoreProducts.length}개\n`,
+    );
 
     // 3. 각 상품의 옵션 매핑 처리
     for (let i = 0; i < allOurProducts.length; i++) {
@@ -319,32 +363,33 @@ async function buildMapping() {
       result.processedProducts++;
 
       console.log(
-        `\n[${i + 1}/${allOurProducts.length}] 상품 처리: ${product.name} (ID: ${
-          product.id
-        })`,
+        `\n[${i + 1}/${allOurProducts.length}] 상품 처리: ${
+          product.name
+        } (ID: ${product.id})`,
       );
 
       // smartstore_product_id가 없으면 스마트스토어에서 매칭 시도
       if (!product.smartstore_product_id) {
         console.log(`[INFO]   스마트스토어 미연동 상품 - 매칭 시도 중...`);
-        
+
         // 스마트스토어 상품 목록에서 이름으로 매칭
-        const matchedSmartstoreProduct = smartstoreProducts.find(
-          (sp) =>
-            sp.name === product.name ||
-            sp.name.includes(product.name) ||
-            product.name.includes(sp.name),
-        );
+        // v1/products/search 응답: channelProducts 배열의 각 항목이 { name, channelProductNo, ... }
+        const matchedSmartstoreProduct = smartstoreProducts.find((sp) => {
+          const smartstoreName = sp.name || "";
+          if (!smartstoreName) return false;
+          return (
+            smartstoreName === product.name ||
+            smartstoreName.includes(product.name) ||
+            product.name.includes(smartstoreName)
+          );
+        });
 
         if (matchedSmartstoreProduct) {
           // 매칭된 상품의 채널상품 번호 찾기
-          // v1/products API는 원상품 목록을 반환하므로, 
-          // 실제로는 채널상품 조회 API를 통해 확인해야 함
-          // 일단 productId를 사용 (실제로는 다른 API 필요할 수 있음)
+          // v1/products/search 응답: channelProducts 배열의 각 항목에 channelProductNo가 있음
           const channelProductNo =
             matchedSmartstoreProduct.channelProductNo ||
-            matchedSmartstoreProduct.productId ||
-            matchedSmartstoreProduct.id;
+            matchedSmartstoreProduct.channelProductDisplayNo;
 
           if (channelProductNo) {
             console.log(
@@ -368,9 +413,7 @@ async function buildMapping() {
               console.log(`[INFO]   ✅ smartstore_product_id 연결 완료`);
             }
           } else {
-            console.warn(
-              `[WARN]   매칭된 상품의 채널상품 번호를 찾을 수 없음`,
-            );
+            console.warn(`[WARN]   매칭된 상품의 채널상품 번호를 찾을 수 없음`);
           }
         } else {
           console.warn(
@@ -529,7 +572,269 @@ async function buildMapping() {
       }
     }
 
-    // 4. 결과 요약
+    // 4. 스마트스토어에만 있고 우리 DB에 없는 상품 추가
+    console.log("\n" + "=".repeat(60));
+    console.log("[INFO] 📥 스마트스토어에만 있는 상품 추가 중...");
+
+    // 우리 DB의 모든 상품명 목록 (매칭 확인용)
+    const ourProductNames = new Set(
+      allOurProducts.map((p) => p.name.toLowerCase().trim()),
+    );
+
+    // 기본 카테고리 ID 가져오기 (첫 번째 카테고리 사용)
+    const { data: categories } = await supabase
+      .from("categories")
+      .select("id")
+      .is("deleted_at", null)
+      .limit(1);
+
+    const defaultCategoryId =
+      categories && categories.length > 0 ? categories[0].id : null;
+
+    if (!defaultCategoryId) {
+      console.warn("[WARN] 기본 카테고리가 없어 상품 추가를 건너뜁니다.");
+    } else {
+      let addedCount = 0;
+      let skippedCount = 0;
+
+      for (const smartstoreProduct of smartstoreProducts) {
+        const smartstoreName = (smartstoreProduct.name || "")
+          .toLowerCase()
+          .trim();
+
+        // 이미 우리 DB에 있는 상품인지 확인
+        const existsInOurDB = ourProductNames.has(smartstoreName);
+
+        if (existsInOurDB) {
+          skippedCount++;
+          continue;
+        }
+
+        // 우리 DB에 없는 상품 → 추가
+        try {
+          const channelProductNo =
+            smartstoreProduct.channelProductNo ||
+            smartstoreProduct.channelProductDisplayNo;
+
+          if (!channelProductNo) {
+            console.warn(
+              `[WARN] 채널상품 번호 없음: ${smartstoreProduct.name}`,
+            );
+            skippedCount++;
+            continue;
+          }
+
+          // 채널 상품 상세 정보 가져오기 (이미지, 옵션 정보 포함)
+          console.log(
+            `[INFO]   상세 정보 조회 중: ${smartstoreProduct.name} (${channelProductNo})`,
+          );
+          const channelProductData = await getChannelProduct(
+            channelProductNo.toString(),
+          );
+
+          if (!channelProductData) {
+            console.warn(
+              `[WARN] 채널 상품 조회 실패: ${smartstoreProduct.name}`,
+            );
+            skippedCount++;
+            continue;
+          }
+
+          const originProduct = channelProductData.originProduct;
+
+          // slug 생성 (상품명 기반)
+          const slug = smartstoreProduct.name
+            .toLowerCase()
+            .replace(/[^a-z0-9가-힣\s-]/g, "")
+            .replace(/\s+/g, "-")
+            .replace(/-+/g, "-")
+            .substring(0, 100);
+
+          // slug 중복 확인 및 처리
+          let finalSlug = slug;
+          let slugSuffix = 1;
+          while (true) {
+            const { data: existing } = await supabase
+              .from("products")
+              .select("id")
+              .eq("slug", finalSlug)
+              .is("deleted_at", null)
+              .single();
+
+            if (!existing) break;
+            finalSlug = `${slug}-${slugSuffix}`;
+            slugSuffix++;
+          }
+
+          // 상품 추가
+          const { data: newProduct, error: insertError } = await supabase
+            .from("products")
+            .insert({
+              category_id: defaultCategoryId,
+              name: smartstoreProduct.name,
+              slug: finalSlug,
+              price: originProduct.salePrice || 0,
+              discount_price: null, // 할인가는 나중에 필요시 추가
+              description: originProduct.detailContent || null,
+              status: "active",
+              stock: originProduct.stockQuantity || 0,
+              is_featured: false,
+              is_new: false,
+              smartstore_product_id: channelProductNo.toString(),
+            })
+            .select("id")
+            .single();
+
+          if (insertError) {
+            console.error(
+              `[ERROR] 상품 추가 실패: ${smartstoreProduct.name} - ${insertError.message}`,
+            );
+            skippedCount++;
+            continue;
+          }
+
+          console.log(
+            `[INFO]   ✅ 상품 추가: ${smartstoreProduct.name} (ID: ${newProduct.id})`,
+          );
+
+          // 1. 이미지 추가 (product_images)
+          const images = [];
+          if (originProduct.images?.representativeImage?.url) {
+            images.push({
+              image_url: originProduct.images.representativeImage.url,
+              is_primary: true,
+              sort_order: 0,
+              alt_text: smartstoreProduct.name,
+            });
+          }
+          if (originProduct.images?.optionalImages) {
+            originProduct.images.optionalImages.forEach((img, index) => {
+              if (img.url) {
+                images.push({
+                  image_url: img.url,
+                  is_primary: false,
+                  sort_order: index + 1,
+                  alt_text: `${smartstoreProduct.name} - 이미지 ${index + 1}`,
+                });
+              }
+            });
+          }
+
+          if (images.length > 0) {
+            const imageData = images.map((img) => ({
+              product_id: newProduct.id,
+              ...img,
+            }));
+
+            const { error: imageError } = await supabase
+              .from("product_images")
+              .insert(imageData);
+
+            if (imageError) {
+              console.warn(`[WARN] 이미지 추가 실패: ${imageError.message}`);
+            } else {
+              console.log(`[INFO]   ✅ 이미지 ${images.length}개 추가 완료`);
+            }
+          }
+
+          // 2. 옵션 추가 (product_variants)
+          const options = extractOptionStocks(channelProductData);
+          if (options.length > 0) {
+            const variantData = options.map((option, index) => {
+              const optionName = option.optionName2
+                ? `${option.optionName1}/${option.optionName2}`
+                : option.optionName1;
+
+              return {
+                product_id: newProduct.id,
+                variant_name: "옵션", // 기본 옵션명
+                variant_value: optionName,
+                stock: option.stockQuantity || 0,
+                price_adjustment: option.price || 0,
+                sku: option.sellerManagerCode || null,
+              };
+            });
+
+            const { error: variantError } = await supabase
+              .from("product_variants")
+              .insert(variantData);
+
+            if (variantError) {
+              console.warn(`[WARN] 옵션 추가 실패: ${variantError.message}`);
+            } else {
+              console.log(`[INFO]   ✅ 옵션 ${options.length}개 추가 완료`);
+
+              // 옵션 매핑 정보도 함께 저장
+              const channelProductNoInt = parseInt(channelProductNo, 10);
+              for (let i = 0; i < options.length; i++) {
+                const option = options[i];
+                const variant = variantData[i];
+
+                // 방금 추가한 variant 찾기
+                const { data: insertedVariant } = await supabase
+                  .from("product_variants")
+                  .select("id")
+                  .eq("product_id", newProduct.id)
+                  .eq("variant_value", variant.variant_value)
+                  .is("deleted_at", null)
+                  .single();
+
+                if (insertedVariant) {
+                  await supabase
+                    .from("product_variants")
+                    .update({
+                      smartstore_option_id: option.id,
+                      smartstore_channel_product_no: channelProductNoInt,
+                    })
+                    .eq("id", insertedVariant.id);
+                }
+              }
+            }
+          }
+
+          // 3. 카테고리 연결 (product_categories)
+          const { error: categoryError } = await supabase
+            .from("product_categories")
+            .insert({
+              product_id: newProduct.id,
+              category_id: defaultCategoryId,
+              is_primary: true,
+              sort_order: 0,
+            });
+
+          if (categoryError) {
+            console.warn(`[WARN] 카테고리 연결 실패: ${categoryError.message}`);
+          } else {
+            console.log(`[INFO]   ✅ 카테고리 연결 완료`);
+          }
+
+          addedCount++;
+          // 우리 DB 목록에 추가 (중복 체크용)
+          allOurProducts.push({
+            id: newProduct.id,
+            name: smartstoreProduct.name,
+            smartstore_product_id: channelProductNo.toString(),
+            status: "active",
+          });
+          ourProductNames.add(smartstoreName);
+
+          // API 레이트 리밋 방지
+          await delay(150);
+        } catch (error) {
+          console.error(
+            `[ERROR] 상품 추가 중 오류: ${smartstoreProduct.name} - ${error.message}`,
+          );
+          skippedCount++;
+        }
+      }
+
+      console.log(
+        `[INFO] ✅ 상품 추가 완료: ${addedCount}개 추가, ${skippedCount}개 스킵`,
+      );
+      result.newMappings += addedCount;
+    }
+
+    // 5. 결과 요약
     console.log("\n" + "=".repeat(60));
     console.log("📊 매핑 빌드 결과 요약");
     console.log("=".repeat(60));
