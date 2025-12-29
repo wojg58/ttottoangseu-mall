@@ -1048,3 +1048,15 @@ button[style*="background-color: #FEE500"]:disabled {
   cursor: pointer !important;
   opacity: 1 !important;
 }
+
+/* 기존 상담챗봇 런처 버튼 숨기기 */
+/* ChannelIO(채널톡) 기본 런처 버튼 숨기기 */
+#channelio-launcher,
+.channelio-launcher,
+[data-channelio-id],
+iframe[src*="channel.io"] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
