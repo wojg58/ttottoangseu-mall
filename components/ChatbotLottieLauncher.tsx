@@ -24,6 +24,74 @@ export default function ChatbotLottieLauncher() {
     console.groupEnd();
   }, []);
 
+  // 기존 상담 위젯 런처 버튼 자동 찾기 및 숨기기
+  useEffect(() => {
+    const findAndHideLaunchers = () => {
+      // 화면에 떠 있는 고정(fixed) 버튼/위젯 후보를 찾기
+      const els = [...document.querySelectorAll("body *")].filter((el) => {
+        const s = getComputedStyle(el);
+        if (s.position !== "fixed") return false;
+
+        const r = el.getBoundingClientRect();
+        if (r.width < 30 || r.height < 30) return false;
+
+        // 우하단 근처에 있는 것만
+        const nearBottomRight =
+          r.right > window.innerWidth - 220 && r.bottom > window.innerHeight - 220;
+
+        return nearBottomRight;
+      });
+
+      console.group("[ChatbotLottieLauncher] 기존 런처 버튼 찾기");
+      console.log("우하단 fixed 후보 개수:", els.length);
+
+      // Lottie 버튼 자체는 제외
+      const lottieButton = document.querySelector('[aria-label="상담 챗봇 열기"]');
+      const filteredEls = els.filter((el) => el !== lottieButton);
+
+      filteredEls.slice(0, 10).forEach((el, i) => {
+        const r = el.getBoundingClientRect();
+        const id = el.id ? `#${el.id}` : "";
+        const className = el.className
+          ? `.${String(el.className).replaceAll(" ", ".")}`
+          : "";
+
+        console.log(
+          `${i + 1}.`,
+          el.tagName,
+          id,
+          className,
+          `(${Math.round(r.width)}x${Math.round(r.height)})`,
+          el
+        );
+
+        // 기존 런처 버튼 숨기기
+        (el as HTMLElement).style.display = "none";
+        (el as HTMLElement).style.visibility = "hidden";
+        (el as HTMLElement).style.opacity = "0";
+        (el as HTMLElement).style.pointerEvents = "none";
+      });
+
+      console.log(`✅ ${filteredEls.length}개의 기존 런처 버튼을 숨겼습니다.`);
+      console.groupEnd();
+    };
+
+    // DOM이 로드된 후 실행
+    if (document.readyState === "complete") {
+      // 약간의 지연을 두어 다른 스크립트가 먼저 실행되도록
+      setTimeout(findAndHideLaunchers, 1000);
+    } else {
+      window.addEventListener("load", () => {
+        setTimeout(findAndHideLaunchers, 1000);
+      });
+    }
+
+    // 주기적으로 체크 (동적으로 추가되는 위젯 대응)
+    const interval = setInterval(findAndHideLaunchers, 3000);
+
+    return () => clearInterval(interval);
+  }, []);
+
   const openChatWidget = () => {
     console.group("[ChatbotLottieLauncher] 상담창 열기 시도");
 
@@ -91,7 +159,9 @@ export default function ChatbotLottieLauncher() {
         zIndex: 99999,
       }}
     >
-      {animationData ? <Lottie animationData={animationData} loop autoplay /> : null}
+      {animationData ? (
+        <Lottie animationData={animationData} loop autoplay />
+      ) : null}
     </button>
   );
 }
