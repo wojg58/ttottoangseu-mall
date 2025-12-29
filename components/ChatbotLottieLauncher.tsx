@@ -30,6 +30,11 @@ export default function ChatbotLottieLauncher() {
       ".chatbot-launcher",
       ".chat-widget-launcher",
       "[data-chatbot-launcher]",
+      // iframe 내부의 런처 버튼도 찾기 (일부 위젯은 iframe으로 구현됨)
+      "iframe[src*='channel.io']",
+      "iframe[src*='crisp']",
+      "iframe[src*='tawk']",
+      "iframe[src*='intercom']",
       // 필요하면 여기 추가
     ];
 
@@ -50,16 +55,41 @@ export default function ChatbotLottieLauncher() {
       for (const sel of selectors) {
         const el = document.querySelector(sel) as HTMLElement | null;
         if (el) {
-          launcherElRef.current = el;
-          console.log("✅ 기존 런처 버튼 찾음:", sel, el);
-          stop();
-          return;
+          // iframe인 경우, iframe 내부의 버튼을 찾거나 iframe 자체를 클릭
+          if (el.tagName === "IFRAME") {
+            // iframe의 부모 요소나 컨테이너를 찾아서 클릭
+            const container = el.parentElement;
+            if (container) {
+              launcherElRef.current = container as HTMLElement;
+              console.log("✅ 기존 런처 iframe 컨테이너 찾음:", sel, container);
+              stop();
+              return;
+            }
+          } else {
+            launcherElRef.current = el;
+            console.log("✅ 기존 런처 버튼 찾음:", sel, el);
+            stop();
+            return;
+          }
         }
       }
 
-      // 첫 시도일 때만 로그 출력
+      // 첫 시도일 때만 로그 출력 및 iframe 정보 확인
       if (triedRef.current === 1) {
         console.log("🔎 기존 런처 버튼 찾는 중...");
+        
+        // iframe 요소들 확인 (디버깅용)
+        const iframes = [...document.querySelectorAll("iframe")].map((f, i) => ({
+          i,
+          src: f.src,
+          id: f.id,
+          class: f.className,
+          rect: f.getBoundingClientRect(),
+        }));
+        
+        if (iframes.length > 0) {
+          console.log("📋 발견된 iframe 요소들:", iframes);
+        }
       }
 
       // 최대 시도 횟수 도달 시 중지
