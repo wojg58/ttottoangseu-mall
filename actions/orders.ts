@@ -97,8 +97,8 @@ export async function createOrder(input: CreateOrderInput): Promise<{
       .select(
         `
         *,
-        product:products!fk_cart_items_product_id(id, name, price, discount_price, stock, status),
-        variant:product_variants!fk_cart_items_variant_id(id, variant_value, price_adjustment)
+        product:products!fk_cart_items_product_id(id, name, price, discount_price, stock, status, smartstore_product_id),
+        variant:product_variants!fk_cart_items_variant_id(id, variant_value, price_adjustment, stock, smartstore_option_id, smartstore_channel_product_no)
       `,
       )
       .eq("cart_id", cart.id);
@@ -263,23 +263,25 @@ export async function createOrder(input: CreateOrderInput): Promise<{
       return { success: false, message: "주문 생성에 실패했습니다." };
     }
 
-    // 재고 차감 (상품 + 옵션)
+    // 재고 차감 (옵션이 있으면 옵션만, 없으면 상품만)
     for (const item of cartItems) {
       const product = item.product as { id: string; stock: number };
       const variant = item.variant as { id: string; stock: number } | null;
 
-      // 상품 재고 차감
-      await supabase
-        .from("products")
-        .update({ stock: product.stock - item.quantity })
-        .eq("id", product.id);
-
-      // 옵션이 있는 경우 옵션 재고도 차감
       if (variant) {
+        // 옵션이 있는 경우: 옵션 재고만 차감
         await supabase
           .from("product_variants")
           .update({ stock: variant.stock - item.quantity })
           .eq("id", variant.id);
+        logger.info(`[createOrder] 옵션 재고 차감: Variant ID ${variant.id}, 기존 ${variant.stock} -> ${variant.stock - item.quantity}`);
+      } else {
+        // 옵션이 없는 경우: 상품 재고만 차감
+        await supabase
+          .from("products")
+          .update({ stock: product.stock - item.quantity })
+          .eq("id", product.id);
+        logger.info(`[createOrder] 상품 재고 차감: Product ID ${product.id}, 기존 ${product.stock} -> ${product.stock - item.quantity}`);
       }
     }
 
@@ -311,6 +313,7 @@ export async function createOrder(input: CreateOrderInput): Promise<{
             product_id: string;
             variant_id: string | null;
             smartstore_id: string;
+            smartstore_option_id: number | null;
             target_stock: number;
             status: string;
           }> = [];
@@ -335,6 +338,7 @@ export async function createOrder(input: CreateOrderInput): Promise<{
                 product_id: product.id,
                 variant_id: variant.id,
                 smartstore_id: variant.smartstore_channel_product_no.toString(),
+                smartstore_option_id: variant.smartstore_option_id,
                 target_stock: variant.stock, // 옵션 재고 (이미 차감됨)
                 status: 'pending'
               });
@@ -347,6 +351,7 @@ export async function createOrder(input: CreateOrderInput): Promise<{
                 product_id: product.id,
                 variant_id: null,
                 smartstore_id: product.smartstore_product_id,
+                smartstore_option_id: null,
                 target_stock: product.stock, // 상품 재고 (이미 차감됨)
                 status: 'pending'
               });
