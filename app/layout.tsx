@@ -10,6 +10,7 @@ import { SyncUserProvider } from "@/components/providers/sync-user-provider";
 import { AuthSessionSync } from "@/components/auth-session-sync";
 import MarketingScripts from "@/components/marketing-scripts";
 import ChatbotLottieLauncher from "@/components/ChatbotLottieLauncher";
+import ChatWidgetWrapper from "@/components/chatbot/chat-widget-wrapper";
 import "./globals.css";
 
 // Google Fonts 최적화 - 한글 서브셋 포함
@@ -105,6 +106,8 @@ export default function RootLayout({
           </SyncUserProvider>
           {/* 마케팅 스크립트 - 페이지 로드 후 lazyOnload로 로드 */}
           <MarketingScripts />
+          {/* ChatWidget - 버튼은 숨겨지고 Dialog만 사용 */}
+          <ChatWidgetWrapper />
           {/* Clerk iframe 접근성 개선 */}
           <script
             dangerouslySetInnerHTML={{

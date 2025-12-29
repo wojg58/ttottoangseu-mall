@@ -91,6 +91,16 @@ export function ChatWidget() {
   const listRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
+  // setOpen을 window 객체에 등록하여 외부에서 호출 가능하게
+  useEffect(() => {
+    (window as any).__openChatWidget = () => {
+      setOpen(true);
+    };
+    return () => {
+      delete (window as any).__openChatWidget;
+    };
+  }, []);
+
   const signInUrl = useMemo(() => {
     return process.env.NEXT_PUBLIC_CLERK_SIGN_IN_URL || "/sign-in";
   }, []);
@@ -261,15 +271,18 @@ export function ChatWidget() {
 
   return (
     <>
-      {/* Floating Button */}
+      {/* Floating Button - 숨김 처리 (opacity:0 + pointer-events:none) */}
       <button
         type="button"
         className="fixed bottom-0 right-0 md:bottom-6 md:right-6 z-50 w-[120px] h-[120px] md:w-[150px] md:h-[150px] transition-all duration-300 ease-out flex items-center justify-center bg-transparent hover:opacity-90 hover:scale-110 hover:rotate-12 active:scale-95 p-0 m-0"
         onClick={() => {
-          console.log("[ChatWidget] open");
           setOpen(true);
         }}
         aria-label="또또앙스 챗봇 열기"
+        style={{
+          opacity: 0,
+          pointerEvents: "none",
+        }}
       >
         <Image 
           src="/chatbot.png" 
