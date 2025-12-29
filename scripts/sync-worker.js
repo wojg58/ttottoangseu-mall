@@ -450,20 +450,55 @@ async function run() {
               ),
             );
 
-            const res = await fetch(
-              `https://api.commerce.naver.com/external/v2/products/channel-products/${job.smartstore_id}`,
-              {
-                method: "PUT",
-                headers: {
-                  Authorization: `Bearer ${token}`,
-                  "Content-Type": "application/json",
-                  Accept: "application/json;charset=UTF-8",
-                },
-                body: JSON.stringify(requestBody),
-              },
-            );
+            // 재고 변경 API 호출 (429 재시도 포함)
+            let res = null;
+            let updateRetryCount = 0;
+            const maxUpdateRetries = 5;
 
-            console.log(`[INFO] 재고 변경 API 응답 상태: ${res.status}`);
+            while (updateRetryCount < maxUpdateRetries) {
+              try {
+                console.log(
+                  `[INFO] 재고 변경 API 호출 시도: ${job.smartstore_id} (시도 ${updateRetryCount + 1}/${maxUpdateRetries})`,
+                );
+                res = await fetch(
+                  `https://api.commerce.naver.com/external/v2/products/channel-products/${job.smartstore_id}`,
+                  {
+                    method: "PUT",
+                    headers: {
+                      Authorization: `Bearer ${token}`,
+                      "Content-Type": "application/json",
+                      Accept: "application/json;charset=UTF-8",
+                    },
+                    body: JSON.stringify(requestBody),
+                  },
+                );
+
+                console.log(`[INFO] 재고 변경 API 응답 상태: ${res.status}`);
+
+                // 429 Rate Limit 발생 시 1~2초 대기 후 재시도
+                if (res.status === 429) {
+                  const waitTime = 1000 + Math.random() * 1000; // 1000ms ~ 2000ms
+                  console.log(
+                    `[WARN] 429 Rate Limit 발생, ${Math.round(waitTime)}ms 대기 후 재시도 (${updateRetryCount + 1}/${maxUpdateRetries})`,
+                  );
+                  await delay(waitTime);
+                  updateRetryCount++;
+                  continue;
+                }
+
+                // 429가 아니면 루프 종료
+                break;
+              } catch (fetchError) {
+                console.error(`[ERROR] 재고 변경 API 호출 예외: ${fetchError.message}`);
+                if (updateRetryCount < maxUpdateRetries - 1) {
+                  const waitTime = 1000 + Math.random() * 1000;
+                  await delay(waitTime);
+                  updateRetryCount++;
+                  continue;
+                }
+                throw fetchError;
+              }
+            }
 
             const responseText = await res.text();
             console.log(
