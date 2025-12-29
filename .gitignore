@@ -67,3 +67,11 @@ repomix-output.xml
 /.clerk/
 
 .vercel
+
+# 민감 정보 파일 (절대 커밋 금지)
+아이피
+*.secret
+*.credentials
+*.key
+secrets/
+private/

@@ -1,0 +1,237 @@
+---
+description: 보안 인시던트 대응 가이드 - 민감 정보 노출 시 즉시 조치 절차
+globs: **/*
+alwaysApply: true
+---
+
+# 🚨 보안 인시던트 대응 가이드
+
+> **상황**: 민감 정보가 포함된 파일이 GitHub에 커밋됨
+
+> **심각도**: 🔴 Critical
+
+## 📋 인시던트 요약
+
+### 노출될 수 있는 민감 정보
+
+| 항목 | 내용 | 위험도 |
+|------|------|--------|
+| 서버 IP 주소 | AWS EC2 퍼블릭 IP | 🟡 Medium |
+| API 시크릿 키 | 네이버 커머스, Supabase 등 | 🔴 Critical |
+| 비밀번호 해시 | bcrypt salt 등 | 🔴 Critical |
+| SSH 키 | `.pem` 파일 | 🔴 Critical |
+| 환경 변수 | `.env` 파일 내용 | 🔴 Critical |
+
+## 🛠️ 즉시 조치 사항 (이 순서대로!)
+
+### Step 1: 로컬 파일 삭제 + .gitignore 추가
+
+```bash
+# 1. 민감 정보가 포함된 파일 삭제
+rm "아이피"
+rm "*.secret"
+rm "*.credentials"
+
+# 2. .gitignore에 추가
+echo "" >> .gitignore
+echo "# 민감 정보 파일 (절대 커밋 금지)" >> .gitignore
+echo "아이피" >> .gitignore
+echo "*.secret" >> .gitignore
+echo "*.credentials" >> .gitignore
+echo "*.pem" >> .gitignore
+echo "*.key" >> .gitignore
+
+# 3. 커밋
+git add .gitignore
+git commit -m "chore: add sensitive files to .gitignore"
+```
+
+### Step 2: Git 히스토리에서 파일 완전 제거
+
+> **주의**: 이 작업은 Git 히스토리를 변경합니다. 팀원들에게 미리 알리세요!
+
+#### 방법 A: git filter-repo 사용 (최신 권장)
+
+```bash
+# 1. 설치
+pip install git-filter-repo
+
+# 2. 파일 제거
+git filter-repo --path "아이피" --invert-paths
+
+# 3. 리모트 다시 추가 후 푸시
+git remote add origin https://github.com/your-username/ttottoangseu-mall.git
+git push --force --all
+```
+
+#### 방법 B: BFG Repo-Cleaner 사용
+
+```bash
+# 1. BFG 설치 (Mac)
+brew install bfg
+
+# 2. 저장소 미러 클론
+cd ..
+git clone --mirror https://github.com/your-username/ttottoangseu-mall.git
+
+# 3. BFG로 파일 삭제
+bfg --delete-files "아이피" ttottoangseu-mall.git
+
+# 4. 정리
+cd ttottoangseu-mall.git
+git reflog expire --expire=now --all
+git gc --prune=now --aggressive
+
+# 5. 강제 푸시
+git push --force
+```
+
+#### 방법 C: git filter-branch 사용
+
+```bash
+# 1. 히스토리에서 파일 제거
+git filter-branch --force --index-filter \
+  "git rm --cached --ignore-unmatch 아이피" \
+  --prune-empty --tag-name-filter cat -- --all
+
+# 2. 정리
+git reflog expire --expire=now --all
+git gc --prune=now --aggressive
+
+# 3. 강제 푸시
+git push origin --force --all
+git push origin --force --tags
+```
+
+### Step 3: 팀원 알림 및 동기화
+
+히스토리가 변경되었으므로 팀원들은 다음을 실행해야 합니다:
+
+```bash
+# 팀원들이 실행할 명령어
+cd ttottoangseu-mall
+git fetch origin
+git reset --hard origin/main
+```
+
+### Step 4: 노출된 자격 증명 즉시 교체
+
+- [ ] 네이버 커머스 API 키 재발급 및 교체
+- [ ] Supabase 서비스 키 재생성 및 교체
+- [ ] AWS EC2 키 페어 재생성 (필요한 경우)
+- [ ] 모든 환경 변수 업데이트 (로컬, 서버, Vercel 등)
+
+## 🛡️ 재발 방지 대책
+
+### 1. .gitignore 강화
+
+```gitignore
+# 민감 정보 파일
+아이피
+*.secret
+*.credentials
+*.pem
+*.key
+.env
+.env.local
+.env.*.local
+
+# AWS
+*.pem
+credentials
+config
+aws_server.pem
+
+# 기타
+secrets/
+private/
+```
+
+### 2. pre-commit 훅 설정
+
+```bash
+# git-secrets 설치 (AWS 제공)
+git clone https://github.com/awslabs/git-secrets.git
+cd git-secrets
+sudo make install
+
+# 프로젝트에 설정
+cd ~/ttottoangseu-mall
+git secrets --install
+git secrets --register-aws
+
+# 커스텀 패턴 추가
+git secrets --add '7HQQWpZq8VoHTXChpNmae3'
+git secrets --add '15\.165\.148\.244'
+```
+
+### 3. 코드 리뷰 체크리스트
+
+- [ ] 하드코딩된 API 키가 없는지 확인
+- [ ] `.env` 파일이 커밋되지 않았는지 확인
+- [ ] IP 주소나 서버 정보가 코드에 포함되지 않았는지 확인
+- [ ] SSH 키나 인증서 파일이 포함되지 않았는지 확인
+
+### 4. 환경 변수 사용 원칙
+
+```javascript
+// ✅ DO: 환경 변수 사용
+const API_KEY = process.env.NAVER_SMARTSTORE_CLIENT_SECRET;
+
+// ❌ DON'T: 하드코딩
+const API_KEY = "7HQQWpZq8VoHTXChpNmae3";
+```
+
+## ✅ 체크리스트
+
+### 즉시 조치
+- [ ] 민감 정보 파일 삭제
+- [ ] `.gitignore`에 패턴 추가
+- [ ] Git 히스토리에서 파일 제거
+- [ ] 강제 푸시 완료
+- [ ] 팀원들 동기화 완료
+
+### 자격 증명 교체
+- [ ] 네이버 커머스 API 키 재발급
+- [ ] Supabase 서비스 키 재생성
+- [ ] 로컬 `.env` 파일 업데이트
+- [ ] 서버 환경 변수 업데이트
+- [ ] Vercel 환경 변수 업데이트
+
+### 재발 방지
+- [ ] `.gitignore` 강화
+- [ ] pre-commit 훅 설정
+- [ ] 코드 리뷰 프로세스 개선
+- [ ] 팀원 교육
+
+## 📚 참고 자료
+
+| 문서 | URL |
+|------|-----|
+| GitHub 민감 데이터 제거 가이드 | https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/removing-sensitive-data-from-a-repository |
+| BFG Repo-Cleaner | https://rtyley.github.io/bfg-repo-cleaner/ |
+| git-secrets | https://github.com/awslabs/git-secrets |
+| git-filter-repo | https://github.com/newren/git-filter-repo |
+
+## 💡 교훈
+
+> **"민감 정보는 절대 코드 저장소에 넣지 않는다"**
+
+1. **API 키, 비밀번호, IP 주소** 등은 **환경 변수**로 관리
+2. **`.env.local`**은 **`.gitignore`**에 포함 (기본 설정)
+3. **메모나 임시 파일**도 프로젝트 폴더에 만들지 않기
+4. **의심되면 `git status`**로 먼저 확인 후 커밋
+5. **코드 리뷰** 시 민감 정보 체크 필수
+
+## 🚨 긴급 연락처
+
+보안 인시던트 발생 시:
+1. 즉시 팀 리더에게 보고
+2. 노출된 서비스 제공업체에 즉시 연락 (네이버, Supabase 등)
+3. 필요시 서비스 일시 중단 고려
+
+---
+
+> **시니어의 한마디**
+> 
+> "실수는 누구나 해. 중요한 건 빠르게 대응하고, 같은 실수를 반복하지 않는 것."
