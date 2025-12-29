@@ -1,0 +1,459 @@
+---
+description: AWS EC2에서 일회성 스크립트 및 배치 작업 실행 가이드 - 시니어 개발자 베스트 프랙티스
+globs: scripts/**/*.js, scripts/**/*.ts
+alwaysApply: false
+---
+
+# AWS Script Execution Guide
+
+이 규칙은 AWS EC2에서 일회성 스크립트(예: `build-smartstore-mapping.js`) 및 배치 작업을 안전하고 효율적으로 실행하기 위한 시니어 개발자 레벨의 베스트 프랙티스를 정의합니다.
+
+## 스크립트 분류
+
+### 장기 실행 스크립트 (Long-running Scripts)
+
+- **특징**: 24시간 실행되는 워커 프로세스
+- **예시**: `sync-worker.js`
+- **실행 방법**: PM2로 데몬화하여 실행
+- **참고**: [aws-ssh-debugging.mdc](mdc:.cursor/rules/common/aws-ssh-debugging.mdc)
+
+### 일회성 스크립트 (One-time Scripts)
+
+- **특징**: 특정 작업을 수행하고 종료되는 스크립트
+- **예시**: `build-smartstore-mapping.js` (매핑 빌드), 데이터 마이그레이션 스크립트
+- **실행 방법**: 직접 실행 또는 PM2로 1회 실행 후 종료
+
+## 실행 전 체크리스트
+
+### 필수 확인 사항
+
+- [ ] **환경 변수 확인**: 서버의 `.env` 파일에 필요한 모든 환경 변수가 있는지 확인
+- [ ] **의존성 확인**: `package.json`의 모든 의존성이 서버에 설치되어 있는지 확인
+- [ ] **데이터베이스 연결 확인**: Supabase 연결 정보 및 권한 확인
+- [ ] **API 인증 정보 확인**: 네이버 API 키 등 외부 API 인증 정보 확인
+- [ ] **디스크 공간 확인**: 로그 파일 및 임시 파일을 위한 충분한 공간 확인
+- [ ] **백업 확인**: 데이터베이스 백업이 최신인지 확인 (데이터 수정 스크립트인 경우)
+
+### 코드 검증
+
+```bash
+# 로컬에서 문법 오류 확인
+node -c scripts/build-smartstore-mapping.js
+
+# 로컬에서 환경 변수만 로드하여 초기화 확인 (실제 실행은 하지 않음)
+node -e "require('dotenv').config(); console.log('환경 변수 로드 성공');"
+```
+
+## 스크립트 배포 및 실행
+
+### 1. 파일 업로드
+
+```bash
+# 단일 스크립트 파일 업로드
+scp -i "aws_server.pem" scripts/build-smartstore-mapping.js ubuntu@15.165.148.244:~/ttottoangseu-mall/scripts/build-smartstore-mapping.js
+
+# 여러 파일이 필요한 경우 (예: 유틸리티 파일)
+scp -i "aws_server.pem" scripts/*.js ubuntu@15.165.148.244:~/ttottoangseu-mall/scripts/
+```
+
+### 2. 서버 환경 확인
+
+```bash
+# SSH 연결
+ssh -i "aws_server.pem" ubuntu@15.165.148.244
+
+# 프로젝트 디렉토리로 이동
+cd ~/ttottoangseu-mall
+
+# Node.js 버전 확인
+node --version
+
+# 의존성 설치 확인
+npm list --depth=0
+
+# 환경 변수 확인 (민감한 정보는 마스킹)
+cat .env | grep -E 'SUPABASE|NAVER' | sed 's/=.*/=***/'
+```
+
+### 3. 실행 방법 선택
+
+#### 방법 A: 직접 실행 (간단한 스크립트, 빠른 테스트)
+
+```bash
+# SSH로 서버 접속 후
+cd ~/ttottoangseu-mall
+node scripts/build-smartstore-mapping.js
+
+# 또는 nohup으로 백그라운드 실행 (SSH 연결이 끊어져도 계속 실행)
+nohup node scripts/build-smartstore-mapping.js > logs/mapping-$(date +%Y%m%d-%H%M%S).log 2>&1 &
+```
+
+**장점**: 빠르고 간단  
+**단점**: SSH 연결이 끊어지면 프로세스가 종료될 수 있음 (nohup 사용 시 해결)
+
+#### 방법 B: PM2로 1회 실행 (권장 - 프로덕션 환경)
+
+```bash
+# PM2로 시작 (--no-autorestart: 종료 후 재시작하지 않음)
+pm2 start scripts/build-smartstore-mapping.js \
+  --name "smartstore-mapping" \
+  --no-autorestart \
+  --update-env
+
+# 실행 상태 확인
+pm2 status
+
+# 로그 실시간 확인
+pm2 logs smartstore-mapping
+
+# 로그 파일로 확인
+pm2 logs smartstore-mapping --lines 100 --nostream
+
+# 프로세스가 종료되면 자동으로 PM2에서 제거됨 (--no-autorestart 사용 시)
+```
+
+**장점**: 
+- SSH 연결이 끊어져도 계속 실행
+- 로그 관리가 용이
+- 프로세스 모니터링 가능
+- 에러 발생 시 자동으로 종료 상태 확인 가능
+
+**단점**: PM2 설치 필요
+
+#### 방법 C: screen/tmux 사용 (대안)
+
+```bash
+# screen 세션 시작
+screen -S mapping
+
+# 스크립트 실행
+cd ~/ttottoangseu-mall
+node scripts/build-smartstore-mapping.js
+
+# 세션 분리: Ctrl+A, D
+# 세션 재접속: screen -r mapping
+```
+
+## 장기 실행 스크립트 실행 패턴
+
+### PM2로 데몬화
+
+```bash
+# 워커 프로세스 시작 (자동 재시작)
+pm2 start scripts/sync-worker.js \
+  --name "naver-worker" \
+  --update-env
+
+# PM2 설정 저장
+pm2 save
+
+# 시스템 재부팅 시 자동 시작 설정
+pm2 startup
+# 출력된 명령어를 sudo로 실행
+```
+
+## 로그 관리
+
+### 로그 파일 구조
+
+```javascript
+// 스크립트 내부에서 로그 레벨 구분
+console.log(`[INFO] 작업 시작: ${new Date().toISOString()}`);
+console.warn(`[WARN] 경고 메시지`);
+console.error(`[ERROR] 에러 발생:`, error);
+console.log(`[DEBUG] 디버깅 정보:`, debugData); // 프로덕션에서는 제거
+```
+
+### 로그 파일 저장
+
+```bash
+# PM2 사용 시 (자동 로그 파일 생성)
+# 로그 위치: ~/.pm2/logs/
+
+# 직접 실행 시 로그 파일로 저장
+node scripts/build-smartstore-mapping.js 2>&1 | tee logs/mapping-$(date +%Y%m%d-%H%M%S).log
+
+# nohup 사용 시
+nohup node scripts/build-smartstore-mapping.js > logs/mapping-$(date +%Y%m%d-%H%M%S).log 2>&1 &
+```
+
+### 로그 모니터링
+
+```bash
+# 실시간 로그 확인 (PM2)
+pm2 logs smartstore-mapping --lines 50
+
+# 특정 키워드로 필터링
+pm2 logs smartstore-mapping --lines 500 --nostream | grep -i "error\|warn"
+
+# 로그 파일 직접 확인
+tail -f ~/.pm2/logs/smartstore-mapping-out.log
+tail -f ~/.pm2/logs/smartstore-mapping-error.log
+```
+
+## 에러 처리 및 복구
+
+### 스크립트 내부 에러 처리
+
+```javascript
+// ✅ DO: 명확한 에러 메시지와 컨텍스트
+try {
+  const result = await processData();
+  console.log(`[INFO] 처리 완료: ${result.count}건`);
+} catch (error) {
+  console.error(`[ERROR] 처리 실패:`, {
+    message: error.message,
+    stack: error.stack,
+    context: { /* 관련 데이터 */ }
+  });
+  process.exit(1); // 명시적 종료 코드
+}
+
+// ❌ DON'T: 에러를 조용히 무시
+try {
+  await processData();
+} catch (error) {
+  // 에러 무시 - 문제 추적 불가능
+}
+```
+
+### 실행 중 에러 발생 시
+
+1. **로그 확인**:
+   ```bash
+   pm2 logs smartstore-mapping --err --lines 100
+   ```
+
+2. **프로세스 상태 확인**:
+   ```bash
+   pm2 status
+   pm2 describe smartstore-mapping
+   ```
+
+3. **부분 완료 확인** (데이터베이스 조회):
+   ```sql
+   -- 예시: 매핑 작업 진행 상황 확인
+   SELECT COUNT(*) FROM product_variants WHERE smartstore_option_id IS NOT NULL;
+   ```
+
+4. **재시작 전 데이터 정리** (필요한 경우):
+   ```sql
+   -- 부분 완료된 데이터 롤백 (필요 시)
+   UPDATE product_variants SET smartstore_option_id = NULL WHERE ...;
+   ```
+
+## 성능 최적화
+
+### 대용량 데이터 처리
+
+```javascript
+// ✅ DO: 배치 처리 및 페이지네이션
+const BATCH_SIZE = 100;
+let offset = 0;
+
+while (true) {
+  const batch = await fetchBatch(offset, BATCH_SIZE);
+  if (batch.length === 0) break;
+  
+  await processBatch(batch);
+  offset += BATCH_SIZE;
+  
+  // Rate Limit 방지
+  await delay(100);
+}
+
+// ❌ DON'T: 전체 데이터를 한 번에 메모리에 로드
+const allData = await fetchAll(); // 메모리 부족 가능
+```
+
+### API Rate Limit 관리
+
+```javascript
+// ✅ DO: 지수 백오프 및 재시도 로직
+async function fetchWithRetry(url, options, retryCount = 0) {
+  const res = await fetch(url, options);
+  
+  if (res.status === 429 && retryCount < 5) {
+    const waitTime = 1000 + Math.random() * 1000; // 1~2초 랜덤
+    console.log(`[WARN] Rate Limit, ${waitTime}ms 대기 후 재시도`);
+    await delay(waitTime);
+    return fetchWithRetry(url, options, retryCount + 1);
+  }
+  
+  return res;
+}
+
+// ❌ DON'T: Rate Limit 무시하고 연속 요청
+for (const item of items) {
+  await fetch(item); // Rate Limit 에러 발생 가능
+}
+```
+
+## 모니터링 및 알림
+
+### 실행 시간 추적
+
+```javascript
+const startTime = Date.now();
+console.log(`[INFO] 작업 시작: ${new Date().toISOString()}`);
+
+// ... 작업 수행 ...
+
+const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+console.log(`[INFO] 작업 완료: ${duration}초 소요`);
+```
+
+### 진행 상황 로깅
+
+```javascript
+const total = items.length;
+for (let i = 0; i < items.length; i++) {
+  // 10%마다 진행 상황 로그
+  if (i % Math.floor(total / 10) === 0) {
+    const progress = ((i / total) * 100).toFixed(1);
+    console.log(`[INFO] 진행 상황: ${progress}% (${i}/${total})`);
+  }
+  
+  await processItem(items[i]);
+}
+```
+
+### 리소스 모니터링
+
+```bash
+# CPU 및 메모리 사용량 확인
+pm2 monit
+
+# 디스크 공간 확인
+df -h
+
+# 프로세스별 리소스 사용량
+top -p $(pgrep -f build-smartstore-mapping)
+```
+
+## 롤백 전략
+
+### 트랜잭션 사용 (가능한 경우)
+
+```javascript
+// ✅ DO: 트랜잭션으로 원자성 보장
+const { data, error } = await supabase.rpc('process_batch', {
+  batch_data: batch
+});
+
+if (error) {
+  // 트랜잭션 자동 롤백
+  throw error;
+}
+```
+
+### 체크포인트 저장
+
+```javascript
+// ✅ DO: 진행 상황을 DB에 저장하여 재시작 시 이어서 진행
+let lastProcessedId = await getLastCheckpoint();
+
+for (const item of items) {
+  if (item.id <= lastProcessedId) continue; // 이미 처리된 항목 스킵
+  
+  await processItem(item);
+  await saveCheckpoint(item.id); // 체크포인트 저장
+}
+```
+
+## 보안 고려사항
+
+### 환경 변수 관리
+
+```bash
+# ✅ DO: .env 파일 사용 (서버에만 존재)
+# .env 파일은 .gitignore에 포함
+
+# ❌ DON'T: 하드코딩된 API 키
+const API_KEY = "hardcoded-key"; // 절대 금지
+```
+
+### 로그에서 민감 정보 제거
+
+```javascript
+// ✅ DO: 민감 정보 마스킹
+const maskedKey = apiKey.substring(0, 4) + "***";
+console.log(`[INFO] API Key: ${maskedKey}`);
+
+// ❌ DON'T: 전체 API 키 로깅
+console.log(`[INFO] API Key: ${apiKey}`); // 보안 위험
+```
+
+## 배포 워크플로우
+
+### 표준 배포 프로세스
+
+1. **로컬 테스트**:
+   ```bash
+   # 로컬에서 문법 확인
+   node -c scripts/build-smartstore-mapping.js
+   ```
+
+2. **파일 업로드**:
+   ```bash
+   scp -i "aws_server.pem" scripts/build-smartstore-mapping.js \
+     ubuntu@15.165.148.244:~/ttottoangseu-mall/scripts/
+   ```
+
+3. **환경 변수 확인**:
+   ```bash
+   ssh -i "aws_server.pem" ubuntu@15.165.148.244 \
+     "cd ~/ttottoangseu-mall && cat .env | grep -E 'SUPABASE|NAVER'"
+   ```
+
+4. **스크립트 실행**:
+   ```bash
+   ssh -i "aws_server.pem" ubuntu@15.165.148.244 \
+     "cd ~/ttottoangseu-mall && pm2 start scripts/build-smartstore-mapping.js \
+     --name smartstore-mapping --no-autorestart --update-env"
+   ```
+
+5. **로그 모니터링**:
+   ```bash
+   ssh -i "aws_server.pem" ubuntu@15.165.148.244 \
+     "pm2 logs smartstore-mapping --lines 50"
+   ```
+
+## 트러블슈팅
+
+### 일반적인 문제
+
+1. **"Module not found" 에러**
+   ```bash
+   # 해결: 서버에서 의존성 재설치
+   cd ~/ttottoangseu-mall
+   npm install
+   ```
+
+2. **"Permission denied" 에러**
+   ```bash
+   # 해결: 파일 실행 권한 확인
+   chmod +x scripts/build-smartstore-mapping.js
+   ```
+
+3. **메모리 부족 (OOM)**
+   ```bash
+   # 해결: Node.js 메모리 제한 증가
+   node --max-old-space-size=4096 scripts/build-smartstore-mapping.js
+   ```
+
+4. **타임아웃 에러**
+   ```bash
+   # 해결: 타임아웃 시간 증가 또는 배치 크기 감소
+   ```
+
+## 베스트 프랙티스 요약
+
+1. **항상 PM2 또는 nohup 사용**: SSH 연결이 끊어져도 계속 실행
+2. **상세한 로깅**: 문제 추적을 위한 충분한 컨텍스트 정보
+3. **에러 처리**: 모든 에러를 명시적으로 처리하고 로깅
+4. **진행 상황 추적**: 대용량 작업 시 진행률 로깅
+5. **체크포인트 저장**: 장기 실행 작업은 중단 후 재개 가능하도록
+6. **리소스 모니터링**: CPU, 메모리, 디스크 사용량 주기적 확인
+7. **롤백 계획**: 데이터 수정 작업 전 백업 및 롤백 방법 준비
+8. **보안**: 환경 변수 사용, 로그에서 민감 정보 제거
