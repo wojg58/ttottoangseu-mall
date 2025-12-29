@@ -60,16 +60,29 @@ export default async function ProductDetailPage({
   // 품절 여부
   const isSoldOut = product.status === "sold_out" || product.stock === 0;
 
-  // 이미지 정렬
-  const sortedImages = [...(product.images || [])].sort(
-    (a, b) => a.sort_order - b.sort_order,
-  );
+  // 이미지 정렬 (is_primary 우선, 그 다음 sort_order)
+  const sortedImages = [...(product.images || [])].sort((a, b) => {
+    // is_primary가 true인 것을 먼저
+    if (a.is_primary && !b.is_primary) return -1;
+    if (!a.is_primary && b.is_primary) return 1;
+    // sort_order로 정렬
+    return (a.sort_order || 0) - (b.sort_order || 0);
+  });
+  
   const primaryImage =
     sortedImages.find((img) => img.is_primary) || sortedImages[0];
   
   // 상세 이미지 (대표 이미지 제외한 모든 이미지)
   const detailImages = sortedImages.filter(
     (img) => img.id !== primaryImage?.id
+  );
+
+  console.log(
+    "[ProductDetailPage] 이미지 정렬 완료:",
+    sortedImages.length,
+    "개 (대표 이미지:",
+    primaryImage?.image_url || "없음",
+    ")",
   );
 
   return (

@@ -213,24 +213,73 @@ export async function confirmPayment({
       console.log("[confirmPayment] ✅ 주문 상태 업데이트 완료");
     }
 
-    // 8. 네이버 동기화 큐 적재 (직접 호출 X, AWS Worker용)
-    console.log("[confirmPayment] 네이버 동기화 큐 적재 중...");
+    // 8. 네이버 동기화 큐 적재 (옵션 단위, AWS Worker용)
+    console.log("[confirmPayment] 네이버 동기화 큐 적재 중 (옵션 단위)...");
     try {
       const { data: orderItems } = await supabase
         .from("order_items")
-        .select(`quantity, product:products(id, smartstore_product_id, stock)`)
+        .select(`
+          quantity,
+          variant_id,
+          product:products(id, smartstore_product_id, stock),
+          variant:product_variants(
+            id,
+            stock,
+            smartstore_option_id,
+            smartstore_channel_product_no
+          )
+        `)
         .eq("order_id", orderId);
 
       if (orderItems) {
-        const queueData = orderItems
-          // 네이버 연동 상품만 필터링
-          .filter((item: any) => item.product && item.product.smartstore_product_id)
-          .map((item: any) => ({
-            product_id: item.product.id,
-            smartstore_id: item.product.smartstore_product_id,
-            target_stock: item.product.stock, // 이미 차감된 최종 재고
-            status: 'pending'
-          }));
+        const queueData: Array<{
+          product_id: string;
+          variant_id: string | null;
+          smartstore_id: string;
+          target_stock: number;
+          status: string;
+        }> = [];
+
+        for (const item of orderItems) {
+          const product = item.product as { id: string; smartstore_product_id: string | null; stock: number } | null;
+          const variant = item.variant as {
+            id: string;
+            stock: number;
+            smartstore_option_id: number | null;
+            smartstore_channel_product_no: number | null;
+          } | null;
+
+          // 네이버 연동 상품만 처리
+          if (!product || !product.smartstore_product_id) {
+            continue;
+          }
+
+          // 옵션이 있고 스마트스토어 옵션 매핑이 있는 경우 → 옵션 단위 동기화
+          if (variant && variant.smartstore_option_id && variant.smartstore_channel_product_no) {
+            queueData.push({
+              product_id: product.id,
+              variant_id: variant.id,
+              smartstore_id: variant.smartstore_channel_product_no.toString(),
+              target_stock: variant.stock, // 옵션 재고 (이미 차감됨)
+              status: 'pending'
+            });
+            console.log(
+              `[confirmPayment] 옵션 단위 큐 추가: ${product.id} / variant ${variant.id} → 스마트스토어 옵션 ${variant.smartstore_option_id} (재고: ${variant.stock})`
+            );
+          } else {
+            // 옵션이 없거나 매핑이 없는 경우 → 상품 단위 동기화
+            queueData.push({
+              product_id: product.id,
+              variant_id: null,
+              smartstore_id: product.smartstore_product_id,
+              target_stock: product.stock, // 상품 재고 (이미 차감됨)
+              status: 'pending'
+            });
+            console.log(
+              `[confirmPayment] 상품 단위 큐 추가: ${product.id} → 스마트스토어 ${product.smartstore_product_id} (재고: ${product.stock})`
+            );
+          }
+        }
 
         if (queueData.length > 0) {
           const { error: queueError } = await supabase

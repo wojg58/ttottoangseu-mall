@@ -245,21 +245,42 @@ export async function createOrder(input: CreateOrderInput): Promise<{
       return { success: false, message: "주문 생성에 실패했습니다." };
     }
 
-    // 재고 차감
+    // 재고 차감 (상품 + 옵션)
     for (const item of cartItems) {
       const product = item.product as { id: string; stock: number };
+      const variant = item.variant as { id: string; stock: number } | null;
+
+      // 상품 재고 차감
       await supabase
         .from("products")
         .update({ stock: product.stock - item.quantity })
         .eq("id", product.id);
+
+      // 옵션이 있는 경우 옵션 재고도 차감
+      if (variant) {
+        await supabase
+          .from("product_variants")
+          .update({ stock: variant.stock - item.quantity })
+          .eq("id", variant.id);
+      }
     }
 
-    // 네이버 동기화 큐 적재 (재고 차감 후, 결제 성공 여부와 관계없이)
-    logger.info("[createOrder] 네이버 동기화 큐 적재 시작");
+    // 네이버 동기화 큐 적재 (옵션 단위, 재고 차감 후)
+    logger.info("[createOrder] 네이버 동기화 큐 적재 시작 (옵션 단위)");
     try {
       const { data: orderItems, error: orderItemsError } = await supabase
         .from("order_items")
-        .select(`quantity, product:products(id, smartstore_product_id, stock)`)
+        .select(`
+          quantity,
+          variant_id,
+          product:products(id, smartstore_product_id, stock),
+          variant:product_variants(
+            id,
+            stock,
+            smartstore_option_id,
+            smartstore_channel_product_no
+          )
+        `)
         .eq("order_id", order.id);
 
       if (orderItemsError) {
@@ -268,22 +289,54 @@ export async function createOrder(input: CreateOrderInput): Promise<{
         logger.info(`[createOrder] order_items 조회 완료: ${orderItems?.length || 0}건`);
         
         if (orderItems && orderItems.length > 0) {
-          logger.info("[createOrder] 주문 상품 상세:", orderItems.map((item: any) => ({
-            quantity: item.quantity,
-            productId: item.product?.id,
-            smartstoreId: item.product?.smartstore_product_id || "없음",
-            stock: item.product?.stock,
-          })));
+          const queueData: Array<{
+            product_id: string;
+            variant_id: string | null;
+            smartstore_id: string;
+            target_stock: number;
+            status: string;
+          }> = [];
 
-          const queueData = orderItems
-            // 네이버 연동 상품만 필터링
-            .filter((item: any) => item.product && item.product.smartstore_product_id)
-            .map((item: any) => ({
-              product_id: item.product.id,
-              smartstore_id: item.product.smartstore_product_id,
-              target_stock: item.product.stock, // 이미 차감된 최종 재고
-              status: 'pending'
-            }));
+          for (const item of orderItems) {
+            const product = item.product as { id: string; smartstore_product_id: string | null; stock: number } | null;
+            const variant = item.variant as {
+              id: string;
+              stock: number;
+              smartstore_option_id: number | null;
+              smartstore_channel_product_no: number | null;
+            } | null;
+
+            // 네이버 연동 상품만 처리
+            if (!product || !product.smartstore_product_id) {
+              continue;
+            }
+
+            // 옵션이 있고 스마트스토어 옵션 매핑이 있는 경우 → 옵션 단위 동기화
+            if (variant && variant.smartstore_option_id && variant.smartstore_channel_product_no) {
+              queueData.push({
+                product_id: product.id,
+                variant_id: variant.id,
+                smartstore_id: variant.smartstore_channel_product_no.toString(),
+                target_stock: variant.stock, // 옵션 재고 (이미 차감됨)
+                status: 'pending'
+              });
+              logger.info(
+                `[createOrder] 옵션 단위 큐 추가: ${product.id} / variant ${variant.id} → 스마트스토어 옵션 ${variant.smartstore_option_id} (재고: ${variant.stock})`
+              );
+            } else {
+              // 옵션이 없거나 매핑이 없는 경우 → 상품 단위 동기화
+              queueData.push({
+                product_id: product.id,
+                variant_id: null,
+                smartstore_id: product.smartstore_product_id,
+                target_stock: product.stock, // 상품 재고 (이미 차감됨)
+                status: 'pending'
+              });
+              logger.info(
+                `[createOrder] 상품 단위 큐 추가: ${product.id} → 스마트스토어 ${product.smartstore_product_id} (재고: ${product.stock})`
+              );
+            }
+          }
 
           logger.info(`[createOrder] 네이버 연동 상품 필터링 결과: ${queueData.length}건`);
 

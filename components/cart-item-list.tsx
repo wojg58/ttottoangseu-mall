@@ -23,6 +23,7 @@ interface CartItemListProps {
 export default function CartItemList({ items }: CartItemListProps) {
   const [isPending, startTransition] = useTransition();
   const [mounted, setMounted] = useState(false);
+  const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     setMounted(true);
@@ -94,16 +95,27 @@ export default function CartItemList({ items }: CartItemListProps) {
                 className="shrink-0"
               >
                 <div className="relative w-24 h-24 rounded-lg overflow-hidden bg-[#f5f5f5] p-2">
-                  <Image
-                    src={
-                      item.primary_image?.image_url ||
-                      "https://placehold.co/200x200/fad2e6/333333?text=No+Image"
-                    }
-                    alt={item.product.name}
-                    fill
-                    className="object-contain"
-                    sizes="96px"
-                  />
+                  {!imageErrors.has(item.id) &&
+                  item.primary_image?.image_url ? (
+                    <Image
+                      src={item.primary_image.image_url}
+                      alt={item.product.name}
+                      fill
+                      className="object-contain"
+                      sizes="96px"
+                      onError={() => {
+                        console.warn(
+                          "[CartItemList] 이미지 로딩 실패:",
+                          item.primary_image?.image_url,
+                        );
+                        setImageErrors((prev) => new Set(prev).add(item.id));
+                      }}
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <span className="text-2xl">🎀</span>
+                    </div>
+                  )}
                   {isSoldOut && (
                     <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
                       <span className="text-white text-xs font-medium">

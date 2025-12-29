@@ -122,14 +122,40 @@ async function run() {
           try {
             const token = await getNaverToken();
 
+            // 옵션 단위 처리 여부 확인
+            const isVariantSync = !!job.variant_id;
+            console.log(
+              `[INFO] 재고 변경 시작 - channelProductNo: ${job.smartstore_id}, target_stock: ${job.target_stock}, 옵션 단위: ${isVariantSync ? '예' : '아니오'}`,
+            );
+
+            // 옵션 단위 처리인 경우 variant 정보 조회
+            let variantInfo = null;
+            if (isVariantSync) {
+              const { data: variant } = await supabase
+                .from("product_variants")
+                .select("smartstore_option_id, smartstore_channel_product_no")
+                .eq("id", job.variant_id)
+                .single();
+
+              if (variant && variant.smartstore_option_id) {
+                variantInfo = {
+                  optionId: variant.smartstore_option_id,
+                  channelProductNo: variant.smartstore_channel_product_no,
+                };
+                console.log(
+                  `[INFO] 옵션 정보 조회 완료: 옵션 ID ${variantInfo.optionId}, 채널상품 ${variantInfo.channelProductNo}`,
+                );
+              } else {
+                console.warn(
+                  `[WARN] 옵션 매핑 정보 없음 (variant_id: ${job.variant_id}), 상품 단위로 처리`,
+                );
+              }
+            }
+
             // 3-1. 채널 상품 정보 조회
             // 네이버 커머스 API: 채널 상품 수정 (재고 변경)
             // https://apicenter.commerce.naver.com/docs/commerce-api/current/update-channel-product-product
             // PUT /external/v2/products/channel-products/{channelProductNo}
-            console.log(
-              `[INFO] 재고 변경 시작 - channelProductNo: ${job.smartstore_id}, target_stock: ${job.target_stock}`,
-            );
-
             let channelProductData = null;
 
             try {
@@ -195,7 +221,6 @@ async function run() {
             // 채널 상품 수정 API 요청 본문 구조
             // { originProduct: {...}, customerBenefit: {...}, smartstoreChannelProduct: {...}, windowChannelProduct: {...} }
             // 채널 상품 조회 응답에서 전체 구조를 가져와서 재고만 업데이트
-            // 옵션이 있는 상품의 경우 optionInfo.optionCombinations[].stockQuantity를 변경해야 함
             let requestBody;
             const originProductData =
               channelProductData.originProduct ||
@@ -205,7 +230,6 @@ async function run() {
               // originProduct 복사
               const updatedOriginProduct = {
                 ...originProductData,
-                stockQuantity: job.target_stock,
               };
 
               // 옵션이 있는 상품의 경우 optionInfo.optionCombinations[].stockQuantity도 업데이트
@@ -222,65 +246,123 @@ async function run() {
                 const optionCombinations =
                   originProductData.detailAttribute.optionInfo
                     .optionCombinations;
-                const totalCurrentStock = optionCombinations.reduce(
-                  (sum, opt) => sum + (opt.stockQuantity || 0),
-                  0,
-                );
 
-                // 옵션별 재고를 비율에 따라 분배
-                const updatedOptionCombinations = optionCombinations.map(
-                  (opt) => {
-                    if (totalCurrentStock > 0) {
-                      // 비율에 따라 분배
-                      const ratio = opt.stockQuantity / totalCurrentStock;
-                      const newStock = Math.floor(job.target_stock * ratio);
-                      return { ...opt, stockQuantity: newStock };
-                    } else {
-                      // 현재 재고가 0이면 첫 번째 옵션에 전체 재고 할당
-                      return {
-                        ...opt,
-                        stockQuantity:
-                          opt === optionCombinations[0] ? job.target_stock : 0,
-                      };
-                    }
-                  },
-                );
-
-                // 나머지 재고를 첫 번째 옵션에 추가 (반올림 오차 보정)
-                const allocatedStock = updatedOptionCombinations.reduce(
-                  (sum, opt) => sum + opt.stockQuantity,
-                  0,
-                );
-                if (
-                  allocatedStock < job.target_stock &&
-                  optionCombinations.length > 0
-                ) {
-                  updatedOptionCombinations[0].stockQuantity +=
-                    job.target_stock - allocatedStock;
-                }
-
-                updatedOriginProduct.detailAttribute = {
-                  ...originProductData.detailAttribute,
-                  optionInfo: {
-                    ...originProductData.detailAttribute.optionInfo,
-                    optionCombinations: updatedOptionCombinations,
-                  },
-                };
-
-                console.log(
-                  `[INFO] 옵션별 재고 업데이트: 총 ${job.target_stock}개`,
-                );
-                updatedOptionCombinations.forEach((opt, idx) => {
-                  console.log(
-                    `[INFO]   옵션 ${idx + 1} (${opt.optionName1 || opt.id}): ${
-                      opt.stockQuantity
-                    }개`,
+                // 옵션 단위 동기화인 경우: 해당 옵션만 정확히 업데이트
+                if (isVariantSync && variantInfo) {
+                  const targetOption = optionCombinations.find(
+                    (opt) => opt.id === variantInfo.optionId,
                   );
-                });
+
+                  if (targetOption) {
+                    console.log(
+                      `[INFO] 옵션 단위 재고 업데이트: 옵션 ID ${variantInfo.optionId} -> ${job.target_stock}개`,
+                    );
+                    // 해당 옵션만 재고 업데이트, 나머지는 그대로 유지
+                    const updatedOptionCombinations = optionCombinations.map(
+                      (opt) => {
+                        if (opt.id === variantInfo.optionId) {
+                          return { ...opt, stockQuantity: job.target_stock };
+                        }
+                        return opt; // 다른 옵션은 그대로 유지
+                      },
+                    );
+
+                    // 전체 재고 합계 계산
+                    const totalStock = updatedOptionCombinations.reduce(
+                      (sum, opt) => sum + (opt.stockQuantity || 0),
+                      0,
+                    );
+                    updatedOriginProduct.stockQuantity = totalStock;
+
+                    updatedOriginProduct.detailAttribute = {
+                      ...originProductData.detailAttribute,
+                      optionInfo: {
+                        ...originProductData.detailAttribute.optionInfo,
+                        optionCombinations: updatedOptionCombinations,
+                      },
+                    };
+
+                    updatedOptionCombinations.forEach((opt) => {
+                      console.log(
+                        `[INFO]   옵션 ${opt.optionName1 || opt.id} (ID: ${opt.id}): ${opt.stockQuantity}개`,
+                      );
+                    });
+                  } else {
+                    console.warn(
+                      `[WARN] 옵션 ID ${variantInfo.optionId}를 찾을 수 없음, 상품 단위로 처리`,
+                    );
+                    // 옵션을 찾을 수 없으면 상품 단위로 처리
+                    updatedOriginProduct.stockQuantity = job.target_stock;
+                  }
+                } else {
+                  // 상품 단위 동기화: 기존 로직 (비율 분배)
+                  console.log(
+                    `[INFO] 상품 단위 재고 동기화: 총 ${job.target_stock}개를 옵션별로 비율 분배`,
+                  );
+                  const totalCurrentStock = optionCombinations.reduce(
+                    (sum, opt) => sum + (opt.stockQuantity || 0),
+                    0,
+                  );
+
+                  // 옵션별 재고를 비율에 따라 분배
+                  const updatedOptionCombinations = optionCombinations.map(
+                    (opt) => {
+                      if (totalCurrentStock > 0) {
+                        // 비율에 따라 분배
+                        const ratio = opt.stockQuantity / totalCurrentStock;
+                        const newStock = Math.floor(job.target_stock * ratio);
+                        return { ...opt, stockQuantity: newStock };
+                      } else {
+                        // 현재 재고가 0이면 첫 번째 옵션에 전체 재고 할당
+                        return {
+                          ...opt,
+                          stockQuantity:
+                            opt === optionCombinations[0] ? job.target_stock : 0,
+                        };
+                      }
+                    },
+                  );
+
+                  // 나머지 재고를 첫 번째 옵션에 추가 (반올림 오차 보정)
+                  const allocatedStock = updatedOptionCombinations.reduce(
+                    (sum, opt) => sum + opt.stockQuantity,
+                    0,
+                  );
+                  if (
+                    allocatedStock < job.target_stock &&
+                    optionCombinations.length > 0
+                  ) {
+                    updatedOptionCombinations[0].stockQuantity +=
+                      job.target_stock - allocatedStock;
+                  }
+
+                  updatedOriginProduct.stockQuantity = job.target_stock;
+
+                  updatedOriginProduct.detailAttribute = {
+                    ...originProductData.detailAttribute,
+                    optionInfo: {
+                      ...originProductData.detailAttribute.optionInfo,
+                      optionCombinations: updatedOptionCombinations,
+                    },
+                  };
+
+                  console.log(
+                    `[INFO] 옵션별 재고 업데이트: 총 ${job.target_stock}개`,
+                  );
+                  updatedOptionCombinations.forEach((opt, idx) => {
+                    console.log(
+                      `[INFO]   옵션 ${idx + 1} (${opt.optionName1 || opt.id}): ${
+                        opt.stockQuantity
+                      }개`,
+                    );
+                  });
+                }
               } else {
+                // 옵션이 없는 상품: 상품 재고만 업데이트
                 console.log(
                   `[INFO] 옵션이 없는 상품: originProduct.stockQuantity만 업데이트 (${job.target_stock}개)`,
                 );
+                updatedOriginProduct.stockQuantity = job.target_stock;
               }
 
               requestBody = {

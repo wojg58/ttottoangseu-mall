@@ -24,11 +24,21 @@ export default function ProductImageGallery({
   productName,
 }: ProductImageGalleryProps) {
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [imageErrors, setImageErrors] = useState<Set<number>>(new Set());
 
-  console.log("[ProductImageGallery] 렌더링, 이미지 수:", images.length);
+  // 이미지 정렬 (sort_order 기준, 없으면 is_primary 우선)
+  const sortedImages = [...(images || [])].sort((a, b) => {
+    // is_primary가 true인 것을 먼저
+    if (a.is_primary && !b.is_primary) return -1;
+    if (!a.is_primary && b.is_primary) return 1;
+    // sort_order로 정렬
+    return (a.sort_order || 0) - (b.sort_order || 0);
+  });
+
+  console.log("[ProductImageGallery] 렌더링, 이미지 수:", sortedImages.length);
 
   // 이미지가 없는 경우
-  if (!images || images.length === 0) {
+  if (!sortedImages || sortedImages.length === 0) {
     return (
       <div className="aspect-square bg-[#f5f5f5] rounded-xl flex items-center justify-center">
         <div className="text-center">
@@ -39,26 +49,50 @@ export default function ProductImageGallery({
     );
   }
 
-  const currentImage = images[selectedIndex];
+  const currentImage = sortedImages[selectedIndex];
+
+  const handleImageError = (index: number, imageUrl: string) => {
+    console.warn(
+      `[ProductImageGallery] 이미지 로딩 실패 (인덱스 ${index}):`,
+      imageUrl,
+    );
+    setImageErrors((prev) => new Set(prev).add(index));
+  };
 
   return (
     <div className="space-y-4">
       {/* 메인 이미지 */}
       <div className="relative aspect-square bg-[#f5f5f5] rounded-xl overflow-hidden p-4">
-        <Image
-          src={currentImage.image_url}
-          alt={currentImage.alt_text || productName}
-          fill
-          className="object-contain"
-          sizes="(max-width: 1024px) 100vw, 50vw"
-          priority
-        />
+        {!imageErrors.has(selectedIndex) && currentImage.image_url ? (
+          <Image
+            src={currentImage.image_url}
+            alt={currentImage.alt_text || productName}
+            fill
+            className="object-contain"
+            sizes="(max-width: 1024px) 100vw, 50vw"
+            priority
+            onError={() => handleImageError(selectedIndex, currentImage.image_url)}
+            onLoadingComplete={() => {
+              console.log(
+                "[ProductImageGallery] 메인 이미지 로딩 완료:",
+                currentImage.image_url,
+              );
+            }}
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <div className="text-center">
+              <span className="text-4xl block mb-2">🎀</span>
+              <p className="text-sm text-[#8b7d84]">이미지 준비 중</p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* 썸네일 리스트 */}
-      {images.length > 1 && (
+      {sortedImages.length > 1 && (
         <div className="flex gap-2 overflow-x-auto pb-2">
-          {images.map((image, index) => (
+          {sortedImages.map((image, index) => (
             <button
               key={image.id}
               onClick={() => {
@@ -71,13 +105,20 @@ export default function ProductImageGallery({
                   : "border-transparent hover:border-[#fad2e6]"
               }`}
             >
-              <Image
-                src={image.image_url}
-                alt={image.alt_text || `${productName} ${index + 1}`}
-                fill
-                className="object-contain"
-                sizes="80px"
-              />
+              {!imageErrors.has(index) && image.image_url ? (
+                <Image
+                  src={image.image_url}
+                  alt={image.alt_text || `${productName} ${index + 1}`}
+                  fill
+                  className="object-contain"
+                  sizes="80px"
+                  onError={() => handleImageError(index, image.image_url)}
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                  <span className="text-xs text-gray-400">🎀</span>
+                </div>
+              )}
             </button>
           ))}
         </div>

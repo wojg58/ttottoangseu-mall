@@ -25,6 +25,7 @@ interface ProductCardProps {
 
 function ProductCardComponent({ product, rank }: ProductCardProps) {
   const [isLiked, setIsLiked] = useState(false);
+  const [imageError, setImageError] = useState(false);
 
   // 메모이제이션된 계산값들
   const { discountRate, displayPrice, isSoldOut } = useMemo(() => {
@@ -49,21 +50,42 @@ function ProductCardComponent({ product, rank }: ProductCardProps) {
     // TODO: 찜하기 기능 구현
   };
 
+  const handleImageError = () => {
+    console.warn(
+      "[ProductCard] 이미지 로딩 실패:",
+      product.primary_image?.image_url,
+    );
+    setImageError(true);
+  };
+
   return (
     <Link href={`/products/${product.slug}`} className="product-card group">
       {/* 이미지 영역 */}
       <div className="relative aspect-square mb-3 rounded-xl overflow-hidden bg-[#f5f5f5] border border-gray-300">
         {/* 상품 이미지 */}
-        <Image
-          src={
-            product.primary_image?.image_url ||
-            "https://placehold.co/600x600/fad2e6/333333?text=No+Image"
-          }
-          alt={product.primary_image?.alt_text || product.name}
-          fill
-          className="product-image"
-          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
-        />
+        {!imageError && product.primary_image?.image_url ? (
+          <Image
+            src={product.primary_image.image_url}
+            alt={product.primary_image.alt_text || product.name}
+            fill
+            className="product-image"
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
+            onError={handleImageError}
+            onLoadingComplete={() => {
+              console.log(
+                "[ProductCard] 이미지 로딩 완료:",
+                product.primary_image?.image_url,
+              );
+            }}
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <div className="text-center">
+              <span className="text-4xl block mb-2">🎀</span>
+              <p className="text-xs text-[#8b7d84]">이미지 준비 중</p>
+            </div>
+          </div>
+        )}
 
         {/* 순위 뱃지 (베스트 상품인 경우) */}
         {rank && (
