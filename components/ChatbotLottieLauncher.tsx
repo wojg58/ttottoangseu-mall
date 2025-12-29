@@ -33,11 +33,19 @@ export default function ChatbotLottieLauncher() {
         if (s.position !== "fixed") return false;
 
         const r = el.getBoundingClientRect();
+        
+        // 너무 작은 요소 제외
         if (r.width < 30 || r.height < 30) return false;
+        
+        // 너무 큰 요소 제외 (배경 이미지 등) - 화면의 50% 이상이면 제외
+        if (r.width > window.innerWidth * 0.5 || r.height > window.innerHeight * 0.5) {
+          return false;
+        }
 
         // 우하단 근처에 있는 것만
         const nearBottomRight =
-          r.right > window.innerWidth - 220 && r.bottom > window.innerHeight - 220;
+          r.right > window.innerWidth - 220 &&
+          r.bottom > window.innerHeight - 220;
 
         return nearBottomRight;
       });
@@ -46,8 +54,28 @@ export default function ChatbotLottieLauncher() {
       console.log("우하단 fixed 후보 개수:", els.length);
 
       // Lottie 버튼 자체는 제외
-      const lottieButton = document.querySelector('[aria-label="상담 챗봇 열기"]');
-      const filteredEls = els.filter((el) => el !== lottieButton);
+      const lottieButton = document.querySelector(
+        '[aria-label="상담 챗봇 열기"]',
+      );
+      
+      // 배경 이미지 요소 제외 (inset-0 또는 전체 화면을 덮는 요소)
+      const filteredEls = els.filter((el) => {
+        if (el === lottieButton) return false;
+        
+        const r = el.getBoundingClientRect();
+        const s = getComputedStyle(el);
+        
+        // 배경 이미지로 보이는 요소 제외
+        // - z-index가 음수이거나 매우 낮음
+        // - 또는 inset-0 스타일을 가진 요소
+        const zIndex = parseInt(s.zIndex);
+        if (zIndex < 0 || s.zIndex === "-10") return false;
+        
+        // img 태그나 배경 이미지를 포함하는 요소 제외
+        if (el.tagName === "IMG" || el.querySelector("img[fill]")) return false;
+        
+        return true;
+      });
 
       filteredEls.slice(0, 10).forEach((el, i) => {
         const r = el.getBoundingClientRect();
@@ -62,7 +90,7 @@ export default function ChatbotLottieLauncher() {
           id,
           className,
           `(${Math.round(r.width)}x${Math.round(r.height)})`,
-          el
+          el,
         );
 
         // 기존 런처 버튼 숨기기
