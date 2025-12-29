@@ -20,6 +20,11 @@ export default function ChatbotLottieLauncher() {
 
   // ✅ 런처 찾기: 최대 N번만, 찾으면 중지
   useEffect(() => {
+    // 이미 찾았거나 interval이 실행 중이면 중복 실행 방지
+    if (launcherElRef.current || intervalRef.current !== null) {
+      return;
+    }
+
     const selectors = [
       "#chatbot-launcher",
       ".chatbot-launcher",
@@ -31,7 +36,15 @@ export default function ChatbotLottieLauncher() {
     const MAX_TRIES = 20; // 20번(=약 10초) 정도면 충분
     const INTERVAL_MS = 500;
 
+    // 시도 횟수 초기화
+    triedRef.current = 0;
+
     const findLauncherOnce = () => {
+      // 이미 찾았거나 interval이 정리되었으면 실행 중지
+      if (launcherElRef.current || intervalRef.current === null) {
+        return;
+      }
+
       triedRef.current += 1;
 
       for (const sel of selectors) {
@@ -44,10 +57,12 @@ export default function ChatbotLottieLauncher() {
         }
       }
 
+      // 첫 시도일 때만 로그 출력
       if (triedRef.current === 1) {
         console.log("🔎 기존 런처 버튼 찾는 중...");
       }
 
+      // 최대 시도 횟수 도달 시 중지
       if (triedRef.current >= MAX_TRIES) {
         console.log("❌ 기존 런처 버튼을 못 찾았습니다. 탐색 종료");
         stop();
@@ -55,22 +70,22 @@ export default function ChatbotLottieLauncher() {
     };
 
     const stop = () => {
-      if (intervalRef.current) {
+      if (intervalRef.current !== null) {
         window.clearInterval(intervalRef.current);
         intervalRef.current = null;
+        triedRef.current = 0; // 시도 횟수도 초기화
       }
     };
-
-    // 이미 찾았다면 다시 안 돌림
-    if (launcherElRef.current) return;
 
     // interval 시작
     intervalRef.current = window.setInterval(findLauncherOnce, INTERVAL_MS);
     // 즉시 1회 실행
     findLauncherOnce();
 
-    // 언마운트 시 정리
-    return () => stop();
+    // cleanup: 언마운트 시 확실히 정리
+    return () => {
+      stop();
+    };
   }, []);
 
   const openChat = () => {
@@ -113,7 +128,9 @@ export default function ChatbotLottieLauncher() {
         zIndex: 99999,
       }}
     >
-      {animationData ? <Lottie animationData={animationData} loop autoplay /> : null}
+      {animationData ? (
+        <Lottie animationData={animationData} loop autoplay />
+      ) : null}
     </button>
   );
 }
