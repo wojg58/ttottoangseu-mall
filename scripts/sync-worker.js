@@ -301,14 +301,26 @@ async function run() {
                     (opt) => opt.id === variantInfo.optionId,
                   );
 
+                  console.log(
+                    `[DEBUG] 옵션 검색: variantInfo.optionId=${variantInfo.optionId}, 전체 옵션 ID 목록:`,
+                    optionCombinations.map((opt) => ({
+                      id: opt.id,
+                      name: opt.optionName1 || opt.optionName2 || "N/A",
+                      currentStock: opt.stockQuantity,
+                    })),
+                  );
+
                   if (targetOption) {
                     console.log(
-                      `[INFO] 옵션 단위 재고 업데이트: 옵션 ID ${variantInfo.optionId} -> ${job.target_stock}개`,
+                      `[INFO] 옵션 단위 재고 업데이트: 옵션 ID ${variantInfo.optionId} (${targetOption.optionName1 || targetOption.optionName2 || "N/A"}) -> 기존 ${targetOption.stockQuantity}개 → ${job.target_stock}개`,
                     );
                     // 해당 옵션만 재고 업데이트, 나머지는 그대로 유지
                     const updatedOptionCombinations = optionCombinations.map(
                       (opt) => {
                         if (opt.id === variantInfo.optionId) {
+                          console.log(
+                            `[DEBUG] 옵션 재고 변경: ${opt.optionName1 || opt.optionName2 || opt.id} (ID: ${opt.id}) ${opt.stockQuantity} → ${job.target_stock}`,
+                          );
                           return { ...opt, stockQuantity: job.target_stock };
                         }
                         return opt; // 다른 옵션은 그대로 유지
@@ -320,6 +332,9 @@ async function run() {
                       (sum, opt) => sum + (opt.stockQuantity || 0),
                       0,
                     );
+                    console.log(
+                      `[DEBUG] 전체 재고 합계 계산: ${totalStock}개 (기존: ${originProductData.stockQuantity}개)`,
+                    );
                     updatedOriginProduct.stockQuantity = totalStock;
 
                     updatedOriginProduct.detailAttribute = {
@@ -330,14 +345,26 @@ async function run() {
                       },
                     };
 
+                    console.log(
+                      `[DEBUG] 최종 옵션별 재고 상태:`,
+                      updatedOptionCombinations.map((opt) => ({
+                        id: opt.id,
+                        name: opt.optionName1 || opt.optionName2 || "N/A",
+                        stock: opt.stockQuantity,
+                      })),
+                    );
                     updatedOptionCombinations.forEach((opt) => {
                       console.log(
-                        `[INFO]   옵션 ${opt.optionName1 || opt.id} (ID: ${opt.id}): ${opt.stockQuantity}개`,
+                        `[INFO]   옵션 ${opt.optionName1 || opt.optionName2 || opt.id} (ID: ${opt.id}): ${opt.stockQuantity}개`,
                       );
                     });
                   } else {
                     console.warn(
                       `[WARN] 옵션 ID ${variantInfo.optionId}를 찾을 수 없음, 상품 단위로 처리`,
+                    );
+                    console.log(
+                      `[DEBUG] 사용 가능한 옵션 ID 목록:`,
+                      optionCombinations.map((opt) => opt.id),
                     );
                     // 옵션을 찾을 수 없으면 상품 단위로 처리
                     updatedOriginProduct.stockQuantity = job.target_stock;
@@ -578,6 +605,37 @@ async function run() {
             console.log(
               `✅ [OK] 상품 ${job.smartstore_id} -> 요청: ${job.target_stock}개, 응답: ${actualStock}개`,
             );
+
+            // 옵션 단위 동기화인 경우 응답의 옵션별 재고도 확인
+            if (isVariantSync && variantInfo && responseData) {
+              const responseOptions =
+                responseData?.data?.originProduct?.detailAttribute?.optionInfo
+                  ?.optionCombinations ||
+                responseData?.originProduct?.detailAttribute?.optionInfo
+                  ?.optionCombinations;
+              if (responseOptions) {
+                const updatedOption = responseOptions.find(
+                  (opt) => opt.id === variantInfo.optionId,
+                );
+                if (updatedOption) {
+                  console.log(
+                    `[DEBUG] 응답의 옵션 재고 확인: 옵션 ID ${variantInfo.optionId} -> ${updatedOption.stockQuantity}개 (요청: ${job.target_stock}개)`,
+                  );
+                } else {
+                  console.warn(
+                    `[WARN] 응답에서 옵션 ID ${variantInfo.optionId}를 찾을 수 없음`,
+                  );
+                }
+                console.log(
+                  `[DEBUG] 응답의 전체 옵션별 재고:`,
+                  responseOptions.map((opt) => ({
+                    id: opt.id,
+                    name: opt.optionName1 || opt.optionName2 || "N/A",
+                    stock: opt.stockQuantity,
+                  })),
+                );
+              }
+            }
           } catch (err) {
             console.error(`❌ [FAIL] Job ${job.id}:`, err.message);
             await supabase
