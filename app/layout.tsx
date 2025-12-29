@@ -10,6 +10,7 @@ import { SyncUserProvider } from "@/components/providers/sync-user-provider";
 import { AuthSessionSync } from "@/components/auth-session-sync";
 import ChatWidgetWrapper from "@/components/chatbot/chat-widget-wrapper";
 import MarketingScripts from "@/components/marketing-scripts";
+import ChatbotLottieLauncher from "@/components/ChatbotLottieLauncher";
 import "./globals.css";
 
 // Google Fonts 최적화 - 한글 서브셋 포함
@@ -125,6 +126,7 @@ export default function RootLayout({
               `,
             }}
           />
+          <ChatbotLottieLauncher />
         </body>
       </html>
     </ClerkProvider>
