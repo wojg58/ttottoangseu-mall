@@ -90,12 +90,7 @@ async function getNaverToken() {
 }
 
 // API 호출 래퍼 (401 시 토큰 재발급 + 1회 재시도, 429 시 exponential backoff)
-async function fetchWithRetry(
-  url,
-  options,
-  retried = false,
-  retryCount = 0,
-) {
+async function fetchWithRetry(url, options, retried = false, retryCount = 0) {
   const token = await getNaverToken();
 
   const response = await fetch(url, {
@@ -118,7 +113,9 @@ async function fetchWithRetry(
     // 1~2초 사이 랜덤 대기 (Rate Limit 분산)
     const waitTime = 1000 + Math.random() * 1000; // 1000ms ~ 2000ms
     console.log(
-      `[WARN] 429 Rate Limit 발생, ${Math.round(waitTime)}ms 대기 후 재시도 (${retryCount + 1}/5)`,
+      `[WARN] 429 Rate Limit 발생, ${Math.round(waitTime)}ms 대기 후 재시도 (${
+        retryCount + 1
+      }/5)`,
     );
     await delay(waitTime);
     return fetchWithRetry(url, options, retried, retryCount + 1);
@@ -462,11 +459,7 @@ async function buildMapping() {
         }
 
         const options = extractOptionStocks(channelProductData);
-
-        if (options.length === 0) {
-          console.log(`[INFO] 옵션이 없는 상품 (스킵)`);
-          continue;
-        }
+        const originProduct = channelProductData.originProduct;
 
         // channelProductNo는 API 엔드포인트에서 사용한 값
         const channelProductNo = parseInt(product.smartstore_product_id, 10);
@@ -475,6 +468,117 @@ async function buildMapping() {
         // 재고 수정 시 필요하지만, 매핑 작업에서는 옵션 ID + 채널상품 번호로 충분
         // 나중에 재고 동기화 시 다른 API로 확인하거나, 매핑된 데이터로 역추적 가능
         const originProductNo = null; // 매핑 작업에서는 사용하지 않음 (재고 수정 시 필요)
+
+        // 1. 상품 이미지 추가/업데이트
+        console.log(`[INFO] 이미지 추가/업데이트 시작...`);
+        const images = [];
+        if (originProduct?.images?.representativeImage?.url) {
+          images.push({
+            image_url: originProduct.images.representativeImage.url,
+            is_primary: true,
+            sort_order: 0,
+            alt_text: product.name,
+          });
+        }
+        if (originProduct?.images?.optionalImages) {
+          originProduct.images.optionalImages.forEach((img, index) => {
+            if (img.url) {
+              images.push({
+                image_url: img.url,
+                is_primary: false,
+                sort_order: index + 1,
+                alt_text: `${product.name} - 이미지 ${index + 1}`,
+              });
+            }
+          });
+        }
+
+        if (images.length > 0) {
+          // 기존 이미지 확인
+          const { data: existingImages } = await supabase
+            .from("product_images")
+            .select("id, image_url")
+            .eq("product_id", product.id);
+
+          // 기존 이미지 URL 목록
+          const existingUrls = new Set(
+            (existingImages || []).map((img) => img.image_url),
+          );
+
+          // 새로 추가할 이미지만 필터링
+          const newImages = images.filter(
+            (img) => !existingUrls.has(img.image_url),
+          );
+
+          if (newImages.length > 0) {
+            const imageData = newImages.map((img) => ({
+              product_id: product.id,
+              ...img,
+            }));
+
+            const { error: imageError } = await supabase
+              .from("product_images")
+              .insert(imageData);
+
+            if (imageError) {
+              console.warn(`[WARN] 이미지 추가 실패: ${imageError.message}`);
+            } else {
+              console.log(
+                `[INFO]   ✅ 이미지 ${newImages.length}개 추가 완료 (기존 ${
+                  existingImages?.length || 0
+                }개 유지)`,
+              );
+            }
+          } else {
+            console.log(
+              `[INFO]   이미지 이미 존재함 (${existingImages?.length || 0}개)`,
+            );
+          }
+        } else {
+          console.log(`[INFO]   이미지 없음 (스킵)`);
+        }
+
+        // 2. 옵션이 없는 상품 처리
+        if (options.length === 0) {
+          console.log(`[INFO] 옵션이 없는 상품 - 기본 variant 확인 중...`);
+
+          // 옵션이 없는 상품은 기본 variant가 있는지 확인
+          const { data: existingVariants } = await supabase
+            .from("product_variants")
+            .select("id")
+            .eq("product_id", product.id)
+            .is("deleted_at", null);
+
+          if (!existingVariants || existingVariants.length === 0) {
+            // variant가 없으면 기본 variant 생성
+            console.log(`[INFO]   기본 variant 생성 중...`);
+            const { error: variantError } = await supabase
+              .from("product_variants")
+              .insert({
+                product_id: product.id,
+                variant_name: "기본",
+                variant_value: "기본",
+                stock: originProduct?.stockQuantity || 0,
+                price_adjustment: 0,
+                sku: null,
+              });
+
+            if (variantError) {
+              console.warn(
+                `[WARN] 기본 variant 생성 실패: ${variantError.message}`,
+              );
+            } else {
+              console.log(`[INFO]   ✅ 기본 variant 생성 완료`);
+            }
+          } else {
+            console.log(
+              `[INFO]   기존 variant 존재 (${existingVariants.length}개)`,
+            );
+          }
+
+          // 옵션이 없는 상품은 매핑 작업 완료
+          continue;
+        }
 
         console.log(`[INFO] 옵션 ${options.length}개 매핑 시작...`);
 
