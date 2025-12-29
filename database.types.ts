@@ -270,6 +270,39 @@ export type Database = {
           },
         ]
       }
+      naver_sync_queue: {
+        Row: {
+          created_at: string | null
+          id: number
+          message: string | null
+          processed_at: string | null
+          product_id: string
+          smartstore_id: string
+          status: string | null
+          target_stock: number
+        }
+        Insert: {
+          created_at?: string | null
+          id?: number
+          message?: string | null
+          processed_at?: string | null
+          product_id: string
+          smartstore_id: string
+          status?: string | null
+          target_stock: number
+        }
+        Update: {
+          created_at?: string | null
+          id?: number
+          message?: string | null
+          processed_at?: string | null
+          product_id?: string
+          smartstore_id?: string
+          status?: string | null
+          target_stock?: number
+        }
+        Relationships: []
+      }
       order_items: {
         Row: {
           created_at: string
