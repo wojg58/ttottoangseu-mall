@@ -71,7 +71,7 @@ export default function ShopHeader() {
       {/* Announcement Bar */}
       <div className="bg-white border-b border-gray-200">
         <div className="shop-container">
-          <div className="flex items-center h-[20px]">
+          <div className="flex items-center h-[30px]">
             {/* 빈 공간 */}
           </div>
         </div>
