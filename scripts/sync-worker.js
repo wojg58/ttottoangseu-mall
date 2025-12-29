@@ -158,18 +158,49 @@ async function run() {
             // PUT /external/v2/products/channel-products/{channelProductNo}
             let channelProductData = null;
 
-            try {
-              console.log(`[INFO] 채널 상품 조회 시도: ${job.smartstore_id}`);
-              const channelRes = await fetch(
-                `https://api.commerce.naver.com/external/v2/products/channel-products/${job.smartstore_id}`,
-                {
-                  method: "GET",
-                  headers: {
-                    Authorization: `Bearer ${token}`,
-                    Accept: "application/json;charset=UTF-8",
+            // 채널 상품 조회 (429 재시도 포함)
+            let channelRes = null;
+            let retryCount = 0;
+            const maxRetries = 5;
+
+            while (retryCount < maxRetries) {
+              try {
+                console.log(`[INFO] 채널 상품 조회 시도: ${job.smartstore_id} (시도 ${retryCount + 1}/${maxRetries})`);
+                channelRes = await fetch(
+                  `https://api.commerce.naver.com/external/v2/products/channel-products/${job.smartstore_id}`,
+                  {
+                    method: "GET",
+                    headers: {
+                      Authorization: `Bearer ${token}`,
+                      Accept: "application/json;charset=UTF-8",
+                    },
                   },
-                },
-              );
+                );
+
+                // 429 Rate Limit 발생 시 1~2초 대기 후 재시도
+                if (channelRes.status === 429) {
+                  const waitTime = 1000 + Math.random() * 1000; // 1000ms ~ 2000ms
+                  console.log(
+                    `[WARN] 429 Rate Limit 발생, ${Math.round(waitTime)}ms 대기 후 재시도 (${retryCount + 1}/${maxRetries})`,
+                  );
+                  await delay(waitTime);
+                  retryCount++;
+                  continue;
+                }
+
+                // 429가 아니면 루프 종료
+                break;
+              } catch (fetchError) {
+                console.error(`[ERROR] 채널 상품 조회 예외: ${fetchError.message}`);
+                if (retryCount < maxRetries - 1) {
+                  const waitTime = 1000 + Math.random() * 1000;
+                  await delay(waitTime);
+                  retryCount++;
+                  continue;
+                }
+                throw fetchError;
+              }
+            }
 
               console.log(
                 `[INFO] 채널 상품 조회 응답 상태: ${channelRes.status}`,

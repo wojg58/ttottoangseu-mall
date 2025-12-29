@@ -113,11 +113,12 @@ async function fetchWithRetry(
     return fetchWithRetry(url, options, true, retryCount);
   }
 
-  // 429 Rate Limit → exponential backoff로 재시도 (최대 5회)
+  // 429 Rate Limit → 1~2초 대기 후 재시도 (최대 5회)
   if (response.status === 429 && retryCount < 5) {
-    const waitTime = Math.min(1000 * Math.pow(2, retryCount), 30000); // 최대 30초
+    // 1~2초 사이 랜덤 대기 (Rate Limit 분산)
+    const waitTime = 1000 + Math.random() * 1000; // 1000ms ~ 2000ms
     console.log(
-      `[WARN] 429 Rate Limit 발생, ${waitTime}ms 대기 후 재시도 (${retryCount + 1}/5)`,
+      `[WARN] 429 Rate Limit 발생, ${Math.round(waitTime)}ms 대기 후 재시도 (${retryCount + 1}/5)`,
     );
     await delay(waitTime);
     return fetchWithRetry(url, options, retried, retryCount + 1);
