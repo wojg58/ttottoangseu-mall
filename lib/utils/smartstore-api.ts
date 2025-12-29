@@ -39,6 +39,71 @@ export interface SmartStoreApiResponse<T> {
   data: T;
 }
 
+// 실제 API 응답 구조 기반 타입 정의 (tmp/channel-product.json 참고)
+export interface SmartStoreOptionStock {
+  id: number; // 옵션 ID
+  stockQuantity: number; // 해당 옵션 재고
+  price: number; // 가격 조정
+  usable: boolean; // 사용 가능 여부
+  optionName1: string; // 옵션값1 (예: "페어리요정")
+  optionName2?: string; // 옵션값2 (2단계 옵션인 경우, 현재 예시에는 없음)
+  sellerManagerCode?: string; // 판매자 관리코드 (=SKU, 현재 예시에는 없음)
+}
+
+export interface SmartStoreOptionInfo {
+  simpleOptionSortType?: string;
+  optionSimple: SmartStoreOptionStock[];
+  optionCustom: unknown[];
+  optionCombinationSortType?: string;
+  optionCombinationGroupNames?: {
+    optionGroupName1?: string;
+  };
+  optionCombinations: SmartStoreOptionStock[];
+  standardOptionGroups: unknown[];
+  optionStandards: SmartStoreOptionStock[];
+  useStockManagement: boolean;
+  optionDeliveryAttributes: unknown[];
+}
+
+export interface SmartStoreChannelProductResponse {
+  originProduct: {
+    statusType: string;
+    saleType: string;
+    leafCategoryId: string;
+    name: string;
+    detailContent: string;
+    images: {
+      representativeImage: { url: string };
+      optionalImages: Array<{ url: string }>;
+    };
+    salePrice: number;
+    stockQuantity: number;
+    deliveryInfo: unknown;
+    detailAttribute: {
+      naverShoppingSearchInfo: unknown;
+      afterServiceInfo: unknown;
+      originAreaInfo: unknown;
+      optionInfo: SmartStoreOptionInfo;
+      [key: string]: unknown;
+    };
+    customerBenefit: unknown;
+  };
+  smartstoreChannelProduct: {
+    channelProductName: string;
+    storeKeepExclusiveProduct: boolean;
+    naverShoppingRegistration: boolean;
+    channelProductDisplayStatusType: string;
+  };
+}
+
+// 채널 상품 조회 결과를 위한 정규화된 타입
+export interface SmartStoreProductWithOptions {
+  originProductNo?: number; // 원상품 번호 (재고 수정 시 필요, 응답에서 직접 확인 불가)
+  channelProductNo: number; // 채널상품 번호 (API 엔드포인트에서 사용한 값)
+  name: string;
+  optionInfo?: SmartStoreOptionInfo;
+}
+
 // 네이버 스마트스토어 API 클라이언트
 export class SmartStoreApiClient {
   private clientId: string;
@@ -314,6 +379,110 @@ export class SmartStoreApiClient {
       logger.groupEnd();
       return [];
     }
+  }
+
+  /**
+   * 채널 상품 조회 (옵션 정보 포함)
+   * 
+   * @param channelProductNo 채널상품 번호 (products.smartstore_product_id 값)
+   * @returns 채널 상품 정보 (옵션 포함) 또는 null
+   */
+  async getChannelProduct(
+    channelProductNo: string,
+  ): Promise<SmartStoreProductWithOptions | null> {
+    logger.group(
+      `[SmartStoreAPI] 채널 상품 조회: ${channelProductNo}`,
+    );
+
+    try {
+      const response = await this.fetchWithRetry(
+        `${BASE_URL}/v2/products/channel-products/${channelProductNo}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        },
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        logger.error("[SmartStoreAPI] 채널 상품 조회 실패", {
+          channelProductNo,
+          status: response.status,
+          error: errorText,
+        });
+        logger.groupEnd();
+        return null;
+      }
+
+      const data: SmartStoreChannelProductResponse = await response.json();
+
+      // 응답을 정규화된 형태로 변환
+      const normalized: SmartStoreProductWithOptions = {
+        channelProductNo: parseInt(channelProductNo, 10),
+        name: data.originProduct.name,
+        optionInfo: data.originProduct.detailAttribute.optionInfo,
+        // originProductNo는 응답에 직접 없으므로 나중에 다른 API로 확인 필요
+        // 일단 undefined로 두고, 필요시 다른 API 호출로 채움
+      };
+
+      logger.info("[SmartStoreAPI] 채널 상품 조회 성공", {
+        name: normalized.name,
+        hasOptions: !!normalized.optionInfo,
+        useStockManagement:
+          normalized.optionInfo?.useStockManagement ?? false,
+      });
+      logger.groupEnd();
+      return normalized;
+    } catch (error) {
+      logger.error("[SmartStoreAPI] 채널 상품 조회 예외", error);
+      logger.groupEnd();
+      return null;
+    }
+  }
+
+  /**
+   * 옵션별 재고 목록 추출
+   * 
+   * @param product 채널 상품 정보
+   * @returns 사용 가능한 옵션별 재고 목록
+   */
+  extractOptionStocks(
+    product: SmartStoreProductWithOptions,
+  ): SmartStoreOptionStock[] {
+    const { optionInfo } = product;
+
+    if (!optionInfo || !optionInfo.useStockManagement) {
+      logger.warn("[SmartStoreAPI] 재고관리 미사용 상품", {
+        channelProductNo: product.channelProductNo,
+        name: product.name,
+      });
+      return [];
+    }
+
+    // 표준형 > 조합형 > 단독형 순으로 확인
+    const options =
+      optionInfo.optionStandards.length > 0
+        ? optionInfo.optionStandards
+        : optionInfo.optionCombinations.length > 0
+          ? optionInfo.optionCombinations
+          : optionInfo.optionSimple.length > 0
+            ? optionInfo.optionSimple
+            : [];
+
+    // usable이 false인 옵션 제외
+    const usableOptions = options.filter(
+      (opt) => opt.usable !== false,
+    );
+
+    logger.info("[SmartStoreAPI] 옵션 추출 완료", {
+      channelProductNo: product.channelProductNo,
+      totalOptions: options.length,
+      usableOptions: usableOptions.length,
+    });
+
+    return usableOptions;
   }
 }
 
