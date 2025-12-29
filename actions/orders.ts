@@ -143,13 +143,31 @@ export async function createOrder(input: CreateOrderInput): Promise<{
         };
       }
 
-      // 재고 확인
-      if (product.stock < item.quantity) {
-        logger.groupEnd();
-        return {
-          success: false,
-          message: `${product.name}의 재고가 부족합니다. (현재 재고: ${product.stock}개)`,
-        };
+      // 재고 확인 (옵션이 있으면 옵션 재고 확인, 없으면 상품 재고 확인)
+      if (variant) {
+        // 옵션 재고 확인
+        const { data: variantData } = await supabase
+          .from("product_variants")
+          .select("stock")
+          .eq("id", variant.id)
+          .single();
+
+        if (!variantData || variantData.stock < item.quantity) {
+          logger.groupEnd();
+          return {
+            success: false,
+            message: `${product.name} (${variant.variant_value})의 재고가 부족합니다. (현재 재고: ${variantData?.stock || 0}개)`,
+          };
+        }
+      } else {
+        // 상품 재고 확인
+        if (product.stock < item.quantity) {
+          logger.groupEnd();
+          return {
+            success: false,
+            message: `${product.name}의 재고가 부족합니다. (현재 재고: ${product.stock}개)`,
+          };
+        }
       }
 
       // 가격 계산
