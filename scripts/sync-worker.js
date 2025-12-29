@@ -127,6 +127,23 @@ async function run() {
             console.log(
               `[INFO] 재고 변경 시작 - channelProductNo: ${job.smartstore_id}, target_stock: ${job.target_stock}, 옵션 단위: ${isVariantSync ? '예' : '아니오'}`,
             );
+            console.log(
+              `[DEBUG] Job 상세 정보:`,
+              JSON.stringify(
+                {
+                  id: job.id,
+                  product_id: job.product_id,
+                  variant_id: job.variant_id,
+                  smartstore_id: job.smartstore_id,
+                  smartstore_option_id: job.smartstore_option_id,
+                  target_stock: job.target_stock,
+                  status: job.status,
+                  created_at: job.created_at,
+                },
+                null,
+                2,
+              ),
+            );
 
             // 옵션 단위 처리인 경우 variant 정보 조회
             let variantInfo = null;
@@ -439,6 +456,13 @@ async function run() {
                   originProduct: {
                     ...requestBody.originProduct,
                     stockQuantity: requestBody.originProduct.stockQuantity,
+                    hasOptions: !!(
+                      requestBody.originProduct.detailAttribute?.optionInfo
+                        ?.optionCombinations
+                    ),
+                    optionCount:
+                      requestBody.originProduct.detailAttribute?.optionInfo
+                        ?.optionCombinations?.length || 0,
                   },
                   hasCustomerBenefit: !!requestBody.customerBenefit,
                   hasSmartstoreChannelProduct:
@@ -449,6 +473,21 @@ async function run() {
                 2,
               ),
             );
+            if (
+              requestBody.originProduct.detailAttribute?.optionInfo
+                ?.optionCombinations
+            ) {
+              console.log(
+                `[DEBUG] 요청 본문의 옵션별 재고:`,
+                requestBody.originProduct.detailAttribute.optionInfo.optionCombinations.map(
+                  (opt) => ({
+                    id: opt.id,
+                    name: opt.optionName1 || opt.optionName2 || "N/A",
+                    stock: opt.stockQuantity,
+                  }),
+                ),
+              );
+            }
 
             // 재고 변경 API 호출 (429 재시도 포함)
             let res = null;
