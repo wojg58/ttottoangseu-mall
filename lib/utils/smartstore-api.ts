@@ -3,18 +3,25 @@
  * @description 네이버 스마트스토어 API 연동 유틸리티
  *
  * 주요 기능:
- * 1. 네이버 스마트스토어 API 인증 (OAuth 2.0)
- * 2. 상품 재고 조회
- * 3. 상품 목록 조회
+ * 1. 네이버 스마트스토어 API 인증 (OAuth 2.0 with bcrypt 서명)
+ * 2. 토큰 캐싱 (메모리 기반, 만료 10분 전까지 유효)
+ * 3. API 호출 재시도 (401 시 토큰 재발급 후 1회 재시도)
+ * 4. 상품 재고 조회
+ * 5. 상품 목록 조회
  *
  * @dependencies
+ * - bcrypt: 네이버 API 인증 서명 생성
  * - 네이버 스마트스토어 API 키 및 시크릿
  *
  * 참고: 네이버 스마트스토어 API 문서
- * https://developers.naver.com/docs/serviceapi/smartstore/smartstore.md
+ * https://apicenter.commerce.naver.com/docs/auth
  */
 
 import { logger } from "@/lib/logger";
+import bcrypt from "bcrypt";
+
+// 네이버 스마트스토어 API 기본 URL
+export const BASE_URL = "https://api.commerce.naver.com/external";
 
 // 네이버 스마트스토어 API 응답 타입
 export interface SmartStoreProduct {
@@ -36,8 +43,9 @@ export interface SmartStoreApiResponse<T> {
 export class SmartStoreApiClient {
   private clientId: string;
   private clientSecret: string;
-  private accessToken: string | null = null;
-  private tokenExpiresAt: number = 0;
+  // 토큰 캐싱 (중요!)
+  private cachedToken: string | null = null;
+  private cachedTokenExpiresAt: number = 0;
 
   constructor() {
     this.clientId = process.env.NAVER_SMARTSTORE_CLIENT_ID || "";
@@ -51,31 +59,45 @@ export class SmartStoreApiClient {
   }
 
   /**
-   * OAuth 2.0 액세스 토큰 발급
+   * OAuth 2.0 액세스 토큰 발급 (캐싱 + bcrypt 서명 포함)
    */
   private async getAccessToken(): Promise<string> {
-    // 토큰이 아직 유효한 경우 재사용
-    if (this.accessToken && Date.now() < this.tokenExpiresAt) {
-      return this.accessToken;
+    // 1. 캐시된 토큰이 유효하면 재사용
+    if (this.cachedToken && Date.now() < this.cachedTokenExpiresAt) {
+      logger.info("[SmartStoreAPI] 캐시된 토큰 재사용");
+      return this.cachedToken;
     }
 
     logger.group("[SmartStoreAPI] 액세스 토큰 발급 중...");
 
     try {
-      const response = await fetch(
-        "https://api.commerce.naver.com/oauth2/v1/token",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-          },
-          body: new URLSearchParams({
-            grant_type: "client_credentials",
-            client_id: this.clientId,
-            client_secret: this.clientSecret,
-          }),
+      // 2. bcrypt 서명 생성
+      const timestamp = Date.now();
+      const password = `${this.clientId}_${timestamp}`;
+
+      // bcrypt 서명 생성 (CLIENT_SECRET을 salt로 사용)
+      const hashed = bcrypt.hashSync(password, this.clientSecret);
+      const signature = Buffer.from(hashed, "utf-8").toString("base64");
+
+      logger.info("[SmartStoreAPI] 서명 생성 완료", {
+        timestamp,
+        signatureLength: signature.length,
+      });
+
+      // ⚠️ 중요: form-urlencoded로 전송! (JSON 아님)
+      const response = await fetch(`${BASE_URL}/v1/oauth2/token`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
         },
-      );
+        body: new URLSearchParams({
+          client_id: this.clientId,
+          timestamp: timestamp.toString(),
+          client_secret_sign: signature,
+          grant_type: "client_credentials",
+          type: "SELF",
+        }),
+      });
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -87,18 +109,51 @@ export class SmartStoreApiClient {
       }
 
       const data = await response.json();
-      this.accessToken = data.access_token;
-      // 토큰 만료 시간 설정 (기본 1시간, 여유있게 50분으로 설정)
-      this.tokenExpiresAt = Date.now() + (data.expires_in - 600) * 1000;
 
-      logger.info("[SmartStoreAPI] 토큰 발급 성공");
+      // 3. 캐시 저장 (만료 10분 전까지 유효)
+      this.cachedToken = data.access_token;
+      this.cachedTokenExpiresAt =
+        Date.now() + (data.expires_in - 600) * 1000;
+
+      logger.info("[SmartStoreAPI] 토큰 발급 성공", {
+        expiresIn: data.expires_in,
+        tokenType: data.token_type,
+      });
       logger.groupEnd();
-      return this.accessToken;
+      return this.cachedToken;
     } catch (error) {
       logger.error("[SmartStoreAPI] 토큰 발급 예외", error);
       logger.groupEnd();
       throw error;
     }
+  }
+
+  /**
+   * API 호출 래퍼 (401 시 토큰 재발급 + 1회 재시도)
+   */
+  private async fetchWithRetry(
+    url: string,
+    options: RequestInit,
+    retried = false,
+  ): Promise<Response> {
+    const token = await this.getAccessToken();
+
+    const response = await fetch(url, {
+      ...options,
+      headers: {
+        ...options.headers,
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    // 401 Unauthorized → 토큰 재발급 후 1회만 재시도
+    if (response.status === 401 && !retried) {
+      logger.warn("[SmartStoreAPI] 401 발생, 토큰 재발급 후 재시도");
+      this.cachedToken = null; // 캐시 무효화
+      return this.fetchWithRetry(url, options, true);
+    }
+
+    return response;
   }
 
   /**
@@ -108,13 +163,11 @@ export class SmartStoreApiClient {
     logger.group(`[SmartStoreAPI] 상품 재고 조회: ${productId}`);
 
     try {
-      const token = await this.getAccessToken();
-      const response = await fetch(
-        `https://api.commerce.naver.com/products/${productId}/stock`,
+      const response = await this.fetchWithRetry(
+        `${BASE_URL}/v1/products/${productId}/stock`,
         {
           method: "GET",
           headers: {
-            Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
         },
@@ -161,13 +214,11 @@ export class SmartStoreApiClient {
     logger.group(`[SmartStoreAPI] 상품 정보 조회: ${productId}`);
 
     try {
-      const token = await this.getAccessToken();
-      const response = await fetch(
-        `https://api.commerce.naver.com/products/${productId}`,
+      const response = await this.fetchWithRetry(
+        `${BASE_URL}/v1/products/${productId}`,
         {
           method: "GET",
           headers: {
-            Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
         },
@@ -217,13 +268,11 @@ export class SmartStoreApiClient {
     logger.group(`[SmartStoreAPI] 상품 목록 조회: 페이지 ${page}`);
 
     try {
-      const token = await this.getAccessToken();
-      const response = await fetch(
-        `https://api.commerce.naver.com/products?page=${page}&size=${pageSize}`,
+      const response = await this.fetchWithRetry(
+        `${BASE_URL}/v1/products?page=${page}&size=${pageSize}`,
         {
           method: "GET",
           headers: {
-            Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
         },

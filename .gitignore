@@ -60,6 +60,9 @@ next-env.d.ts
 prompts/
 repomix-output.xml
 
+# test output
+/tmp/
+
 # clerk configuration (can include secrets)
 /.clerk/
 
