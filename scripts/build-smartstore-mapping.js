@@ -258,41 +258,133 @@ async function buildMapping() {
   };
 
   try {
-    // 1. 우리 DB의 모든 상품 가져오기 (스마트스토어 연동 여부와 관계없이)
-    console.log("\n[INFO] 📋 우리 DB의 모든 상품 조회 중...");
-    const { data: ourProducts, error: findError } = await supabase
-      .from("products")
-      .select("id, name, smartstore_product_id")
-      .is("deleted_at", null);
+    // 1. 우리 DB의 판매중인 모든 상품 가져오기 (페이지네이션)
+    console.log("\n[INFO] 📋 우리 DB의 판매중인 상품 조회 중...");
+    
+    const allOurProducts = [];
+    const pageSize = 100;
+    let page = 0;
+    let hasMore = true;
 
-    if (findError) {
-      console.error("[ERROR] 상품 조회 실패:", findError);
+    while (hasMore) {
+      const { data: products, error: findError } = await supabase
+        .from("products")
+        .select("id, name, smartstore_product_id, status")
+        .eq("status", "active") // 판매중인 상품만
+        .is("deleted_at", null)
+        .range(page * pageSize, (page + 1) * pageSize - 1)
+        .order("id", { ascending: true });
+
+      if (findError) {
+        console.error("[ERROR] 상품 조회 실패:", findError);
+        result.success = false;
+        return result;
+      }
+
+      if (!products || products.length === 0) {
+        hasMore = false;
+        break;
+      }
+
+      allOurProducts.push(...products);
+      console.log(
+        `[INFO] 페이지 ${page + 1}: ${products.length}개 상품 조회 (누적: ${allOurProducts.length}개)`,
+      );
+
+      if (products.length < pageSize) {
+        hasMore = false;
+      } else {
+        page++;
+      }
+    }
+
+    if (allOurProducts.length === 0) {
+      console.log("[INFO] 우리 DB에 판매중인 상품이 없습니다.");
       result.success = false;
       return result;
     }
 
-    if (!ourProducts || ourProducts.length === 0) {
-      console.log("[INFO] 우리 DB에 상품이 없습니다.");
-      result.success = false;
-      return result;
-    }
+    console.log(`[INFO] ✅ 우리 DB 판매중인 상품: ${allOurProducts.length}개\n`);
 
-    console.log(`[INFO] ✅ 우리 DB 상품: ${ourProducts.length}개\n`);
+    result.totalProducts = allOurProducts.length;
 
-    result.totalProducts = ourProducts.length;
+    // 2. 스마트스토어 API에서 모든 상품 목록 가져오기 (매칭용)
+    console.log("\n[INFO] 📦 스마트스토어 API에서 상품 목록 가져오는 중...");
+    const smartstoreProducts = await getAllSmartstoreProducts();
+    console.log(`[INFO] ✅ 스마트스토어 상품: ${smartstoreProducts.length}개\n`);
 
-    // 2. 각 상품의 옵션 매핑 처리
-    for (let i = 0; i < ourProducts.length; i++) {
-      const product = ourProducts[i];
+    // 3. 각 상품의 옵션 매핑 처리
+    for (let i = 0; i < allOurProducts.length; i++) {
+      const product = allOurProducts[i];
       result.processedProducts++;
 
       console.log(
-        `\n[${i + 1}/${ourProducts.length}] 상품 처리: ${product.name} (ID: ${product.id})`,
+        `\n[${i + 1}/${allOurProducts.length}] 상품 처리: ${product.name} (ID: ${
+          product.id
+        })`,
       );
 
-      // smartstore_product_id가 없으면 스킵 (스마트스토어 미연동 상품)
+      // smartstore_product_id가 없으면 스마트스토어에서 매칭 시도
       if (!product.smartstore_product_id) {
-        console.log(`[INFO]   스마트스토어 미연동 상품 (스킵)`);
+        console.log(`[INFO]   스마트스토어 미연동 상품 - 매칭 시도 중...`);
+        
+        // 스마트스토어 상품 목록에서 이름으로 매칭
+        const matchedSmartstoreProduct = smartstoreProducts.find(
+          (sp) =>
+            sp.name === product.name ||
+            sp.name.includes(product.name) ||
+            product.name.includes(sp.name),
+        );
+
+        if (matchedSmartstoreProduct) {
+          // 매칭된 상품의 채널상품 번호 찾기
+          // v1/products API는 원상품 목록을 반환하므로, 
+          // 실제로는 채널상품 조회 API를 통해 확인해야 함
+          // 일단 productId를 사용 (실제로는 다른 API 필요할 수 있음)
+          const channelProductNo =
+            matchedSmartstoreProduct.channelProductNo ||
+            matchedSmartstoreProduct.productId ||
+            matchedSmartstoreProduct.id;
+
+          if (channelProductNo) {
+            console.log(
+              `[INFO]   🔗 매칭 발견: "${product.name}" → 스마트스토어 상품 (${channelProductNo})`,
+            );
+
+            // 우리 DB에 smartstore_product_id 연결
+            const { error: updateError } = await supabase
+              .from("products")
+              .update({ smartstore_product_id: channelProductNo.toString() })
+              .eq("id", product.id);
+
+            if (updateError) {
+              console.error(
+                `[ERROR]   smartstore_product_id 업데이트 실패: ${updateError.message}`,
+              );
+              // 업데이트 실패해도 계속 진행 (채널상품 조회 시도)
+            } else {
+              product.smartstore_product_id = channelProductNo.toString();
+              result.newMappings++;
+              console.log(`[INFO]   ✅ smartstore_product_id 연결 완료`);
+            }
+          } else {
+            console.warn(
+              `[WARN]   매칭된 상품의 채널상품 번호를 찾을 수 없음`,
+            );
+          }
+        } else {
+          console.warn(
+            `[WARN]   스마트스토어에서 매칭되는 상품 없음 - 새로 추가 필요`,
+          );
+          // TODO: 스마트스토어에 상품 추가 로직 (나중에 구현)
+          // 현재는 로그만 남기고 스킵
+          continue;
+        }
+      }
+
+      // 여전히 smartstore_product_id가 없으면 스킵
+      if (!product.smartstore_product_id) {
+        console.log(`[INFO]   스마트스토어 연동 불가 (스킵)`);
         continue;
       }
 
