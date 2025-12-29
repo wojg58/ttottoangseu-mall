@@ -172,9 +172,78 @@ function extractOptionStocks(channelProductData) {
 
 const delay = (ms) => new Promise((r) => setTimeout(r, ms));
 
+// 스마트스토어 API에서 모든 상품 목록 가져오기 (페이지네이션)
+async function getAllSmartstoreProducts() {
+  const allProducts = [];
+  let page = 1;
+  const pageSize = 100;
+  let hasMore = true;
+
+  console.log("[INFO] 📦 스마트스토어 API에서 모든 상품 목록 가져오는 중...");
+
+  while (hasMore) {
+    const token = await getNaverToken();
+    const url = `${BASE_URL}/v1/products?page=${page}&size=${pageSize}`;
+
+    try {
+      const response = await fetchWithRetry(url, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(
+          `[ERROR] 상품 목록 조회 실패 (페이지 ${page}): ${
+            response.status
+          } - ${errorText.substring(0, 200)}`,
+        );
+        break;
+      }
+
+      const data = await response.json();
+
+      if (data.code !== "SUCCESS") {
+        console.error(
+          `[ERROR] 상품 목록 조회 실패 (페이지 ${page}): ${data.code} - ${data.message}`,
+        );
+        break;
+      }
+
+      const products = data.data?.products || [];
+      allProducts.push(...products);
+
+      console.log(
+        `[INFO] 페이지 ${page}: ${products.length}개 상품 조회 (누적: ${allProducts.length}개)`,
+      );
+
+      // 다음 페이지가 있는지 확인
+      const totalCount = data.data?.totalCount || 0;
+      hasMore = page * pageSize < totalCount;
+
+      if (hasMore) {
+        page++;
+        // API 레이트 리밋 방지
+        await delay(100);
+      }
+    } catch (error) {
+      console.error(
+        `[ERROR] 상품 목록 조회 예외 (페이지 ${page}):`,
+        error.message,
+      );
+      break;
+    }
+  }
+
+  console.log(`[INFO] ✅ 총 ${allProducts.length}개 상품 조회 완료\n`);
+  return allProducts;
+}
+
 // 메인 실행 함수
 async function buildMapping() {
-  console.log("🚀 스마트스토어 옵션 매핑 빌드 시작\n");
+  console.log("🚀 스마트스토어 옵션 매핑 빌드 시작 (모든 상품 처리)\n");
   console.log("=".repeat(60));
 
   const result = {
@@ -184,15 +253,16 @@ async function buildMapping() {
     unmappedOptions: [],
     processedProducts: 0,
     totalProducts: 0,
+    matchedProducts: 0, // 우리 DB와 매칭된 상품 수
+    newMappings: 0, // 새로 smartstore_product_id가 연결된 상품 수
   };
 
   try {
-    // 1. 스마트스토어 연동된 상품 조회
-    console.log("\n[INFO] 📋 스마트스토어 연동 상품 조회 중...");
-    const { data: products, error: findError } = await supabase
+    // 1. 우리 DB의 모든 상품 가져오기 (스마트스토어 연동 여부와 관계없이)
+    console.log("\n[INFO] 📋 우리 DB의 모든 상품 조회 중...");
+    const { data: ourProducts, error: findError } = await supabase
       .from("products")
       .select("id, name, smartstore_product_id")
-      .not("smartstore_product_id", "is", null)
       .is("deleted_at", null);
 
     if (findError) {
@@ -201,34 +271,41 @@ async function buildMapping() {
       return result;
     }
 
-    if (!products || products.length === 0) {
-      console.log("[INFO] 매핑 대상 상품이 없습니다.");
+    if (!ourProducts || ourProducts.length === 0) {
+      console.log("[INFO] 우리 DB에 상품이 없습니다.");
       result.success = false;
       return result;
     }
 
-    result.totalProducts = products.length;
-    console.log(`[INFO] ✅ 매핑 대상 상품: ${products.length}개\n`);
+    console.log(`[INFO] ✅ 우리 DB 상품: ${ourProducts.length}개\n`);
 
-    // 2. 각 상품의 옵션 매핑
-    for (let i = 0; i < products.length; i++) {
-      const product = products[i];
+    result.totalProducts = ourProducts.length;
+
+    // 2. 각 상품의 옵션 매핑 처리
+    for (let i = 0; i < ourProducts.length; i++) {
+      const product = ourProducts[i];
       result.processedProducts++;
 
       console.log(
-        `\n[${i + 1}/${products.length}] 상품 처리: ${product.name} (${
-          product.smartstore_product_id
-        })`,
+        `\n[${i + 1}/${ourProducts.length}] 상품 처리: ${product.name} (ID: ${product.id})`,
       );
 
+      // smartstore_product_id가 없으면 스킵 (스마트스토어 미연동 상품)
+      if (!product.smartstore_product_id) {
+        console.log(`[INFO]   스마트스토어 미연동 상품 (스킵)`);
+        continue;
+      }
+
+      result.matchedProducts++;
+
       try {
-        // 채널 상품 조회
+        // 채널 상품 조회 (옵션 정보 포함)
         const channelProductData = await getChannelProduct(
           product.smartstore_product_id,
         );
 
         if (!channelProductData) {
-          console.warn(`[WARN] 상품 조회 실패: ${product.name}`);
+          console.warn(`[WARN] 채널 상품 조회 실패: ${product.name}`);
           result.failedCount++;
           continue;
         }
@@ -360,14 +437,17 @@ async function buildMapping() {
       }
     }
 
-    // 3. 결과 요약
+    // 4. 결과 요약
     console.log("\n" + "=".repeat(60));
     console.log("📊 매핑 빌드 결과 요약");
     console.log("=".repeat(60));
-    console.log(`✅ 성공: ${result.mappedCount}개`);
-    console.log(`❌ 실패: ${result.failedCount}개`);
+    console.log(`📦 스마트스토어 상품: ${result.totalProducts}개`);
+    console.log(`🔗 우리 DB와 매칭: ${result.matchedProducts}개`);
+    console.log(`🆕 새로 연결된 상품: ${result.newMappings}개`);
+    console.log(`✅ 옵션 매핑 성공: ${result.mappedCount}개`);
+    console.log(`❌ 옵션 매핑 실패: ${result.failedCount}개`);
     console.log(
-      `📦 처리된 상품: ${result.processedProducts}/${result.totalProducts}개`,
+      `📊 처리된 상품: ${result.processedProducts}/${result.totalProducts}개`,
     );
 
     if (result.unmappedOptions.length > 0) {
