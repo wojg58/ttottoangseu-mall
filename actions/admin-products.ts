@@ -16,6 +16,26 @@ import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import type { Product, ProductImage } from "@/types/database";
 
+/**
+ * Supabase Storage URL에서 파일 경로를 추출합니다.
+ * @param imageUrl - Supabase Storage URL (예: https://xxx.supabase.co/storage/v1/object/public/uploads/products/xxx.webp)
+ * @returns 파일 경로 (예: products/xxx.webp) 또는 null
+ */
+function extractFilePathFromUrl(imageUrl: string): string | null {
+  try {
+    const url = new URL(imageUrl);
+    // /storage/v1/object/public/uploads/ 또는 /storage/v1/object/sign/uploads/ 경로에서 파일 경로 추출
+    const pathMatch = url.pathname.match(/\/storage\/v1\/object\/(?:public|sign)\/uploads\/(.+)$/);
+    if (pathMatch && pathMatch[1]) {
+      return pathMatch[1];
+    }
+    return null;
+  } catch (error) {
+    console.error("[extractFilePathFromUrl] URL 파싱 에러:", error);
+    return null;
+  }
+}
+
 // 상품 생성 입력 타입
 export interface CreateProductInput {
   category_id: string; // 기본 카테고리 (하위 호환성)
@@ -315,10 +335,10 @@ export async function updateProduct(
     if (input.images !== undefined) {
       console.log("[updateProduct] 이미지 업데이트 시작");
       
-      // 기존 이미지 목록 가져오기
+      // 기존 이미지 목록 가져오기 (image_url 포함)
       const { data: existingImages } = await supabase
         .from("product_images")
-        .select("id")
+        .select("id, image_url")
         .eq("product_id", input.id);
 
       // 전달된 이미지 중 기존 이미지 ID 추출
@@ -333,6 +353,29 @@ export async function updateProduct(
       // 삭제할 이미지가 있으면 삭제
       if (imagesToDelete.length > 0) {
         const deleteIds = imagesToDelete.map((img) => img.id);
+        
+        // Storage에서 파일 삭제
+        for (const imageToDelete of imagesToDelete) {
+          if (imageToDelete.image_url) {
+            const filePath = extractFilePathFromUrl(imageToDelete.image_url);
+            if (filePath) {
+              console.log(`[updateProduct] Storage 파일 삭제 시도: ${filePath}`);
+              const { error: storageError } = await supabase.storage
+                .from("uploads")
+                .remove([filePath]);
+
+              if (storageError) {
+                console.error(`[updateProduct] Storage 파일 삭제 실패 (${filePath}):`, storageError);
+              } else {
+                console.log(`[updateProduct] Storage 파일 삭제 성공: ${filePath}`);
+              }
+            } else {
+              console.warn(`[updateProduct] 파일 경로 추출 실패: ${imageToDelete.image_url}`);
+            }
+          }
+        }
+
+        // 데이터베이스에서 이미지 레코드 삭제
         const { error: deleteImageError } = await supabase
           .from("product_images")
           .delete()
