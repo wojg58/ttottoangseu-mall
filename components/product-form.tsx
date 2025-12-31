@@ -232,6 +232,24 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
     setIsMounted(true);
   }, []);
 
+  // 옵션별 재고 합산하여 총 재고 자동 계산
+  useEffect(() => {
+    if (productVariants.length > 0) {
+      const totalStock = productVariants.reduce((sum, variant) => {
+        return sum + (variant.stock || 0);
+      }, 0);
+      console.log("[ProductForm] 옵션 재고 합산:", {
+        variantsCount: productVariants.length,
+        totalStock,
+        variantStocks: productVariants.map((v) => ({
+          value: v.variant_value,
+          stock: v.stock,
+        })),
+      });
+      form.setValue("stock", totalStock);
+    }
+  }, [productVariants, form]);
+
   // 이미지 삭제 기능을 위한 이벤트 리스너
   useEffect(() => {
     if (!editor || !isMounted) return;
@@ -645,25 +663,39 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
             <FormField
               control={form.control}
               name="stock"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-[#4a3f48]">
-                    재고 <span className="text-[#ff6b9d]">*</span>
-                  </FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      placeholder="0"
-                      className="border-[#f5d5e3] focus:border-[#fad2e6] focus:ring-[#fad2e6]"
-                      {...field}
-                      onChange={(e) =>
-                        field.onChange(parseInt(e.target.value) || 0)
-                      }
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
+              render={({ field }) => {
+                const hasVariants = productVariants.length > 0;
+                const totalStock = hasVariants
+                  ? productVariants.reduce((sum, variant) => sum + (variant.stock || 0), 0)
+                  : field.value;
+
+                return (
+                  <FormItem>
+                    <FormLabel className="text-[#4a3f48]">
+                      재고 <span className="text-[#ff6b9d]">*</span>
+                      {hasVariants && (
+                        <span className="text-xs text-[#8b7d84] ml-2 font-normal">
+                          (옵션 재고 합계 자동 계산)
+                        </span>
+                      )}
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        placeholder="0"
+                        className="border-[#f5d5e3] focus:border-[#fad2e6] focus:ring-[#fad2e6]"
+                        {...field}
+                        value={hasVariants ? totalStock : field.value}
+                        disabled={hasVariants}
+                        onChange={(e) =>
+                          field.onChange(parseInt(e.target.value) || 0)
+                        }
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                );
+              }}
             />
           </div>
 
