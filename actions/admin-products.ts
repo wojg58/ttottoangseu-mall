@@ -385,22 +385,35 @@ export async function updateProduct(
         // Storage에서 파일 삭제
         for (const imageToDelete of imagesToDelete) {
           if (imageToDelete.image_url) {
+            console.log(`[updateProduct] 삭제 대상 이미지 URL: ${imageToDelete.image_url}`);
+            
             const filePath = extractFilePathFromUrl(imageToDelete.image_url);
             const bucketName = extractBucketFromUrl(imageToDelete.image_url);
             
+            console.log(`[updateProduct] 추출된 정보:`, { filePath, bucketName });
+            
             if (filePath && bucketName) {
               console.log(`[updateProduct] Storage 파일 삭제 시도: ${bucketName}/${filePath}`);
-              const { error: storageError } = await supabase.storage
+              const { data, error: storageError } = await supabase.storage
                 .from(bucketName)
                 .remove([filePath]);
 
               if (storageError) {
                 console.error(`[updateProduct] Storage 파일 삭제 실패 (${bucketName}/${filePath}):`, storageError);
+                console.error(`[updateProduct] 에러 상세:`, JSON.stringify(storageError, null, 2));
               } else {
                 console.log(`[updateProduct] Storage 파일 삭제 성공: ${bucketName}/${filePath}`);
+                console.log(`[updateProduct] 삭제 결과:`, data);
               }
             } else {
-              console.warn(`[updateProduct] 파일 경로 또는 버킷 추출 실패: ${imageToDelete.image_url}`);
+              // 외부 URL인 경우 (네이버 스마트스토어 등) - Storage에 없으므로 삭제할 필요 없음
+              if (imageToDelete.image_url.includes("shop-phinf.pstatic.net") || 
+                  imageToDelete.image_url.includes("http://") || 
+                  imageToDelete.image_url.includes("https://")) {
+                console.log(`[updateProduct] 외부 URL이므로 Storage 삭제 건너뜀: ${imageToDelete.image_url}`);
+              } else {
+                console.warn(`[updateProduct] 파일 경로 또는 버킷 추출 실패: ${imageToDelete.image_url}`);
+              }
             }
           }
         }
@@ -764,23 +777,36 @@ export async function deleteProductImage(
 
     // Storage에서 파일 삭제
     if (imageData?.image_url) {
+      console.log(`[deleteProductImage] 삭제 대상 이미지 URL: ${imageData.image_url}`);
+      
       const filePath = extractFilePathFromUrl(imageData.image_url);
       const bucketName = extractBucketFromUrl(imageData.image_url);
       
+      console.log(`[deleteProductImage] 추출된 정보:`, { filePath, bucketName });
+      
       if (filePath && bucketName) {
         console.log(`[deleteProductImage] Storage 파일 삭제 시도: ${bucketName}/${filePath}`);
-        const { error: storageError } = await supabase.storage
+        const { data, error: storageError } = await supabase.storage
           .from(bucketName)
           .remove([filePath]);
 
         if (storageError) {
           console.error(`[deleteProductImage] Storage 파일 삭제 실패 (${bucketName}/${filePath}):`, storageError);
+          console.error(`[deleteProductImage] 에러 상세:`, JSON.stringify(storageError, null, 2));
           // Storage 삭제 실패해도 DB 삭제는 진행
         } else {
           console.log(`[deleteProductImage] Storage 파일 삭제 성공: ${bucketName}/${filePath}`);
+          console.log(`[deleteProductImage] 삭제 결과:`, data);
         }
       } else {
-        console.warn(`[deleteProductImage] 파일 경로 또는 버킷 추출 실패: ${imageData.image_url}`);
+        // 외부 URL인 경우 (네이버 스마트스토어 등) - Storage에 없으므로 삭제할 필요 없음
+        if (imageData.image_url.includes("shop-phinf.pstatic.net") || 
+            imageData.image_url.includes("http://") || 
+            imageData.image_url.includes("https://")) {
+          console.log(`[deleteProductImage] 외부 URL이므로 Storage 삭제 건너뜀: ${imageData.image_url}`);
+        } else {
+          console.warn(`[deleteProductImage] 파일 경로 또는 버킷 추출 실패: ${imageData.image_url}`);
+        }
       }
     }
 
