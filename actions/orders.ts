@@ -319,8 +319,9 @@ export async function createOrder(input: CreateOrderInput): Promise<{
           }> = [];
 
           for (const item of orderItems) {
-            const product = item.product as { id: string; smartstore_product_id: string | null; stock: number } | null;
-            const variant = item.variant as {
+            // Supabase 관계형 쿼리 결과가 배열로 추론될 수 있으므로 unknown을 거쳐 타입 단언
+            const product = (item.product as unknown) as { id: string; smartstore_product_id: string | null; stock: number } | null;
+            const variant = (item.variant as unknown) as {
               id: string;
               stock: number;
               smartstore_option_id: number | null;
