@@ -264,6 +264,9 @@ export async function createOrder(input: CreateOrderInput): Promise<{
     }
 
     // 재고 차감 (옵션이 있으면 옵션만, 없으면 상품만)
+    // 옵션이 있는 상품의 경우 총 재고 업데이트를 위해 추적
+    const productsToUpdateStock = new Set<string>();
+
     for (const item of cartItems) {
       const product = item.product as { id: string; stock: number };
       const variant = item.variant as { id: string; stock: number } | null;
@@ -275,6 +278,9 @@ export async function createOrder(input: CreateOrderInput): Promise<{
           .update({ stock: variant.stock - item.quantity })
           .eq("id", variant.id);
         logger.info(`[createOrder] 옵션 재고 차감: Variant ID ${variant.id}, 기존 ${variant.stock} -> ${variant.stock - item.quantity}`);
+        
+        // 옵션이 있는 상품은 총 재고도 업데이트 필요
+        productsToUpdateStock.add(product.id);
       } else {
         // 옵션이 없는 경우: 상품 재고만 차감
         await supabase
@@ -282,6 +288,40 @@ export async function createOrder(input: CreateOrderInput): Promise<{
           .update({ stock: product.stock - item.quantity })
           .eq("id", product.id);
         logger.info(`[createOrder] 상품 재고 차감: Product ID ${product.id}, 기존 ${product.stock} -> ${product.stock - item.quantity}`);
+      }
+    }
+
+    // 옵션이 있는 상품의 총 재고 업데이트 (모든 옵션 재고 합산)
+    if (productsToUpdateStock.size > 0) {
+      logger.info(`[createOrder] 옵션이 있는 상품 ${productsToUpdateStock.size}개의 총 재고 업데이트 시작`);
+      
+      for (const productId of productsToUpdateStock) {
+        // 해당 상품의 모든 옵션 재고 합산
+        const { data: variants, error: variantsError } = await supabase
+          .from("product_variants")
+          .select("stock")
+          .eq("product_id", productId)
+          .is("deleted_at", null);
+
+        if (variantsError) {
+          logger.error(`[createOrder] 옵션 재고 조회 실패 (Product ID: ${productId}):`, variantsError);
+          continue;
+        }
+
+        if (variants && variants.length > 0) {
+          const totalStock = variants.reduce((sum, v) => sum + (v.stock || 0), 0);
+          
+          const { error: updateError } = await supabase
+            .from("products")
+            .update({ stock: totalStock })
+            .eq("id", productId);
+
+          if (updateError) {
+            logger.error(`[createOrder] 총 재고 업데이트 실패 (Product ID: ${productId}):`, updateError);
+          } else {
+            logger.info(`[createOrder] 총 재고 업데이트 완료: Product ID ${productId} -> ${totalStock}개`);
+          }
+        }
       }
     }
 
@@ -669,19 +709,78 @@ export async function cancelOrder(
     }
 
     // 재고 복구
+    // 옵션이 있는 상품의 경우 총 재고 업데이트를 위해 추적
+    const productsToUpdateStock = new Set<string>();
+
     if (orderItems && orderItems.length > 0) {
       for (const item of orderItems) {
-        const { data: product } = await supabase
-          .from("products")
-          .select("stock")
-          .eq("id", item.product_id)
-          .single();
+        if (item.variant_id) {
+          // 옵션이 있는 경우: 옵션 재고 복구
+          const { data: variant } = await supabase
+            .from("product_variants")
+            .select("stock, product_id")
+            .eq("id", item.variant_id)
+            .single();
 
-        if (product) {
-          await supabase
+          if (variant) {
+            await supabase
+              .from("product_variants")
+              .update({ stock: variant.stock + item.quantity })
+              .eq("id", item.variant_id);
+            logger.info(`[cancelOrder] 옵션 재고 복구: Variant ID ${item.variant_id}, 기존 ${variant.stock} -> ${variant.stock + item.quantity}`);
+            
+            // 옵션이 있는 상품은 총 재고도 업데이트 필요
+            productsToUpdateStock.add(variant.product_id);
+          }
+        } else {
+          // 옵션이 없는 경우: 상품 재고 복구
+          const { data: product } = await supabase
             .from("products")
-            .update({ stock: product.stock + item.quantity })
-            .eq("id", item.product_id);
+            .select("stock")
+            .eq("id", item.product_id)
+            .single();
+
+          if (product) {
+            await supabase
+              .from("products")
+              .update({ stock: product.stock + item.quantity })
+              .eq("id", item.product_id);
+            logger.info(`[cancelOrder] 상품 재고 복구: Product ID ${item.product_id}, 기존 ${product.stock} -> ${product.stock + item.quantity}`);
+          }
+        }
+      }
+    }
+
+    // 옵션이 있는 상품의 총 재고 업데이트 (모든 옵션 재고 합산)
+    if (productsToUpdateStock.size > 0) {
+      logger.info(`[cancelOrder] 옵션이 있는 상품 ${productsToUpdateStock.size}개의 총 재고 업데이트 시작`);
+      
+      for (const productId of productsToUpdateStock) {
+        // 해당 상품의 모든 옵션 재고 합산
+        const { data: variants, error: variantsError } = await supabase
+          .from("product_variants")
+          .select("stock")
+          .eq("product_id", productId)
+          .is("deleted_at", null);
+
+        if (variantsError) {
+          logger.error(`[cancelOrder] 옵션 재고 조회 실패 (Product ID: ${productId}):`, variantsError);
+          continue;
+        }
+
+        if (variants && variants.length > 0) {
+          const totalStock = variants.reduce((sum, v) => sum + (v.stock || 0), 0);
+          
+          const { error: updateError } = await supabase
+            .from("products")
+            .update({ stock: totalStock })
+            .eq("id", productId);
+
+          if (updateError) {
+            logger.error(`[cancelOrder] 총 재고 업데이트 실패 (Product ID: ${productId}):`, updateError);
+          } else {
+            logger.info(`[cancelOrder] 총 재고 업데이트 완료: Product ID ${productId} -> ${totalStock}개`);
+          }
         }
       }
     }
