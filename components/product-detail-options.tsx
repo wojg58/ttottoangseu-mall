@@ -175,6 +175,12 @@ export default function ProductDetailOptions({
       return;
     }
 
+    // 옵션이 있는 상품은 옵션 선택 필수
+    if (hasVariants && selectedOptions.length === 0) {
+      alert("옵션을 선택해주세요.");
+      return;
+    }
+
     console.log("[ProductDetailOptions] 바로 구매:", {
       hasVariants,
       selectedOptions,
@@ -183,8 +189,8 @@ export default function ProductDetailOptions({
 
     startTransition(async () => {
       try {
-        if (hasVariants && selectedOptions.length > 0) {
-          // 옵션이 있고 선택된 경우: 모든 옵션을 순차적으로 장바구니에 추가
+        if (hasVariants) {
+          // 옵션이 있는 상품: 모든 옵션을 순차적으로 장바구니에 추가
           for (const option of selectedOptions) {
             const result = await addToCart(
               productId,
@@ -197,7 +203,7 @@ export default function ProductDetailOptions({
             }
           }
         } else {
-          // 옵션이 없거나 옵션이 있어도 선택하지 않은 경우: 수량만 지정하여 장바구니에 추가
+          // 옵션이 없는 상품: 수량만 지정하여 장바구니에 추가
           const result = await addToCart(productId, quantity);
           if (!result.success) {
             alert(result.message);
@@ -372,7 +378,11 @@ export default function ProductDetailOptions({
         </Button>
         <Button
           onClick={handleBuyNow}
-          disabled={isLoading || isSoldOut}
+          disabled={
+            (hasVariants && selectedOptions.length === 0) ||
+            isLoading ||
+            isSoldOut
+          }
           className="flex-1 h-14 bg-[#ff6b9d] hover:bg-[#ff5088] text-white rounded-xl text-base font-bold"
         >
           {isLoading ? "처리 중..." : "바로 구매"}
