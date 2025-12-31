@@ -18,20 +18,48 @@ import type { Product, ProductImage } from "@/types/database";
 
 /**
  * Supabase Storage URL에서 파일 경로를 추출합니다.
- * @param imageUrl - Supabase Storage URL (예: https://xxx.supabase.co/storage/v1/object/public/uploads/products/xxx.webp)
+ * @param imageUrl - Supabase Storage URL (예: https://xxx.supabase.co/storage/v1/object/public/product-images/products/xxx.webp)
  * @returns 파일 경로 (예: products/xxx.webp) 또는 null
  */
 function extractFilePathFromUrl(imageUrl: string): string | null {
   try {
     const url = new URL(imageUrl);
-    // /storage/v1/object/public/uploads/ 또는 /storage/v1/object/sign/uploads/ 경로에서 파일 경로 추출
-    const pathMatch = url.pathname.match(/\/storage\/v1\/object\/(?:public|sign)\/uploads\/(.+)$/);
-    if (pathMatch && pathMatch[1]) {
-      return pathMatch[1];
+    // /storage/v1/object/public/product-images/ 또는 /storage/v1/object/sign/product-images/ 경로에서 파일 경로 추출
+    const productImagesMatch = url.pathname.match(/\/storage\/v1\/object\/(?:public|sign)\/product-images\/(.+)$/);
+    if (productImagesMatch && productImagesMatch[1]) {
+      return productImagesMatch[1];
+    }
+    // 하위 호환성: uploads 버킷도 지원
+    const uploadsMatch = url.pathname.match(/\/storage\/v1\/object\/(?:public|sign)\/uploads\/(.+)$/);
+    if (uploadsMatch && uploadsMatch[1]) {
+      return uploadsMatch[1];
     }
     return null;
   } catch (error) {
     console.error("[extractFilePathFromUrl] URL 파싱 에러:", error);
+    return null;
+  }
+}
+
+/**
+ * Supabase Storage URL에서 버킷 이름을 추출합니다.
+ * @param imageUrl - Supabase Storage URL
+ * @returns 버킷 이름 (예: "product-images" 또는 "uploads") 또는 null
+ */
+function extractBucketFromUrl(imageUrl: string): string | null {
+  try {
+    const url = new URL(imageUrl);
+    // product-images 버킷 확인
+    if (url.pathname.includes("/product-images/")) {
+      return "product-images";
+    }
+    // uploads 버킷 확인 (하위 호환성)
+    if (url.pathname.includes("/uploads/")) {
+      return "uploads";
+    }
+    return null;
+  } catch (error) {
+    console.error("[extractBucketFromUrl] URL 파싱 에러:", error);
     return null;
   }
 }
@@ -358,19 +386,21 @@ export async function updateProduct(
         for (const imageToDelete of imagesToDelete) {
           if (imageToDelete.image_url) {
             const filePath = extractFilePathFromUrl(imageToDelete.image_url);
-            if (filePath) {
-              console.log(`[updateProduct] Storage 파일 삭제 시도: ${filePath}`);
+            const bucketName = extractBucketFromUrl(imageToDelete.image_url);
+            
+            if (filePath && bucketName) {
+              console.log(`[updateProduct] Storage 파일 삭제 시도: ${bucketName}/${filePath}`);
               const { error: storageError } = await supabase.storage
-                .from("uploads")
+                .from(bucketName)
                 .remove([filePath]);
 
               if (storageError) {
-                console.error(`[updateProduct] Storage 파일 삭제 실패 (${filePath}):`, storageError);
+                console.error(`[updateProduct] Storage 파일 삭제 실패 (${bucketName}/${filePath}):`, storageError);
               } else {
-                console.log(`[updateProduct] Storage 파일 삭제 성공: ${filePath}`);
+                console.log(`[updateProduct] Storage 파일 삭제 성공: ${bucketName}/${filePath}`);
               }
             } else {
-              console.warn(`[updateProduct] 파일 경로 추출 실패: ${imageToDelete.image_url}`);
+              console.warn(`[updateProduct] 파일 경로 또는 버킷 추출 실패: ${imageToDelete.image_url}`);
             }
           }
         }
@@ -719,6 +749,42 @@ export async function deleteProductImage(
   try {
     const supabase = await createClient();
 
+    // 삭제하기 전에 이미지 정보 가져오기 (Storage 파일 삭제용)
+    const { data: imageData, error: fetchError } = await supabase
+      .from("product_images")
+      .select("image_url")
+      .eq("id", imageId)
+      .single();
+
+    if (fetchError) {
+      console.error("이미지 정보 조회 에러:", fetchError);
+      console.groupEnd();
+      return { success: false, message: "이미지 정보를 가져오는데 실패했습니다." };
+    }
+
+    // Storage에서 파일 삭제
+    if (imageData?.image_url) {
+      const filePath = extractFilePathFromUrl(imageData.image_url);
+      const bucketName = extractBucketFromUrl(imageData.image_url);
+      
+      if (filePath && bucketName) {
+        console.log(`[deleteProductImage] Storage 파일 삭제 시도: ${bucketName}/${filePath}`);
+        const { error: storageError } = await supabase.storage
+          .from(bucketName)
+          .remove([filePath]);
+
+        if (storageError) {
+          console.error(`[deleteProductImage] Storage 파일 삭제 실패 (${bucketName}/${filePath}):`, storageError);
+          // Storage 삭제 실패해도 DB 삭제는 진행
+        } else {
+          console.log(`[deleteProductImage] Storage 파일 삭제 성공: ${bucketName}/${filePath}`);
+        }
+      } else {
+        console.warn(`[deleteProductImage] 파일 경로 또는 버킷 추출 실패: ${imageData.image_url}`);
+      }
+    }
+
+    // 데이터베이스에서 이미지 레코드 삭제
     const { error } = await supabase
       .from("product_images")
       .delete()
