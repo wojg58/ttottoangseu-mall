@@ -347,7 +347,6 @@ export default function ProductDetailOptions({
           <div className="flex items-center justify-between p-4 bg-[#ffeef5] rounded-lg border border-[#f5d5e3]">
             <div className="flex items-center gap-2">
               <span className="text-sm text-[#8b7d84]">총 상품 금액</span>
-              <span className="text-xs text-[#8b7d84]">?</span>
             </div>
             <div className="flex items-center gap-4">
               <span className="text-sm text-[#4a3f48]">
