@@ -7,6 +7,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Edit, ImageIcon } from "lucide-react";
 import type { ProductListItem } from "@/types/database";
 import DeleteProductButton from "@/components/delete-product-button";
@@ -138,7 +139,6 @@ function ProductRow({
 }) {
   const [imageError, setImageError] = useState(false);
   const [imageLoading, setImageLoading] = useState(true);
-  const imageRef = useRef<HTMLImageElement | null>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // 이미지 URL이 있으면 표시 시도
@@ -158,7 +158,7 @@ function ProductRow({
           setImageError(true);
           setImageLoading(false);
         }
-      }, 10000); // 10초 타임아웃 (더 길게 설정)
+      }, 10000); // 10초 타임아웃
 
       return () => {
         if (timeoutRef.current) {
@@ -189,45 +189,32 @@ function ProductRow({
       </td>
       <td className="py-4 px-4">
         {hasImage ? (
-          <div className="relative w-16 h-16">
-            {/* 로딩 스피너 (이미지가 로딩 중일 때만 표시) */}
-            {imageLoading && (
-              <div className="absolute inset-0 bg-gray-100 rounded-lg flex items-center justify-center z-10">
-                <div className="w-4 h-4 border-2 border-[#ff6b9d] border-t-transparent rounded-full animate-spin" />
-              </div>
-            )}
-            {/* 이미지 (로딩 중이어도 표시 - 브라우저가 자동으로 로드 시도) */}
-            <img
-              ref={imageRef}
+          <div className="relative w-16 h-16 rounded-lg overflow-hidden bg-gray-100">
+            {/* Next.js Image 컴포넌트 사용 (SSL 인증서 오류 해결) */}
+            <Image
               src={product.primary_image.image_url}
               alt={product.name}
-              className={`w-16 h-16 object-cover rounded-lg ${
-                imageLoading ? "opacity-50" : "opacity-100"
-              } transition-opacity`}
-              loading="lazy"
-              onLoad={() => {
-                console.log("[ProductRow] 이미지 로딩 성공:", product.name);
+              fill
+              className="object-cover"
+              sizes="64px"
+              onLoadingComplete={() => {
+                console.log("[ProductRow] 이미지 로딩 완료:", product.name);
                 if (timeoutRef.current) {
                   clearTimeout(timeoutRef.current);
                 }
                 setImageLoading(false);
                 setImageError(false);
               }}
-              onError={(e) => {
-                console.error("[ProductRow] 이미지 로딩 실패:", {
-                  productName: product.name,
-                  imageUrl: product.primary_image?.image_url,
-                });
-                if (timeoutRef.current) {
-                  clearTimeout(timeoutRef.current);
-                }
-                setImageError(true);
-                setImageLoading(false);
-              }}
             />
-            {/* 에러 상태일 때도 이미지 URL은 표시 (사용자가 확인 가능) */}
+            {/* 로딩 스피너 (이미지가 로딩 중일 때만 표시) */}
+            {imageLoading && (
+              <div className="absolute inset-0 bg-gray-100 flex items-center justify-center z-10">
+                <div className="w-4 h-4 border-2 border-[#ff6b9d] border-t-transparent rounded-full animate-spin" />
+              </div>
+            )}
+            {/* 에러 상태일 때 오버레이 */}
             {imageError && (
-              <div className="absolute inset-0 bg-gray-100 rounded-lg flex items-center justify-center opacity-75">
+              <div className="absolute inset-0 bg-gray-100 flex items-center justify-center z-10 opacity-75">
                 <ImageIcon className="w-4 h-4 text-gray-400" />
               </div>
             )}
