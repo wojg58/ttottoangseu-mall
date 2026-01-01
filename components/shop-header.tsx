@@ -18,10 +18,9 @@
 import { SignedOut, SignedIn, SignOutButton } from "@clerk/nextjs";
 import Link from "next/link";
 import Image from "next/image";
-import { Search, ShoppingCart, Heart, Menu, X, ArrowRight, LogIn, UserPlus, User, LogOut } from "lucide-react";
+import { Search, ShoppingCart, Menu, X, LogIn, UserPlus, User, LogOut } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 
@@ -62,9 +61,6 @@ export default function ShopHeader() {
     setSearchQuery("");
   };
 
-  const toggleSearch = () => {
-    setIsSearchOpen(!isSearchOpen);
-  };
 
   return (
     <>

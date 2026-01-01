@@ -67,7 +67,7 @@ export async function POST(request: Request) {
     if (clerkUser.externalAccounts && clerkUser.externalAccounts.length > 0) {
       console.log("🔗 External Accounts:", clerkUser.externalAccounts.map(acc => ({
         provider: acc.provider,
-        providerUserId: acc.providerUserId,
+        id: acc.id,
         emailAddress: acc.emailAddress,
         verified: acc.verification?.status,
         username: acc.username,
