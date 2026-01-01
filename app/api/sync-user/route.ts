@@ -54,7 +54,22 @@ export async function POST(request: Request) {
       id: clerkUser.id,
       name: clerkUser.fullName || clerkUser.username,
       email: clerkUser.emailAddresses[0]?.emailAddress,
+      emailAddresses: clerkUser.emailAddresses,
+      externalAccounts: clerkUser.externalAccounts,
+      createdAt: clerkUser.createdAt,
     });
+    
+    // External Accounts 상세 로그
+    if (clerkUser.externalAccounts && clerkUser.externalAccounts.length > 0) {
+      console.log("🔗 External Accounts:", clerkUser.externalAccounts.map(acc => ({
+        provider: acc.provider,
+        providerUserId: acc.providerUserId,
+        emailAddress: acc.emailAddress,
+        verified: acc.verification?.status,
+      })));
+    } else {
+      console.warn("⚠️ External Accounts가 없습니다. 네이버 로그인이 제대로 연결되지 않았을 수 있습니다.");
+    }
 
     // Supabase에 사용자 정보 동기화
     console.log("💾 Supabase에 사용자 정보 동기화 중...");

@@ -27,10 +27,16 @@ export function useSyncUser() {
 
         console.group("🔄 사용자 동기화 시작");
         console.log("userId:", userId);
+        console.log("isLoaded:", isLoaded);
+        console.log("isSignedIn:", isSignedIn);
+        console.log("시간:", new Date().toISOString());
 
         // Clerk 토큰 가져오기
         const token = await getToken();
         console.log("토큰 존재:", !!token);
+        if (token) {
+          console.log("토큰 길이:", token.length);
+        }
 
         const response = await fetch("/api/sync-user", {
           method: "POST",
