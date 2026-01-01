@@ -112,7 +112,7 @@ export default function ShopHeader() {
                 aria-label="인스타그램 바로가기"
               >
                 <Image
-                  src="/icons/icon_instagram.png"
+                  src="/icons/icon_Instagram.png"
                   alt="인스타그램 바로가기"
                   width={26}
                   height={26}
