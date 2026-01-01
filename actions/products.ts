@@ -94,7 +94,8 @@ export async function getProducts(
     `,
       { count: "exact" },
     )
-    .is("deleted_at", null);
+    .is("deleted_at", null)
+    .eq("status", "active"); // 숨김 상품 제외: active 상태인 상품만 조회
 
   // 카테고리 필터 적용 (다중 카테고리 지원)
   if (categoryFilteredProductIds !== null) {
@@ -316,6 +317,7 @@ export async function getProductBySlug(
     )
     .eq("slug", slug)
     .is("deleted_at", null)
+    .eq("status", "active") // 숨김 상품 제외: active 상태인 상품만 조회
     .single();
 
   if (error) {
