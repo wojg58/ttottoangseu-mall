@@ -16,10 +16,14 @@ import BulkHideProductsButton from "@/components/bulk-hide-products-button";
 
 interface ProductListWithSelectionProps {
   products: ProductListItem[];
+  currentPage?: string;
+  currentSearch?: string;
 }
 
 export default function ProductListWithSelection({
   products,
+  currentPage,
+  currentSearch,
 }: ProductListWithSelectionProps) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
@@ -116,6 +120,8 @@ export default function ProductListWithSelection({
                     product={product}
                     isSelected={isSelected}
                     onSelect={(checked) => handleSelectOne(product.id, checked)}
+                    currentPage={currentPage}
+                    currentSearch={currentSearch}
                   />
                 );
               })}
@@ -132,11 +138,27 @@ function ProductRow({
   product,
   isSelected,
   onSelect,
+  currentPage,
+  currentSearch,
 }: {
   product: ProductListItem;
   isSelected: boolean;
   onSelect: (checked: boolean) => void;
+  currentPage?: string;
+  currentSearch?: string;
 }) {
+  // 수정 페이지로 이동할 URL 생성
+  const getEditUrl = () => {
+    const params = new URLSearchParams();
+    if (currentPage && currentPage !== "1") {
+      params.set("page", currentPage);
+    }
+    if (currentSearch) {
+      params.set("search", currentSearch);
+    }
+    const queryString = params.toString();
+    return `/admin/products/${product.id}${queryString ? `?${queryString}` : ""}`;
+  };
   const [imageError, setImageError] = useState(false);
   const [imageLoading, setImageLoading] = useState(true);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -285,7 +307,7 @@ function ProductRow({
       <td className="py-4 px-4">
         <div className="flex items-center gap-2">
           <Link
-            href={`/admin/products/${product.id}`}
+            href={getEditUrl()}
             className="p-2 text-[#8b7d84] hover:text-[#ff6b9d] transition-colors"
           >
             <Edit className="w-4 h-4" />

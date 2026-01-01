@@ -84,7 +84,11 @@ export default async function AdminProductsPage({
 
         {/* 상품 목록 */}
         {products.length > 0 ? (
-          <ProductListWithSelection products={products} />
+          <ProductListWithSelection 
+            products={products}
+            currentPage={page.toString()}
+            currentSearch={searchQuery}
+          />
         ) : (
           <div className="bg-white rounded-xl shadow-sm p-16 text-center">
             <p className="text-[#8b7d84] mb-4">등록된 상품이 없습니다.</p>

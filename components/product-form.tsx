@@ -66,12 +66,32 @@ type ProductFormData = z.infer<typeof productSchema>;
 interface ProductFormProps {
   categories: Category[];
   product?: ProductWithDetails;
+  returnPage?: string; // 목록으로 돌아갈 때 페이지 번호
+  returnSearch?: string; // 목록으로 돌아갈 때 검색어
 }
 
-export default function ProductForm({ categories, product }: ProductFormProps) {
+export default function ProductForm({ 
+  categories, 
+  product,
+  returnPage,
+  returnSearch,
+}: ProductFormProps) {
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
   const isEdit = !!product;
+  
+  // 목록으로 돌아갈 URL 생성
+  const getReturnUrl = () => {
+    const params = new URLSearchParams();
+    if (returnPage && returnPage !== "1") {
+      params.set("page", returnPage);
+    }
+    if (returnSearch) {
+      params.set("search", returnSearch);
+    }
+    const queryString = params.toString();
+    return `/admin/products${queryString ? `?${queryString}` : ""}`;
+  };
 
   console.log("[ProductForm] 카테고리 개수:", categories.length);
   console.log("[ProductForm] 카테고리 목록:", categories.map((c) => c.name));
@@ -374,7 +394,7 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
 
         if (result.success) {
           alert(result.message);
-          router.push("/admin/products");
+          router.push(getReturnUrl());
         } else {
           alert(result.message);
         }
@@ -421,7 +441,7 @@ export default function ProductForm({ categories, product }: ProductFormProps) {
 
         if (result.success) {
           alert(result.message);
-          router.push("/admin/products");
+          router.push(getReturnUrl());
         } else {
           alert(result.message);
         }
