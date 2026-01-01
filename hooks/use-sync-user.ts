@@ -1,6 +1,6 @@
 "use client";
 
-import { useAuth } from "@clerk/nextjs";
+import { useAuth, useUser } from "@clerk/nextjs";
 import { useEffect, useRef } from "react";
 
 /**
@@ -8,9 +8,13 @@ import { useEffect, useRef } from "react";
  *
  * 사용자가 로그인한 상태에서 이 훅을 사용하면
  * 자동으로 /api/sync-user를 호출하여 Supabase users 테이블에 사용자 정보를 저장합니다.
+ *
+ * OAuth 로그인(네이버, 카카오 등) 시 Clerk가 사용자를 자동으로 생성하지 못하는 경우를 대비하여
+ * 사용자 정보가 완전히 로드될 때까지 대기한 후 동기화를 시도합니다.
  */
 export function useSyncUser() {
   const { isLoaded, isSignedIn, userId, getToken } = useAuth();
+  const { user, isLoaded: userLoaded } = useUser();
   const syncedRef = useRef(false);
 
   useEffect(() => {
@@ -19,17 +23,36 @@ export function useSyncUser() {
       return;
     }
 
+    // OAuth 로그인 시 사용자 정보가 완전히 로드될 때까지 대기
+    if (!userLoaded || !user) {
+      console.log("🔄 사용자 정보 로딩 대기 중...");
+      return;
+    }
+
     // 동기화 실행 (약간의 딜레이 추가)
     const syncUser = async () => {
       try {
         // Clerk 세션이 완전히 준비될 때까지 잠시 대기
-        await new Promise((resolve) => setTimeout(resolve, 500));
+        // OAuth 로그인 후 사용자 정보가 완전히 로드되는데 시간이 걸릴 수 있음
+        await new Promise((resolve) => setTimeout(resolve, 1000));
 
         console.group("🔄 사용자 동기화 시작");
         console.log("userId:", userId);
         console.log("isLoaded:", isLoaded);
         console.log("isSignedIn:", isSignedIn);
+        console.log("userLoaded:", userLoaded);
+        console.log("user 존재:", !!user);
         console.log("시간:", new Date().toISOString());
+
+        // 사용자 정보 확인
+        if (user) {
+          console.log("👤 Clerk 사용자 정보:", {
+            id: user.id,
+            email: user.emailAddresses[0]?.emailAddress,
+            name: user.fullName || user.username,
+            externalAccounts: user.externalAccounts?.length || 0,
+          });
+        }
 
         // Clerk 토큰 가져오기
         const token = await getToken();
@@ -72,5 +95,5 @@ export function useSyncUser() {
     };
 
     syncUser();
-  }, [isLoaded, isSignedIn, userId, getToken]);
+  }, [isLoaded, isSignedIn, userId, getToken, userLoaded, user]);
 }
