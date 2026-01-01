@@ -57,6 +57,10 @@ export async function POST(request: Request) {
       emailAddresses: clerkUser.emailAddresses,
       externalAccounts: clerkUser.externalAccounts,
       createdAt: clerkUser.createdAt,
+      firstName: clerkUser.firstName,
+      lastName: clerkUser.lastName,
+      username: clerkUser.username,
+      imageUrl: clerkUser.imageUrl,
     });
     
     // External Accounts 상세 로그
@@ -66,9 +70,27 @@ export async function POST(request: Request) {
         providerUserId: acc.providerUserId,
         emailAddress: acc.emailAddress,
         verified: acc.verification?.status,
+        username: acc.username,
+        firstName: acc.firstName,
+        lastName: acc.lastName,
+        imageUrl: acc.imageUrl,
       })));
     } else {
       console.warn("⚠️ External Accounts가 없습니다. 네이버 로그인이 제대로 연결되지 않았을 수 있습니다.");
+    }
+    
+    // 이메일 주소 상세 확인
+    if (!clerkUser.emailAddresses || clerkUser.emailAddresses.length === 0) {
+      console.error("❌ 이메일 주소가 없습니다! Clerk가 네이버에서 이메일을 가져오지 못했습니다.");
+      console.error("이것은 Clerk의 User Info Mapping 설정 문제일 수 있습니다.");
+      console.error("Clerk 대시보드에서 User Info Mapping을 확인하세요:");
+      console.error("  - Email: response.email 또는 $.response.email");
+      console.error("  - Name: response.name 또는 $.response.name");
+    } else {
+      console.log("✅ 이메일 주소 확인됨:", clerkUser.emailAddresses.map(e => ({
+        email: e.emailAddress,
+        verified: e.verification?.status,
+      })));
     }
 
     // Supabase에 사용자 정보 동기화

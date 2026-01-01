@@ -1321,7 +1321,7 @@ export default function SignInContent() {
     const removeClerkNaverButton = () => {
       // Clerk가 자동으로 생성한 네이버 버튼 찾기
       const clerkNaverButton = document.querySelector(
-        ".cl-socialButtonsIconButton__custom_naver, button[class*='custom_naver']",
+        ".cl-socialButtonsIconButton__custom_naver-auth, .cl-socialButtonsIconButton__custom_naver_auth, button[class*='custom_naver-auth'], button[class*='custom_naver_auth'], button[class*='custom_naver']",
       ) as HTMLElement;
 
       if (clerkNaverButton) {
@@ -1744,13 +1744,23 @@ export default function SignInContent() {
                     }
 
                     console.log("[SignInContent] 네이버 로그인 시작");
+                    console.log("[SignInContent] Clerk 상태:", {
+                      isLoaded,
+                      signInLoaded,
+                      hasClerk: !!clerk,
+                      hasSignIn: !!signIn,
+                    });
 
                     // OAuth 전략 시도 (Clerk 설정에 따라 형식이 다를 수 있음)
+                    // Clerk 대시보드에서 설정한 Custom OAuth provider의 Key를 확인해야 함
+                    // 일반적으로 "oauth_custom_{provider_key}" 형식
+                    // 예: Clerk 대시보드에서 provider Key를 "naver-auth"로 설정했다면 "oauth_custom_naver-auth"
                     const possibleStrategies = [
-                      "oauth_custom_naver",
-                      "oauth_custom_custom_naver",
-                      "oauth_naver",
-                      "naver",
+                      "oauth_custom_naver-auth", // Custom provider 일반적인 형식 (가장 일반적)
+                      "oauth_custom_naver_auth", // 하이픈 대신 언더스코어 (일부 경우)
+                      "oauth_custom_custom_naver-auth", // 이중 custom 접두사
+                      "oauth_naver-auth", // Social provider 형식
+                      "naver-auth", // 단순 형식
                     ];
 
                     let lastError: any = null;
@@ -1788,23 +1798,55 @@ export default function SignInContent() {
                       "[SignInContent] 모든 네이버 로그인 전략 실패:",
                       allErrors,
                     );
+
+                    // Clerk 대시보드 설정 확인 안내 메시지
+                    const errorMessage =
+                      lastError?.message ||
+                      "네이버 로그인 전략을 찾을 수 없습니다.";
                     throw new Error(
-                      `네이버 로그인 실패\n\n` +
+                      `${errorMessage}\n\n` +
                         `가능한 원인:\n` +
                         `1. Clerk 대시보드에서 네이버 Custom OAuth provider가 설정되지 않았습니다.\n` +
-                        `2. Custom OAuth provider의 Key가 'naver'가 아닙니다.\n` +
+                        `2. Custom OAuth provider의 Key가 'naver-auth'가 아닙니다.\n` +
                         `3. 네이버 개발자 콘솔에서 Callback URL이 등록되지 않았습니다.\n\n` +
-                        `시도한 전략: ${possibleStrategies.join(", ")}`,
+                        `해결 방법:\n` +
+                        `1. Clerk Dashboard → User & Authentication → Social Connections → Custom OAuth\n` +
+                        `2. 네이버 provider의 Key를 확인하세요 (예: 'naver-auth', 'naver' 등)\n` +
+                        `3. Key가 'naver-auth'가 아니라면 코드의 전략 이름을 수정해야 합니다.\n` +
+                        `4. 시도한 전략: ${possibleStrategies.join(", ")}\n\n` +
+                        `에러 상세:\n${allErrors.join("\n")}`,
                     );
                   } catch (error: any) {
                     console.error("[SignInContent] 네이버 로그인 실패:", error);
+                    console.error("[SignInContent] 에러 상세:", {
+                      message: error.message,
+                      errors: error.errors,
+                      status: error.status,
+                      stack: error.stack,
+                    });
 
+                    // 에러 메시지 추출 및 개선
                     let errorMessage =
                       "네이버 로그인에 실패했습니다. 다시 시도해주세요.";
                     if (error.errors && error.errors.length > 0) {
-                      errorMessage = error.errors[0].message || errorMessage;
+                      const firstError = error.errors[0];
+                      errorMessage = firstError.message || errorMessage;
                     } else if (error.message) {
                       errorMessage = error.message;
+                    }
+
+                    // "You did not grant access" 에러인 경우 특별 안내
+                    if (
+                      errorMessage.includes("did not grant access") ||
+                      errorMessage.includes("grant access") ||
+                      errorMessage.includes("권한을 승인")
+                    ) {
+                      errorMessage =
+                        "네이버 로그인 권한 승인이 필요합니다.\n\n" +
+                        "확인 사항:\n" +
+                        "1. 네이버 개발자 센터에서 '이메일 주소'가 필수 동의로 설정되어 있는지 확인하세요.\n" +
+                        "2. 네이버 로그인 페이지에서 모든 권한을 승인해주세요.\n" +
+                        "3. 네이버 개발자 센터 → 내 애플리케이션 → 네이버 로그인 → 제공 정보 설정을 확인하세요.";
                     }
 
                     alert(errorMessage);
