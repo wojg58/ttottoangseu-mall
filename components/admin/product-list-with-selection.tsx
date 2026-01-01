@@ -7,8 +7,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
-import { Edit } from "lucide-react";
+import { Edit, ImageIcon } from "lucide-react";
 import type { ProductListItem } from "@/types/database";
 import DeleteProductButton from "@/components/delete-product-button";
 import NumberDisplay from "@/components/number-display";
@@ -111,111 +110,12 @@ export default function ProductListWithSelection({
               {products.map((product) => {
                 const isSelected = selectedIds.has(product.id);
                 return (
-                  <tr
+                  <ProductRow
                     key={product.id}
-                    className={`border-b border-gray-50 hover:bg-gray-50 ${
-                      isSelected ? "bg-[#ffeef5]" : ""
-                    }`}
-                  >
-                    <td className="py-4 px-4">
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={(e) => handleSelectOne(product.id, e.target.checked)}
-                        className="w-4 h-4 text-[#ff6b9d] border-gray-300 rounded focus:ring-[#ff6b9d]"
-                        aria-label={`${product.name} 선택`}
-                      />
-                    </td>
-                    <td className="py-4 px-4">
-                      {product.primary_image ? (
-                        <img
-                          src={product.primary_image.image_url}
-                          alt={product.name}
-                          className="w-16 h-16 object-cover rounded-lg"
-                        />
-                      ) : (
-                        <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 text-xs">
-                          No Image
-                        </div>
-                      )}
-                    </td>
-                    <td className="py-4 px-4">
-                      <div>
-                        <p className="font-medium text-[#4a3f48]">
-                          {product.name}
-                        </p>
-                        <p className="text-xs text-[#8b7d84]">
-                          {product.slug}
-                        </p>
-                      </div>
-                    </td>
-                    <td className="py-4 px-4 text-[#4a3f48]">
-                      {product.category.name}
-                    </td>
-                    <td className="py-4 px-4">
-                      <div>
-                        {product.discount_price ? (
-                          <>
-                            <NumberDisplay
-                              value={product.discount_price}
-                              suffix="원"
-                              className="text-[#ff6b9d] font-medium"
-                            />
-                            <p className="text-xs text-gray-400 line-through">
-                              <NumberDisplay value={product.price} suffix="원" />
-                            </p>
-                          </>
-                        ) : (
-                          <NumberDisplay
-                            value={product.price}
-                            suffix="원"
-                            className="text-[#4a3f48] font-medium"
-                          />
-                        )}
-                      </div>
-                    </td>
-                    <td className="py-4 px-4 text-[#4a3f48]">
-                      {product.stock}개
-                    </td>
-                    <td className="py-4 px-4">
-                      <span
-                        className={`px-2 py-1 rounded-full text-xs ${
-                          product.status === "active"
-                            ? "bg-green-100 text-green-600"
-                            : product.status === "sold_out"
-                            ? "bg-red-100 text-red-600"
-                            : "bg-gray-100 text-gray-600"
-                        }`}
-                      >
-                        {product.status === "active" && "판매중"}
-                        {product.status === "hidden" && "숨김"}
-                        {product.status === "sold_out" && "품절"}
-                      </span>
-                      <div className="flex gap-1 mt-1">
-                        {product.is_featured && (
-                          <span className="text-xs px-1.5 py-0.5 bg-[#ffeef5] text-[#ff6b9d] rounded">
-                            BEST
-                          </span>
-                        )}
-                        {product.is_new && (
-                          <span className="text-xs px-1.5 py-0.5 bg-blue-100 text-blue-600 rounded">
-                            NEW
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="py-4 px-4">
-                      <div className="flex items-center gap-2">
-                        <Link
-                          href={`/admin/products/${product.id}`}
-                          className="p-2 text-[#8b7d84] hover:text-[#ff6b9d] transition-colors"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Link>
-                        <DeleteProductButton productId={product.id} />
-                      </div>
-                    </td>
-                  </tr>
+                    product={product}
+                    isSelected={isSelected}
+                    onSelect={(checked) => handleSelectOne(product.id, checked)}
+                  />
                 );
               })}
             </tbody>
@@ -223,6 +123,143 @@ export default function ProductListWithSelection({
         </div>
       </div>
     </div>
+  );
+}
+
+// 상품 행 컴포넌트 (이미지 로딩 상태 관리)
+function ProductRow({
+  product,
+  isSelected,
+  onSelect,
+}: {
+  product: ProductListItem;
+  isSelected: boolean;
+  onSelect: (checked: boolean) => void;
+}) {
+  const [imageError, setImageError] = useState(false);
+  const [imageLoading, setImageLoading] = useState(true);
+
+  // 이미지 URL이 있으면 표시 시도
+  const hasImage = product.primary_image?.image_url;
+
+  return (
+    <tr
+      className={`border-b border-gray-50 hover:bg-gray-50 ${
+        isSelected ? "bg-[#ffeef5]" : ""
+      }`}
+    >
+      <td className="py-4 px-4">
+        <input
+          type="checkbox"
+          checked={isSelected}
+          onChange={(e) => onSelect(e.target.checked)}
+          className="w-4 h-4 text-[#ff6b9d] border-gray-300 rounded focus:ring-[#ff6b9d]"
+          aria-label={`${product.name} 선택`}
+        />
+      </td>
+      <td className="py-4 px-4">
+        {hasImage && !imageError ? (
+          <>
+            {imageLoading && (
+              <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center">
+                <div className="w-4 h-4 border-2 border-[#ff6b9d] border-t-transparent rounded-full animate-spin" />
+              </div>
+            )}
+            <img
+              src={product.primary_image.image_url}
+              alt={product.name}
+              className={`w-16 h-16 object-cover rounded-lg ${
+                imageLoading ? "hidden" : ""
+              }`}
+              onLoad={() => {
+                console.log("[ProductRow] 이미지 로딩 성공:", product.name);
+                setImageLoading(false);
+              }}
+              onError={(e) => {
+                console.error("[ProductRow] 이미지 로딩 실패:", {
+                  productName: product.name,
+                  imageUrl: product.primary_image?.image_url,
+                });
+                setImageError(true);
+                setImageLoading(false);
+              }}
+            />
+          </>
+        ) : (
+          <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400">
+            <ImageIcon className="w-6 h-6" />
+          </div>
+        )}
+      </td>
+      <td className="py-4 px-4">
+        <div>
+          <p className="font-medium text-[#4a3f48]">{product.name}</p>
+          <p className="text-xs text-[#8b7d84]">{product.slug}</p>
+        </div>
+      </td>
+      <td className="py-4 px-4 text-[#4a3f48]">{product.category.name}</td>
+      <td className="py-4 px-4">
+        <div>
+          {product.discount_price ? (
+            <>
+              <NumberDisplay
+                value={product.discount_price}
+                suffix="원"
+                className="text-[#ff6b9d] font-medium"
+              />
+              <p className="text-xs text-gray-400 line-through">
+                <NumberDisplay value={product.price} suffix="원" />
+              </p>
+            </>
+          ) : (
+            <NumberDisplay
+              value={product.price}
+              suffix="원"
+              className="text-[#4a3f48] font-medium"
+            />
+          )}
+        </div>
+      </td>
+      <td className="py-4 px-4 text-[#4a3f48]">{product.stock}개</td>
+      <td className="py-4 px-4">
+        <span
+          className={`px-2 py-1 rounded-full text-xs ${
+            product.status === "active"
+              ? "bg-green-100 text-green-600"
+              : product.status === "sold_out"
+              ? "bg-red-100 text-red-600"
+              : "bg-gray-100 text-gray-600"
+          }`}
+        >
+          {product.status === "active" && "판매중"}
+          {product.status === "hidden" && "숨김"}
+          {product.status === "sold_out" && "품절"}
+        </span>
+        <div className="flex gap-1 mt-1">
+          {product.is_featured && (
+            <span className="text-xs px-1.5 py-0.5 bg-[#ffeef5] text-[#ff6b9d] rounded">
+              BEST
+            </span>
+          )}
+          {product.is_new && (
+            <span className="text-xs px-1.5 py-0.5 bg-blue-100 text-blue-600 rounded">
+              NEW
+            </span>
+          )}
+        </div>
+      </td>
+      <td className="py-4 px-4">
+        <div className="flex items-center gap-2">
+          <Link
+            href={`/admin/products/${product.id}`}
+            className="p-2 text-[#8b7d84] hover:text-[#ff6b9d] transition-colors"
+          >
+            <Edit className="w-4 h-4" />
+          </Link>
+          <DeleteProductButton productId={product.id} />
+        </div>
+      </td>
+    </tr>
   );
 }
 
