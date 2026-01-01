@@ -132,11 +132,13 @@ export default function SignInContent() {
         errorAlerts.forEach((alert) => {
           const alertElement = alert as HTMLElement;
           const alertText = alertElement.textContent || "";
-          // "Unable to complete action" 에러 메시지 숨기기
+          // "Unable to complete action" 및 "External Account was not found" 에러 메시지 숨기기
           if (
             alertText.includes("Unable to complete action") ||
             alertText.includes("문제가 지속되면") ||
-            alertText.includes("If the problem persists")
+            alertText.includes("If the problem persists") ||
+            alertText.includes("External Account was not found") ||
+            alertText.includes("외부 계정을 찾을 수 없습니다")
           ) {
             console.log("[SignInContent] Clerk 에러 메시지 숨김:", alertText);
             alertElement.style.cssText = `
@@ -625,11 +627,13 @@ export default function SignInContent() {
       errorAlerts.forEach((alert) => {
         const alertElement = alert as HTMLElement;
         const alertText = alertElement.textContent || "";
-        // "Unable to complete action" 에러 메시지 숨기기
+        // "Unable to complete action" 및 "External Account was not found" 에러 메시지 숨기기
         if (
           alertText.includes("Unable to complete action") ||
           alertText.includes("문제가 지속되면") ||
-          alertText.includes("If the problem persists")
+          alertText.includes("If the problem persists") ||
+          alertText.includes("External Account was not found") ||
+          alertText.includes("외부 계정을 찾을 수 없습니다")
         ) {
           console.log("[SignInContent] Clerk 에러 메시지 숨김:", alertText);
           alertElement.style.cssText = `
@@ -1754,13 +1758,16 @@ export default function SignInContent() {
                     // OAuth 전략 시도 (Clerk 설정에 따라 형식이 다를 수 있음)
                     // Clerk 대시보드에서 설정한 Custom OAuth provider의 Key를 확인해야 함
                     // 일반적으로 "oauth_custom_{provider_key}" 형식
+                    // 예: Clerk 대시보드에서 provider Key를 "naver"로 설정했다면 "oauth_custom_naver"
                     // 예: Clerk 대시보드에서 provider Key를 "naver_auth"로 설정했다면 "oauth_custom_naver_auth"
                     const possibleStrategies = [
-                      "oauth_custom_naver_auth", // Custom provider 일반적인 형식 (가장 일반적)
+                      "oauth_custom_naver", // Key가 "naver"인 경우 (문서 권장)
+                      "oauth_custom_naver_auth", // Key가 "naver_auth"인 경우
                       "oauth_custom_naver-auth", // 언더스코어 대신 하이픈 (일부 경우)
                       "oauth_custom_custom_naver_auth", // 이중 custom 접두사
                       "oauth_naver_auth", // Social provider 형식
                       "naver_auth", // 단순 형식
+                      "naver", // 가장 단순한 형식
                     ];
 
                     let lastError: any = null;
@@ -1847,6 +1854,26 @@ export default function SignInContent() {
                         "1. 네이버 개발자 센터에서 '이메일 주소'가 필수 동의로 설정되어 있는지 확인하세요.\n" +
                         "2. 네이버 로그인 페이지에서 모든 권한을 승인해주세요.\n" +
                         "3. 네이버 개발자 센터 → 내 애플리케이션 → 네이버 로그인 → 제공 정보 설정을 확인하세요.";
+                    }
+
+                    // "External Account was not found" 에러인 경우 특별 안내
+                    if (
+                      errorMessage.includes("External Account was not found") ||
+                      errorMessage.includes("외부 계정을 찾을 수 없습니다") ||
+                      errorMessage.includes("external account")
+                    ) {
+                      errorMessage =
+                        "네이버 로그인에 실패했습니다.\n\n" +
+                        "가능한 원인:\n" +
+                        "1. 네이버 개발자 센터에서 '이메일 주소'가 필수 동의로 설정되지 않았습니다.\n" +
+                        "2. Clerk 대시보드의 User Info Mapping 설정이 올바르지 않습니다.\n" +
+                        "3. 네이버에서 이메일 정보를 제공하지 않았습니다.\n\n" +
+                        "해결 방법:\n" +
+                        "1. 네이버 개발자 센터 → 내 애플리케이션 → 네이버 로그인 → 제공 정보 설정\n" +
+                        "2. '이메일 주소'를 필수 동의로 설정\n" +
+                        "3. Clerk 대시보드 → SSO Connections → 네이버 provider → User Info Mapping 확인\n" +
+                        "   - Email: response.email\n" +
+                        "   - Name: response.name";
                     }
 
                     alert(errorMessage);
