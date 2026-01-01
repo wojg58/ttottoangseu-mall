@@ -8,15 +8,13 @@ import { redirect } from "next/navigation";
 import {
   Plus,
   ChevronLeft,
-  Edit,
   FileText,
   Image as ImageIcon,
 } from "lucide-react";
 import { isAdmin, getAdminProducts } from "@/actions/admin";
-import DeleteProductButton from "@/components/delete-product-button";
 import BulkDeleteProductsButton from "@/components/bulk-delete-products-button";
 import ProductSearch from "@/components/admin/product-search";
-import NumberDisplay from "@/components/number-display";
+import ProductListWithSelection from "@/components/admin/product-list-with-selection";
 
 interface AdminProductsPageProps {
   searchParams: Promise<{
@@ -86,135 +84,7 @@ export default async function AdminProductsPage({
 
         {/* 상품 목록 */}
         {products.length > 0 ? (
-          <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-gray-100 bg-gray-50">
-                    <th className="text-left py-4 px-4 text-[#8b7d84] font-medium">
-                      이미지
-                    </th>
-                    <th className="text-left py-4 px-4 text-[#8b7d84] font-medium">
-                      상품명
-                    </th>
-                    <th className="text-left py-4 px-4 text-[#8b7d84] font-medium">
-                      카테고리
-                    </th>
-                    <th className="text-left py-4 px-4 text-[#8b7d84] font-medium">
-                      가격
-                    </th>
-                    <th className="text-left py-4 px-4 text-[#8b7d84] font-medium">
-                      재고
-                    </th>
-                    <th className="text-left py-4 px-4 text-[#8b7d84] font-medium">
-                      상태
-                    </th>
-                    <th className="text-left py-4 px-4 text-[#8b7d84] font-medium">
-                      액션
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {products.map((product) => (
-                    <tr
-                      key={product.id}
-                      className="border-b border-gray-50 hover:bg-gray-50"
-                    >
-                      <td className="py-4 px-4">
-                        {product.primary_image ? (
-                          <img
-                            src={product.primary_image.image_url}
-                            alt={product.name}
-                            className="w-16 h-16 object-cover rounded-lg"
-                          />
-                        ) : (
-                          <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 text-xs">
-                            No Image
-                          </div>
-                        )}
-                      </td>
-                      <td className="py-4 px-4">
-                        <div>
-                          <p className="font-medium text-[#4a3f48]">
-                            {product.name}
-                          </p>
-                          <p className="text-xs text-[#8b7d84]">
-                            {product.slug}
-                          </p>
-                        </div>
-                      </td>
-                      <td className="py-4 px-4 text-[#4a3f48]">
-                        {product.category.name}
-                      </td>
-                      <td className="py-4 px-4">
-                        <div>
-                          {product.discount_price ? (
-                            <>
-                              <NumberDisplay
-                                value={product.discount_price}
-                                suffix="원"
-                                className="text-[#ff6b9d] font-medium"
-                              />
-                              <p className="text-xs text-gray-400 line-through">
-                                <NumberDisplay value={product.price} suffix="원" />
-                              </p>
-                            </>
-                          ) : (
-                            <NumberDisplay
-                              value={product.price}
-                              suffix="원"
-                              className="text-[#4a3f48] font-medium"
-                            />
-                          )}
-                        </div>
-                      </td>
-                      <td className="py-4 px-4 text-[#4a3f48]">
-                        {product.stock}개
-                      </td>
-                      <td className="py-4 px-4">
-                        <span
-                          className={`px-2 py-1 rounded-full text-xs ${
-                            product.status === "active"
-                              ? "bg-green-100 text-green-600"
-                              : product.status === "sold_out"
-                              ? "bg-red-100 text-red-600"
-                              : "bg-gray-100 text-gray-600"
-                          }`}
-                        >
-                          {product.status === "active" && "판매중"}
-                          {product.status === "hidden" && "숨김"}
-                          {product.status === "sold_out" && "품절"}
-                        </span>
-                        <div className="flex gap-1 mt-1">
-                          {product.is_featured && (
-                            <span className="text-xs px-1.5 py-0.5 bg-[#ffeef5] text-[#ff6b9d] rounded">
-                              BEST
-                            </span>
-                          )}
-                          {product.is_new && (
-                            <span className="text-xs px-1.5 py-0.5 bg-blue-100 text-blue-600 rounded">
-                              NEW
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="py-4 px-4">
-                        <div className="flex items-center gap-2">
-                          <Link
-                            href={`/admin/products/${product.id}`}
-                            className="p-2 text-[#8b7d84] hover:text-[#ff6b9d] transition-colors"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Link>
-                          <DeleteProductButton productId={product.id} />
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <ProductListWithSelection products={products} />
         ) : (
           <div className="bg-white rounded-xl shadow-sm p-16 text-center">
             <p className="text-[#8b7d84] mb-4">등록된 상품이 없습니다.</p>

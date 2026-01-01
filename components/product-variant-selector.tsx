@@ -62,6 +62,17 @@ export default function ProductVariantSelector({
     return null;
   }
 
+  // 옵션 이름에서 숫자 추출 함수 (정렬용)
+  const extractOrderNumber = (variantValue: string): number => {
+    // "1.블랙키티+그레이드레스" 형식에서 숫자 추출
+    const match = variantValue.match(/^(\d+)\./);
+    if (match) {
+      return parseInt(match[1], 10);
+    }
+    // 숫자가 없으면 맨 뒤로 (큰 숫자 반환)
+    return 999999;
+  };
+
   // 옵션별 그룹화 (variant_name 기준)
   const groupedVariants = availableVariants.reduce((acc, variant) => {
     const groupName = variant.variant_name || "옵션";
@@ -71,6 +82,15 @@ export default function ProductVariantSelector({
     acc[groupName].push(variant);
     return acc;
   }, {} as Record<string, ProductVariant[]>);
+
+  // 각 그룹의 옵션들을 숫자 순서로 정렬
+  Object.keys(groupedVariants).forEach((groupName) => {
+    groupedVariants[groupName].sort((a, b) => {
+      const orderA = extractOrderNumber(a.variant_value);
+      const orderB = extractOrderNumber(b.variant_value);
+      return orderA - orderB;
+    });
+  });
 
   const handleVariantClick = (variantId: string) => {
     console.log("[ProductVariantSelector] 옵션 선택:", variantId);
