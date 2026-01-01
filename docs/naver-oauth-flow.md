@@ -381,3 +381,4 @@ ssh -i "aws_server.pem" ubuntu@15.165.148.244 "pm2 logs clerk-userinfo-proxy --l
    - Supabase Dashboard에서 users 테이블 확인
    - `clerk_user_id`로 조회
 
+

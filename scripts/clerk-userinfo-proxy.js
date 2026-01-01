@@ -56,15 +56,15 @@ function flattenNaverResponse(raw) {
     sub: get(raw, ["response", "id"]), // User ID (필수 - Identifier로 사용)
     email: get(raw, ["response", "email"]), // 이메일 (필수)
     email_verified: true, // 네이버는 이메일 인증된 사용자만 제공
-    
+
     // 이름 필드 (Clerk 호환)
     name: get(raw, ["response", "name"]), // 전체 이름
     given_name: get(raw, ["response", "name"]), // First name
     family_name: "", // Last name (네이버는 제공하지 않음)
-    
+
     // 프로필 이미지
     picture: get(raw, ["response", "profile_image"]),
-    
+
     // 추가 필드 (선택)
     nickname: get(raw, ["response", "nickname"]),
     gender: get(raw, ["response", "gender"]),
@@ -72,7 +72,7 @@ function flattenNaverResponse(raw) {
     birthyear: get(raw, ["response", "birthyear"]),
     mobile: get(raw, ["response", "mobile"]),
   };
-  
+
   // 필수 필드가 없으면 에러 반환
   if (!flat.sub || !flat.email) {
     console.error("[ERROR] 필수 필드 누락:", {
@@ -188,15 +188,22 @@ const server = http.createServer(async (req, res) => {
     // 4) Clerk가 매핑할 수 있는 flat JSON 반환
     console.log("[INFO] 평탄화된 응답 반환");
     console.log("[DEBUG] 최종 응답 JSON:", JSON.stringify(flat, null, 2));
-    
+
     // 필수 필드 재확인
     if (!flat.sub || !flat.email) {
-      console.error("[ERROR] 필수 필드가 없어 Clerk가 사용자를 생성하지 못할 수 있습니다!");
+      console.error(
+        "[ERROR] 필수 필드가 없어 Clerk가 사용자를 생성하지 못할 수 있습니다!",
+      );
       console.error("[ERROR] sub:", flat.sub, "email:", flat.email);
     } else {
-      console.log("[INFO] 필수 필드 확인 완료 - sub:", flat.sub, "email:", flat.email);
+      console.log(
+        "[INFO] 필수 필드 확인 완료 - sub:",
+        flat.sub,
+        "email:",
+        flat.email,
+      );
     }
-    
+
     res.writeHead(200, {
       "Content-Type": "application/json",
       "Cache-Control": "no-store",
