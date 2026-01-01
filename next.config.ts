@@ -10,11 +10,17 @@ const nextConfig: NextConfig = {
       { hostname: "shop-phinf.pstatic.net" },
       // Supabase Storage 도메인 (환경변수에서 가져오기)
       ...(process.env.NEXT_PUBLIC_SUPABASE_URL
-        ? [
-            {
-              hostname: new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).hostname,
-            },
-          ]
+        ? (() => {
+            try {
+              return [
+                {
+                  hostname: new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).hostname,
+                },
+              ];
+            } catch {
+              return [];
+            }
+          })()
         : []),
     ],
     // 이미지 최적화 설정
