@@ -5,7 +5,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { Edit, ImageIcon } from "lucide-react";
 import type { ProductListItem } from "@/types/database";
@@ -138,9 +138,35 @@ function ProductRow({
 }) {
   const [imageError, setImageError] = useState(false);
   const [imageLoading, setImageLoading] = useState(true);
+  const imageRef = useRef<HTMLImageElement | null>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // 이미지 URL이 있으면 표시 시도
   const hasImage = product.primary_image?.image_url;
+
+  // 이미지 로딩 타임아웃 설정 (5초 후 실패 처리)
+  useEffect(() => {
+    if (hasImage && !imageError) {
+      timeoutRef.current = setTimeout(() => {
+        // 5초가 지나도 이미지가 로드되지 않으면 에러 처리
+        if (imageLoading) {
+          console.warn(
+            "[ProductRow] 이미지 로딩 타임아웃:",
+            product.name,
+            product.primary_image?.image_url,
+          );
+          setImageError(true);
+          setImageLoading(false);
+        }
+      }, 5000); // 5초 타임아웃
+
+      return () => {
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+        }
+      };
+    }
+  }, [hasImage, imageError, imageLoading, product.name, product.primary_image?.image_url]);
 
   return (
     <tr
@@ -166,20 +192,29 @@ function ProductRow({
               </div>
             )}
             <img
+              ref={imageRef}
               src={product.primary_image.image_url}
               alt={product.name}
               className={`w-16 h-16 object-cover rounded-lg ${
                 imageLoading ? "hidden" : ""
               }`}
+              loading="lazy"
               onLoad={() => {
                 console.log("[ProductRow] 이미지 로딩 성공:", product.name);
+                if (timeoutRef.current) {
+                  clearTimeout(timeoutRef.current);
+                }
                 setImageLoading(false);
+                setImageError(false);
               }}
               onError={(e) => {
                 console.error("[ProductRow] 이미지 로딩 실패:", {
                   productName: product.name,
                   imageUrl: product.primary_image?.image_url,
                 });
+                if (timeoutRef.current) {
+                  clearTimeout(timeoutRef.current);
+                }
                 setImageError(true);
                 setImageLoading(false);
               }}
