@@ -1321,7 +1321,7 @@ export default function SignInContent() {
     const removeClerkNaverButton = () => {
       // Clerk가 자동으로 생성한 네이버 버튼 찾기
       const clerkNaverButton = document.querySelector(
-        ".cl-socialButtonsIconButton__custom_naver-auth, .cl-socialButtonsIconButton__custom_naver_auth, button[class*='custom_naver-auth'], button[class*='custom_naver_auth'], button[class*='custom_naver']",
+        ".cl-socialButtonsIconButton__custom_naver_auth, .cl-socialButtonsIconButton__custom_naver-auth, button[class*='custom_naver_auth'], button[class*='custom_naver-auth'], button[class*='custom_naver']",
       ) as HTMLElement;
 
       if (clerkNaverButton) {
@@ -1754,13 +1754,13 @@ export default function SignInContent() {
                     // OAuth 전략 시도 (Clerk 설정에 따라 형식이 다를 수 있음)
                     // Clerk 대시보드에서 설정한 Custom OAuth provider의 Key를 확인해야 함
                     // 일반적으로 "oauth_custom_{provider_key}" 형식
-                    // 예: Clerk 대시보드에서 provider Key를 "naver-auth"로 설정했다면 "oauth_custom_naver-auth"
+                    // 예: Clerk 대시보드에서 provider Key를 "naver_auth"로 설정했다면 "oauth_custom_naver_auth"
                     const possibleStrategies = [
-                      "oauth_custom_naver-auth", // Custom provider 일반적인 형식 (가장 일반적)
-                      "oauth_custom_naver_auth", // 하이픈 대신 언더스코어 (일부 경우)
-                      "oauth_custom_custom_naver-auth", // 이중 custom 접두사
-                      "oauth_naver-auth", // Social provider 형식
-                      "naver-auth", // 단순 형식
+                      "oauth_custom_naver_auth", // Custom provider 일반적인 형식 (가장 일반적)
+                      "oauth_custom_naver-auth", // 언더스코어 대신 하이픈 (일부 경우)
+                      "oauth_custom_custom_naver_auth", // 이중 custom 접두사
+                      "oauth_naver_auth", // Social provider 형식
+                      "naver_auth", // 단순 형식
                     ];
 
                     let lastError: any = null;
@@ -1807,12 +1807,12 @@ export default function SignInContent() {
                       `${errorMessage}\n\n` +
                         `가능한 원인:\n` +
                         `1. Clerk 대시보드에서 네이버 Custom OAuth provider가 설정되지 않았습니다.\n` +
-                        `2. Custom OAuth provider의 Key가 'naver-auth'가 아닙니다.\n` +
+                        `2. Custom OAuth provider의 Key가 'naver_auth'가 아닙니다.\n` +
                         `3. 네이버 개발자 콘솔에서 Callback URL이 등록되지 않았습니다.\n\n` +
                         `해결 방법:\n` +
                         `1. Clerk Dashboard → User & Authentication → Social Connections → Custom OAuth\n` +
-                        `2. 네이버 provider의 Key를 확인하세요 (예: 'naver-auth', 'naver' 등)\n` +
-                        `3. Key가 'naver-auth'가 아니라면 코드의 전략 이름을 수정해야 합니다.\n` +
+                        `2. 네이버 provider의 Key를 확인하세요 (예: 'naver_auth', 'naver' 등)\n` +
+                        `3. Key가 'naver_auth'가 아니라면 코드의 전략 이름을 수정해야 합니다.\n` +
                         `4. 시도한 전략: ${possibleStrategies.join(", ")}\n\n` +
                         `에러 상세:\n${allErrors.join("\n")}`,
                     );
