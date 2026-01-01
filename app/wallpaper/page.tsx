@@ -89,7 +89,7 @@ export default function WallpaperDownloadPage() {
             </h3>
             <div className="relative aspect-video mb-4 rounded-lg overflow-hidden bg-gray-100">
               <Image
-                src="/image/ChatGPT_01_jp.jpg"
+                src="/image/calendar_pc.jpg"
                 alt="PC용 배경화면 (달력X)"
                 fill
                 className="object-contain"
