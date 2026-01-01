@@ -138,16 +138,17 @@ function ProductRow({
 }) {
   const [imageError, setImageError] = useState(false);
   const [imageLoading, setImageLoading] = useState(true);
+  const imageRef = useRef<HTMLImageElement | null>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // 이미지 URL이 있으면 표시 시도
   const hasImage = product.primary_image?.image_url;
 
-  // 이미지 로딩 타임아웃 설정 (5초 후 실패 처리)
+  // 이미지 로딩 타임아웃 설정 (10초 후 실패 처리 - 네트워크가 느린 경우 대비)
   useEffect(() => {
     if (hasImage && !imageError) {
       timeoutRef.current = setTimeout(() => {
-        // 5초가 지나도 이미지가 로드되지 않으면 에러 처리
+        // 10초가 지나도 이미지가 로드되지 않으면 에러 처리
         if (imageLoading) {
           console.warn(
             "[ProductRow] 이미지 로딩 타임아웃:",
@@ -157,13 +158,17 @@ function ProductRow({
           setImageError(true);
           setImageLoading(false);
         }
-      }, 5000); // 5초 타임아웃
+      }, 10000); // 10초 타임아웃 (더 길게 설정)
 
       return () => {
         if (timeoutRef.current) {
           clearTimeout(timeoutRef.current);
         }
       };
+    } else if (!hasImage) {
+      // 이미지가 없으면 즉시 로딩 완료 처리
+      setImageLoading(false);
+      setImageError(true);
     }
   }, [hasImage, imageError, imageLoading, product.name, product.primary_image?.image_url]);
 
@@ -183,18 +188,21 @@ function ProductRow({
         />
       </td>
       <td className="py-4 px-4">
-        {hasImage && !imageError ? (
+        {hasImage ? (
           <div className="relative w-16 h-16">
+            {/* 로딩 스피너 (이미지가 로딩 중일 때만 표시) */}
             {imageLoading && (
               <div className="absolute inset-0 bg-gray-100 rounded-lg flex items-center justify-center z-10">
                 <div className="w-4 h-4 border-2 border-[#ff6b9d] border-t-transparent rounded-full animate-spin" />
               </div>
             )}
+            {/* 이미지 (로딩 중이어도 표시 - 브라우저가 자동으로 로드 시도) */}
             <img
+              ref={imageRef}
               src={product.primary_image.image_url}
               alt={product.name}
               className={`w-16 h-16 object-cover rounded-lg ${
-                imageLoading ? "opacity-0" : "opacity-100"
+                imageLoading ? "opacity-50" : "opacity-100"
               } transition-opacity`}
               loading="lazy"
               onLoad={() => {
@@ -217,6 +225,12 @@ function ProductRow({
                 setImageLoading(false);
               }}
             />
+            {/* 에러 상태일 때도 이미지 URL은 표시 (사용자가 확인 가능) */}
+            {imageError && (
+              <div className="absolute inset-0 bg-gray-100 rounded-lg flex items-center justify-center opacity-75">
+                <ImageIcon className="w-4 h-4 text-gray-400" />
+              </div>
+            )}
           </div>
         ) : (
           <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400">
