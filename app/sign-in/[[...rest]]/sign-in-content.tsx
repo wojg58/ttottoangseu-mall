@@ -30,6 +30,7 @@ export default function SignInContent() {
   const { signIn, isLoaded: signInLoaded } = useSignIn();
   const redirectUrl = searchParams.get("redirect_url") || "/";
   const kakaoButtonRef = useRef<HTMLButtonElement>(null);
+  const naverButtonRef = useRef<HTMLButtonElement>(null);
 
   // 클라이언트 사이드에서만 실행 (useEffect 안으로 이동하여 hydration mismatch 방지)
   useEffect(() => {
@@ -1315,6 +1316,30 @@ export default function SignInContent() {
     };
   }, []);
 
+  // Clerk가 자동으로 생성한 네이버 버튼 삭제
+  useEffect(() => {
+    const removeClerkNaverButton = () => {
+      // Clerk가 자동으로 생성한 네이버 버튼 찾기
+      const clerkNaverButton = document.querySelector(
+        ".cl-socialButtonsIconButton__custom_naver, button[class*='custom_naver']",
+      ) as HTMLElement;
+
+      if (clerkNaverButton) {
+        console.log("[SignInContent] Clerk 자동 생성 네이버 버튼 삭제");
+        clerkNaverButton.remove();
+      }
+    };
+
+    // 초기 실행 및 주기적 확인
+    const initialTimeout = setTimeout(removeClerkNaverButton, 500);
+    const interval = setInterval(removeClerkNaverButton, 1000);
+
+    return () => {
+      clearTimeout(initialTimeout);
+      clearInterval(interval);
+    };
+  }, []);
+
   // 카카오 버튼을 이메일 주소 필드 위에 삽입
   useEffect(() => {
     const insertKakaoButton = () => {
@@ -1378,6 +1403,67 @@ export default function SignInContent() {
     // 초기 실행 및 주기적 확인
     const initialTimeout = setTimeout(insertKakaoButton, 500);
     const interval = setInterval(insertKakaoButton, 1000);
+
+    return () => {
+      clearTimeout(initialTimeout);
+      clearInterval(interval);
+    };
+  }, []);
+
+  // 네이버 버튼을 카카오 버튼 아래에 삽입
+  useEffect(() => {
+    const insertNaverButton = () => {
+      const kakaoButton = kakaoButtonRef.current;
+      const naverButton = naverButtonRef.current;
+
+      if (kakaoButton && naverButton && kakaoButton.parentElement) {
+        // 이미 삽입되어 있는지 확인
+        const parent = naverButton.parentElement;
+        if (
+          parent &&
+          parent === kakaoButton.parentElement &&
+          kakaoButton.nextSibling === naverButton
+        ) {
+          // 이미 올바른 위치에 있으면 리턴
+          return;
+        }
+
+        // 기존 위치에서 제거
+        if (naverButton.parentElement) {
+          naverButton.parentElement.removeChild(naverButton);
+        }
+
+        console.log("[SignInContent] 네이버 버튼을 카카오 버튼 아래에 삽입");
+
+        // 네이버 버튼을 보이도록 설정
+        naverButton.classList.remove("hidden");
+
+        // 버튼이 클릭 가능하도록 스타일 강제 적용
+        naverButton.style.cssText += `
+          display: block !important;
+          visibility: visible !important;
+          opacity: 1 !important;
+          pointer-events: auto !important;
+          cursor: pointer !important;
+          z-index: 10 !important;
+        `;
+
+        // 버튼이 비활성화되지 않도록 보장
+        naverButton.removeAttribute("disabled");
+        naverButton.setAttribute("tabindex", "0");
+        naverButton.setAttribute("aria-disabled", "false");
+
+        // 카카오 버튼 다음에 삽입
+        kakaoButton.parentElement.insertBefore(
+          naverButton,
+          kakaoButton.nextSibling,
+        );
+      }
+    };
+
+    // 초기 실행 및 주기적 확인
+    const initialTimeout = setTimeout(insertNaverButton, 600);
+    const interval = setInterval(insertNaverButton, 1000);
 
     return () => {
       clearTimeout(initialTimeout);
@@ -1624,6 +1710,115 @@ export default function SignInContent() {
                 }}
               >
                 카카오계정 로그인
+              </button>
+
+              {/* 네이버 로그인 버튼 */}
+              <button
+                ref={naverButtonRef}
+                onClick={async () => {
+                  console.group("[SignInContent] 네이버 로그인 버튼 클릭");
+                  console.log("시간:", new Date().toISOString());
+                  console.log("리다이렉트 URL:", redirectUrl);
+
+                  try {
+                    if (!isLoaded || !signInLoaded) {
+                      console.warn(
+                        "[SignInContent] Clerk가 아직 초기화 중입니다.",
+                      );
+                      alert(
+                        "로그인 기능을 준비하는 중입니다. 잠시 후 다시 시도해주세요.",
+                      );
+                      console.groupEnd();
+                      return;
+                    }
+
+                    if (!clerk || !signIn) {
+                      console.error(
+                        "[SignInContent] Clerk 또는 signIn이 초기화되지 않음",
+                      );
+                      alert(
+                        "로그인 기능을 준비하는 중입니다. 잠시 후 다시 시도해주세요.",
+                      );
+                      console.groupEnd();
+                      return;
+                    }
+
+                    console.log("[SignInContent] 네이버 로그인 시작");
+
+                    // OAuth 전략 시도 (Clerk 설정에 따라 형식이 다를 수 있음)
+                    const possibleStrategies = [
+                      "oauth_custom_naver",
+                      "oauth_custom_custom_naver",
+                      "oauth_naver",
+                      "naver",
+                    ];
+
+                    let lastError: any = null;
+                    const allErrors: string[] = [];
+
+                    for (const strategy of possibleStrategies) {
+                      try {
+                        console.log(
+                          `[SignInContent] 네이버 로그인 시도 - 전략: ${strategy}`,
+                        );
+                        await (signIn.authenticateWithRedirect as any)({
+                          strategy: strategy,
+                          redirectUrl: redirectUrl,
+                          redirectUrlComplete: redirectUrl,
+                        });
+                        console.log(
+                          `[SignInContent] 네이버 로그인 리다이렉트 완료`,
+                        );
+                        return;
+                      } catch (strategyError: any) {
+                        const errorMsg =
+                          strategyError.message || String(strategyError);
+                        console.warn(
+                          `[SignInContent] 전략 ${strategy} 실패:`,
+                          errorMsg,
+                        );
+                        allErrors.push(`${strategy}: ${errorMsg}`);
+                        lastError = strategyError;
+                        continue;
+                      }
+                    }
+
+                    // 모든 전략 실패
+                    console.error(
+                      "[SignInContent] 모든 네이버 로그인 전략 실패:",
+                      allErrors,
+                    );
+                    throw new Error(
+                      `네이버 로그인 실패\n\n` +
+                        `가능한 원인:\n` +
+                        `1. Clerk 대시보드에서 네이버 Custom OAuth provider가 설정되지 않았습니다.\n` +
+                        `2. Custom OAuth provider의 Key가 'naver'가 아닙니다.\n` +
+                        `3. 네이버 개발자 콘솔에서 Callback URL이 등록되지 않았습니다.\n\n` +
+                        `시도한 전략: ${possibleStrategies.join(", ")}`,
+                    );
+                  } catch (error: any) {
+                    console.error("[SignInContent] 네이버 로그인 실패:", error);
+
+                    let errorMessage =
+                      "네이버 로그인에 실패했습니다. 다시 시도해주세요.";
+                    if (error.errors && error.errors.length > 0) {
+                      errorMessage = error.errors[0].message || errorMessage;
+                    } else if (error.message) {
+                      errorMessage = error.message;
+                    }
+
+                    alert(errorMessage);
+                  } finally {
+                    console.groupEnd();
+                  }
+                }}
+                className="w-full bg-[#03C75A] hover:bg-[#02b351] text-white font-semibold h-8 py-2 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md mb-4 flex items-center justify-center hidden"
+                style={{
+                  backgroundColor: "#03C75A",
+                  height: "32px",
+                }}
+              >
+                네이버 로그인
               </button>
             </div>
 
