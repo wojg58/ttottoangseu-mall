@@ -138,7 +138,6 @@ function ProductRow({
 }) {
   const [imageError, setImageError] = useState(false);
   const [imageLoading, setImageLoading] = useState(true);
-  const imageRef = useRef<HTMLImageElement | null>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // 이미지 URL이 있으면 표시 시도
@@ -185,19 +184,18 @@ function ProductRow({
       </td>
       <td className="py-4 px-4">
         {hasImage && !imageError ? (
-          <>
+          <div className="relative w-16 h-16">
             {imageLoading && (
-              <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center">
+              <div className="absolute inset-0 bg-gray-100 rounded-lg flex items-center justify-center z-10">
                 <div className="w-4 h-4 border-2 border-[#ff6b9d] border-t-transparent rounded-full animate-spin" />
               </div>
             )}
             <img
-              ref={imageRef}
               src={product.primary_image.image_url}
               alt={product.name}
               className={`w-16 h-16 object-cover rounded-lg ${
-                imageLoading ? "hidden" : ""
-              }`}
+                imageLoading ? "opacity-0" : "opacity-100"
+              } transition-opacity`}
               loading="lazy"
               onLoad={() => {
                 console.log("[ProductRow] 이미지 로딩 성공:", product.name);
@@ -219,7 +217,7 @@ function ProductRow({
                 setImageLoading(false);
               }}
             />
-          </>
+          </div>
         ) : (
           <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400">
             <ImageIcon className="w-6 h-6" />
