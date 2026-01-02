@@ -200,6 +200,7 @@ export default function SignInContent() {
           visibility: visible !important;
           opacity: 1 !important;
           pointer-events: auto !important;
+          margin-bottom: 18.9px !important;
         `;
 
         // 이메일 주소 입력 필드 활성화
@@ -348,6 +349,7 @@ export default function SignInContent() {
           passwordLabelRow.style.cssText = `
             display: block !important;
             margin-bottom: 0.5rem !important;
+            margin-top: 0 !important;
             visibility: visible !important;
             opacity: 1 !important;
           `;
@@ -356,6 +358,7 @@ export default function SignInContent() {
           passwordLabel.style.cssText = `
             display: block !important;
             margin-bottom: 0.5rem !important;
+            margin-top: 0 !important;
             visibility: visible !important;
             opacity: 1 !important;
             font-size: 0.875rem !important;
