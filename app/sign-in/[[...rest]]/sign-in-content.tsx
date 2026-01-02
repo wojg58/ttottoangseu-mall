@@ -74,6 +74,7 @@ export default function SignInContent() {
           flex-direction: column !important;
           gap: 0.75rem !important;
           width: 100% !important;
+          margin-bottom: 18.9px !important;
         `;
       }
 
@@ -133,6 +134,17 @@ export default function SignInContent() {
           badgeElement.style.display = "none";
         }
       });
+
+      // dividerRow (구분선) 간격 조정
+      const dividerRow = document.querySelector(
+        ".cl-dividerRow",
+      ) as HTMLElement;
+      if (dividerRow) {
+        dividerRow.style.cssText += `
+          margin-top: 0 !important;
+          margin-bottom: 18.9px !important;
+        `;
+      }
 
       // Clerk 에러 메시지 숨기기 (OAuth 콜백 후 발생하는 에러)
       const hideErrorAlerts = () => {
