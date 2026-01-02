@@ -21,6 +21,7 @@ import type { CartItemWithProduct } from "@/types/database";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import PaymentWidget from "@/components/payment-widget";
 import {
   Form,
   FormControl,
@@ -219,8 +220,8 @@ const checkoutSchema = z.object({
   shippingAddress: z.string().min(5, "배송지 주소를 입력해주세요."),
   shippingMemo: z.string().optional(),
   
-  // 결제 수단
-  paymentMethod: z.literal("KG_INICIS", {
+  // 결제 수단 (토스페이먼츠 사용)
+  paymentMethod: z.literal("TOSS_PAYMENTS", {
     errorMap: () => ({ message: "결제 수단을 선택해주세요." }),
   }),
 });
@@ -242,9 +243,9 @@ export default function CheckoutForm({
 }: CheckoutFormProps) {
   const [isPending, startTransition] = useTransition();
   const searchParams = useSearchParams();
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [orderId, setOrderId] = useState<string | null>(null);
   const [orderNumber, setOrderNumber] = useState<string | null>(null);
+  const [showPaymentWidget, setShowPaymentWidget] = useState(false);
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [selectedCoupon, setSelectedCoupon] = useState<Coupon | null>(null);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<"카드" | "계좌이체" | null>(null);
@@ -426,7 +427,7 @@ export default function CheckoutForm({
       shippingZipCode: "",
       shippingAddress: "",
       shippingMemo: "",
-      paymentMethod: "KG_INICIS",
+      paymentMethod: "TOSS_PAYMENTS",
     },
   });
 
@@ -512,67 +513,59 @@ export default function CheckoutForm({
       console.groupEnd();
 
       if (result.success && result.orderId && result.orderNumber) {
-        console.log("[CheckoutForm] ✅ 주문 생성 성공 - KG이니시스 결제 시작");
+        console.log("[CheckoutForm] ✅ 주문 생성 성공 - 토스페이먼츠 결제 시작");
         
         // 주문 정보 상태 저장
         setOrderId(result.orderId);
         setOrderNumber(result.orderNumber);
         
-        // KG이니시스 결제창 열기
-        console.log("[CheckoutForm] KG이니시스 결제 요청", {
+        // 토스페이먼츠 결제 위젯 표시
+        console.log("[CheckoutForm] 토스페이먼츠 결제 위젯 표시", {
           orderId: result.orderId,
           orderNumber: result.orderNumber,
           amount: displayTotal,
         });
-
-        // KG이니시스 결제창 열기
-        try {
-          // TODO: KG이니시스 웹표준 결제창 연동 필요
-          const clientKey = process.env.NEXT_PUBLIC_KG_INICIS_MID;
-          
-          if (!clientKey) {
-            throw new Error("KG이니시스 MID가 설정되지 않았습니다.");
-          }
-
-          if (!user?.emailAddresses[0]?.emailAddress) {
-            throw new Error("사용자 이메일 정보를 찾을 수 없습니다.");
-          }
-
-          console.log("[CheckoutForm] KG이니시스 결제창 준비 시작");
-          
-          // TODO: KG이니시스 웹표준 결제창 연동 코드 추가 필요
-          // KG이니시스는 form submit 방식의 웹표준 결제창을 사용합니다.
-          // 신용카드: PType=Card
-          // 실시간 계좌이체: PType=DirectBank
-          
-          const successUrl = `${window.location.origin}/payments/success`;
-          const failUrl = `${window.location.origin}/payments/fail`;
-
-          console.log("[CheckoutForm] 결제 요청 파라미터:", {
-            orderId: result.orderId,
-            orderName: `주문번호: ${result.orderNumber}`,
-            customerName: data.shippingName,
-            amount: displayTotal,
-            paymentMethod: selectedPaymentMethod,
-            successUrl,
-            failUrl,
-          });
-
-          // TODO: KG이니시스 결제창 호출 로직 구현 필요
-          // 현재는 임시로 에러 발생
-          throw new Error("KG이니시스 결제 연동이 아직 완료되지 않았습니다. 개발 중입니다.");
-          
-          console.log("[CheckoutForm] 결제 요청 완료 (리다이렉트 대기 중)");
-        } catch (error) {
-          console.error("[CheckoutForm] 결제 시작 실패:", error);
-          alert(error instanceof Error ? error.message : "결제를 시작할 수 없습니다.");
-        }
+        
+        setShowPaymentWidget(true);
       } else {
         console.error("[CheckoutForm] ❌ 주문 생성 실패:", result.message);
         alert(result.message);
       }
     });
   };
+
+  // 주문 생성 후 결제 위젯 표시
+  if (showPaymentWidget && orderId && orderNumber && user) {
+    return (
+      <div className="space-y-6">
+        {/* 주문 정보 요약 */}
+        <div className="bg-[#ffeef5] border border-[#f5d5e3] rounded-lg p-6">
+          <h2 className="text-lg font-bold text-[#4a3f48] mb-4">주문 정보</h2>
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span className="text-[#8b7d84]">주문번호</span>
+              <span className="font-bold text-[#4a3f48]">{orderNumber}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-[#8b7d84]">결제 금액</span>
+              <span className="font-bold text-[#ff6b9d]">
+                {displayTotal.toLocaleString("ko-KR")}원
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* 결제 위젯 */}
+        <PaymentWidget
+          orderId={orderId}
+          orderNumber={orderNumber}
+          amount={displayTotal}
+          customerName={form.getValues("ordererName")}
+          customerEmail={form.getValues("ordererEmail")}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -987,7 +980,7 @@ export default function CheckoutForm({
                   onChange={() => {
                     console.log("[결제수단] 신용카드 결제 선택");
                     setSelectedPaymentMethod("카드");
-                    form.setValue("paymentMethod", "KG_INICIS");
+                    form.setValue("paymentMethod", "TOSS_PAYMENTS");
                   }}
                   className="w-5 h-5 text-[#ff6b9d] border-[#f5d5e3] focus:ring-[#ff6b9d]"
                 />
@@ -1010,7 +1003,7 @@ export default function CheckoutForm({
                   onChange={() => {
                     console.log("[결제수단] 에스크로(실시간 계좌이체) 선택");
                     setSelectedPaymentMethod("계좌이체");
-                    form.setValue("paymentMethod", "KG_INICIS");
+                    form.setValue("paymentMethod", "TOSS_PAYMENTS");
                   }}
                   className="w-5 h-5 text-[#ff6b9d] border-[#f5d5e3] focus:ring-[#ff6b9d]"
                 />
@@ -1110,6 +1103,10 @@ export default function CheckoutForm({
           <Button
             onClick={() => {
               console.log("[CheckoutForm] 결제하기 버튼 클릭");
+              if (!selectedPaymentMethod) {
+                alert("토스페이먼츠 결제 연동중입니다");
+                return;
+              }
               form.handleSubmit(onSubmit)();
             }}
             disabled={
