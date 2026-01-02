@@ -99,6 +99,7 @@ export default function SignInContent() {
           width: 100% !important;
           min-width: 0 !important;
           flex: 1 !important;
+          height: 32px !important;
         `;
       });
 
