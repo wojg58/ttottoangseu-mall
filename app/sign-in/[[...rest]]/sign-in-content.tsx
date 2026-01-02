@@ -64,14 +64,14 @@ export default function SignInContent() {
 
       console.group("[SignInContent] 폼 필드 업데이트 - 세로 레이아웃");
 
-      // 소셜 버튼 컨테이너를 가로 배치로 변경
+      // 소셜 버튼 컨테이너를 세로 배치로 변경 (구글 버튼 하나로 꽉 채우기)
       const socialButtonsRoot = document.querySelector(
         ".cl-socialButtonsRoot",
       ) as HTMLElement;
       if (socialButtonsRoot) {
         socialButtonsRoot.style.cssText = `
           display: flex !important;
-          flex-direction: row !important;
+          flex-direction: column !important;
           gap: 0.75rem !important;
           width: 100% !important;
         `;
@@ -81,13 +81,23 @@ export default function SignInContent() {
       const socialButtons = document.querySelectorAll(
         ".cl-socialButtons",
       ) as NodeListOf<HTMLElement>;
-      socialButtons.forEach((container) => {
-        container.style.cssText = `
-          display: flex !important;
-          flex: 1 !important;
-          width: 100% !important;
-          min-width: 0 !important;
-        `;
+      socialButtons.forEach((container, index) => {
+        // 구글 버튼이 있는 컨테이너만 보이도록 설정
+        const hasGoogleButton = container.querySelector(
+          ".cl-socialButtonsBlockButton__google",
+        );
+        if (hasGoogleButton) {
+          container.style.cssText = `
+            display: flex !important;
+            width: 100% !important;
+            min-width: 0 !important;
+          `;
+        } else {
+          // 빈 컨테이너는 숨기기
+          container.style.cssText = `
+            display: none !important;
+          `;
+        }
       });
 
       // 소셜 버튼들도 flex로 설정
@@ -98,7 +108,6 @@ export default function SignInContent() {
         button.style.cssText += `
           width: 100% !important;
           min-width: 0 !important;
-          flex: 1 !important;
           height: 32px !important;
         `;
       });
