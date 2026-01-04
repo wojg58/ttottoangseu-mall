@@ -10,6 +10,7 @@
  * 환경 변수:
  *   - PORT: 서버 포트 (기본값: 3001)
  *   - NAVER_USERINFO_URL: 네이버 UserInfo 엔드포인트 (기본값: https://openapi.naver.com/v1/nid/me)
+ *   - CLERK_SUB_ENCODING: sub 필드 인코딩 방식 (기본값: "original", 옵션: "base64url")
  */
 require("dotenv").config();
 const http = require("http");
@@ -52,23 +53,32 @@ function flattenNaverResponse(raw) {
   // }
 
   // 네이버 ID를 안전한 형식으로 변환
-  // Clerk의 sub 필드는 URL-safe 문자열이어야 하므로 base64url 인코딩 사용
+  // Clerk의 sub 필드는 URL-safe 문자열이어야 함
+  // 참고: https://clerk.com/docs/guides/configure/auth-strategies/social-connections/custom-provider
   const naverId = get(raw, ["response", "id"]);
   let safeSub = naverId;
   
+  // 환경 변수로 인코딩 방식 제어 (기본값: 원본 사용)
+  // CLERK_SUB_ENCODING=base64url로 설정하면 base64url 인코딩 사용
+  const encodingMethod = process.env.CLERK_SUB_ENCODING || "original";
+  
   if (naverId) {
-    // 방법 1: base64url 인코딩 (가장 안전)
-    try {
-      safeSub = Buffer.from(naverId, 'utf8')
-        .toString('base64')
-        .replace(/\+/g, '-')
-        .replace(/\//g, '_')
-        .replace(/=/g, ''); // base64url 형식
-      console.log(`[INFO] sub 변환: "${naverId}" → "${safeSub}" (base64url)`);
-      console.log(`[INFO] 원본 sub 길이: ${naverId.length}, 인코딩 후 길이: ${safeSub.length}`);
-    } catch (err) {
-      console.error("[ERROR] sub base64url 인코딩 실패:", err);
-      // 실패 시 원본 사용
+    if (encodingMethod === "base64url") {
+      // base64url 인코딩 (하이픈 문제 해결 시도)
+      try {
+        safeSub = Buffer.from(naverId, 'utf8')
+          .toString('base64')
+          .replace(/\+/g, '-')
+          .replace(/\//g, '_')
+          .replace(/=/g, ''); // base64url 형식
+        console.log(`[INFO] sub 변환: "${naverId}" → "${safeSub}" (base64url)`);
+      } catch (err) {
+        console.error("[ERROR] sub base64url 인코딩 실패:", err);
+        safeSub = naverId;
+      }
+    } else {
+      // 원본 사용 (Clerk가 하이픈을 허용할 수도 있음)
+      console.log(`[INFO] sub 원본 사용: "${naverId}" (인코딩 없음)`);
       safeSub = naverId;
     }
   }
@@ -76,10 +86,11 @@ function flattenNaverResponse(raw) {
   // 디버깅: sub 값 상세 로그
   console.log("[DEBUG] sub 필드 상세 정보:", {
     원본: naverId,
-    인코딩: safeSub,
+    최종값: safeSub,
+    인코딩방법: encodingMethod,
     원본길이: naverId?.length || 0,
-    인코딩길이: safeSub?.length || 0,
-    base64url형식: safeSub?.match(/^[A-Za-z0-9_-]+$/) ? "✅" : "❌",
+    최종길이: safeSub?.length || 0,
+    URL안전여부: safeSub?.match(/^[A-Za-z0-9._-]+$/) ? "✅" : "❌",
   });
 
   const flat = {
