@@ -3,6 +3,7 @@
 import { useAuth, useUser } from "@clerk/nextjs";
 import { useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import * as Sentry from "@sentry/nextjs";
 
 /**
  * OAuth 콜백 후 Clerk 세션 동기화를 위한 컴포넌트
@@ -34,6 +35,17 @@ export function AuthSessionSync() {
 
     if (isOAuthCallback) {
       const timestamp = new Date().toISOString();
+      
+      // Sentry에 OAuth 콜백 시작 이벤트 전송
+      Sentry.addBreadcrumb({
+        category: "oauth",
+        message: "OAuth 콜백 감지 - 세션 생성 검증 시작",
+        level: "info",
+        data: {
+          url: currentUrl,
+          timestamp,
+        },
+      });
       
       console.group("[AuthSessionSync] OAuth 콜백 감지 - 세션 생성 검증 시작");
       console.log("현재 URL:", currentUrl);
@@ -106,15 +118,80 @@ export function AuthSessionSync() {
         console.error("   - userId:", userId);
         console.error("   - sessionId:", sessionId);
         console.error("   → '추가 정보 입력 필요' 또는 '사용자 생성 실패' 상태일 수 있습니다.");
+        
+        // Sentry에 세션 생성 실패 이벤트 전송
+        Sentry.captureMessage("OAuth 세션 생성 실패", {
+          level: "error",
+          tags: {
+            oauth_provider: "naver",
+            session_creation: "failed",
+          },
+          contexts: {
+            oauth_callback: {
+              url: currentUrl,
+              timestamp,
+              isSignedIn,
+              userId: userId || null,
+              sessionId: sessionId || null,
+              userLoaded,
+              hasUser: !!user,
+              clerkStatus,
+              clerkRedirectUrl,
+            },
+            verification: verificationResult,
+          },
+          extra: {
+            userInfo,
+            externalAccounts,
+            hasToken,
+            tokenLength,
+          },
+        });
       } else if (user && (!user.externalAccounts || user.externalAccounts.length === 0)) {
         verificationResult.warnings.push("External Account가 연결되지 않았습니다");
         console.error("❌ [중요] 세션은 생성되었지만 External Account가 연결되지 않았습니다!");
         console.error("   → 'The External Account was not found' 에러의 원인입니다.");
+        
+        // Sentry에 External Account 연결 실패 이벤트 전송
+        Sentry.captureMessage("OAuth External Account 연결 실패", {
+          level: "warning",
+          tags: {
+            oauth_provider: "naver",
+            session_creation: "success",
+            external_account: "missing",
+          },
+          contexts: {
+            oauth_callback: {
+              url: currentUrl,
+              timestamp,
+              userId,
+              sessionId,
+              hasUser: !!user,
+            },
+            verification: verificationResult,
+          },
+          extra: {
+            userInfo,
+            externalAccounts,
+          },
+        });
       } else {
         verificationResult.success = true;
         console.log("✅ [검증 성공] 세션이 정상적으로 생성되었습니다!");
         console.log("   - userId:", userId);
         console.log("   - sessionId:", sessionId);
+        
+        // Sentry에 성공 이벤트 전송 (디버깅용)
+        Sentry.addBreadcrumb({
+          category: "oauth",
+          message: "OAuth 세션 생성 성공",
+          level: "info",
+          data: {
+            userId,
+            sessionId,
+            hasExternalAccounts: user?.externalAccounts?.length > 0,
+          },
+        });
       }
       
       // 세션 토큰 확인 후 서버로 로그 전송
@@ -241,10 +318,66 @@ export function AuthSessionSync() {
           console.error("   → Proxy 서버 로그에서 응답 데이터 확인:");
           console.error("      - sub 값이 올바른지");
           console.error("      - email 값이 올바른지");
+          
+          // Sentry에 최종 검증 실패 이벤트 전송
+          Sentry.captureMessage("OAuth 세션 생성 최종 검증 실패", {
+            level: "error",
+            tags: {
+              oauth_provider: "naver",
+              session_creation: "failed",
+              verification: "final_check",
+            },
+            contexts: {
+              oauth_callback: {
+                url: currentUrl,
+                timestamp,
+                finalCheck: {
+                  isSignedIn,
+                  userId: userId || null,
+                  sessionId: sessionId || null,
+                  userLoaded,
+                  hasUser: !!user,
+                },
+              },
+            },
+            extra: {
+              userInfo,
+              externalAccounts,
+              clerkStatus,
+              clerkRedirectUrl,
+            },
+          });
         } else if (user && (!user.externalAccounts || user.externalAccounts.length === 0)) {
           console.error("❌ [중요] 세션은 생성되었지만 External Account가 연결되지 않았습니다!");
           console.error("   → 'The External Account was not found' 에러의 원인입니다.");
           console.error("   → Proxy 서버 응답의 sub 값이 Clerk가 기대하는 형식과 일치하지 않을 수 있습니다.");
+          
+          // Sentry에 최종 검증 경고 이벤트 전송
+          Sentry.captureMessage("OAuth External Account 연결 최종 검증 실패", {
+            level: "warning",
+            tags: {
+              oauth_provider: "naver",
+              session_creation: "success",
+              external_account: "missing",
+              verification: "final_check",
+            },
+            contexts: {
+              oauth_callback: {
+                url: currentUrl,
+                timestamp,
+                finalCheck: {
+                  isSignedIn,
+                  userId,
+                  sessionId,
+                  hasUser: !!user,
+                },
+              },
+            },
+            extra: {
+              userInfo,
+              externalAccounts,
+            },
+          });
         } else {
           console.log("✅ [최종 검증 성공] 세션과 External Account가 모두 정상입니다!");
         }

@@ -1,6 +1,7 @@
 import { auth, clerkClient } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { getServiceRoleClient } from "@/lib/supabase/service-role";
+import * as Sentry from "@sentry/nextjs";
 
 /**
  * Clerk 사용자를 Supabase users 테이블에 동기화하는 API
@@ -33,6 +34,23 @@ export async function POST(request: Request) {
     if (!userId) {
       console.error("❌ 인증 실패: userId가 없습니다");
       console.log("요청 헤더:", Object.fromEntries(request.headers.entries()));
+      
+      // Sentry에 인증 실패 이벤트 전송
+      Sentry.captureMessage("사용자 동기화 API 인증 실패", {
+        level: "error",
+        tags: {
+          api: "sync-user",
+          auth_status: "failed",
+        },
+        contexts: {
+          request: {
+            headers: Object.fromEntries(request.headers.entries()),
+            method: request.method,
+            url: request.url,
+          },
+        },
+      });
+      
       console.groupEnd();
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -85,6 +103,30 @@ export async function POST(request: Request) {
       console.error("         - Email → 'email'");
       console.error("      3. Proxy 서버가 Clerk에 응답을 제대로 반환하지 못함");
       console.error("   → Proxy 서버 로그 확인: ssh로 접속 후 'pm2 logs clerk-userinfo-proxy'");
+      
+      // Sentry에 External Account 누락 이벤트 전송
+      Sentry.captureMessage("OAuth External Account 누락 - 사용자 동기화 API", {
+        level: "warning",
+        tags: {
+          api: "sync-user",
+          oauth_provider: "naver",
+          external_account: "missing",
+        },
+        contexts: {
+          clerk_user: {
+            id: clerkUser.id,
+            email: clerkUser.emailAddresses[0]?.emailAddress,
+            createdAt: clerkUser.createdAt?.toISOString(),
+          },
+        },
+        extra: {
+          possibleCauses: [
+            "Proxy 서버 응답의 'sub' 값이 Clerk가 기대하는 형식과 다름",
+            "Clerk Dashboard의 Attribute Mapping 설정 문제",
+            "Proxy 서버가 Clerk에 응답을 제대로 반환하지 못함",
+          ],
+        },
+      });
     }
     
     // 이메일 주소 상세 확인
