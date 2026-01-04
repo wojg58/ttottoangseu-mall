@@ -346,3 +346,34 @@ Clerk Dashboard → SSO Connections → 네이버:
 4. Network 탭에서 Clerk API 호출 확인
 5. Clerk Dashboard → Logs에서 에러 로그 확인
 
+### 9.9 OAuth 콜백 응답 확인
+
+**303 See Other 응답:**
+- ✅ **정상입니다!** 이것은 Clerk가 네이버에서 Authorization Code를 받고 리다이렉트하는 정상적인 응답입니다.
+- 303 See Other는 "다른 위치로 리다이렉트하라"는 의미입니다.
+
+**문제는 303 리다이렉트 이후에 발생합니다:**
+
+1. **Clerk가 네이버에서 Authorization Code를 받음** (303 응답)
+2. **Clerk가 네이버 Token URL로 Access Token 요청**
+3. **Clerk가 Proxy 서버로 UserInfo 요청** (프록시 로그에서 확인됨)
+4. **Proxy가 올바른 응답 반환** (sub, email 포함)
+5. ❌ **Clerk가 사용자 생성을 시도하지만 실패** ← 여기서 문제 발생
+
+**확인해야 할 사항:**
+
+1. **Clerk Dashboard → Logs**
+   - 최근 OAuth 관련 로그 확인
+   - 특히 "External Account was not found" 또는 "Unable to complete action" 에러 확인
+   - 세션 생성 실패 원인 확인
+
+2. **프록시 서버 로그 재확인**
+   - Clerk가 Proxy를 호출했는지 확인
+   - Proxy 응답이 올바른지 확인
+   - 에러 로그가 있는지 확인
+
+3. **실제 로그인 시 브라우저 콘솔**
+   - 네이버 로그인 완료 후 리다이렉트
+   - 브라우저 콘솔(F12)에서 Clerk 에러 확인
+   - 특히 "External Account was not found" 에러 확인
+
