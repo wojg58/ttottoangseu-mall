@@ -399,3 +399,35 @@ Clerk Dashboard → SSO Connections → 네이버:
 2. Clerk Debug 페이지에서 새로운 `sub` 값 확인
 3. 실제 로그인 시도하여 사용자 생성 여부 확인
 
+### 9.11 Network 탭에서 실패한 요청 확인
+
+**문제:**
+- OAuth 콜백 후 리다이렉션이 너무 빨리 일어나서 Network 탭에서 실패한 요청을 확인할 수 없음
+
+**해결 방법:**
+
+1. **Network 탭 설정**
+   - 브라우저 개발자 도구(F12) 열기
+   - Network 탭 선택
+   - **"Preserve log" 옵션 활성화** (중요!)
+   - 이렇게 하면 페이지 새로고침 후에도 로그가 유지됨
+
+2. **리다이렉션 대기 시간**
+   - 현재 설정: 8-10초 대기 후 리다이렉션
+   - 이 시간 동안 Network 탭에서 실패한 요청 확인 가능
+
+3. **리다이렉션 중지 (선택적)**
+   - 콘솔에서 `window.stopRedirect = true` 입력
+   - 리다이렉션을 중지하고 Network 탭을 자세히 확인
+   - 계속하려면: `window.stopRedirect = false` 후 `window.location.reload()`
+
+**확인해야 할 요청:**
+1. `/v1/oauth_callback` - Clerk OAuth 콜백 (303 See Other는 정상)
+2. `/v1/oauth/userinfo` - Clerk가 Proxy 서버로 UserInfo 요청
+3. 기타 Clerk API 호출 실패 (빨간색으로 표시됨)
+
+**실패한 요청 확인 방법:**
+- Network 탭에서 빨간색으로 표시된 요청 클릭
+- Response 탭에서 에러 메시지 확인
+- Headers 탭에서 요청/응답 헤더 확인
+

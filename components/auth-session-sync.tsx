@@ -187,16 +187,28 @@ export function AuthSessionSync() {
       cleanSearch = cleanSearch.replace(/[?&]oauth_callback[^&]*/g, '');
       const cleanUrl = url.pathname + (cleanSearch || '');
       
-      // 세션이 활성화될 때까지 잠시 대기 (더 긴 대기 시간)
+      // Network 탭에서 실패한 요청을 확인할 수 있도록 충분한 대기 시간 제공
       // 세션이 생성되지 않은 경우 더 긴 대기 시간 제공
-      const waitTime = (!isSignedIn || !userId || !sessionId) ? 3000 : 2000;
+      const waitTime = (!isSignedIn || !userId || !sessionId) ? 10000 : 8000;
       
       // 로그를 더 오래 볼 수 있도록 경고 표시
-      console.warn("⚠️ 3초 후 페이지가 새로고침됩니다. 로그를 확인하세요!");
-      console.warn("   페이지 새로고침 후에도 로그를 보려면:");
-      console.warn("   localStorage.getItem('oauth_callback_logs')를 콘솔에 입력하세요.");
+      console.warn("⚠️ Network 탭에서 실패한 요청을 확인하세요!");
+      console.warn("   - Network 탭에서 'Preserve log' 옵션을 활성화하세요");
+      console.warn("   - 실패한 요청(빨간색)을 확인하세요");
+      console.warn(`   - ${waitTime / 1000}초 후 페이지가 새로고침됩니다.`);
+      console.warn("   - 콘솔에서 'window.stopRedirect = true'를 입력하면 리다이렉션을 중지할 수 있습니다.");
+      
+      // 전역 변수로 리다이렉션 제어 가능하게 설정
+      (window as any).stopRedirect = false;
       
       setTimeout(() => {
+        // 사용자가 리다이렉션을 중지한 경우 확인
+        if ((window as any).stopRedirect) {
+          console.log("⏸️ 사용자가 리다이렉션을 중지했습니다.");
+          console.log("   계속하려면 콘솔에서 'window.stopRedirect = false'를 입력한 후");
+          console.log("   'window.location.reload()'를 실행하세요.");
+          return;
+        }
         // 재검증
         console.log("[AuthSessionSync] 대기 후 재검증");
         console.log("isSignedIn:", isSignedIn);
@@ -239,8 +251,14 @@ export function AuthSessionSync() {
         
         console.log("[AuthSessionSync] 세션 동기화를 위해 페이지 새로고침");
         console.log("리다이렉트 URL:", cleanUrl || "/");
-        // 전체 페이지 새로고침으로 세션 상태를 확실히 반영
-        window.location.href = cleanUrl || "/";
+        console.log("⚠️ Network 탭에서 실패한 요청을 확인했는지 확인하세요!");
+        
+        // Network 탭 확인을 위한 추가 대기 (선택적)
+        // 사용자가 확인할 시간을 더 주기 위해 2초 더 대기
+        setTimeout(() => {
+          // 전체 페이지 새로고침으로 세션 상태를 확실히 반영
+          window.location.href = cleanUrl || "/";
+        }, 2000);
       }, waitTime);
       
       hasCheckedRef.current = true;
