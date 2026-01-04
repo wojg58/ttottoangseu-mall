@@ -116,7 +116,13 @@ export async function POST(request: Request) {
           clerk_user: {
             id: clerkUser.id,
             email: clerkUser.emailAddresses[0]?.emailAddress,
-            createdAt: clerkUser.createdAt?.toISOString(),
+            createdAt: clerkUser.createdAt
+              ? typeof clerkUser.createdAt === "number"
+                ? new Date(clerkUser.createdAt).toISOString()
+                : clerkUser.createdAt instanceof Date
+                  ? clerkUser.createdAt.toISOString()
+                  : String(clerkUser.createdAt)
+              : undefined,
           },
         },
         extra: {
