@@ -86,18 +86,6 @@ export function AuthSessionSync() {
         }
       }
       
-      // 세션 토큰 확인
-      getToken().then(token => {
-        hasToken = !!token;
-        tokenLength = token?.length || 0;
-        console.log("세션 토큰 존재:", hasToken);
-        if (token) {
-          console.log("세션 토큰 길이:", tokenLength);
-        }
-      }).catch(err => {
-        console.error("세션 토큰 가져오기 실패:", err);
-      });
-      
       // URL 파라미터 확인
       const clerkStatus = searchParams.get("__clerk_status");
       const clerkRedirectUrl = searchParams.get("__clerk_redirect_url");
@@ -129,40 +117,64 @@ export function AuthSessionSync() {
         console.log("   - sessionId:", sessionId);
       }
       
-      // 서버로 로그 전송 (비동기, 실패해도 계속 진행)
-      const logPayload = {
-        timestamp,
-        url: currentUrl,
-        isSignedIn,
-        userId,
-        sessionId,
-        userLoaded,
-        hasUser: !!user,
-        userInfo,
-        externalAccounts,
-        clerkStatus,
-        clerkRedirectUrl,
-        hasToken,
-        tokenLength,
-        verificationResult,
+      // 세션 토큰 확인 후 서버로 로그 전송
+      const sendLogToServer = async () => {
+        try {
+          // 세션 토큰 확인
+          const token = await getToken();
+          hasToken = !!token;
+          tokenLength = token?.length || 0;
+          console.log("세션 토큰 존재:", hasToken);
+          if (token) {
+            console.log("세션 토큰 길이:", tokenLength);
+          }
+        } catch (err) {
+          console.error("세션 토큰 가져오기 실패:", err);
+        }
+        
+        // 서버로 로그 전송
+        const logPayload = {
+          timestamp,
+          url: currentUrl,
+          isSignedIn,
+          userId,
+          sessionId,
+          userLoaded,
+          hasUser: !!user,
+          userInfo,
+          externalAccounts,
+          clerkStatus,
+          clerkRedirectUrl,
+          hasToken,
+          tokenLength,
+          verificationResult,
+        };
+        
+        console.log("📤 서버로 로그 전송 중...");
+        console.log("전송할 데이터:", JSON.stringify(logPayload, null, 2));
+        
+        try {
+          const res = await fetch("/api/log-oauth-callback", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(logPayload),
+          });
+          
+          if (res.ok) {
+            const result = await res.json();
+            console.log("✅ 서버 로그 저장 완료:", result.message);
+            console.log("   → 서버 터미널을 확인하세요!");
+          } else {
+            const errorText = await res.text();
+            console.error("❌ 서버 로그 저장 실패:", res.status, errorText);
+          }
+        } catch (err) {
+          console.error("❌ 서버 로그 전송 실패:", err);
+        }
       };
       
-      console.log("📤 서버로 로그 전송 중...");
-      fetch("/api/log-oauth-callback", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(logPayload),
-      })
-        .then((res) => {
-          if (res.ok) {
-            console.log("✅ 서버 로그 저장 완료 (터미널에서 확인 가능)");
-          } else {
-            console.warn("⚠️ 서버 로그 저장 실패 (계속 진행)");
-          }
-        })
-        .catch((err) => {
-          console.warn("⚠️ 서버 로그 전송 실패 (계속 진행):", err);
-        });
+      // 즉시 실행
+      sendLogToServer();
       
       // OAuth 콜백 파라미터 제거
       const url = new URL(currentUrl);

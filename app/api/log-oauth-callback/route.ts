@@ -8,8 +8,13 @@ import { logger } from "@/lib/logger";
  * 이 로그는 서버 터미널에서 확인할 수 있습니다.
  */
 export async function POST(request: Request) {
+  // 즉시 로그 출력 (요청 도달 확인)
+  console.log("🔔 [OAuth 콜백 로그] API 요청 수신됨");
+  console.log("시간:", new Date().toISOString());
+  
   try {
     const body = await request.json();
+    console.log("📥 요청 본문 파싱 완료");
     const {
       timestamp,
       url,
