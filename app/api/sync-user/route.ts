@@ -117,11 +117,7 @@ export async function POST(request: Request) {
             id: clerkUser.id,
             email: clerkUser.emailAddresses[0]?.emailAddress,
             createdAt: clerkUser.createdAt
-              ? typeof clerkUser.createdAt === "number"
-                ? new Date(clerkUser.createdAt).toISOString()
-                : clerkUser.createdAt instanceof Date
-                  ? clerkUser.createdAt.toISOString()
-                  : String(clerkUser.createdAt)
+              ? new Date(clerkUser.createdAt).toISOString()
               : undefined,
           },
         },
