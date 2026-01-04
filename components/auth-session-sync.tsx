@@ -78,7 +78,7 @@ export function AuthSessionSync() {
         };
         console.log("👤 Clerk 사용자 정보:", userInfo);
         
-        externalAccounts = user.externalAccounts?.map(acc => ({
+        externalAccounts = user.externalAccounts?.map((acc) => ({
           provider: acc.provider,
           providerUserId: acc.providerUserId,
           verified: acc.verification?.status,
@@ -105,7 +105,7 @@ export function AuthSessionSync() {
       console.log("__clerk_redirect_url:", clerkRedirectUrl);
       
       // 검증 판정
-      let verificationResult = {
+      const verificationResult = {
         success: false,
         error: null as string | null,
         warnings: [] as string[],

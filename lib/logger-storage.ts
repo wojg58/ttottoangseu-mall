@@ -97,7 +97,7 @@ class LoggerStorage {
             return JSON.parse(str);
           }
           return arg;
-        } catch (e) {
+        } catch {
           return String(arg);
         }
       }) : undefined,

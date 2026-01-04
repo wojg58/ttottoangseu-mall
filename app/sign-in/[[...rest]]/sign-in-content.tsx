@@ -82,7 +82,7 @@ export default function SignInContent() {
       const socialButtons = document.querySelectorAll(
         ".cl-socialButtons",
       ) as NodeListOf<HTMLElement>;
-      socialButtons.forEach((container, index) => {
+      socialButtons.forEach((container) => {
         // 구글 버튼이 있는 컨테이너만 보이도록 설정
         const hasGoogleButton = container.querySelector(
           ".cl-socialButtonsBlockButton__google",

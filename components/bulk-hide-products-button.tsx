@@ -5,8 +5,8 @@
 
 "use client";
 
-import { useState, useTransition } from "react";
-import { EyeOff, CheckCircle } from "lucide-react";
+import { useTransition } from "react";
+import { EyeOff } from "lucide-react";
 import { bulkHideProducts } from "@/actions/bulk-hide-products";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";

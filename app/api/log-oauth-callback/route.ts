@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { logger } from "@/lib/logger";
 
 /**
  * OAuth 콜백 결과를 서버에 로깅하는 API

@@ -27,7 +27,6 @@ import {
   UserPlus,
   User,
   LogOut,
-  ChevronDown,
 } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
