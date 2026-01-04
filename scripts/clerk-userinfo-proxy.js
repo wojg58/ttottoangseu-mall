@@ -65,12 +65,22 @@ function flattenNaverResponse(raw) {
         .replace(/\//g, '_')
         .replace(/=/g, ''); // base64url 형식
       console.log(`[INFO] sub 변환: "${naverId}" → "${safeSub}" (base64url)`);
+      console.log(`[INFO] 원본 sub 길이: ${naverId.length}, 인코딩 후 길이: ${safeSub.length}`);
     } catch (err) {
       console.error("[ERROR] sub base64url 인코딩 실패:", err);
       // 실패 시 원본 사용
       safeSub = naverId;
     }
   }
+  
+  // 디버깅: sub 값 상세 로그
+  console.log("[DEBUG] sub 필드 상세 정보:", {
+    원본: naverId,
+    인코딩: safeSub,
+    원본길이: naverId?.length || 0,
+    인코딩길이: safeSub?.length || 0,
+    base64url형식: safeSub?.match(/^[A-Za-z0-9_-]+$/) ? "✅" : "❌",
+  });
 
   const flat = {
     // OAuth 2.0 표준 필드 (Clerk가 요구하는 필수 필드)
