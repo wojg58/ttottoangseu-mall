@@ -14,6 +14,8 @@
 require("dotenv").config();
 const { createClient } = require("@supabase/supabase-js");
 const bcrypt = require("bcrypt");
+const sharp = require("sharp");
+const cheerio = require("cheerio");
 
 // 환경변수 로드
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -185,6 +187,107 @@ function extractOptionStocks(channelProductData) {
 
 const delay = (ms) => new Promise((r) => setTimeout(r, ms));
 
+// 이미지 다운로드 + 800×800 압축 + Supabase Storage 업로드
+async function downloadCompressAndUploadImage(
+  imageUrl,
+  productId,
+  imageType = "additional", // "primary", "additional", "option", "detail"
+) {
+  try {
+    console.log(`[INFO] 이미지 처리 시작: ${imageUrl.substring(0, 50)}...`);
+
+    // 1. 이미지 다운로드
+    const response = await fetch(imageUrl, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(
+        `이미지 다운로드 실패: ${response.status} ${response.statusText}`,
+      );
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+    const imageBuffer = Buffer.from(arrayBuffer);
+
+    // 2. 이미지 압축 (800×800)
+    console.log(`[INFO] 이미지 압축 중 (800×800)...`);
+    const compressedBuffer = await sharp(imageBuffer)
+      .resize(800, 800, {
+        fit: "inside",
+        withoutEnlargement: true,
+      })
+      .webp({ quality: 85 })
+      .toBuffer();
+
+    // 3. Supabase Storage에 업로드
+    const fileName = `product-${productId}-${Date.now()}-${Math.random()
+      .toString(36)
+      .substring(7)}.webp`;
+    const filePath = `products/${fileName}`;
+
+    console.log(`[INFO] Supabase Storage 업로드 중: ${filePath}`);
+    const { error: uploadError } = await supabase.storage
+      .from("product-images")
+      .upload(filePath, compressedBuffer, {
+        contentType: "image/webp",
+        cacheControl: "3600",
+        upsert: false,
+      });
+
+    if (uploadError) {
+      throw new Error(`업로드 실패: ${uploadError.message}`);
+    }
+
+    // 4. 공개 URL 가져오기
+    const {
+      data: { publicUrl },
+    } = supabase.storage.from("product-images").getPublicUrl(filePath);
+
+    console.log(`[INFO] ✅ 이미지 업로드 완료: ${publicUrl}`);
+    return { success: true, url: publicUrl };
+  } catch (error) {
+    console.error(`[ERROR] 이미지 처리 실패: ${error.message}`);
+    return { success: false, error: error.message, url: imageUrl }; // 실패 시 원본 URL 반환
+  }
+}
+
+// 상세 설명 HTML에서 이미지 URL 추출
+function extractDetailImagesFromHTML(htmlContent) {
+  if (!htmlContent || typeof htmlContent !== "string") {
+    return [];
+  }
+
+  try {
+    const $ = cheerio.load(htmlContent);
+    const imageUrls = [];
+
+    // <img> 태그에서 src 추출
+    $("img").each((i, elem) => {
+      const src = $(elem).attr("src");
+      if (src && src.trim()) {
+        imageUrls.push(src.trim());
+      }
+    });
+
+    // <amp-img> 태그도 처리
+    $("amp-img").each((i, elem) => {
+      const src = $(elem).attr("src");
+      if (src && src.trim()) {
+        imageUrls.push(src.trim());
+      }
+    });
+
+    return imageUrls;
+  } catch (error) {
+    console.error(`[ERROR] HTML 파싱 실패: ${error.message}`);
+    return [];
+  }
+}
+
 // 스마트스토어 API에서 모든 상품 목록 가져오기 (v1/products/search API 사용)
 async function getAllSmartstoreProducts() {
   const allProducts = [];
@@ -294,7 +397,16 @@ async function getAllSmartstoreProducts() {
 
 // 메인 실행 함수
 async function buildMapping() {
-  console.log("🚀 스마트스토어 옵션 매핑 빌드 시작 (모든 상품 처리)\n");
+  // 테스트용: 특정 상품명만 처리
+  const TEST_PRODUCT_NAME = "산리오 헬로키티 마이멜로디 쿠로미 포차코 시나모롤 아코디언 가죽 카드지갑 반지갑";
+  const TEST_MODE = true; // true: 테스트 모드 (특정 상품만), false: 전체 처리
+
+  console.log("🚀 스마트스토어 옵션 매핑 빌드 시작");
+  if (TEST_MODE) {
+    console.log(`[TEST MODE] 테스트 상품: "${TEST_PRODUCT_NAME}"\n`);
+  } else {
+    console.log("(모든 상품 처리)\n");
+  }
   console.log("=".repeat(60));
 
   const result = {
@@ -337,9 +449,21 @@ async function buildMapping() {
         break;
       }
 
-      allOurProducts.push(...products);
+      // 테스트 모드: 특정 상품명만 필터링
+      let filteredProducts = products;
+      if (TEST_MODE) {
+        filteredProducts = products.filter((p) =>
+          p.name.includes(TEST_PRODUCT_NAME) ||
+          TEST_PRODUCT_NAME.includes(p.name),
+        );
+        console.log(
+          `[TEST MODE] 페이지 ${page + 1}: ${products.length}개 중 ${filteredProducts.length}개 매칭`,
+        );
+      }
+
+      allOurProducts.push(...filteredProducts);
       console.log(
-        `[INFO] 페이지 ${page + 1}: ${products.length}개 상품 조회 (누적: ${
+        `[INFO] 페이지 ${page + 1}: ${filteredProducts.length}개 상품 조회 (누적: ${
           allOurProducts.length
         }개)`,
       );
@@ -472,27 +596,128 @@ async function buildMapping() {
         // 1. 상품 이미지 추가/업데이트
         console.log(`[INFO] 이미지 추가/업데이트 시작...`);
         const images = [];
+
+        // 1-1. 대표 이미지 (압축 없이 원본 URL 사용)
         if (originProduct?.images?.representativeImage?.url) {
+          const representativeUrl =
+            originProduct.images.representativeImage.url;
           images.push({
-            image_url: originProduct.images.representativeImage.url,
+            image_url: representativeUrl,
             is_primary: true,
             sort_order: 0,
             alt_text: product.name,
           });
-        }
-        if (originProduct?.images?.optionalImages) {
-          originProduct.images.optionalImages.forEach((img, index) => {
-            if (img.url) {
-              images.push({
-                image_url: img.url,
-                is_primary: false,
-                sort_order: index + 1,
-                alt_text: `${product.name} - 이미지 ${index + 1}`,
-              });
-            }
-          });
+          console.log(`[INFO]   대표 이미지: ${representativeUrl}`);
         }
 
+        // 1-2. 추가 이미지 (800×800 압축 후 업로드)
+        if (originProduct?.images?.optionalImages) {
+          console.log(
+            `[INFO]   추가 이미지 ${originProduct.images.optionalImages.length}개 처리 중...`,
+          );
+          for (
+            let index = 0;
+            index < originProduct.images.optionalImages.length;
+            index++
+          ) {
+            const img = originProduct.images.optionalImages[index];
+            if (img.url) {
+              const result = await downloadCompressAndUploadImage(
+                img.url,
+                product.id,
+                "additional",
+              );
+              if (result.success) {
+                images.push({
+                  image_url: result.url,
+                  is_primary: false,
+                  sort_order: index + 1,
+                  alt_text: `${product.name} - 이미지 ${index + 1}`,
+                });
+              } else {
+                console.warn(
+                  `[WARN]   추가 이미지 처리 실패 (원본 URL 사용): ${result.error}`,
+                );
+                // 실패 시 원본 URL 사용
+                images.push({
+                  image_url: img.url,
+                  is_primary: false,
+                  sort_order: index + 1,
+                  alt_text: `${product.name} - 이미지 ${index + 1}`,
+                });
+              }
+            }
+            // API 레이트 리밋 방지
+            await delay(200);
+          }
+        }
+
+        // 1-3. 옵션 이미지 (800×800 압축 후 업로드)
+        if (originProduct?.standardOptionAttributes) {
+          console.log(
+            `[INFO]   옵션 이미지 처리 중... (${originProduct.standardOptionAttributes.length}개 옵션)`,
+          );
+          for (const optionAttr of originProduct.standardOptionAttributes) {
+            if (optionAttr.imageUrls && optionAttr.imageUrls.length > 0) {
+              for (let i = 0; i < optionAttr.imageUrls.length; i++) {
+                const imageUrl = optionAttr.imageUrls[i];
+                const result = await downloadCompressAndUploadImage(
+                  imageUrl,
+                  product.id,
+                  "option",
+                );
+                if (result.success) {
+                  images.push({
+                    image_url: result.url,
+                    is_primary: false,
+                    sort_order: images.length,
+                    alt_text: `${product.name} - 옵션 ${optionAttr.attributeValueName || "이미지"} ${i + 1}`,
+                  });
+                } else {
+                  console.warn(
+                    `[WARN]   옵션 이미지 처리 실패: ${result.error}`,
+                  );
+                }
+                await delay(200);
+              }
+            }
+          }
+        }
+
+        // 1-4. 상세 설명 이미지 (HTML 파싱 → 800×800 압축 후 업로드)
+        if (originProduct?.detailContent) {
+          console.log(`[INFO]   상세 설명 이미지 추출 중...`);
+          const detailImageUrls = extractDetailImagesFromHTML(
+            originProduct.detailContent,
+          );
+          console.log(
+            `[INFO]   상세 설명에서 ${detailImageUrls.length}개 이미지 발견`,
+          );
+
+          for (let i = 0; i < detailImageUrls.length; i++) {
+            const imageUrl = detailImageUrls[i];
+            const result = await downloadCompressAndUploadImage(
+              imageUrl,
+              product.id,
+              "detail",
+            );
+            if (result.success) {
+              images.push({
+                image_url: result.url,
+                is_primary: false,
+                sort_order: images.length,
+                alt_text: `${product.name} - 상세 이미지 ${i + 1}`,
+              });
+            } else {
+              console.warn(
+                `[WARN]   상세 이미지 처리 실패: ${result.error}`,
+              );
+            }
+            await delay(200);
+          }
+        }
+
+        // 1-5. DB에 저장
         if (images.length > 0) {
           // 기존 이미지 확인
           const { data: existingImages } = await supabase
@@ -526,7 +751,7 @@ async function buildMapping() {
               console.log(
                 `[INFO]   ✅ 이미지 ${newImages.length}개 추가 완료 (기존 ${
                   existingImages?.length || 0
-                }개 유지)`,
+                }개 유지, 총 ${images.length}개)`,
               );
             }
           } else {
@@ -819,25 +1044,123 @@ async function buildMapping() {
 
           // 1. 이미지 추가 (product_images)
           const images = [];
+
+          // 1-1. 대표 이미지 (압축 없이 원본 URL 사용)
           if (originProduct.images?.representativeImage?.url) {
+            const representativeUrl =
+              originProduct.images.representativeImage.url;
             images.push({
-              image_url: originProduct.images.representativeImage.url,
+              image_url: representativeUrl,
               is_primary: true,
               sort_order: 0,
               alt_text: smartstoreProduct.name,
             });
+            console.log(`[INFO]   대표 이미지: ${representativeUrl}`);
           }
+
+          // 1-2. 추가 이미지 (800×800 압축 후 업로드)
           if (originProduct.images?.optionalImages) {
-            originProduct.images.optionalImages.forEach((img, index) => {
+            console.log(
+              `[INFO]   추가 이미지 ${originProduct.images.optionalImages.length}개 처리 중...`,
+            );
+            for (
+              let index = 0;
+              index < originProduct.images.optionalImages.length;
+              index++
+            ) {
+              const img = originProduct.images.optionalImages[index];
               if (img.url) {
-                images.push({
-                  image_url: img.url,
-                  is_primary: false,
-                  sort_order: index + 1,
-                  alt_text: `${smartstoreProduct.name} - 이미지 ${index + 1}`,
-                });
+                const result = await downloadCompressAndUploadImage(
+                  img.url,
+                  newProduct.id,
+                  "additional",
+                );
+                if (result.success) {
+                  images.push({
+                    image_url: result.url,
+                    is_primary: false,
+                    sort_order: index + 1,
+                    alt_text: `${smartstoreProduct.name} - 이미지 ${index + 1}`,
+                  });
+                } else {
+                  console.warn(
+                    `[WARN]   추가 이미지 처리 실패 (원본 URL 사용): ${result.error}`,
+                  );
+                  images.push({
+                    image_url: img.url,
+                    is_primary: false,
+                    sort_order: index + 1,
+                    alt_text: `${smartstoreProduct.name} - 이미지 ${index + 1}`,
+                  });
+                }
               }
-            });
+              await delay(200);
+            }
+          }
+
+          // 1-3. 옵션 이미지 (800×800 압축 후 업로드)
+          if (originProduct?.standardOptionAttributes) {
+            console.log(
+              `[INFO]   옵션 이미지 처리 중... (${originProduct.standardOptionAttributes.length}개 옵션)`,
+            );
+            for (const optionAttr of originProduct.standardOptionAttributes) {
+              if (optionAttr.imageUrls && optionAttr.imageUrls.length > 0) {
+                for (let i = 0; i < optionAttr.imageUrls.length; i++) {
+                  const imageUrl = optionAttr.imageUrls[i];
+                  const result = await downloadCompressAndUploadImage(
+                    imageUrl,
+                    newProduct.id,
+                    "option",
+                  );
+                  if (result.success) {
+                    images.push({
+                      image_url: result.url,
+                      is_primary: false,
+                      sort_order: images.length,
+                      alt_text: `${smartstoreProduct.name} - 옵션 ${optionAttr.attributeValueName || "이미지"} ${i + 1}`,
+                    });
+                  } else {
+                    console.warn(
+                      `[WARN]   옵션 이미지 처리 실패: ${result.error}`,
+                    );
+                  }
+                  await delay(200);
+                }
+              }
+            }
+          }
+
+          // 1-4. 상세 설명 이미지 (HTML 파싱 → 800×800 압축 후 업로드)
+          if (originProduct?.detailContent) {
+            console.log(`[INFO]   상세 설명 이미지 추출 중...`);
+            const detailImageUrls = extractDetailImagesFromHTML(
+              originProduct.detailContent,
+            );
+            console.log(
+              `[INFO]   상세 설명에서 ${detailImageUrls.length}개 이미지 발견`,
+            );
+
+            for (let i = 0; i < detailImageUrls.length; i++) {
+              const imageUrl = detailImageUrls[i];
+              const result = await downloadCompressAndUploadImage(
+                imageUrl,
+                newProduct.id,
+                "detail",
+              );
+              if (result.success) {
+                images.push({
+                  image_url: result.url,
+                  is_primary: false,
+                  sort_order: images.length,
+                  alt_text: `${smartstoreProduct.name} - 상세 이미지 ${i + 1}`,
+                });
+              } else {
+                console.warn(
+                  `[WARN]   상세 이미지 처리 실패: ${result.error}`,
+                );
+              }
+              await delay(200);
+            }
           }
 
           if (images.length > 0) {
@@ -853,7 +1176,14 @@ async function buildMapping() {
             if (imageError) {
               console.warn(`[WARN] 이미지 추가 실패: ${imageError.message}`);
             } else {
-              console.log(`[INFO]   ✅ 이미지 ${images.length}개 추가 완료`);
+              const detailImageCount =
+                originProduct?.detailContent
+                  ? extractDetailImagesFromHTML(originProduct.detailContent)
+                      .length
+                  : 0;
+              console.log(
+                `[INFO]   ✅ 이미지 ${images.length}개 추가 완료 (대표: 1개, 추가: ${originProduct.images?.optionalImages?.length || 0}개, 옵션: ${originProduct?.standardOptionAttributes?.filter((o) => o.imageUrls?.length > 0).length || 0}개, 상세: ${detailImageCount}개)`,
+              );
             }
           }
 
