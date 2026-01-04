@@ -18,16 +18,50 @@ export function useSyncUser() {
   const syncedRef = useRef(false);
 
   useEffect(() => {
+    // 디버깅: 현재 상태 로그
+    console.log("[useSyncUser] useEffect 실행", {
+      synced: syncedRef.current,
+      isLoaded,
+      isSignedIn,
+      userId,
+      userLoaded,
+      hasUser: !!user,
+      timestamp: new Date().toISOString(),
+    });
+
     // 이미 동기화했거나, 로딩 중이거나, 로그인하지 않은 경우 무시
-    if (syncedRef.current || !isLoaded || !isSignedIn || !userId) {
+    if (syncedRef.current) {
+      console.log("[useSyncUser] 이미 동기화 완료, 건너뜀");
+      return;
+    }
+    
+    if (!isLoaded) {
+      console.log("[useSyncUser] Clerk 로딩 중, 건너뜀");
+      return;
+    }
+    
+    if (!isSignedIn) {
+      console.log("[useSyncUser] 로그인하지 않음, 건너뜀");
+      return;
+    }
+    
+    if (!userId) {
+      console.log("[useSyncUser] userId 없음, 건너뜀");
       return;
     }
 
     // OAuth 로그인 시 사용자 정보가 완전히 로드될 때까지 대기
-    if (!userLoaded || !user) {
-      console.log("🔄 사용자 정보 로딩 대기 중...");
+    if (!userLoaded) {
+      console.log("[useSyncUser] 사용자 정보 로딩 중 (userLoaded: false), 대기...");
       return;
     }
+    
+    if (!user) {
+      console.log("[useSyncUser] 사용자 정보 없음 (user: null), 대기...");
+      return;
+    }
+    
+    console.log("[useSyncUser] ✅ 모든 조건 만족, 동기화 시작!");
 
     // 동기화 실행 (약간의 딜레이 추가)
     const syncUser = async () => {
