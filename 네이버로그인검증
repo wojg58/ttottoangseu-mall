@@ -183,8 +183,58 @@ Clerk Dashboard → Custom OAuth Provider 설정에서:
 
 ✅ **판정**
 
-- createdSessionId가 비어있다 → “추가 정보 입력 필요” 플로우를 태워야 함
+- createdSessionId가 비어있다 → "추가 정보 입력 필요" 플로우를 태워야 함
 
+---
 
+## 9) 최종 진단: "Debug 페이지에서 정보는 파싱되지만 사용자 생성 실패"
 
-[{"timestamp":"2026-01-04T10:16:06.426Z","level":"log","message":"💾 모든 콘솔 로그가 localStorage에 저장됩니다.","args":["💾 모든 콘솔 로그가 localStorage에 저장됩니다."]},{"timestamp":"2026-01-04T10:16:06.426Z","level":"log","message":"   - getStoredLogs(): 저장된 로그 가져오기","args":["   - getStoredLogs(): 저장된 로그 가져오기"]},{"timestamp":"2026-01-04T10:16:06.427Z","level":"log","message":"   - clearStoredLogs(): 로그 초기화","args":["   - clearStoredLogs(): 로그 초기화"]},{"timestamp":"2026-01-04T10:16:06.427Z","level":"log","message":"   - replayStoredLogs(): 로그 재생","args":["   - replayStoredLogs(): 로그 재생"]},{"timestamp":"2026-01-04T10:16:06.872Z","level":"log","message":"[Client Instrumentation Hook] Slow execution detected: 33ms (Note: Code download overhead is not included in this measurement)","args":["[Client Instrumentation Hook] Slow execution detected: 33ms (Note: Code download overhead is not included in this measurement)"]},{"timestamp":"2026-01-04T10:16:06.879Z","level":"info","message":"%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold","args":["%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools","font-weight:bold"]},{"timestamp":"2026-01-04T10:16:07.226Z","level":"group","message":"%c%s%c [HomePage] 상품 데이터 fetching background: #e6e6e6;background: light-dark(rgba(0,0,0,0.1), rgba(255,255,255,0.25));color: #000000;color: light-dark(#000000, #ffffff);border-radius: 2px  Server  ","args":["%c%s%c [HomePage] 상품 데이터 fetching","background: #e6e6e6;background: light-dark(rgba(0,0,0,0.1), rgba(255,255,255,0.25));color: #000000;color: light-dark(#000000, #ffffff);border-radius: 2px"," Server ",""]},{"timestamp":"2026-01-04T10:16:07.226Z","level":"log","message":"%c%s%c [HomePage] 상품 데이터 fetching background: #e6e6e6;background: light-dark(rgba(0,0,0,0.1), rgba(255,255,255,0.25));color: #000000;color: light-dark(#000000, #ffffff);border-radius: 2px  Server  ","args":["%c%s%c [HomePage] 상품 데이터 fetching","background: #e6e6e6;background: light-dark(rgba(0,0,0,0.1), rgba(255,255,255,0.25));color: #000000;color: light-dark(#000000, #ffffff);border-radius: 2px"," Server ",""]},{"timestamp":"2026-01-04T10:16:07.227Z","level":"warn","message":"%c%s%c  \u001b[33m\u001b[1m⚠\u001b[22m\u001b[39m Unsupported metadata viewport is configured in metadata export in /. Please move it to viewport export instead.\nRead more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport background: #e6e6e6;background: light-dark(rgba(0,0,0,0.1), rgba(255,255,255,0.25));color: #000000;color: light-dark(#000000, #ffffff);border-radius: 2px  Server  ","args":["%c%s%c  \u001b[33m\u001b[1m⚠\u001b[22m\u001b[39m Unsupported metadata viewport is configured in metadata export in /. Please move it to viewport export instead.\nRead more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport","background: #e6e6e6;background: light-dark(rgba(0,0,0,0.1), rgba(255,255,255,0.25));color: #000000;color: light-dark(#000000, #ffffff);border-radius: 2px"," Server ",""]},{"timestamp":"2026-01-04T10:16:07.237Z","level":"log","message":"%c%s%c [DEBUG] [HomePage] 베스트 1번 매칭 (100점) background: #e6e6e6;background: light-dark(rgba(0,0,0,0.1), rgba(255,255,255,0.25));color: #000000;color: light-dark(#000000, #ffffff);border-radius: 2px  Server   {\n  \"target\": \"산리오 헬로키티 블랙엔젤 스타일업 롱다리 마스코트 인형...\",\n  \"found\": \"산리오 헬로키티 블랙엔젤 스타일업 롱다리 마스코트 인형...\"\n}","args":["%c%s%c [DEBUG] [HomePage] 베스트 1번 매칭 (100점)","background: #e6e6e6;background: light-dark(rgba(0,0,0,0.1), rgba(255,255,255,0.25));color: #000000;color: light-dark(#000000, #ffffff);border-radius: 2px"," Server ","",{"target":"산리오 헬로키티 블랙엔젤 스타일업 롱다리 마스코트 인형...","found":"산리오 헬로키티 블랙엔젤 스타일업 롱다리 마스코트 인형..."}]},{"timestamp":"2026-01-04T10:16:07.237Z","level":"log","message":"%c%s%c [DEBUG] [HomePage] 베스트 2번 매칭 (100점) background: #e6e6e6;background: light-dark(rgba(0,0,0,0.1), rgba(255,255,255,0.25));color: #000000;color: light-dark(#000000, #ffffff);border-radius: 2px  Server   {\n  \"target\": \"산리오 헬로키티 판타지 스
+### 9.1 증상
+
+- ✅ Clerk Debug 페이지에서 User Info가 올바르게 파싱됨
+- ✅ `sub`, `email` 등 모든 필드가 정상적으로 표시됨
+- ❌ 하지만 실제 로그인 시 사용자가 생성되지 않음
+
+### 9.2 가능한 원인
+
+1. **이메일 중복 문제**
+   - 같은 이메일(`ttottoangseu@naver.com`)이 이미 다른 사용자와 연결되어 있을 수 있음
+   - Clerk Dashboard → Users에서 해당 이메일로 검색하여 확인
+
+2. **Clerk의 정책 설정**
+   - Clerk Dashboard → Settings → User Management
+   - "Allow users to sign up" 설정 확인
+   - "Email address" 정책 확인
+
+3. **Debug 모드와 실제 플로우의 차이**
+   - Debug 페이지는 테스트용이며, 실제 OAuth 플로우와 다를 수 있음
+   - 실제 로그인 플로우에서 에러가 발생할 수 있음
+
+### 9.3 해결 방법
+
+#### 방법 1: 기존 사용자 확인 및 삭제
+
+Clerk Dashboard → Users에서:
+- `ttottoangseu@naver.com`으로 검색
+- 같은 이메일을 가진 사용자가 있으면 삭제 또는 External Account 연결 확인
+
+#### 방법 2: Clerk 정책 확인
+
+Clerk Dashboard → Settings → User Management:
+- "Allow users to sign up" 활성화 확인
+- "Email address" 정책 확인 (필수 여부 등)
+
+#### 방법 3: 실제 로그인 플로우에서 에러 확인
+
+- 네이버 로그인 시도
+- 브라우저 콘솔에서 Clerk 에러 메시지 확인
+- Network 탭에서 Clerk API 호출 확인
+
+### 9.4 체크리스트
+
+- [ ] Clerk Dashboard → Users에서 `ttottoangseu@naver.com` 검색
+- [ ] 같은 이메일을 가진 사용자 존재 여부 확인
+- [ ] Settings → User Management → "Allow users to sign up" 확인
+- [ ] 실제 로그인 시 브라우저 콘솔 에러 확인
+- [ ] Network 탭에서 Clerk API 호출 실패 여부 확인
+
