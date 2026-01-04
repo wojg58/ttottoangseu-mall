@@ -63,9 +63,9 @@ export async function POST(request: Request) {
       imageUrl: clerkUser.imageUrl,
     });
     
-    // External Accounts 상세 로그
+    // External Accounts 상세 로그 (핵심: 네이버 로그인 연결 여부 확인)
     if (clerkUser.externalAccounts && clerkUser.externalAccounts.length > 0) {
-      console.log("🔗 External Accounts:", clerkUser.externalAccounts.map(acc => ({
+      console.log("✅ External Accounts 연결됨:", clerkUser.externalAccounts.map(acc => ({
         provider: acc.provider,
         id: acc.id,
         emailAddress: acc.emailAddress,
@@ -76,7 +76,15 @@ export async function POST(request: Request) {
         imageUrl: acc.imageUrl,
       })));
     } else {
-      console.warn("⚠️ External Accounts가 없습니다. 네이버 로그인이 제대로 연결되지 않았을 수 있습니다.");
+      console.error("❌ [중요] External Accounts가 없습니다!");
+      console.error("   → 네이버 로그인이 Clerk에 연결되지 않았습니다.");
+      console.error("   → 가능한 원인:");
+      console.error("      1. Proxy 서버 응답의 'sub' 값이 Clerk가 기대하는 형식과 다름");
+      console.error("      2. Clerk Dashboard의 Attribute Mapping 설정 문제");
+      console.error("         - User ID / Subject → 'sub' (대소문자 주의)");
+      console.error("         - Email → 'email'");
+      console.error("      3. Proxy 서버가 Clerk에 응답을 제대로 반환하지 못함");
+      console.error("   → Proxy 서버 로그 확인: ssh로 접속 후 'pm2 logs clerk-userinfo-proxy'");
     }
     
     // 이메일 주소 상세 확인
