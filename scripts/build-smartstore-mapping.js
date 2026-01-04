@@ -947,6 +947,18 @@ async function buildMapping() {
           .toLowerCase()
           .trim();
 
+        // 테스트 모드: 특정 상품명만 처리
+        if (TEST_MODE) {
+          const testNameLower = TEST_PRODUCT_NAME.toLowerCase().trim();
+          if (
+            !smartstoreName.includes(testNameLower) &&
+            !testNameLower.includes(smartstoreName)
+          ) {
+            skippedCount++;
+            continue;
+          }
+        }
+
         // 이미 우리 DB에 있는 상품인지 확인
         const existsInOurDB = ourProductNames.has(smartstoreName);
 
