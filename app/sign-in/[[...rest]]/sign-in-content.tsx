@@ -1783,11 +1783,12 @@ export default function SignInContent() {
                     // OAuth 전략 시도 (Clerk 설정에 따라 형식이 다를 수 있음)
                     // Clerk 대시보드에서 설정한 Custom OAuth provider의 Key를 확인해야 함
                     // 일반적으로 "oauth_custom_{provider_key}" 형식
-                    // 예: Clerk 대시보드에서 provider Key를 "naver"로 설정했다면 "oauth_custom_naver"
                     // 예: Clerk 대시보드에서 provider Key를 "naver_auth"로 설정했다면 "oauth_custom_naver_auth"
+                    // ⚠️ 중요: Clerk Dashboard의 실제 Provider Key와 일치해야 함!
+                    // 에러 응답에서 "supported_first_factors"를 확인하여 허용되는 전략 확인 가능
                     const possibleStrategies = [
-                      "oauth_custom_naver", // Key가 "naver"인 경우 (문서 권장)
-                      "oauth_custom_naver_auth", // Key가 "naver_auth"인 경우
+                      "oauth_custom_naver_auth", // Key가 "naver_auth"인 경우 (현재 설정)
+                      "oauth_custom_naver", // Key가 "naver"인 경우 (fallback)
                       "oauth_custom_naver-auth", // 언더스코어 대신 하이픈 (일부 경우)
                       "oauth_custom_custom_naver_auth", // 이중 custom 접두사
                       "oauth_naver_auth", // Social provider 형식
