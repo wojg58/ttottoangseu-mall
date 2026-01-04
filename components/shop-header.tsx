@@ -76,16 +76,16 @@ export default function ShopHeader() {
       <header className="sticky top-0 z-50 w-full">
         {/* 메인 헤더 - 핑크 배경 (대비율 개선: 더 진한 핑크 사용) */}
         <div className="bg-[#FF5088]">
-        <div className="shop-container h-[80px] sm:h-[100px] md:h-[120px] flex items-center">
-          <div className="relative flex justify-between items-center gap-2 md:gap-4 w-full">
-            {/* 왼쪽 소셜 미디어 바로가기 아이콘 */}
-            <div className="flex-1 flex items-center gap-2">
+        <div className="shop-container h-[70px] sm:h-[90px] md:h-[120px] flex items-center">
+          <div className="relative flex justify-between items-center gap-1 sm:gap-2 md:gap-4 w-full">
+            {/* 왼쪽 소셜 미디어 바로가기 아이콘 - 모바일에서 숨김 */}
+            <div className="hidden sm:flex flex-1 items-center gap-2">
               {/* 네이버 스마트스토어 */}
               <a
                 href="https://smartstore.naver.com/ttottoangseu"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center justify-center w-9 h-9 hover:opacity-80 transition-opacity"
+                className="inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 hover:opacity-80 transition-opacity"
                 aria-label="네이버 스마트스토어 바로가기"
               >
                 <Image
@@ -94,7 +94,7 @@ export default function ShopHeader() {
                   width={28}
                   height={28}
                   className="object-contain block"
-                  sizes="28px"
+                  sizes="(max-width: 640px) 24px, 28px"
                   priority
                 />
               </a>
@@ -104,7 +104,7 @@ export default function ShopHeader() {
                 href="https://www.instagram.com/ttottoangseu_shop/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center justify-center w-9 h-9 hover:opacity-80 transition-opacity"
+                className="inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 hover:opacity-80 transition-opacity"
                 aria-label="인스타그램 바로가기"
               >
                 <Image
@@ -113,62 +113,70 @@ export default function ShopHeader() {
                   width={26}
                   height={26}
                   className="object-contain block"
-                  sizes="26px"
+                  sizes="(max-width: 640px) 24px, 26px"
                   priority
                 />
               </a>
             </div>
 
-            {/* 로고 영역 - 중앙 배치 */}
-            <Link href="/" className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2 sm:gap-3 shrink-0" aria-label="또또앙스 홈으로 이동">
+            {/* 모바일용 빈 공간 (좌측 균형) */}
+            <div className="sm:hidden w-0 flex-shrink-0"></div>
+
+            {/* 로고 영역 - 중앙 배치 (모바일 최적화) */}
+            <Link 
+              href="/" 
+              className="absolute left-1/2 -translate-x-1/2 flex items-center gap-1 sm:gap-2 md:gap-3 shrink-0 z-10" 
+              aria-label="또또앙스 홈으로 이동"
+            >
               <Image
                 src="/character.png"
                 alt="또또앙스 로고"
                 width={100}
                 height={100}
-                className="object-contain w-16 h-16 sm:w-20 sm:h-20 md:w-[100px] md:h-[100px] drop-shadow-md"
+                className="object-contain w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 lg:w-[100px] lg:h-[100px] drop-shadow-md"
                 priority
-                sizes="(max-width: 640px) 64px, (max-width: 768px) 80px, 100px"
+                sizes="(max-width: 640px) 48px, (max-width: 768px) 64px, (max-width: 1024px) 80px, 100px"
               />
-              <div className="block">
-                <h1 className="text-xl sm:text-3xl md:text-5xl font-bold drop-shadow-md brand-text-logo text-white whitespace-nowrap">
+              {/* 모바일에서 텍스트 숨김, 태블릿 이상에서만 표시 */}
+              <div className="hidden sm:block">
+                <h1 className="text-lg sm:text-2xl md:text-4xl lg:text-5xl font-bold drop-shadow-md brand-text-logo text-white whitespace-nowrap">
                   또또앙스
                 </h1>
               </div>
             </Link>
 
-            {/* 우측 아이콘들 */}
-            <div className="flex-1 flex justify-end items-center gap-2 md:gap-3">
+            {/* 우측 아이콘들 - 모바일 최적화 */}
+            <div className="flex-1 flex justify-end items-center gap-0.5 sm:gap-1 md:gap-2 lg:gap-3">
               <SignedOut>
-                {/* 로그인 */}
+                {/* 로그인 - 모바일에서 아이콘만, 태블릿 이상에서 텍스트 포함 */}
                 <Link
                   href="/sign-in"
-                  className="flex flex-col items-center justify-center gap-1 text-white hover:opacity-80 transition-opacity min-w-[50px]"
+                  className="flex flex-col items-center justify-center gap-0.5 sm:gap-1 text-white hover:opacity-80 transition-opacity min-w-[36px] sm:min-w-[44px] md:min-w-[50px] px-1 sm:px-0"
                   aria-label="로그인"
                 >
-                  <LogIn className="w-5 h-5 md:w-6 md:h-6" />
-                  <span className="text-[10px] md:text-xs">로그인</span>
+                  <LogIn className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6" />
+                  <span className="text-[9px] sm:text-[10px] md:text-xs hidden sm:inline">로그인</span>
                 </Link>
 
-                {/* 회원가입 */}
+                {/* 회원가입 - 모바일에서 아이콘만, 태블릿 이상에서 텍스트 포함 */}
                 <Link
                   href="/sign-up/join"
-                  className="flex flex-col items-center justify-center gap-1 text-white hover:opacity-80 transition-opacity min-w-[50px]"
+                  className="flex flex-col items-center justify-center gap-0.5 sm:gap-1 text-white hover:opacity-80 transition-opacity min-w-[36px] sm:min-w-[44px] md:min-w-[50px] px-1 sm:px-0"
                   aria-label="회원가입"
                 >
-                  <UserPlus className="w-5 h-5 md:w-6 md:h-6" />
-                  <span className="text-[10px] md:text-xs">회원가입</span>
+                  <UserPlus className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6" />
+                  <span className="text-[9px] sm:text-[10px] md:text-xs hidden sm:inline">회원가입</span>
                 </Link>
               </SignedOut>
 
               {/* 마이페이지 - 항상 표시 */}
               <Link
                 href="/mypage"
-                className="flex flex-col items-center justify-center gap-1 text-white hover:opacity-80 transition-opacity min-w-[50px]"
+                className="flex flex-col items-center justify-center gap-0.5 sm:gap-1 text-white hover:opacity-80 transition-opacity min-w-[36px] sm:min-w-[44px] md:min-w-[50px] px-1 sm:px-0"
                 aria-label="마이페이지"
               >
-                <User className="w-5 h-5 md:w-6 md:h-6" />
-                <span className="text-[10px] md:text-xs">마이페이지</span>
+                <User className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6" />
+                <span className="text-[9px] sm:text-[10px] md:text-xs hidden sm:inline">마이페이지</span>
               </Link>
 
               {/* 로그아웃 - 로그인한 사용자만 표시 */}
@@ -176,11 +184,11 @@ export default function ShopHeader() {
                 <SignOutButton>
                   <button
                     type="button"
-                    className="flex flex-col items-center justify-center gap-1 text-white hover:opacity-80 transition-opacity min-w-[50px]"
+                    className="flex flex-col items-center justify-center gap-0.5 sm:gap-1 text-white hover:opacity-80 transition-opacity min-w-[36px] sm:min-w-[44px] md:min-w-[50px] px-1 sm:px-0"
                     aria-label="로그아웃"
                   >
-                    <LogOut className="w-5 h-5 md:w-6 md:h-6" />
-                    <span className="text-[10px] md:text-xs">로그아웃</span>
+                    <LogOut className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6" />
+                    <span className="text-[9px] sm:text-[10px] md:text-xs hidden sm:inline">로그아웃</span>
                   </button>
                 </SignOutButton>
               </SignedIn>
@@ -188,27 +196,27 @@ export default function ShopHeader() {
               {/* 장바구니 - 항상 표시 */}
               <Link
                 href="/cart"
-                className="flex flex-col items-center justify-center gap-1 text-white hover:opacity-80 transition-opacity relative min-w-[50px]"
+                className="flex flex-col items-center justify-center gap-0.5 sm:gap-1 text-white hover:opacity-80 transition-opacity relative min-w-[36px] sm:min-w-[44px] md:min-w-[50px] px-1 sm:px-0"
                 aria-label="장바구니"
               >
                 <div className="relative">
-                  <ShoppingCart className="w-5 h-5 md:w-6 md:h-6" />
+                  <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6" />
                   {/* 장바구니 아이템 개수 배지 */}
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] sm:text-[10px] font-bold rounded-full w-3.5 h-3.5 sm:w-4 sm:h-4 flex items-center justify-center">
                     0
                   </span>
                 </div>
-                <span className="text-[10px] md:text-xs">장바구니</span>
+                <span className="text-[9px] sm:text-[10px] md:text-xs hidden sm:inline">장바구니</span>
               </Link>
 
               {/* 모바일 메뉴 버튼 */}
               <button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="p-3 min-w-[48px] min-h-[48px] text-white hover:bg-white/20 rounded-full transition-colors lg:hidden flex items-center justify-center relative"
+                className="p-2 sm:p-3 min-w-[36px] min-h-[36px] sm:min-w-[48px] sm:min-h-[48px] text-white hover:bg-white/20 rounded-full transition-colors lg:hidden flex items-center justify-center relative ml-0.5 sm:ml-0"
                 aria-label={isMobileMenuOpen ? "메뉴 닫기" : "메뉴 열기"}
               >
-                <X className={`w-6 h-6 absolute transition-opacity duration-200 ${isMobileMenuOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} />
-                <Menu className={`w-6 h-6 absolute transition-opacity duration-200 ${isMobileMenuOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`} />
+                <X className={`w-5 h-5 sm:w-6 sm:h-6 absolute transition-opacity duration-200 ${isMobileMenuOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} />
+                <Menu className={`w-5 h-5 sm:w-6 sm:h-6 absolute transition-opacity duration-200 ${isMobileMenuOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`} />
               </button>
             </div>
           </div>
@@ -218,8 +226,8 @@ export default function ShopHeader() {
       {/* 카테고리 네비게이션 */}
       <nav className="bg-[#ffd6e8] border-b border-[#ffc8dc] hidden lg:block">
         <div className="shop-container">
-          <div className="flex items-center justify-between">
-            <ul className="flex items-center justify-center gap-2 md:gap-4 lg:gap-6 flex-nowrap overflow-x-auto">
+          <div className="flex items-center justify-between gap-4">
+            <ul className="flex items-center justify-center gap-2 md:gap-4 lg:gap-6 flex-1 flex-nowrap overflow-x-auto scrollbar-hide">
               {CATEGORIES.map((category) => (
                 <li key={category.slug} className="flex-shrink-0">
                   <Link
@@ -230,7 +238,7 @@ export default function ShopHeader() {
                         ? "/products"
                         : `/products/category/${category.slug}`
                     }
-                    className="category-nav-item flex items-center gap-1 text-black hover:text-[#ff6b9d] text-[20px] px-4 md:px-6 whitespace-nowrap"
+                    className="category-nav-item flex items-center gap-1 text-black hover:text-[#ff6b9d] text-base md:text-lg lg:text-[20px] px-2 md:px-4 lg:px-6 whitespace-nowrap"
                   >
                     <span>
                       {category.slug === "best" ? (
@@ -240,8 +248,8 @@ export default function ShopHeader() {
                             alt="베스트"
                             width={20}
                             height={20}
-                            className="inline-block mr-1"
-                            sizes="20px"
+                            className="inline-block mr-1 w-4 h-4 md:w-5 md:h-5"
+                            sizes="(max-width: 768px) 16px, 20px"
                           />
                           {category.name}
                         </>
@@ -257,21 +265,21 @@ export default function ShopHeader() {
               ))}
             </ul>
             {/* 검색 입력 필드 */}
-            <div className="flex items-center">
+            <div className="flex items-center shrink-0">
               <form onSubmit={handleSearch} className="flex items-center gap-1 border-b border-black pb-1">
                 <Input
                   type="text"
                   placeholder="검색"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-[150px] h-8 px-2 bg-transparent border-0 text-sm text-gray-700 placeholder:text-gray-400 focus-visible:ring-0 focus-visible:outline-none shadow-none"
+                  className="w-[120px] md:w-[150px] lg:w-[180px] h-7 md:h-8 px-2 bg-transparent border-0 text-xs md:text-sm text-gray-700 placeholder:text-gray-400 focus-visible:ring-0 focus-visible:outline-none shadow-none"
                 />
                 <button
                   type="submit"
                   className="p-1 text-gray-600 hover:text-gray-900 transition-colors"
                   aria-label="검색"
                 >
-                  <Search className="w-5 h-5" />
+                  <Search className="w-4 h-4 md:w-5 md:h-5" />
                 </button>
               </form>
             </div>

@@ -635,6 +635,16 @@
   @apply bg-shop-pink-dark;
 }
 
+/* 스크롤바 숨김 유틸리티 */
+.scrollbar-hide {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none; /* Chrome, Safari and Opera */
+}
+
 /* 2026 이미지 둥둥 떠다니는 애니메이션 */
 @keyframes floatUp {
   0% {
