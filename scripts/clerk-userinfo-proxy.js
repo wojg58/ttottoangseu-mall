@@ -144,6 +144,9 @@ const server = http.createServer(async (req, res) => {
     
     if (!authorization) {
       console.error("[ERROR] Authorization 헤더 또는 access_token query parameter가 없습니다");
+      console.error("[ERROR] 요청 URL:", req.url);
+      console.error("[ERROR] User-Agent:", req.headers["user-agent"] || "없음");
+      console.error("[ERROR] 요청 메서드:", req.method);
       res.writeHead(401, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ error: "missing_authorization" }));
       console.groupEnd();

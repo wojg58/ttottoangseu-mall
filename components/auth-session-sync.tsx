@@ -33,31 +33,11 @@ export function AuthSessionSync() {
                            currentUrl.includes("oauth_callback");
 
     if (isOAuthCallback) {
-      // 로그를 localStorage에 저장 (페이지 새로고침 후에도 확인 가능)
-      const logData = {
-        timestamp: new Date().toISOString(),
-        url: currentUrl,
-        isSignedIn,
-        userId,
-        sessionId,
-        userLoaded,
-        hasUser: !!user,
-      };
-      
-      // 이전 로그 가져오기
-      const existingLogs = JSON.parse(localStorage.getItem("oauth_callback_logs") || "[]");
-      existingLogs.push(logData);
-      // 최근 10개만 유지
-      if (existingLogs.length > 10) {
-        existingLogs.shift();
-      }
-      localStorage.setItem("oauth_callback_logs", JSON.stringify(existingLogs));
+      const timestamp = new Date().toISOString();
       
       console.group("[AuthSessionSync] OAuth 콜백 감지 - 세션 생성 검증 시작");
       console.log("현재 URL:", currentUrl);
-      console.log("시간:", new Date().toISOString());
-      console.log("💾 로그가 localStorage에 저장되었습니다. 페이지 새로고침 후에도 확인 가능합니다.");
-      console.log("   localStorage.getItem('oauth_callback_logs')로 확인하세요.");
+      console.log("시간:", timestamp);
       
       // 검증 문서 6차 진단: 세션 생성 여부 확인
       console.log("=== 세션 생성 검증 ===");
@@ -67,8 +47,13 @@ export function AuthSessionSync() {
       console.log("userLoaded:", userLoaded);
       console.log("user 존재:", !!user);
       
+      let userInfo = null;
+      let externalAccounts: any[] = [];
+      let hasToken = false;
+      let tokenLength = 0;
+      
       if (user) {
-        const userInfo = {
+        userInfo = {
           id: user.id,
           email: user.emailAddresses[0]?.emailAddress || "없음",
           name: user.fullName || user.username || "없음",
@@ -80,6 +65,12 @@ export function AuthSessionSync() {
           })) || [],
         };
         console.log("👤 Clerk 사용자 정보:", userInfo);
+        
+        externalAccounts = user.externalAccounts?.map(acc => ({
+          provider: acc.provider,
+          providerUserId: acc.providerUserId,
+          verified: acc.verification?.status,
+        })) || [];
         
         // External Account가 없는 경우 경고
         if (!user.externalAccounts || user.externalAccounts.length === 0) {
@@ -97,9 +88,11 @@ export function AuthSessionSync() {
       
       // 세션 토큰 확인
       getToken().then(token => {
-        console.log("세션 토큰 존재:", !!token);
+        hasToken = !!token;
+        tokenLength = token?.length || 0;
+        console.log("세션 토큰 존재:", hasToken);
         if (token) {
-          console.log("세션 토큰 길이:", token.length);
+          console.log("세션 토큰 길이:", tokenLength);
         }
       }).catch(err => {
         console.error("세션 토큰 가져오기 실패:", err);
@@ -112,17 +105,64 @@ export function AuthSessionSync() {
       console.log("__clerk_redirect_url:", clerkRedirectUrl);
       
       // 검증 판정
+      let verificationResult = {
+        success: false,
+        error: null as string | null,
+        warnings: [] as string[],
+      };
+      
       if (!isSignedIn || !userId || !sessionId) {
+        verificationResult.error = "세션이 생성되지 않았습니다";
         console.error("❌ [검증 실패] 세션이 생성되지 않았습니다!");
         console.error("   - isSignedIn:", isSignedIn);
         console.error("   - userId:", userId);
         console.error("   - sessionId:", sessionId);
         console.error("   → '추가 정보 입력 필요' 또는 '사용자 생성 실패' 상태일 수 있습니다.");
+      } else if (user && (!user.externalAccounts || user.externalAccounts.length === 0)) {
+        verificationResult.warnings.push("External Account가 연결되지 않았습니다");
+        console.error("❌ [중요] 세션은 생성되었지만 External Account가 연결되지 않았습니다!");
+        console.error("   → 'The External Account was not found' 에러의 원인입니다.");
       } else {
+        verificationResult.success = true;
         console.log("✅ [검증 성공] 세션이 정상적으로 생성되었습니다!");
         console.log("   - userId:", userId);
         console.log("   - sessionId:", sessionId);
       }
+      
+      // 서버로 로그 전송 (비동기, 실패해도 계속 진행)
+      const logPayload = {
+        timestamp,
+        url: currentUrl,
+        isSignedIn,
+        userId,
+        sessionId,
+        userLoaded,
+        hasUser: !!user,
+        userInfo,
+        externalAccounts,
+        clerkStatus,
+        clerkRedirectUrl,
+        hasToken,
+        tokenLength,
+        verificationResult,
+      };
+      
+      console.log("📤 서버로 로그 전송 중...");
+      fetch("/api/log-oauth-callback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(logPayload),
+      })
+        .then((res) => {
+          if (res.ok) {
+            console.log("✅ 서버 로그 저장 완료 (터미널에서 확인 가능)");
+          } else {
+            console.warn("⚠️ 서버 로그 저장 실패 (계속 진행)");
+          }
+        })
+        .catch((err) => {
+          console.warn("⚠️ 서버 로그 전송 실패 (계속 진행):", err);
+        });
       
       // OAuth 콜백 파라미터 제거
       const url = new URL(currentUrl);
