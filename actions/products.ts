@@ -302,8 +302,13 @@ export async function getProductBySlug(
 ): Promise<ProductWithDetails | null> {
   console.group("[getProductBySlug] 상품 상세 조회");
   console.log("slug:", slug);
+  console.log("slug length:", slug.length);
+  console.log("slug encoded:", encodeURIComponent(slug));
 
   const supabase = await createClient();
+
+  // slug 디코딩 (URL 인코딩된 경우)
+  const decodedSlug = decodeURIComponent(slug);
 
   const { data, error } = await supabase
     .from("products")
@@ -315,18 +320,31 @@ export async function getProductBySlug(
       variants:product_variants(*)
     `,
     )
-    .eq("slug", slug)
+    .eq("slug", decodedSlug)
     .is("deleted_at", null)
     .eq("status", "active") // 숨김 상품 제외: active 상태인 상품만 조회
     .single();
 
   if (error) {
     console.error("에러:", error);
+    console.error("에러 코드:", error.code);
+    console.error("에러 메시지:", error.message);
+    
+    // 디버깅: slug로 시작하는 모든 상품 조회
+    const { data: allProducts } = await supabase
+      .from("products")
+      .select("id, name, slug, status")
+      .ilike("slug", `${decodedSlug}%`)
+      .is("deleted_at", null)
+      .limit(5);
+    console.log("비슷한 slug를 가진 상품들:", allProducts);
+    
     console.groupEnd();
     return null;
   }
 
   console.log("결과:", data?.name);
+  console.log("결과 slug:", data?.slug);
   console.groupEnd();
 
   return data as unknown as ProductWithDetails;
