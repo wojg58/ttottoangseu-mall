@@ -20,7 +20,7 @@ const CATEGORY_EMOJI: Record<string, string> = {
   character: "🧡",
   "phone-strap": "💛",
   fashion: "💙",
-  bear: "🤎",
+  bear: "💜",
   stationery: "💜",
 };
 
