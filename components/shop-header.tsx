@@ -43,7 +43,6 @@ const CATEGORIES = [
   { name: "유키오", slug: "keyring", emoji: "💚" },
   { name: "짱구", slug: "fashion", emoji: "💙" },
   { name: "반다이", slug: "bear", emoji: "💜" },
-  { name: "가차,리멘트", slug: "stationery", emoji: "💜" },
   { name: "전체상품", slug: "all", emoji: "" },
 ];
 

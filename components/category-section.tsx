@@ -21,7 +21,6 @@ const CATEGORY_EMOJI: Record<string, string> = {
   "phone-strap": "💛",
   fashion: "💙",
   bear: "💜",
-  stationery: "💜",
 };
 
 interface CategorySectionProps {
