@@ -48,7 +48,7 @@ export default async function middleware(
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net data:",
       "img-src 'self' data: https: blob:",
-      "connect-src 'self' https://www.google-analytics.com https://analytics.google.com https://*.clerk.accounts.dev https://*.supabase.co https://api.channel.io https://*.ingest.sentry.io https://*.sentry.io",
+      "connect-src 'self' https://www.google-analytics.com https://analytics.google.com https://*.clerk.accounts.dev https://*.clerk-telemetry.com https://*.supabase.co https://api.channel.io https://*.ingest.sentry.io https://*.sentry.io",
       "frame-src 'self' https://*.clerk.accounts.dev https://channels.angel.co",
       "object-src 'none'",
       "base-uri 'self'",
