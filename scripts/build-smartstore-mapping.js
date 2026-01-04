@@ -600,6 +600,23 @@ async function buildMapping() {
         // 나중에 재고 동기화 시 다른 API로 확인하거나, 매핑된 데이터로 역추적 가능
         const originProductNo = null; // 매핑 작업에서는 사용하지 않음 (재고 수정 시 필요)
 
+        // 0. 상품 설명(description) 업데이트
+        if (originProduct?.detailContent) {
+          console.log(`[INFO] 상품 설명 업데이트 중...`);
+          const { error: descUpdateError } = await supabase
+            .from("products")
+            .update({ description: originProduct.detailContent })
+            .eq("id", product.id);
+
+          if (descUpdateError) {
+            console.warn(
+              `[WARN] 상품 설명 업데이트 실패: ${descUpdateError.message}`,
+            );
+          } else {
+            console.log(`[INFO]   ✅ 상품 설명 업데이트 완료`);
+          }
+        }
+
         // 1. 상품 이미지 추가/업데이트
         console.log(`[INFO] 이미지 추가/업데이트 시작...`);
         const images = [];
