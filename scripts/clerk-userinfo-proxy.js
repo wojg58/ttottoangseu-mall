@@ -104,7 +104,7 @@ function flattenNaverResponse(raw) {
 const server = http.createServer(async (req, res) => {
   // CORS 헤더 설정 (Clerk가 호출하므로 필요)
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Authorization, Content-Type");
 
   // OPTIONS 요청 처리
@@ -114,8 +114,8 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // GET 요청만 처리
-  if (req.method !== "GET") {
+  // GET 또는 POST 요청만 처리 (Clerk가 POST로 요청할 수 있음)
+  if (req.method !== "GET" && req.method !== "POST") {
     console.warn(`[WARN] 지원하지 않는 메서드: ${req.method}`);
     res.writeHead(405, { "Content-Type": "application/json" });
     res.end(JSON.stringify({ error: "Method not allowed" }));
@@ -131,9 +131,19 @@ const server = http.createServer(async (req, res) => {
     });
 
     // 1) Clerk가 보내는 Authorization 헤더(토큰) 확인
-    const authorization = req.headers.authorization;
+    // Authorization 헤더가 없으면 query parameter에서 access_token 확인 (fallback)
+    let authorization = req.headers.authorization;
     if (!authorization) {
-      console.error("[ERROR] Authorization 헤더가 없습니다");
+      const url = new URL(req.url, `http://${req.headers.host}`);
+      const accessToken = url.searchParams.get("access_token");
+      if (accessToken) {
+        authorization = `Bearer ${accessToken}`;
+        console.log("[INFO] Authorization 헤더가 없어 query parameter에서 토큰 사용");
+      }
+    }
+    
+    if (!authorization) {
+      console.error("[ERROR] Authorization 헤더 또는 access_token query parameter가 없습니다");
       res.writeHead(401, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ error: "missing_authorization" }));
       console.groupEnd();
