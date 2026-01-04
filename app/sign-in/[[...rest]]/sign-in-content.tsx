@@ -1887,18 +1887,32 @@ export default function SignInContent() {
                       errorMessage.includes("외부 계정을 찾을 수 없습니다") ||
                       errorMessage.includes("external account")
                     ) {
+                      console.error("❌ [네이버 로그인 실패] External Account was not found");
+                      console.error("   → Proxy 서버는 데이터를 반환했지만, Clerk가 외부 계정을 연결하지 못했습니다.");
+                      console.error("   → 가능한 원인:");
+                      console.error("      1. Proxy 서버 응답의 'sub' 값이 Clerk가 기대하는 형식과 다름");
+                      console.error("      2. Clerk Dashboard의 Attribute Mapping에서 'sub' → 'User ID / Subject' 매핑이 잘못됨");
+                      console.error("      3. 이미 같은 네이버 계정이 다른 Clerk 사용자와 연결되어 있음");
+                      console.error("   → 확인 방법:");
+                      console.error("      1. Proxy 서버 로그에서 'sub' 값 확인");
+                      console.error("      2. Clerk Dashboard → 네이버 provider → Attribute Mapping 확인");
+                      console.error("         - User ID / Subject → sub (반드시 'sub'로 매핑)");
+                      console.error("         - Email → email");
+                      console.error("      3. Clerk Dashboard → Users에서 해당 네이버 계정이 이미 연결되어 있는지 확인");
+                      
                       errorMessage =
                         "네이버 로그인에 실패했습니다.\n\n" +
+                        "에러: External Account was not found\n\n" +
                         "가능한 원인:\n" +
-                        "1. 네이버 개발자 센터에서 '이메일 주소'가 필수 동의로 설정되지 않았습니다.\n" +
-                        "2. Clerk 대시보드의 User Info Mapping 설정이 올바르지 않습니다.\n" +
-                        "3. 네이버에서 이메일 정보를 제공하지 않았습니다.\n\n" +
+                        "1. Proxy 서버 응답의 'sub' 값이 Clerk가 기대하는 형식과 다름\n" +
+                        "2. Clerk Dashboard의 Attribute Mapping에서 'sub' → 'User ID / Subject' 매핑이 잘못됨\n" +
+                        "3. 이미 같은 네이버 계정이 다른 Clerk 사용자와 연결되어 있음\n\n" +
                         "해결 방법:\n" +
-                        "1. 네이버 개발자 센터 → 내 애플리케이션 → 네이버 로그인 → 제공 정보 설정\n" +
-                        "2. '이메일 주소'를 필수 동의로 설정\n" +
-                        "3. Clerk 대시보드 → SSO Connections → 네이버 provider → User Info Mapping 확인\n" +
-                        "   - Email: response.email\n" +
-                        "   - Name: response.name";
+                        "1. Proxy 서버 로그 확인 (sub 값 확인)\n" +
+                        "2. Clerk Dashboard → SSO Connections → 네이버 provider → Attribute Mapping\n" +
+                        "   - User ID / Subject → sub (반드시 'sub'로 매핑)\n" +
+                        "   - Email → email\n" +
+                        "3. Clerk Dashboard → Users에서 중복 연결 확인";
                     }
 
                     alert(errorMessage);
