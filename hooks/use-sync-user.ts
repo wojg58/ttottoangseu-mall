@@ -130,4 +130,84 @@ export function useSyncUser() {
 
     syncUser();
   }, [isLoaded, isSignedIn, userId, getToken, userLoaded, user]);
+
+  // 네이버 로그인 후 강제 동기화 시도 (조건 만족하지 않아도 시도)
+  useEffect(() => {
+    // 주기적으로 체크하여 동기화 시도 (최대 5번, 2초 간격)
+    if (syncedRef.current) {
+      return;
+    }
+
+    let attemptCount = 0;
+    const maxAttempts = 5;
+    const interval = 2000; // 2초
+
+    const forceSync = async () => {
+      attemptCount++;
+      console.log(`[useSyncUser] 강제 동기화 시도 ${attemptCount}/${maxAttempts}`);
+
+      // 최소한 userId만 있으면 시도
+      if (userId) {
+        try {
+          const token = await getToken().catch(() => null);
+          
+          console.log("[useSyncUser] 강제 동기화 API 호출 시작");
+          const response = await fetch("/api/sync-user", {
+            method: "POST",
+            credentials: "include",
+            headers: {
+              "Content-Type": "application/json",
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            console.log("✅ [useSyncUser] 강제 동기화 성공:", data);
+            syncedRef.current = true;
+            return true; // 성공
+          } else if (response.status === 401) {
+            console.log("[useSyncUser] 강제 동기화: 인증 실패 (계속 시도)");
+            return false; // 계속 시도
+          } else {
+            const errorText = await response.text();
+            console.error("[useSyncUser] 강제 동기화 실패:", response.status, errorText);
+            return false;
+          }
+        } catch (error) {
+          console.error("[useSyncUser] 강제 동기화 에러:", error);
+          return false;
+        }
+      } else {
+        console.log("[useSyncUser] 강제 동기화: userId 없음 (계속 시도)");
+        return false;
+      }
+    };
+
+    // 즉시 한 번 시도
+    forceSync().then((success) => {
+      if (success) {
+        return; // 성공하면 종료
+      }
+
+      // 실패하면 주기적으로 재시도
+      const intervalId = setInterval(async () => {
+        if (syncedRef.current || attemptCount >= maxAttempts) {
+          clearInterval(intervalId);
+          if (!syncedRef.current) {
+            console.warn(`[useSyncUser] 강제 동기화 최대 시도 횟수 도달 (${maxAttempts}회)`);
+          }
+          return;
+        }
+
+        const success = await forceSync();
+        if (success) {
+          clearInterval(intervalId);
+        }
+      }, interval);
+
+      // cleanup
+      return () => clearInterval(intervalId);
+    });
+  }, [userId, getToken]); // userId가 변경될 때마다 재시도
 }
