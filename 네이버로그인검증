@@ -238,3 +238,54 @@ Clerk Dashboard → Settings → User Management:
 - [ ] 실제 로그인 시 브라우저 콘솔 에러 확인
 - [ ] Network 탭에서 Clerk API 호출 실패 여부 확인
 
+### 9.5 실제 로그인 플로우 확인 (중요!)
+
+Debug 페이지는 **테스트용**이며, 실제 OAuth 플로우와 다를 수 있습니다.
+
+**실제 로그인 시 확인 사항:**
+
+1. **브라우저 콘솔 에러 확인**
+   - 네이버 로그인 버튼 클릭
+   - 네이버 로그인 완료 후 리다이렉트
+   - 브라우저 콘솔(F12)에서 Clerk 관련 에러 확인
+   - 특히 "External Account was not found" 에러 확인
+
+2. **Network 탭 확인**
+   - Clerk API 호출 실패 여부 확인
+   - `/v1/oauth_callback` 호출 확인
+   - 에러 응답 코드 확인
+
+3. **Clerk Dashboard → Logs 확인**
+   - Clerk Dashboard → Logs 탭
+   - 최근 OAuth 관련 로그 확인
+   - 에러 메시지 확인
+
+### 9.6 가능한 해결 방법
+
+#### 방법 1: Clerk 정책 확인 및 수정
+
+Clerk Dashboard → Settings → User Management:
+- "Allow users to sign up" → **Enabled** 확인
+- "Email address" → **Required** 또는 **Optional** 확인
+- "Username" → **Optional** 권장 (네이버는 username을 제공하지 않음)
+
+#### 방법 2: SSO Connections 설정 확인
+
+Clerk Dashboard → SSO Connections → 네이버:
+- Settings 탭:
+  - "Allow users to sign up" → **Enabled** 확인
+  - "Sync user attributes on sign in" → **Enabled** 확인
+- Advanced Settings:
+  - 추가 제한 사항이 있는지 확인
+
+#### 방법 3: 실제 로그인 플로우에서 에러 확인
+
+네이버 로그인을 실제로 시도하고:
+1. 브라우저 콘솔에서 에러 메시지 확인
+2. Network 탭에서 실패한 API 호출 확인
+3. Clerk Dashboard → Logs에서 에러 로그 확인
+
+**가장 가능성 높은 원인:**
+- Clerk의 "Allow users to sign up" 설정이 비활성화되어 있음
+- SSO Connections의 "Allow users to sign up" 설정이 비활성화되어 있음
+
