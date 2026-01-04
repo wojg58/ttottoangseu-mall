@@ -122,10 +122,10 @@ export default function ShopHeader() {
             {/* 모바일용 빈 공간 (좌측 균형) */}
             <div className="sm:hidden w-0 flex-shrink-0"></div>
 
-            {/* 로고 영역 - 중앙 배치 (모바일 최적화) */}
+            {/* 로고 영역 - 중앙 배치 (모바일에서 더 작게, 아이콘 영역 안에 들어가도록) */}
             <Link 
               href="/" 
-              className="absolute left-1/2 -translate-x-1/2 flex items-center gap-1 sm:gap-2 md:gap-3 shrink-0 z-10" 
+              className="absolute left-1/2 -translate-x-1/2 flex items-center gap-1 sm:gap-2 md:gap-3 shrink-0 z-10 pointer-events-auto" 
               aria-label="또또앙스 홈으로 이동"
             >
               <Image
@@ -133,9 +133,9 @@ export default function ShopHeader() {
                 alt="또또앙스 로고"
                 width={100}
                 height={100}
-                className="object-contain w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 lg:w-[100px] lg:h-[100px] drop-shadow-md"
+                className="object-contain w-10 h-10 sm:w-16 sm:h-16 md:w-20 md:h-20 lg:w-[100px] lg:h-[100px] drop-shadow-md"
                 priority
-                sizes="(max-width: 640px) 48px, (max-width: 768px) 64px, (max-width: 1024px) 80px, 100px"
+                sizes="(max-width: 640px) 40px, (max-width: 768px) 64px, (max-width: 1024px) 80px, 100px"
               />
               {/* 모바일에서 텍스트 숨김, 태블릿 이상에서만 표시 */}
               <div className="hidden sm:block">
@@ -145,13 +145,13 @@ export default function ShopHeader() {
               </div>
             </Link>
 
-            {/* 우측 아이콘들 - 모바일 최적화 */}
-            <div className="flex-1 flex justify-end items-center gap-0.5 sm:gap-1 md:gap-2 lg:gap-3">
+            {/* 우측 아이콘들 - 모바일 최적화 (더 컴팩트하게) */}
+            <div className="flex-1 flex justify-end items-center gap-0 sm:gap-0.5 md:gap-2 lg:gap-3">
               <SignedOut>
                 {/* 로그인 - 모바일에서 아이콘만, 태블릿 이상에서 텍스트 포함 */}
                 <Link
                   href="/sign-in"
-                  className="flex flex-col items-center justify-center gap-0.5 sm:gap-1 text-white hover:opacity-80 transition-opacity min-w-[36px] sm:min-w-[44px] md:min-w-[50px] px-1 sm:px-0"
+                  className="flex flex-col items-center justify-center gap-0 sm:gap-0.5 md:gap-1 text-white hover:opacity-80 transition-opacity min-w-[32px] sm:min-w-[44px] md:min-w-[50px] px-0.5 sm:px-0"
                   aria-label="로그인"
                 >
                   <LogIn className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6" />
@@ -161,7 +161,7 @@ export default function ShopHeader() {
                 {/* 회원가입 - 모바일에서 아이콘만, 태블릿 이상에서 텍스트 포함 */}
                 <Link
                   href="/sign-up/join"
-                  className="flex flex-col items-center justify-center gap-0.5 sm:gap-1 text-white hover:opacity-80 transition-opacity min-w-[36px] sm:min-w-[44px] md:min-w-[50px] px-1 sm:px-0"
+                  className="flex flex-col items-center justify-center gap-0 sm:gap-0.5 md:gap-1 text-white hover:opacity-80 transition-opacity min-w-[32px] sm:min-w-[44px] md:min-w-[50px] px-0.5 sm:px-0"
                   aria-label="회원가입"
                 >
                   <UserPlus className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6" />
@@ -172,7 +172,7 @@ export default function ShopHeader() {
               {/* 마이페이지 - 항상 표시 */}
               <Link
                 href="/mypage"
-                className="flex flex-col items-center justify-center gap-0.5 sm:gap-1 text-white hover:opacity-80 transition-opacity min-w-[36px] sm:min-w-[44px] md:min-w-[50px] px-1 sm:px-0"
+                className="flex flex-col items-center justify-center gap-0 sm:gap-0.5 md:gap-1 text-white hover:opacity-80 transition-opacity min-w-[32px] sm:min-w-[44px] md:min-w-[50px] px-0.5 sm:px-0"
                 aria-label="마이페이지"
               >
                 <User className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6" />
@@ -184,7 +184,7 @@ export default function ShopHeader() {
                 <SignOutButton>
                   <button
                     type="button"
-                    className="flex flex-col items-center justify-center gap-0.5 sm:gap-1 text-white hover:opacity-80 transition-opacity min-w-[36px] sm:min-w-[44px] md:min-w-[50px] px-1 sm:px-0"
+                    className="flex flex-col items-center justify-center gap-0 sm:gap-0.5 md:gap-1 text-white hover:opacity-80 transition-opacity min-w-[32px] sm:min-w-[44px] md:min-w-[50px] px-0.5 sm:px-0"
                     aria-label="로그아웃"
                   >
                     <LogOut className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6" />
@@ -196,7 +196,7 @@ export default function ShopHeader() {
               {/* 장바구니 - 항상 표시 */}
               <Link
                 href="/cart"
-                className="flex flex-col items-center justify-center gap-0.5 sm:gap-1 text-white hover:opacity-80 transition-opacity relative min-w-[36px] sm:min-w-[44px] md:min-w-[50px] px-1 sm:px-0"
+                className="flex flex-col items-center justify-center gap-0 sm:gap-0.5 md:gap-1 text-white hover:opacity-80 transition-opacity relative min-w-[32px] sm:min-w-[44px] md:min-w-[50px] px-0.5 sm:px-0"
                 aria-label="장바구니"
               >
                 <div className="relative">
@@ -212,11 +212,11 @@ export default function ShopHeader() {
               {/* 모바일 메뉴 버튼 */}
               <button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="p-2 sm:p-3 min-w-[36px] min-h-[36px] sm:min-w-[48px] sm:min-h-[48px] text-white hover:bg-white/20 rounded-full transition-colors lg:hidden flex items-center justify-center relative ml-0.5 sm:ml-0"
+                className="p-1.5 sm:p-3 min-w-[32px] min-h-[32px] sm:min-w-[48px] sm:min-h-[48px] text-white hover:bg-white/20 rounded-full transition-colors lg:hidden flex items-center justify-center relative ml-0 sm:ml-0"
                 aria-label={isMobileMenuOpen ? "메뉴 닫기" : "메뉴 열기"}
               >
-                <X className={`w-5 h-5 sm:w-6 sm:h-6 absolute transition-opacity duration-200 ${isMobileMenuOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} />
-                <Menu className={`w-5 h-5 sm:w-6 sm:h-6 absolute transition-opacity duration-200 ${isMobileMenuOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`} />
+                <X className={`w-4 h-4 sm:w-6 sm:h-6 absolute transition-opacity duration-200 ${isMobileMenuOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} />
+                <Menu className={`w-4 h-4 sm:w-6 sm:h-6 absolute transition-opacity duration-200 ${isMobileMenuOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`} />
               </button>
             </div>
           </div>
