@@ -131,83 +131,25 @@ export function useSyncUser() {
     syncUser();
   }, [isLoaded, isSignedIn, userId, getToken, userLoaded, user]);
 
-  // 네이버 로그인 후 강제 동기화 시도 (조건 만족하지 않아도 시도)
+  // 네이버 로그인 후 Clerk 사용자 생성 실패 진단
   useEffect(() => {
-    // 주기적으로 체크하여 동기화 시도 (최대 5번, 2초 간격)
-    if (syncedRef.current) {
-      return;
+    // isLoaded가 true인데 isSignedIn이 false면 Clerk가 사용자를 생성하지 못한 것
+    if (isLoaded && !isSignedIn && !userId) {
+      console.error("❌ [중요] 네이버 로그인 후 Clerk가 사용자를 생성하지 못했습니다!");
+      console.error("   → 가능한 원인:");
+      console.error("      1. Proxy 서버 응답 문제");
+      console.error("         - Proxy 서버가 Clerk에 응답을 제대로 반환하지 못함");
+      console.error("         - Proxy 서버 로그 확인: ssh로 접속 후 'pm2 logs clerk-userinfo-proxy'");
+      console.error("      2. Clerk Attribute Mapping 설정 문제");
+      console.error("         - Clerk Dashboard → SSO Connections → 네이버");
+      console.error("         - User ID / Subject → 'sub' (대소문자 주의)");
+      console.error("         - Email → 'email'");
+      console.error("      3. 네이버에서 제공한 정보 부족");
+      console.error("         - 네이버 개발자 센터에서 이메일 제공 정보가 필수 동의로 설정되어 있는지 확인");
+      console.error("   → 확인 방법:");
+      console.error("      1. Proxy 서버 로그에서 '[INFO] 최종 응답 JSON' 확인");
+      console.error("      2. Clerk Dashboard → Users에서 사용자 생성 여부 확인");
+      console.error("      3. 네이버 로그인 시 이메일 동의 화면이 나타나는지 확인");
     }
-
-    let attemptCount = 0;
-    const maxAttempts = 5;
-    const interval = 2000; // 2초
-
-    const forceSync = async () => {
-      attemptCount++;
-      console.log(`[useSyncUser] 강제 동기화 시도 ${attemptCount}/${maxAttempts}`);
-
-      // 최소한 userId만 있으면 시도
-      if (userId) {
-        try {
-          const token = await getToken().catch(() => null);
-          
-          console.log("[useSyncUser] 강제 동기화 API 호출 시작");
-          const response = await fetch("/api/sync-user", {
-            method: "POST",
-            credentials: "include",
-            headers: {
-              "Content-Type": "application/json",
-              ...(token ? { Authorization: `Bearer ${token}` } : {}),
-            },
-          });
-
-          if (response.ok) {
-            const data = await response.json();
-            console.log("✅ [useSyncUser] 강제 동기화 성공:", data);
-            syncedRef.current = true;
-            return true; // 성공
-          } else if (response.status === 401) {
-            console.log("[useSyncUser] 강제 동기화: 인증 실패 (계속 시도)");
-            return false; // 계속 시도
-          } else {
-            const errorText = await response.text();
-            console.error("[useSyncUser] 강제 동기화 실패:", response.status, errorText);
-            return false;
-          }
-        } catch (error) {
-          console.error("[useSyncUser] 강제 동기화 에러:", error);
-          return false;
-        }
-      } else {
-        console.log("[useSyncUser] 강제 동기화: userId 없음 (계속 시도)");
-        return false;
-      }
-    };
-
-    // 즉시 한 번 시도
-    forceSync().then((success) => {
-      if (success) {
-        return; // 성공하면 종료
-      }
-
-      // 실패하면 주기적으로 재시도
-      const intervalId = setInterval(async () => {
-        if (syncedRef.current || attemptCount >= maxAttempts) {
-          clearInterval(intervalId);
-          if (!syncedRef.current) {
-            console.warn(`[useSyncUser] 강제 동기화 최대 시도 횟수 도달 (${maxAttempts}회)`);
-          }
-          return;
-        }
-
-        const success = await forceSync();
-        if (success) {
-          clearInterval(intervalId);
-        }
-      }, interval);
-
-      // cleanup
-      return () => clearInterval(intervalId);
-    });
-  }, [userId, getToken]); // userId가 변경될 때마다 재시도
+  }, [isLoaded, isSignedIn, userId]);
 }
