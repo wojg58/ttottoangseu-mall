@@ -85,12 +85,14 @@
 **위치:** `originProduct.images.representativeImage.url`
 
 **특징:**
+
 - 상품의 메인 이미지 (1개)
 - 1000×1000px 권장
 - 반드시 Commerce API의 **상품 이미지 다건 등록** API로 업로드하여 획득한 URL이어야 함
 - 외부 URL이나 직접 접근 가능한 URL은 사용 불가
 
 **예시:**
+
 ```json
 {
   "images": {
@@ -106,6 +108,7 @@
 **위치:** `originProduct.images.optionalImages[]`
 
 **특징:**
+
 - 대표 이미지를 제외한 부가 이미지 목록
 - 최대 9개까지 가능
 - 각 요소의 `url` 속성에 이미지 주소가 있음
@@ -113,6 +116,7 @@
 - 없을 경우 빈 배열 `[]`로 반환
 
 **예시:**
+
 ```json
 {
   "images": {
@@ -129,12 +133,14 @@
 **위치:** `originProduct.standardOptionAttributes[i].imageUrls[]`
 
 **특징:**
+
 - 스마트스토어의 **표준형 옵션**(예: 색상)마다 이미지가 있는 경우
 - 각 옵션 속성에 다중 URL을 지정할 수 있음
 - 없는 경우 빈 배열 `[]`
 - 예: 색상 옵션의 빨강(Red) 항목에 이미지가 있으면 해당 속성의 `imageUrls`에 URL이 담김
 
 **예시:**
+
 ```json
 {
   "standardOptionAttributes": [
@@ -159,6 +165,7 @@
 **위치:** `originProduct.detailContent` (HTML 문자열)
 
 **특징:**
+
 - 상품 상세 설명이 **HTML 문자열**로 제공됨
 - HTML 내부 `<img>` 태그의 `src` 속성값을 파싱하여 추출
 - Node.js 환경에서는 **Cheerio** 같은 라이브러리로 파싱
@@ -167,22 +174,24 @@
 - `<amp-img>` 등 다른 태그가 있을 수 있으니 필요 시 처리
 
 **예시:**
+
 ```html
 <div>
-  <img src="https://shop.phinf.naver.net/detail1.jpg"/>
-  <img src="https://shop.phinf.naver.net/detail2.jpg"/>
+  <img src="https://shop.phinf.naver.net/detail1.jpg" />
+  <img src="https://shop.phinf.naver.net/detail2.jpg" />
 </div>
 ```
 
 **파싱 예시 (Node.js + Cheerio):**
+
 ```javascript
-const cheerio = require('cheerio');
+const cheerio = require("cheerio");
 
 const $ = cheerio.load(detailContent);
 const imageUrls = [];
 
-$('img').each((i, elem) => {
-  const src = $(elem).attr('src');
+$("img").each((i, elem) => {
+  const src = $(elem).attr("src");
   if (src) {
     imageUrls.push(src);
   }
@@ -227,12 +236,12 @@ $('img').each((i, elem) => {
 
 ### 필드 요약
 
-| 이미지 종류 | JSON 경로 | 개수 제한 |
-|-----------|---------|---------|
-| 대표 이미지 | `originProduct.images.representativeImage.url` | 1개 |
-| 추가 이미지 | `originProduct.images.optionalImages[]` | 최대 9개 |
-| 옵션 이미지 | `originProduct.standardOptionAttributes[].imageUrls[]` | 옵션별 다수 |
-| 상세 설명 이미지 | `originProduct.detailContent` (HTML 파싱) | 제한 없음 |
+| 이미지 종류      | JSON 경로                                              | 개수 제한   |
+| ---------------- | ------------------------------------------------------ | ----------- |
+| 대표 이미지      | `originProduct.images.representativeImage.url`         | 1개         |
+| 추가 이미지      | `originProduct.images.optionalImages[]`                | 최대 9개    |
+| 옵션 이미지      | `originProduct.standardOptionAttributes[].imageUrls[]` | 옵션별 다수 |
+| 상세 설명 이미지 | `originProduct.detailContent` (HTML 파싱)              | 제한 없음   |
 
 ---
 
@@ -245,11 +254,13 @@ POST https://api.commerce.naver.com/oauth2/v1/token
 ```
 
 **요청 헤더:**
+
 ```
 Content-Type: application/x-www-form-urlencoded
 ```
 
 **요청 본문:**
+
 ```
 grant_type=client_credentials&client_id={client_id}&client_secret={client_secret}&timestamp={timestamp}&signature={signature}
 ```
@@ -261,6 +272,7 @@ POST https://api.commerce.naver.com/external/v1/products/search
 ```
 
 **요청 헤더:**
+
 ```
 Authorization: Bearer {access_token}
 Content-Type: application/json
@@ -276,6 +288,7 @@ GET https://api.commerce.naver.com/external/v2/products/channel-products/{채널
 ```
 
 **요청 헤더:**
+
 ```
 Authorization: Bearer {access_token}
 ```
@@ -290,6 +303,7 @@ GET https://api.commerce.naver.com/external/v2/products/origin-products/{원상�
 ```
 
 **요청 헤더:**
+
 ```
 Authorization: Bearer {access_token}
 ```
@@ -361,26 +375,27 @@ Authorization: Bearer {access_token}
 - 이 경우 토큰을 재발급하여 요청을 재시도해야 함
 
 **오류 처리 예시:**
+
 ```javascript
 try {
   const response = await fetch(apiUrl, {
     headers: {
-      'Authorization': `Bearer ${token}`
-    }
+      Authorization: `Bearer ${token}`,
+    },
   });
-  
+
   if (response.status === 401) {
     // 토큰 재발급
     const newToken = await refreshToken();
     // 재시도
     return await fetch(apiUrl, {
       headers: {
-        'Authorization': `Bearer ${newToken}`
-      }
+        Authorization: `Bearer ${newToken}`,
+      },
     });
   }
 } catch (error) {
-  console.error('API 호출 실패:', error);
+  console.error("API 호출 실패:", error);
 }
 ```
 
@@ -401,13 +416,14 @@ try {
 
 ### 7.8 주요 포인트 요약
 
-| 항목 | 위치 | 주의사항 |
-|-----|------|---------|
-| 대표/추가 이미지 | `originProduct.images` | 필수 필드, 빈 배열 가능 |
-| 옵션 이미지 | `originProduct.standardOptionAttributes[].imageUrls` | 옵션별로 다름, 빈 배열 가능 |
-| 상세설명 이미지 | `originProduct.detailContent` (HTML 파싱) | HTML 파싱 필수 |
+| 항목             | 위치                                                 | 주의사항                    |
+| ---------------- | ---------------------------------------------------- | --------------------------- |
+| 대표/추가 이미지 | `originProduct.images`                               | 필수 필드, 빈 배열 가능     |
+| 옵션 이미지      | `originProduct.standardOptionAttributes[].imageUrls` | 옵션별로 다름, 빈 배열 가능 |
+| 상세설명 이미지  | `originProduct.detailContent` (HTML 파싱)            | HTML 파싱 필수              |
 
 **헷갈리지 말 것:**
+
 - ❌ 대표/추가 이미지는 `originProduct.images` 필드
 - ❌ 옵션 이미지는 `standardOptionAttributes[].imageUrls` 필드
 - ❌ 상세설명 이미지는 HTML 파싱 필요
@@ -425,7 +441,6 @@ try {
 
 ## 변경 이력
 
-| 날짜 | 버전 | 변경 내용 | 작성자 |
-|-----|------|---------|--------|
-| 2025-01-27 | 1.0 | 초안 작성 | 10년차 선임 개발자 |
-
+| 날짜       | 버전 | 변경 내용 | 작성자             |
+| ---------- | ---- | --------- | ------------------ |
+| 2025-01-27 | 1.0  | 초안 작성 | 10년차 선임 개발자 |

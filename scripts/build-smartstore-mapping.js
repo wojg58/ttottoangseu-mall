@@ -476,9 +476,16 @@ async function buildMapping() {
     }
 
     if (allOurProducts.length === 0) {
-      console.log("[INFO] 우리 DB에 판매중인 상품이 없습니다.");
-      result.success = false;
-      return result;
+      if (TEST_MODE) {
+        console.log(
+          "[INFO] 우리 DB에 해당 상품이 없습니다. 스마트스토어에서 찾아 추가합니다...",
+        );
+        // 테스트 모드에서는 계속 진행 (스마트스토어에서 상품 추가)
+      } else {
+        console.log("[INFO] 우리 DB에 판매중인 상품이 없습니다.");
+        result.success = false;
+        return result;
+      }
     }
 
     console.log(

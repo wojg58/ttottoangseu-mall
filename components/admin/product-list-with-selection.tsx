@@ -5,7 +5,7 @@
 
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Edit, ImageIcon } from "lucide-react";
@@ -13,6 +13,7 @@ import type { ProductListItem } from "@/types/database";
 import DeleteProductButton from "@/components/delete-product-button";
 import NumberDisplay from "@/components/number-display";
 import BulkHideProductsButton from "@/components/bulk-hide-products-button";
+import BulkShowProductsButton from "@/components/bulk-show-products-button";
 
 interface ProductListWithSelectionProps {
   products: ProductListItem[];
@@ -50,23 +51,70 @@ export default function ProductListWithSelection({
     setSelectedIds(new Set());
   };
 
+  const handleShowSuccess = () => {
+    // 판매중 변경 성공 후 선택 해제
+    setSelectedIds(new Set());
+  };
+
+  // 선택한 상품들의 상태 분석
+  const selectedProductsStatus = useMemo(() => {
+    const selectedProducts = products.filter((p) => selectedIds.has(p.id));
+    const hasHidden = selectedProducts.some((p) => p.status === "hidden");
+    const hasActive = selectedProducts.some((p) => p.status === "active");
+    const hiddenIds = selectedProducts
+      .filter((p) => p.status === "hidden")
+      .map((p) => p.id);
+    const activeIds = selectedProducts
+      .filter((p) => p.status === "active")
+      .map((p) => p.id);
+
+    return {
+      hasHidden,
+      hasActive,
+      hiddenIds,
+      activeIds,
+    };
+  }, [products, selectedIds]);
+
   const allSelected = products.length > 0 && selectedIds.size === products.length;
   const someSelected = selectedIds.size > 0 && selectedIds.size < products.length;
 
   return (
     <div className="space-y-4">
-      {/* 일괄 숨김 처리 버튼 */}
+      {/* 일괄 상태 변경 버튼 */}
       {selectedIds.size > 0 && (
         <div className="flex items-center justify-between bg-[#ffeef5] p-4 rounded-lg border border-[#ff6b9d]">
           <div className="flex items-center gap-2">
             <span className="text-sm text-[#4a3f48] font-medium">
               {selectedIds.size}개 상품 선택됨
             </span>
+            {selectedProductsStatus.hasHidden && (
+              <span className="text-xs text-gray-500">
+                (숨김: {selectedProductsStatus.hiddenIds.length}개)
+              </span>
+            )}
+            {selectedProductsStatus.hasActive && (
+              <span className="text-xs text-gray-500">
+                (판매중: {selectedProductsStatus.activeIds.length}개)
+              </span>
+            )}
           </div>
-          <BulkHideProductsButton
-            selectedProductIds={Array.from(selectedIds)}
-            onSuccess={handleHideSuccess}
-          />
+          <div className="flex items-center gap-2">
+            {/* 숨김 상태인 상품이 선택되면 판매중으로 변경 버튼 표시 */}
+            {selectedProductsStatus.hasHidden && (
+              <BulkShowProductsButton
+                selectedProductIds={selectedProductsStatus.hiddenIds}
+                onSuccess={handleShowSuccess}
+              />
+            )}
+            {/* 판매중 상태인 상품이 선택되면 숨김 처리 버튼 표시 */}
+            {selectedProductsStatus.hasActive && (
+              <BulkHideProductsButton
+                selectedProductIds={selectedProductsStatus.activeIds}
+                onSuccess={handleHideSuccess}
+              />
+            )}
+          </div>
         </div>
       )}
 
