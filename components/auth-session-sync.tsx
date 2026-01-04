@@ -20,19 +20,44 @@ export function AuthSessionSync() {
   const hasCheckedRef = useRef(false);
 
   useEffect(() => {
+    // 디버깅: 항상 현재 상태 로그
+    console.log("[AuthSessionSync] useEffect 실행", {
+      hasChecked: hasCheckedRef.current,
+      isLoaded,
+      currentUrl: typeof window !== "undefined" ? window.location.href : "N/A",
+      searchParams: searchParams.toString(),
+    });
+
     // 이미 확인했거나 아직 로딩 중이면 무시
     if (hasCheckedRef.current || !isLoaded) {
+      console.log("[AuthSessionSync] 조건 불만족으로 종료", {
+        hasChecked: hasCheckedRef.current,
+        isLoaded,
+      });
       return;
     }
 
     // OAuth 콜백 후 리다이렉트인지 확인 (URL 파라미터 확인)
     const currentUrl = window.location.href;
-    const isOAuthCallback = searchParams.has("__clerk_redirect_url") || 
-                           searchParams.has("__clerk_status") ||
-                           currentUrl.includes("__clerk") ||
-                           currentUrl.includes("oauth_callback");
+    const hasRedirectUrl = searchParams.has("__clerk_redirect_url");
+    const hasStatus = searchParams.has("__clerk_status");
+    const includesClerk = currentUrl.includes("__clerk");
+    const includesOAuth = currentUrl.includes("oauth_callback");
+    
+    const isOAuthCallback = hasRedirectUrl || hasStatus || includesClerk || includesOAuth;
+
+    console.log("[AuthSessionSync] OAuth 콜백 체크", {
+      currentUrl,
+      hasRedirectUrl,
+      hasStatus,
+      includesClerk,
+      includesOAuth,
+      isOAuthCallback,
+      allSearchParams: Object.fromEntries(searchParams.entries()),
+    });
 
     if (isOAuthCallback) {
+      console.log("✅ [AuthSessionSync] OAuth 콜백 감지됨!");
       const timestamp = new Date().toISOString();
       
       console.group("[AuthSessionSync] OAuth 콜백 감지 - 세션 생성 검증 시작");
@@ -251,7 +276,10 @@ export function AuthSessionSync() {
     // 일반 페이지 로드 시 세션 상태 확인
     // 로그인 상태가 변경되었을 때 페이지를 새로고침하여 UI 업데이트
     if (isSignedIn) {
-      console.log("[AuthSessionSync] 로그인 상태 확인됨");
+      console.log("[AuthSessionSync] 로그인 상태 확인됨", {
+        userId,
+        sessionId,
+      });
       // 세션이 활성화되었지만 UI가 업데이트되지 않은 경우를 대비하여
       // 약간의 딜레이 후 강제 리렌더링
       const timeoutId = setTimeout(() => {
@@ -265,6 +293,9 @@ export function AuthSessionSync() {
 
       hasCheckedRef.current = true;
       return () => clearTimeout(timeoutId);
+    } else {
+      console.log("[AuthSessionSync] 로그인하지 않은 상태");
+      hasCheckedRef.current = true;
     }
   }, [isLoaded, isSignedIn, userId, sessionId, userLoaded, user, router, searchParams, getToken]);
 
