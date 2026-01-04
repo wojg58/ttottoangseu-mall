@@ -51,9 +51,30 @@ function flattenNaverResponse(raw) {
   //   }
   // }
 
+  // 네이버 ID를 안전한 형식으로 변환
+  // Clerk의 sub 필드는 URL-safe 문자열이어야 하므로 base64url 인코딩 사용
+  const naverId = get(raw, ["response", "id"]);
+  let safeSub = naverId;
+  
+  if (naverId) {
+    // 방법 1: base64url 인코딩 (가장 안전)
+    try {
+      safeSub = Buffer.from(naverId, 'utf8')
+        .toString('base64')
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=/g, ''); // base64url 형식
+      console.log(`[INFO] sub 변환: "${naverId}" → "${safeSub}" (base64url)`);
+    } catch (err) {
+      console.error("[ERROR] sub base64url 인코딩 실패:", err);
+      // 실패 시 원본 사용
+      safeSub = naverId;
+    }
+  }
+
   const flat = {
     // OAuth 2.0 표준 필드 (Clerk가 요구하는 필수 필드)
-    sub: get(raw, ["response", "id"]), // User ID (필수 - Identifier로 사용)
+    sub: safeSub, // User ID (필수 - Identifier로 사용, base64url 인코딩됨)
     email: get(raw, ["response", "email"]), // 이메일 (필수)
     email_verified: true, // 네이버는 이메일 인증된 사용자만 제공
 

@@ -377,3 +377,25 @@ Clerk Dashboard → SSO Connections → 네이버:
    - 브라우저 콘솔(F12)에서 Clerk 에러 확인
    - 특히 "External Account was not found" 에러 확인
 
+### 9.10 sub 필드 형식 문제 (가능한 원인)
+
+**문제:**
+- 네이버에서 반환하는 `sub` 값: `WhNLW9CXcPmXkEpk-e8vs4pRRgRrhSj009HXFo-2mbQ`
+- 하이픈(`-`)이 여러 개 포함되어 있고, 길이가 상당히 김
+- Clerk가 `sub` 필드의 형식을 검증하여 사용자 생성을 거부할 수 있음
+
+**해결 방법:**
+1. **base64url 인코딩** (현재 적용됨)
+   - `sub` 값을 base64url로 인코딩하여 URL-safe 형식으로 변환
+   - 프록시 서버에서 자동으로 변환됨
+   - 예: `WhNLW9CXcPmXkEpk-e8vs4pRRgRrhSj009HXFo-2mbQ` → base64url 인코딩
+
+2. **프록시 서버 재배포 필요**
+   - 변경된 프록시 서버 코드를 AWS EC2에 배포
+   - PM2로 재시작: `pm2 restart clerk-userinfo-proxy`
+
+**확인 방법:**
+1. 프록시 서버 로그에서 변환된 `sub` 값 확인
+2. Clerk Debug 페이지에서 새로운 `sub` 값 확인
+3. 실제 로그인 시도하여 사용자 생성 여부 확인
+
