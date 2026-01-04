@@ -217,12 +217,26 @@ const server = http.createServer(async (req, res) => {
       );
     }
 
+    // 응답 본문 생성
+    const responseBody = JSON.stringify(flat);
+    
+    // Clerk가 요구하는 표준 헤더 설정
     res.writeHead(200, {
-      "Content-Type": "application/json",
-      "Cache-Control": "no-store",
+      "Content-Type": "application/json; charset=utf-8",
+      "Content-Length": Buffer.byteLength(responseBody, "utf8"),
+      "Cache-Control": "no-store, no-cache, must-revalidate",
+      "Pragma": "no-cache",
+      "Expires": "0",
       "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Authorization, Content-Type",
     });
-    res.end(JSON.stringify(flat));
+    
+    console.log("[INFO] 응답 헤더 설정 완료");
+    console.log("[INFO] 응답 본문 길이:", Buffer.byteLength(responseBody, "utf8"), "bytes");
+    
+    res.end(responseBody);
+    console.log("[INFO] 응답 전송 완료");
     console.groupEnd();
   } catch (error) {
     console.error("[ERROR] 프록시 처리 중 예외 발생:", error);
