@@ -57,11 +57,16 @@ export default function ProductDetailOptions({
   const { isSignedIn, getToken } = useAuth();
   const router = useRouter();
 
-  console.log("[ProductDetailOptions] 렌더링:", {
+  console.group("🟡 [ProductDetailOptions] 컴포넌트 렌더링");
+  console.log("렌더링 시간:", new Date().toISOString());
+  console.log("상태:", {
     productId,
     selectedOptionsCount: selectedOptions.length,
     hasVariants: variants && variants.filter((v) => !v.deleted_at).length > 0,
+    isSignedIn,
+    quantity,
   });
+  console.groupEnd();
 
   // 옵션이 있고 필수인 경우 선택 여부 확인
   const hasVariants = variants && variants.filter((v) => !v.deleted_at).length > 0;
@@ -214,10 +219,14 @@ export default function ProductDetailOptions({
   };
 
   const handleBuyNow = async () => {
-    console.log("[ProductDetailOptions] 바로 구매 버튼 클릭:", {
+    console.group("🔵 [ProductDetailOptions] 바로 구매 버튼 클릭");
+    console.log("클릭 시간:", new Date().toISOString());
+    console.log("상태:", {
       isSignedIn,
       hasVariants,
       selectedOptionsCount: selectedOptions.length,
+      productId,
+      quantity,
     });
 
     if (!isSignedIn) {
@@ -244,11 +253,13 @@ export default function ProductDetailOptions({
 
     // 옵션이 있는 상품은 옵션 선택 필수
     if (hasVariants && selectedOptions.length === 0) {
+      console.warn("⚠️ 옵션 선택 필요");
+      console.groupEnd();
       alert("옵션을 선택해주세요.");
       return;
     }
 
-    console.log("[ProductDetailOptions] 바로 구매 시작:", {
+    console.log("✅ 모든 검증 통과 - 바로 구매 시작:", {
       hasVariants,
       selectedOptions,
       quantity,
@@ -467,7 +478,12 @@ export default function ProductDetailOptions({
           {isLoading ? "담는 중..." : "장바구니"}
         </Button>
         <Button
-          onClick={handleBuyNow}
+          onClick={(e) => {
+            console.log("🟢 [ProductDetailOptions] 바로 구매 버튼 클릭 이벤트 발생!");
+            console.log("이벤트:", e);
+            console.log("현재 상태:", { isSignedIn, hasVariants, selectedOptionsCount: selectedOptions.length });
+            handleBuyNow();
+          }}
           disabled={
             (hasVariants && selectedOptions.length === 0) ||
             isLoading ||
