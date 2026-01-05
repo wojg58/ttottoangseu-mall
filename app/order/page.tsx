@@ -206,10 +206,11 @@ export default function OrderPage() {
         paymentRequest.method = "CARD";
         paymentRequest.card = {
           useEscrow: false,
+          flowMode: "DIRECT", // 자체창 바로 열기 (카드사 선택/카드번호 입력 화면)
           useCardPoint: false,
           useAppCardOnly: false,
         };
-        logger.info("신용카드 결제 요청");
+        logger.info("신용카드 결제 요청 (DIRECT 모드)");
       } else if (paymentMethod === "TRANSFER") {
         paymentRequest.method = "TRANSFER";
         paymentRequest.transfer = {
