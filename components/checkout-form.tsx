@@ -1157,18 +1157,6 @@ export default function CheckoutForm({
                 </div>
               )}
 
-              {/* 결제수단과 입력정보를 다음에도 사용 체크박스 */}
-              <div className="flex items-start gap-2">
-                <input
-                  type="checkbox"
-                  id="save-payment-info"
-                  className="w-4 h-4 text-[#ff6b9d] border-[#d4d4d4] rounded focus:ring-[#ff6b9d] mt-0.5"
-                />
-                <label htmlFor="save-payment-info" className="text-sm text-[#4a3f48] cursor-pointer">
-                  결제수단과 입력정보를 다음에도 사용
-                </label>
-              </div>
-
             </div>
           )}
 
