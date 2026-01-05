@@ -102,6 +102,7 @@ export default function RootLayout({
 
   return (
     <ClerkProvider
+      publishableKey={clerkPublishableKey}
       localization={customKoKR}
       {...(clerkDomain ? { domain: clerkDomain } : {})}
     >

@@ -54,7 +54,7 @@ export default function ProductDetailOptions({
   const [quantity, setQuantity] = useState(1); // 옵션이 없는 상품의 수량
   const [isPending, startTransition] = useTransition();
   const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const { isLoaded, userId, isSignedIn, getToken } = useAuth();
+  const { isLoaded, userId, isSignedIn } = useAuth();
   const router = useRouter();
 
   console.group("🟡 [ProductDetailOptions] 컴포넌트 렌더링");
@@ -309,8 +309,6 @@ export default function ProductDetailOptions({
       }
     });
   };
-
-  const isLoading = isPending;
 
   return (
     <div className="space-y-6">
