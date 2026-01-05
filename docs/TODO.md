@@ -124,7 +124,7 @@
 - [x] 주문 금액 계산 (상품금액 + 배송비)
 - [x] 주문 유효성 검사 (재고 확인, 필수 입력값)
 
-### TossPayments 연동 ✅ 완료
+### TossPayments 연동
 
 - [x] TossPayments SDK 설치 및 설정
 - [x] 결제 위젯 컴포넌트 - `components/payment-widget.tsx`
@@ -134,7 +134,6 @@
 - [x] 결제 완료 페이지 (`app/payments/success/page.tsx`)
 - [x] 결제 실패 페이지 (`app/payments/fail/page.tsx`)
 - [x] 결제 정보 저장 (`payments` 테이블)
-- [x] 환경 변수 설정 완료
 
 ### 주문 내역
 

@@ -1,0 +1,201 @@
+/**
+ * @file app/order/success/page.tsx
+ * @description 결제 성공 페이지
+ * 
+ * 주요 기능:
+ * 1. 쿼리 파라미터에서 paymentKey, orderId, amount 받기
+ * 2. confirm API 호출
+ * 3. 성공 UI 표시
+ * 
+ * @dependencies
+ * - next/navigation: 쿼리 파라미터 처리
+ */
+
+"use client";
+
+import { useEffect, useState } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { CheckCircle2 } from "lucide-react";
+import logger from "@/lib/logger";
+
+export default function OrderSuccessPage() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const [isProcessing, setIsProcessing] = useState(true);
+  const [result, setResult] = useState<{
+    success: boolean;
+    message: string;
+    orderId?: string;
+  } | null>(null);
+
+  useEffect(() => {
+    logger.group("[OrderSuccessPage] 결제 성공 페이지 진입");
+
+    const paymentKey = searchParams.get("paymentKey");
+    const orderId = searchParams.get("orderId");
+    const amount = searchParams.get("amount");
+
+    logger.info("쿼리 파라미터:", {
+      paymentKey: paymentKey ? paymentKey.substring(0, 10) + "..." : null,
+      orderId,
+      amount,
+    });
+
+    // 필수 파라미터 검증
+    if (!paymentKey || !orderId || !amount) {
+      logger.error("필수 파라미터 누락");
+      setResult({
+        success: false,
+        message: "잘못된 결제 요청입니다.",
+      });
+      setIsProcessing(false);
+      logger.groupEnd();
+      return;
+    }
+
+    const amountNumber = parseInt(amount, 10);
+    if (isNaN(amountNumber)) {
+      logger.error("잘못된 금액 형식:", amount);
+      setResult({
+        success: false,
+        message: "잘못된 결제 금액입니다.",
+      });
+      setIsProcessing(false);
+      logger.groupEnd();
+      return;
+    }
+
+    // confirm API 호출
+    const confirmPayment = async () => {
+      try {
+        logger.info("confirm API 호출 시작");
+        const response = await fetch("/api/payments/toss/confirm", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            paymentKey,
+            orderId,
+            amount: amountNumber,
+          }),
+        });
+
+        const data = await response.json();
+
+        logger.group("[OrderSuccessPage] confirm API 결과");
+        logger.info("성공 여부:", data.success);
+        logger.info("메시지:", data.message);
+        if (data.orderId) {
+          logger.info("주문번호:", data.orderId);
+        }
+        logger.groupEnd();
+
+        setResult({
+          success: data.success,
+          message: data.message,
+          orderId: data.orderId,
+        });
+      } catch (error) {
+        logger.error("confirm API 호출 에러:", error);
+        setResult({
+          success: false,
+          message:
+            error instanceof Error
+              ? error.message
+              : "결제 승인 처리 중 오류가 발생했습니다.",
+        });
+      } finally {
+        setIsProcessing(false);
+        logger.groupEnd();
+      }
+    };
+
+    confirmPayment();
+  }, [searchParams]);
+
+  if (isProcessing) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#ff6b9d] mx-auto mb-4"></div>
+          <p className="text-sm text-[#8b7d84]">결제 승인 처리 중...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!result) {
+    return null;
+  }
+
+  if (!result.success) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center max-w-md mx-auto p-8">
+          <div className="text-red-600 mb-4">
+            <svg
+              className="w-16 h-16 mx-auto"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </div>
+          <h1 className="text-2xl font-bold text-[#4a3f48] mb-4">
+            결제 승인 실패
+          </h1>
+          <p className="text-[#8b7d84] mb-8">{result.message}</p>
+          <Button
+            onClick={() => router.push("/order")}
+            className="bg-[#ff6b9d] hover:bg-[#ff5088] text-white"
+          >
+            다시 시도
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center justify-center min-h-screen">
+      <div className="text-center max-w-md mx-auto p-8">
+        <div className="text-green-600 mb-4">
+          <CheckCircle2 className="w-16 h-16 mx-auto" />
+        </div>
+        <h1 className="text-2xl font-bold text-[#4a3f48] mb-4">
+          결제가 완료되었습니다
+        </h1>
+        <p className="text-[#8b7d84] mb-2">{result.message}</p>
+        {result.orderId && (
+          <p className="text-sm text-[#8b7d84] mb-8">
+            주문번호: {result.orderId}
+          </p>
+        )}
+        <div className="space-y-2">
+          <Button
+            onClick={() => router.push("/mypage/orders")}
+            className="w-full bg-[#ff6b9d] hover:bg-[#ff5088] text-white"
+          >
+            주문 내역 보기
+          </Button>
+          <Button
+            onClick={() => router.push("/")}
+            variant="outline"
+            className="w-full border-[#f5d5e3] text-[#4a3f48] hover:bg-[#fef8fb]"
+          >
+            홈으로 가기
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
