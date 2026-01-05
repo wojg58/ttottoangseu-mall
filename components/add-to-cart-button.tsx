@@ -88,24 +88,48 @@ export default function AddToCartButton({
   };
 
   const handleBuyNow = async () => {
+    console.log("[AddToCartButton] 바로 구매 버튼 클릭:", {
+      isSignedIn,
+      productId,
+      quantity,
+      variantId,
+    });
+
     if (!isSignedIn) {
       console.log("[AddToCartButton] 로그인 필요");
       router.push("/sign-in?redirect_url=" + window.location.pathname);
       return;
     }
 
-    console.log("[AddToCartButton] 바로 구매:", {
+    console.log("[AddToCartButton] 바로 구매 시작:", {
       productId,
       quantity,
       variantId,
     });
 
     startTransition(async () => {
-      const result = await addToCart(productId, quantity, variantId);
-      if (result.success) {
-        router.push("/checkout");
-      } else {
-        alert(result.message);
+      try {
+        const result = await addToCart(productId, quantity, variantId);
+        if (result.success) {
+          console.log("[AddToCartButton] 바로 구매 성공 - 체크아웃 페이지로 이동");
+          router.push("/checkout");
+        } else {
+          console.error("[AddToCartButton] 바로 구매 실패:", {
+            message: result.message,
+          });
+          
+          // 로그인 관련 에러인 경우 로그인 페이지로 리다이렉트
+          if (result.message.includes("로그인이 필요")) {
+            alert("로그인 세션이 만료되었습니다. 다시 로그인해주세요.");
+            router.push("/sign-in?redirect_url=" + window.location.pathname);
+            return;
+          }
+          
+          alert(result.message);
+        }
+      } catch (error) {
+        console.error("[AddToCartButton] 바로 구매 실패:", error);
+        alert("주문에 실패했습니다.");
       }
     });
   };
