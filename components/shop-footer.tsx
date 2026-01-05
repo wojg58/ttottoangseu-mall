@@ -60,9 +60,9 @@ export default function ShopFooter() {
             <div className="text-[#4a3f48] text-xs md:text-sm leading-relaxed whitespace-pre-line">
               <p className="mb-2">
                 상호명 또또앙스{" "}
-                {"\u00A0".repeat(10)}
+                {"\u00A0".repeat(15)}
                 대표자명 우수정{" "}
-                {"\u00A0".repeat(10)}
+                {"\u00A0".repeat(15)}
                 유선전화번호 010-4112-6168
               </p>
               <p className="mb-2">
