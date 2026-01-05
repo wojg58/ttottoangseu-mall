@@ -5,7 +5,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -21,6 +21,52 @@ import { Separator } from "@/components/ui/separator";
 import { saveMemberAdditionalInfo } from "@/actions/member-actions";
 import logger from "@/lib/logger";
 import type { Gender } from "@/types/member";
+
+// Daum Postcode API 타입 정의
+declare global {
+  interface Window {
+    daum: {
+      Postcode: new (options: {
+        oncomplete: (data: {
+          zonecode: string;
+          address: string;
+          addressEnglish: string;
+          addressType: 'R' | 'J';
+          userSelectedType: 'R' | 'J';
+          noSelected: 'Y' | 'N';
+          userLanguageType: 'K' | 'E';
+          roadAddress: string;
+          roadAddressEnglish: string;
+          jibunAddress: string;
+          jibunAddressEnglish: string;
+          autoRoadAddress: string;
+          autoRoadAddressEnglish: string;
+          autoJibunAddress: string;
+          autoJibunAddressEnglish: string;
+          buildingCode: string;
+          buildingName: string;
+          apartment: 'Y' | 'N';
+          sido: string;
+          sigungu: string;
+          sigunguCode: string;
+          roadnameCode: string;
+          bcode: string;
+          roadname: string;
+          bname: string;
+          bname1: string;
+          bname2: string;
+          hname: string;
+          query: string;
+          postCodeType: string;
+        }) => void;
+        width?: string | number;
+        height?: string | number;
+      }) => {
+        open: () => void;
+      };
+    };
+  }
+}
 
 // 비밀번호 찾기 질문 목록
 const PASSWORD_HINTS = [
@@ -122,16 +168,49 @@ export default function JoinForm() {
     setValue("is_news_mail", checked);
   };
 
+  // Daum Postcode API 스크립트 로드
+  useEffect(() => {
+    const script = document.createElement("script");
+    script.src =
+      "//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js";
+    script.async = true;
+    document.head.appendChild(script);
+
+    logger.debug("[JoinForm] Daum Postcode API 스크립트 로드 시작");
+
+    return () => {
+      // 컴포넌트 언마운트 시 스크립트 제거
+      if (document.head.contains(script)) {
+        document.head.removeChild(script);
+      }
+    };
+  }, []);
+
   // Daum 우편번호 검색
   const openPostcode = () => {
     if (typeof window === "undefined") return;
 
+    if (!window.daum) {
+      logger.error("[JoinForm] Daum Postcode API가 로드되지 않았습니다");
+      alert("주소 검색 서비스를 불러오는 중입니다. 잠시 후 다시 시도해주세요.");
+      return;
+    }
+
+    logger.debug("[JoinForm] 주소 검색 팝업 열기");
+
     new window.daum.Postcode({
       oncomplete: function (data: any) {
+        logger.group("[JoinForm] 주소 선택 완료");
+        logger.debug("우편번호:", data.zonecode);
+        logger.debug("주소:", data.address);
+        logger.groupEnd();
+
         setValue("postcode", data.zonecode);
         setValue("addr1", data.address);
         trigger(["postcode", "addr1"]);
       },
+      width: "100%",
+      height: "100%",
     }).open();
   };
 
@@ -225,12 +304,6 @@ export default function JoinForm() {
 
   return (
     <>
-      {/* Daum 우편번호 서비스 스크립트 */}
-      <script
-        src="//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"
-        async
-      />
-
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
 
         {/* ===== 기본 정보 섹션 ===== */}
