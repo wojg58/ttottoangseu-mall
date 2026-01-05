@@ -238,6 +238,27 @@ cp .env.example .env
    NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL="/"
    ```
 
+**6-5. 토스페이먼츠 환경 변수 설정**
+
+1. [토스페이먼츠 개발자센터](https://developers.tosspayments.com/)에 접속하여 로그인
+2. **API 키** 메뉴에서 다음 값들을 복사하여 `.env` 파일에 입력:
+   ```env
+   # 토스페이먼츠 결제 연동 키
+   NEXT_PUBLIC_TOSS_PAYMENTS_CLIENT_KEY="<Client Key>"
+   TOSS_PAYMENTS_SECRET_KEY="<Secret Key>"
+   ```
+   
+   > **⚠️ 주의**: 
+   > - 테스트 환경: 개발자센터에서 발급받은 테스트 키 사용
+   > - 프로덕션 환경: 전자결제 계약 완료 후 발급받은 라이브 키 사용
+   > - `TOSS_PAYMENTS_SECRET_KEY`는 서버 사이드에서만 사용되므로 절대 공개하지 마세요!
+
+**지원하는 결제수단:**
+- 신용카드 (기본결제수단)
+- 계좌이체 (실시간 계좌이체)
+- 가상계좌 (기본결제수단)
+- 간편결제 (토스페이 등)
+
 #### 7. Cursor MCP 설정 (선택사항)
 
 > Cursor AI를 사용하는 경우, Supabase MCP 서버를 설정하면 AI가 데이터베이스를 직접 조회하고 관리할 수 있습니다.
@@ -408,5 +429,6 @@ saas-template/
 - [Supabase 문서](https://supabase.com/docs)
 - [shadcn/ui 문서](https://ui.shadcn.com/)
 - [Tailwind CSS v4 문서](https://tailwindcss.com/docs)
-#   t t o t t o a n g s e u - m a l l  
+#   t t o t t o a n g s e u - m a l l 
+ 
  

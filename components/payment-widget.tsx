@@ -171,7 +171,7 @@ export default function PaymentWidget({
 
       // 결제 위젯 실행 (TossPayments 위젯이 자동으로 결제 처리)
       // orderId는 원래 주문 ID를 사용해야 함 (paymentId가 아님)
-      const paymentRequest = {
+      const paymentRequest: any = {
         orderId: orderId, // 원래 주문 ID 사용
         orderName: `주문번호: ${orderNumber}`,
         customerName,
@@ -179,13 +179,36 @@ export default function PaymentWidget({
         successUrl: `${window.location.origin}/payments/success?paymentKey={paymentKey}&orderId=${orderId}&amount=${amount}`,
         failUrl: `${window.location.origin}/payments/fail?message={message}`,
         flowMode: "DIRECT" as const, // 결제창 바로 열기
-        easyPay: paymentMethod === "카드" ? "토스페이" : undefined,
       };
 
-      logger.debug("[PaymentWidget] TossPayments 결제 위젯 실행:", {
+      // 결제수단에 따라 method 지정
+      if (paymentMethod === "카드") {
+        // 신용카드 결제
+        paymentRequest.method = "카드";
+        // 간편결제 옵션 (토스페이 등)
+        paymentRequest.easyPay = "토스페이";
+      } else if (paymentMethod === "계좌이체") {
+        // 실시간 계좌이체 (퀵계좌이체)
+        paymentRequest.method = "계좌이체";
+        paymentRequest.transfer = {
+          cashReceipt: {
+            type: cashReceipt === "신청" ? "소득공제" : undefined,
+          },
+          useEscrow: useEscrow,
+        };
+        // 입금자명이 있으면 추가
+        if (depositorName.trim()) {
+          paymentRequest.customerName = depositorName.trim();
+        }
+      }
+
+      logger.info("[PaymentWidget] TossPayments 결제 위젯 실행:", {
         orderId: paymentRequest.orderId,
         orderName: paymentRequest.orderName,
         paymentMethod,
+        method: paymentRequest.method,
+        easyPay: paymentRequest.easyPay,
+        transfer: paymentRequest.transfer,
         successUrl: paymentRequest.successUrl,
         failUrl: paymentRequest.failUrl,
       });
