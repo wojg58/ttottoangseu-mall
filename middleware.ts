@@ -43,13 +43,13 @@ export default async function middleware(
     // Content Security Policy - 서드 파티 스크립트 허용 (필요한 도메인만)
     const csp = [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.clerk.accounts.dev https://www.googletagmanager.com https://www.google-analytics.com https://cdn.channel.io https://channels.angel.co",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.clerk.accounts.dev https://www.googletagmanager.com https://www.google-analytics.com https://cdn.channel.io https://channels.angel.co https://t1.daumcdn.net",
       "worker-src 'self' blob: https://*.clerk.accounts.dev",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net data:",
       "img-src 'self' data: https: blob:",
-      "connect-src 'self' https://www.google-analytics.com https://analytics.google.com https://*.clerk.accounts.dev https://*.clerk-telemetry.com https://*.supabase.co https://api.channel.io https://*.ingest.sentry.io https://*.sentry.io",
-      "frame-src 'self' https://*.clerk.accounts.dev https://channels.angel.co",
+      "connect-src 'self' https://www.google-analytics.com https://analytics.google.com https://*.clerk.accounts.dev https://*.clerk-telemetry.com https://*.supabase.co https://api.channel.io https://*.ingest.sentry.io https://*.sentry.io https://t1.daumcdn.net",
+      "frame-src 'self' https://*.clerk.accounts.dev https://channels.angel.co https://t1.daumcdn.net",
       "object-src 'none'",
       "base-uri 'self'",
       "form-action 'self'",
