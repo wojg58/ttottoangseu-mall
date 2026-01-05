@@ -260,20 +260,40 @@ export default function JoinForm() {
           setIsPostcodeReady(true);
           
           // 주소 검색 팝업 열기
-          new window.daum.Postcode({
-            oncomplete: function (data: any) {
-              logger.group("[JoinForm] 주소 선택 완료");
-              logger.debug("우편번호:", data.zonecode);
-              logger.debug("주소:", data.address);
-              logger.groupEnd();
+          try {
+            const postcode = new window.daum.Postcode({
+              oncomplete: function (data: any) {
+                logger.group("[JoinForm] 주소 선택 완료");
+                logger.debug("우편번호:", data.zonecode);
+                logger.debug("주소:", data.address);
+                logger.debug("주소 타입:", data.addressType);
+                logger.debug("도로명 주소:", data.roadAddress);
+                logger.debug("지번 주소:", data.jibunAddress);
+                logger.groupEnd();
 
-              setValue("postcode", data.zonecode);
-              setValue("addr1", data.address);
-              trigger(["postcode", "addr1"]);
-            },
-            width: "100%",
-            height: "100%",
-          }).open();
+                // 도로명 주소 우선, 없으면 지번 주소 사용
+                const address = data.addressType === 'R' ? data.roadAddress : data.jibunAddress;
+                
+                setValue("postcode", data.zonecode);
+                setValue("addr1", address || data.address);
+                trigger(["postcode", "addr1"]);
+              },
+              onresize: function (size: { width: number; height: number }) {
+                logger.debug("[JoinForm] 팝업 크기 변경:", size);
+              },
+              onclose: function (state: 'COMPLETE' | 'FORCE_CLOSE') {
+                logger.debug("[JoinForm] 팝업 닫힘:", state);
+              },
+              width: '100%',
+              height: '100%',
+            });
+            
+            // 팝업 열기 (인자 없이 호출)
+            postcode.open();
+          } catch (error: any) {
+            logger.error("[JoinForm] 주소 검색 팝업 열기 실패:", error);
+            alert("주소 검색 팝업을 열 수 없습니다. 팝업 차단기를 확인해주세요.");
+          }
         } else if (retryCount >= maxRetries) {
           logger.error("[JoinForm] Daum Postcode API 로드 실패 (재시도 한도 초과)");
           clearInterval(retryInterval);
@@ -286,20 +306,40 @@ export default function JoinForm() {
 
     logger.debug("[JoinForm] 주소 검색 팝업 열기");
 
-    new window.daum.Postcode({
-      oncomplete: function (data: any) {
-        logger.group("[JoinForm] 주소 선택 완료");
-        logger.debug("우편번호:", data.zonecode);
-        logger.debug("주소:", data.address);
-        logger.groupEnd();
+    try {
+      const postcode = new window.daum.Postcode({
+        oncomplete: function (data: any) {
+          logger.group("[JoinForm] 주소 선택 완료");
+          logger.debug("우편번호:", data.zonecode);
+          logger.debug("주소:", data.address);
+          logger.debug("주소 타입:", data.addressType);
+          logger.debug("도로명 주소:", data.roadAddress);
+          logger.debug("지번 주소:", data.jibunAddress);
+          logger.groupEnd();
 
-        setValue("postcode", data.zonecode);
-        setValue("addr1", data.address);
-        trigger(["postcode", "addr1"]);
-      },
-      width: "100%",
-      height: "100%",
-    }).open();
+          // 도로명 주소 우선, 없으면 지번 주소 사용
+          const address = data.addressType === 'R' ? data.roadAddress : data.jibunAddress;
+          
+          setValue("postcode", data.zonecode);
+          setValue("addr1", address || data.address);
+          trigger(["postcode", "addr1"]);
+        },
+        onresize: function (size: { width: number; height: number }) {
+          logger.debug("[JoinForm] 팝업 크기 변경:", size);
+        },
+        onclose: function (state: 'COMPLETE' | 'FORCE_CLOSE') {
+          logger.debug("[JoinForm] 팝업 닫힘:", state);
+        },
+        width: '100%',
+        height: '100%',
+      });
+      
+      // 팝업 열기 (인자 없이 호출)
+      postcode.open();
+    } catch (error: any) {
+      logger.error("[JoinForm] 주소 검색 팝업 열기 실패:", error);
+      alert("주소 검색 팝업을 열 수 없습니다. 팝업 차단기를 확인해주세요.");
+    }
   };
 
   // 폼 제출
