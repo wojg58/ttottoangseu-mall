@@ -1562,7 +1562,7 @@ export default function SignInContent() {
               <SignIn
                 routing="path"
                 path="/sign-in"
-                signUpUrl="/sign-up/join"
+                signUpUrl="/sign-up"
                 afterSignInUrl={redirectUrl}
                 fallbackRedirectUrl={redirectUrl}
                 forceRedirectUrl={redirectUrl}

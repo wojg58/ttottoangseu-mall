@@ -8,8 +8,22 @@ const hasClerkKeys =
   !!process.env.CLERK_SECRET_KEY;
 
 // Clerk 미들웨어 생성 (환경 변수가 있을 때만)
+// publicRoutes: 인증 없이 접근 가능한 경로
+// ignoredRoutes: Clerk 미들웨어가 완전히 무시하는 경로
 const clerkMiddlewareHandler = hasClerkKeys
-  ? clerkMiddleware()
+  ? clerkMiddleware({
+      publicRoutes: [
+        "/",
+        "/sign-in(.*)",
+        "/sign-up(.*)",
+        "/api/webhooks(.*)",
+        "/products(.*)",
+        "/company",
+        "/terms",
+        "/privacy",
+        "/guide",
+      ],
+    })
   : undefined;
 
 // 에러 핸들링이 포함된 미들웨어
