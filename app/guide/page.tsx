@@ -109,7 +109,7 @@ export default function GuidePage() {
                 <div>
                   <h3 className="font-semibold mb-2">반품 배송비</h3>
                   <ul className="list-disc list-inside space-y-1">
-                    <li>고객의 단순 변심: 고객 부담 (왕복 배송비)</li>
+                    <li>고객의 단순 변심: 고객 부담 (왕복 배송비 7,000원)</li>
                     <li>상품의 하자 또는 오배송: 회사 부담</li>
                   </ul>
                 </div>
