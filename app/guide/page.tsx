@@ -94,7 +94,7 @@ export default function GuidePage() {
                 <div>
                   <h3 className="font-semibold mb-2">교환/환불 기간</h3>
                   <ul className="list-disc list-inside space-y-1">
-                    <li>상품 수령 후 7일 이내 교환/환불 신청 가능</li>
+                    <li>환불 및 교환은 수령하신 날을 포함하여 7일 내에 요청을 해주셔야만 가능합니다</li>
                   </ul>
                 </div>
                 <div>
