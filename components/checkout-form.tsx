@@ -341,18 +341,20 @@ export default function CheckoutForm({
             const shipping = itemsSubtotal >= 50000 ? 0 : 3000;
             const couponDisc = itemsSubtotal + shipping - order.total_amount;
             
-            console.group("[CheckoutForm] 금액 계산");
-            console.log("상품 금액:", itemsSubtotal);
-            console.log("배송비:", shipping);
-            console.log("쿠폰 할인:", couponDisc);
-            console.log("총 금액:", order.total_amount);
-            console.groupEnd();
+            logger.group("[CheckoutForm] 금액 계산");
+            logger.info("상품 금액:", itemsSubtotal);
+            logger.info("배송비:", shipping);
+            logger.info("쿠폰 할인:", Math.max(0, couponDisc));
+            logger.info("주문 총 금액 (DB):", order.total_amount);
+            logger.info("계산된 총 금액:", itemsSubtotal + shipping - Math.max(0, couponDisc));
+            logger.groupEnd();
 
+            // 주문 정보에 저장된 total_amount를 그대로 사용 (서버에서 계산한 정확한 값)
             setOrderData({
               subtotal: itemsSubtotal,
               shippingFee: shipping,
               couponDiscount: Math.max(0, couponDisc),
-              total: order.total_amount,
+              total: order.total_amount, // DB에 저장된 정확한 금액 사용
               items: order.items.map((item) => ({
                 id: item.id,
                 product_name: item.product_name,
@@ -361,6 +363,10 @@ export default function CheckoutForm({
                 price: item.price,
               })),
             });
+            
+            // 주문 정보 로드 후 결제 위젯 표시
+            setOrderId(urlOrderId);
+            setShowPaymentWidget(true);
           }
         })
         .catch((error) => {
@@ -477,21 +483,21 @@ export default function CheckoutForm({
 
   const onSubmit = (data: CheckoutFormData) => {
     logger.group("[CheckoutForm] 주문 생성 시작");
-    logger.log("주문자 정보:", {
+    logger.info("주문자 정보:", {
       name: data.ordererName,
       phone: data.ordererPhone,
       email: data.ordererEmail,
     });
-    logger.log("배송 정보:", {
+    logger.info("배송 정보:", {
       name: data.shippingName,
       phone: data.shippingPhone,
       address: data.shippingAddress,
       zipCode: data.shippingZipCode,
       memo: data.shippingMemo,
     });
-    logger.log("선택된 쿠폰:", selectedCoupon);
-    logger.log("최종 결제 금액:", displayTotal);
-    logger.log("결제 수단:", data.paymentMethod);
+    logger.info("선택된 쿠폰:", selectedCoupon);
+    logger.info("최종 결제 금액:", displayTotal);
+    logger.info("결제 수단:", data.paymentMethod);
     logger.groupEnd();
 
     startTransition(async () => {
@@ -508,21 +514,21 @@ export default function CheckoutForm({
       });
 
       logger.group("[CheckoutForm] 주문 생성 결과");
-      logger.log("성공 여부:", result.success);
-      logger.log("주문 ID:", result.orderId);
-      logger.log("주문 번호:", result.orderNumber);
-      logger.log("메시지:", result.message);
+      logger.info("성공 여부:", result.success);
+      logger.info("주문 ID:", result.orderId);
+      logger.info("주문 번호:", result.orderNumber);
+      logger.info("메시지:", result.message);
       logger.groupEnd();
 
       if (result.success && result.orderId && result.orderNumber) {
-        logger.log("[CheckoutForm] ✅ 주문 생성 성공 - 토스페이먼츠 결제 시작");
+        logger.info("[CheckoutForm] ✅ 주문 생성 성공 - 토스페이먼츠 결제 시작");
         
         // 주문 정보 상태 저장
         setOrderId(result.orderId);
         setOrderNumber(result.orderNumber);
         
         // 토스페이먼츠 결제 위젯 표시
-        logger.log("[CheckoutForm] 토스페이먼츠 결제 위젯 표시", {
+        logger.info("[CheckoutForm] 토스페이먼츠 결제 위젯 표시", {
           orderId: result.orderId,
           orderNumber: result.orderNumber,
           amount: displayTotal,
@@ -530,7 +536,7 @@ export default function CheckoutForm({
         
         // Next.js 라우터를 사용하여 URL에 orderId 추가
         // router.replace()를 사용하면 서버 컴포넌트도 새로운 URL을 인지합니다
-        logger.log("[CheckoutForm] URL에 orderId 추가 (router.replace):", result.orderId);
+        logger.info("[CheckoutForm] URL에 orderId 추가 (router.replace):", result.orderId);
         router.replace(`/checkout?orderId=${result.orderId}`, { scroll: false });
         
         setShowPaymentWidget(true);
@@ -893,7 +899,7 @@ export default function CheckoutForm({
                   onChange={(e) => {
                     const coupon = coupons.find((c) => c.id === e.target.value);
                     setSelectedCoupon(coupon || null);
-                    logger.log("[CheckoutForm] 쿠폰 선택:", coupon);
+                    logger.info("[CheckoutForm] 쿠폰 선택:", coupon);
                   }}
                   className="w-full px-3 py-2 border border-[#f5d5e3] rounded-lg text-sm focus:border-[#ff6b9d] focus:ring-[#ff6b9d] focus:outline-none"
                   disabled={coupons.length === 0}
@@ -985,7 +991,7 @@ export default function CheckoutForm({
                   value="카드"
                   checked={selectedPaymentMethod === "카드"}
                   onChange={() => {
-                    logger.log("[결제수단] 신용카드 결제 선택");
+                    logger.info("[결제수단] 신용카드 결제 선택");
                     setSelectedPaymentMethod("카드");
                     form.setValue("paymentMethod", "TOSS_PAYMENTS");
                   }}
@@ -1008,7 +1014,7 @@ export default function CheckoutForm({
                   value="계좌이체"
                   checked={selectedPaymentMethod === "계좌이체"}
                   onChange={() => {
-                    logger.log("[결제수단] 에스크로(실시간 계좌이체) 선택");
+                    logger.info("[결제수단] 에스크로(실시간 계좌이체) 선택");
                     setSelectedPaymentMethod("계좌이체");
                     form.setValue("paymentMethod", "TOSS_PAYMENTS");
                   }}
@@ -1040,7 +1046,7 @@ export default function CheckoutForm({
                       type="text"
                       value={depositorName}
                       onChange={(e) => {
-                        logger.log("[예금주명] 입력:", e.target.value);
+                        logger.info("[예금주명] 입력:", e.target.value);
                         setDepositorName(e.target.value);
                       }}
                       placeholder=""
@@ -1055,7 +1061,7 @@ export default function CheckoutForm({
                       id="escrow-checkout"
                       checked={useEscrow}
                       onChange={(e) => {
-                        logger.log("[에스크로] 체크:", e.target.checked);
+                        logger.info("[에스크로] 체크:", e.target.checked);
                         setUseEscrow(e.target.checked);
                       }}
                       className="w-4 h-4 text-[#ff6b9d] border-[#d4d4d4] rounded focus:ring-[#ff6b9d] mt-0.5"
@@ -1109,7 +1115,7 @@ export default function CheckoutForm({
 
           <Button
             onClick={() => {
-              logger.log("[CheckoutForm] 결제하기 버튼 클릭");
+              logger.info("[CheckoutForm] 결제하기 버튼 클릭");
               if (!selectedPaymentMethod) {
                 alert("결제 수단을 선택해주세요");
                 return;

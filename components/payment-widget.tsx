@@ -250,8 +250,9 @@ export default function PaymentWidget({
               value="카드"
               checked={paymentMethod === "카드"}
               onChange={(e) => {
-                logger.debug("[PaymentWidget] 결제수단 선택: 신용카드");
+                logger.info("[PaymentWidget] 결제수단 선택: 신용카드");
                 setPaymentMethod(e.target.value as "카드");
+                logger.info("[PaymentWidget] paymentMethod 상태 업데이트:", e.target.value);
               }}
               className="w-4 h-4 text-[#ff6b9d] border-[#f5d5e3] focus:ring-[#ff6b9d]"
             />
@@ -265,8 +266,9 @@ export default function PaymentWidget({
               value="계좌이체"
               checked={paymentMethod === "계좌이체"}
               onChange={(e) => {
-                logger.debug("[PaymentWidget] 결제수단 선택: 에스크로(실시간 계좌이체)");
+                logger.info("[PaymentWidget] 결제수단 선택: 에스크로(실시간 계좌이체)");
                 setPaymentMethod(e.target.value as "계좌이체");
+                logger.info("[PaymentWidget] paymentMethod 상태 업데이트:", e.target.value);
               }}
               className="w-4 h-4 text-[#ff6b9d] border-[#f5d5e3] focus:ring-[#ff6b9d]"
             />
@@ -380,7 +382,15 @@ export default function PaymentWidget({
 
       {/* 결제 버튼 */}
       <Button
-        onClick={handlePayment}
+        onClick={() => {
+          logger.info("[PaymentWidget] 결제하기 버튼 클릭", {
+            isLoading,
+            paymentMethod,
+            depositorName: paymentMethod === "계좌이체" ? depositorName : "N/A",
+            disabled: isLoading || !paymentMethod || (paymentMethod === "계좌이체" && !depositorName.trim()),
+          });
+          handlePayment();
+        }}
         disabled={
           isLoading || 
           !paymentMethod || 
