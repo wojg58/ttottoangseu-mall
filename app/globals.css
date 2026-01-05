@@ -123,7 +123,7 @@
   --color-shop-text: #4a3f48;
   --color-shop-text-muted: #6b5d64;
   --color-shop-border: #f5d5e3;
-  
+
   /* 접근성 개선: 대비율 향상을 위한 색상 조정 */
   --color-shop-text-dark: #2a2325; /* 더 어두운 텍스트 (대비율 개선) */
   --color-shop-rose-contrast: #ff5088; /* 더 진한 핑크 (대비율 개선) */
@@ -131,7 +131,8 @@
 
 :root {
   --radius: 0.625rem;
-  --font-shop: "LineSeed", var(--font-gowun-dodum), var(--font-noto-sans-kr), system-ui, sans-serif;
+  --font-shop: "LineSeed", var(--font-gowun-dodum), var(--font-noto-sans-kr),
+    system-ui, sans-serif;
 
   /* 색상 변수 */
   --color-white: #ffffff;
@@ -240,25 +241,38 @@
   }
 
   /* 버튼 텍스트 줄바꿈 방지 및 자연스러운 표시 */
-  button, .btn, [role="button"] {
+  button,
+  .btn,
+  [role="button"] {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
 
   /* 긴 텍스트가 있는 경우에만 줄바꿈 허용 */
-  h1, h2, h3, h4, h5, h6, p, span, div {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  p,
+  span,
+  div {
     line-height: 1.4;
   }
 
   /* 모바일에서 긴 텍스트 처리 */
   @media (max-width: 767px) {
-    h1, h2, h3 {
+    h1,
+    h2,
+    h3 {
       word-break: break-word;
       line-height: 1.3;
     }
 
-    p, span {
+    p,
+    span {
       line-height: 1.5;
     }
   }
@@ -359,7 +373,7 @@
     pointer-events: auto !important;
     cursor: text !important;
   }
-  
+
   /* 이메일 주소 입력칸 컨테이너 표시 및 활성화 */
   .cl-formFieldRow__identifier .cl-formField,
   .cl-formFieldRow__identifier .cl-formFieldInput,
@@ -376,7 +390,7 @@
   input[id="identifier-field"]::placeholder {
     color: #b8a8b0;
   }
-  
+
   /* Clerk identifier 에러 메시지만 숨기기 (입력 필드는 숨기지 않음) */
   .cl-formFieldRow__identifier .cl-formFieldErrorText,
   .cl-formField__identifier .cl-formFieldErrorText,
@@ -388,7 +402,7 @@
     margin: 0 !important;
     padding: 0 !important;
   }
-  
+
   /* 입력 필드는 항상 보이도록 보장 */
   .cl-formFieldRow__identifier .cl-formFieldInput__identifier,
   .cl-formFieldRow__identifier input[name="identifier"],
@@ -412,7 +426,7 @@
     pointer-events: auto !important;
     cursor: text !important;
   }
-  
+
   /* 비밀번호 입력 필드가 비활성화되지 않도록 보장 */
   input[name="password"]:disabled,
   input[id*="password"]:disabled,
@@ -421,7 +435,7 @@
     cursor: text !important;
     opacity: 1 !important;
   }
-  
+
   /* 비밀번호 입력칸 컨테이너 표시 및 활성화 */
   .cl-formFieldRow__password .cl-formField,
   .cl-formFieldRow__password .cl-formFieldInput,
@@ -450,12 +464,15 @@
   }
 
   /* 모든 요소에 box-sizing 적용 */
-  *, *::before, *::after {
+  *,
+  *::before,
+  *::after {
     box-sizing: border-box;
   }
 
   /* 가로 스크롤 방지 */
-  html, body {
+  html,
+  body {
     max-width: 100%;
     overflow-x: hidden;
   }

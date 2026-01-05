@@ -57,20 +57,20 @@ function flattenNaverResponse(raw) {
   // 참고: https://clerk.com/docs/guides/configure/auth-strategies/social-connections/custom-provider
   const naverId = get(raw, ["response", "id"]);
   let safeSub = naverId;
-  
+
   // 환경 변수로 인코딩 방식 제어 (기본값: 원본 사용)
   // CLERK_SUB_ENCODING=base64url로 설정하면 base64url 인코딩 사용
   const encodingMethod = process.env.CLERK_SUB_ENCODING || "original";
-  
+
   if (naverId) {
     if (encodingMethod === "base64url") {
       // base64url 인코딩 (하이픈 문제 해결 시도)
       try {
-        safeSub = Buffer.from(naverId, 'utf8')
-          .toString('base64')
-          .replace(/\+/g, '-')
-          .replace(/\//g, '_')
-          .replace(/=/g, ''); // base64url 형식
+        safeSub = Buffer.from(naverId, "utf8")
+          .toString("base64")
+          .replace(/\+/g, "-")
+          .replace(/\//g, "_")
+          .replace(/=/g, ""); // base64url 형식
         console.log(`[INFO] sub 변환: "${naverId}" → "${safeSub}" (base64url)`);
       } catch (err) {
         console.error("[ERROR] sub base64url 인코딩 실패:", err);
@@ -82,7 +82,7 @@ function flattenNaverResponse(raw) {
       safeSub = naverId;
     }
   }
-  
+
   // 디버깅: sub 값 상세 로그
   console.log("[DEBUG] sub 필드 상세 정보:", {
     원본: naverId,
@@ -180,12 +180,16 @@ const server = http.createServer(async (req, res) => {
       const accessToken = url.searchParams.get("access_token");
       if (accessToken) {
         authorization = `Bearer ${accessToken}`;
-        console.log("[INFO] Authorization 헤더가 없어 query parameter에서 토큰 사용");
+        console.log(
+          "[INFO] Authorization 헤더가 없어 query parameter에서 토큰 사용",
+        );
       }
     }
-    
+
     if (!authorization) {
-      console.error("[ERROR] Authorization 헤더 또는 access_token query parameter가 없습니다");
+      console.error(
+        "[ERROR] Authorization 헤더 또는 access_token query parameter가 없습니다",
+      );
       console.error("[ERROR] 요청 URL:", req.url);
       console.error("[ERROR] User-Agent:", req.headers["user-agent"] || "없음");
       console.error("[ERROR] 요청 메서드:", req.method);
@@ -261,22 +265,26 @@ const server = http.createServer(async (req, res) => {
 
     // 응답 본문 생성
     const responseBody = JSON.stringify(flat);
-    
+
     // Clerk가 요구하는 표준 헤더 설정
     res.writeHead(200, {
       "Content-Type": "application/json; charset=utf-8",
       "Content-Length": Buffer.byteLength(responseBody, "utf8"),
       "Cache-Control": "no-store, no-cache, must-revalidate",
-      "Pragma": "no-cache",
-      "Expires": "0",
+      Pragma: "no-cache",
+      Expires: "0",
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
       "Access-Control-Allow-Headers": "Authorization, Content-Type",
     });
-    
+
     console.log("[INFO] 응답 헤더 설정 완료");
-    console.log("[INFO] 응답 본문 길이:", Buffer.byteLength(responseBody, "utf8"), "bytes");
-    
+    console.log(
+      "[INFO] 응답 본문 길이:",
+      Buffer.byteLength(responseBody, "utf8"),
+      "bytes",
+    );
+
     res.end(responseBody);
     console.log("[INFO] 응답 전송 완료");
     console.groupEnd();
