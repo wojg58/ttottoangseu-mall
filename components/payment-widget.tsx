@@ -68,12 +68,25 @@ export default function PaymentWidget({
           throw new Error("TossPayments 클라이언트 키가 설정되지 않았습니다.");
         }
 
+        // customerKey 생성: 이메일을 형식에 맞게 변환
+        // 형식: 영문 대소문자, 숫자, 특수문자('-','_','=','','@')로 최소 2자 이상 최대 50자 이하
+        // 이메일 주소를 그대로 사용하되, 길이 제한 확인
+        let customerKey = customerEmail;
+        if (customerKey.length > 50) {
+          // 이메일이 50자 초과 시 앞부분만 사용
+          customerKey = customerKey.substring(0, 50);
+        }
+        // 형식 검증: 영문, 숫자, 특수문자('-','_','=','','@')만 허용
+        customerKey = customerKey.replace(/[^a-zA-Z0-9\-_=@.]/g, '_');
+        
         logger.debug("[PaymentWidget] 결제 위젯 로드 시작", {
           clientKeyPrefix: clientKey.substring(0, 10) + "...",
           customerEmail,
+          customerKey,
+          customerKeyLength: customerKey.length,
         });
         
-        const paymentWidget = await loadPaymentWidget(clientKey, customerEmail);
+        const paymentWidget = await loadPaymentWidget(clientKey, customerKey);
         paymentWidgetRef.current = paymentWidget;
         logger.debug("[PaymentWidget] ✅ 결제 위젯 인스턴스 생성 완료");
 
@@ -252,16 +265,23 @@ export default function PaymentWidget({
     );
   }
 
+  // 에러가 있어도 결제 위젯 UI는 표시 (에러 메시지와 함께)
   if (error) {
-    return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-        <p className="text-sm text-red-600">{error}</p>
-      </div>
-    );
+    logger.warn("[PaymentWidget] 에러 발생했지만 UI는 표시:", error);
   }
 
   return (
     <div className="space-y-6">
+      {/* 에러 메시지 표시 (있을 경우) */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <p className="text-sm text-red-600">{error}</p>
+          <p className="text-xs text-red-500 mt-2">
+            ⚠️ 결제 위젯 초기화에 문제가 있습니다. 페이지를 새로고침해주세요.
+          </p>
+        </div>
+      )}
+      
       {/* 결제 수단 선택 */}
       <div className="space-y-3">
         <h3 className="text-base font-bold text-[#4a3f48]">결제수단</h3>
