@@ -112,6 +112,7 @@ export default function GuidePage() {
                     <li>고객의 단순 변심: 고객 부담 (왕복 배송비 7,000원)</li>
                     <li>상품의 하자 또는 오배송: 회사 부담</li>
                   </ul>
+                  <p className="mt-3 text-sm">교환 및 환불, 반품 접수 시 지정 택배사인 CJ대한통운을 통해 수거가 진행됩니다.</p>
                 </div>
               </div>
             </section>
