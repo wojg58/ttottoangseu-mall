@@ -9,13 +9,13 @@
  * 4. 카드 정보 입력 화면으로 진행
  *
  * @dependencies
- * - @tosspayments/payment-widget-sdk: TossPayments Payment Widget SDK
+ * - @tosspayments/tosspayments-sdk: TossPayments SDK v2
  */
 
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { loadPaymentWidget, PaymentWidgetInstance } from "@tosspayments/payment-widget-sdk";
+import { loadTossPayments } from "@tosspayments/tosspayments-sdk";
 import { Button } from "@/components/ui/button";
 import logger from "@/lib/logger";
 
@@ -42,8 +42,8 @@ export default function PaymentWidget({
   useEscrow = false,
   onClose,
 }: PaymentWidgetProps) {
-  const paymentWidgetRef = useRef<PaymentWidgetInstance | null>(null);
-  const paymentMethodsWidgetRef = useRef<ReturnType<PaymentWidgetInstance["renderPaymentMethods"]> | null>(null);
+  const widgetsRef = useRef<any>(null);
+  const paymentMethodsWidgetRef = useRef<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -70,24 +70,26 @@ export default function PaymentWidget({
 
     const initializeWidget = async () => {
       try {
-        logger.info("[PaymentWidget] loadPaymentWidget 호출");
+        logger.info("[PaymentWidget] TossPayments SDK 로드 시작");
         
-        // Payment Widget 로드
-        const paymentWidget = await loadPaymentWidget(clientKey, customerEmail);
-        paymentWidgetRef.current = paymentWidget;
-        
-        logger.info("[PaymentWidget] ✅ Payment Widget 로드 완료");
+        // TossPayments SDK 로드
+        const tossPayments = await loadTossPayments(clientKey);
+        logger.info("[PaymentWidget] ✅ TossPayments SDK 로드 완료");
+
+        // Payment Widget 인스턴스 생성
+        const widgets = tossPayments.widgets({ customerKey: customerEmail });
+        widgetsRef.current = widgets;
+        logger.info("[PaymentWidget] ✅ Payment Widgets 인스턴스 생성 완료");
 
         // 금액 설정
-        await paymentWidget.setAmount({
+        await widgets.setAmount({
           currency: "KRW",
           value: amount,
         });
-        
         logger.info("[PaymentWidget] ✅ 금액 설정 완료:", amount);
 
-        // 결제 수단 렌더링 (카드만 표시)
-        const paymentMethodsWidget = await paymentWidget.renderPaymentMethods({
+        // 결제 수단 렌더링
+        const paymentMethodsWidget = await widgets.renderPaymentMethods({
           selector: "#payment-widget",
           variantKey: "DEFAULT",
         });
@@ -95,7 +97,7 @@ export default function PaymentWidget({
         paymentMethodsWidgetRef.current = paymentMethodsWidget;
         
         logger.info("[PaymentWidget] ✅ 결제 수단 UI 렌더링 완료");
-        logger.info("[PaymentWidget] 카드사를 선택하면 약관 동의 체크박스가 자동으로 표시됩니다");
+        logger.info("[PaymentWidget] 💡 카드사를 선택하면 약관 동의 체크박스가 자동으로 표시됩니다");
 
         setIsLoading(false);
         logger.groupEnd();
@@ -123,8 +125,8 @@ export default function PaymentWidget({
 
   // 결제하기 버튼 클릭
   const handlePayment = async () => {
-    if (!paymentWidgetRef.current) {
-      logger.error("[PaymentWidget] Payment Widget이 초기화되지 않았습니다");
+    if (!widgetsRef.current) {
+      logger.error("[PaymentWidget] Payment Widgets가 초기화되지 않았습니다");
       alert("결제 위젯이 초기화되지 않았습니다. 페이지를 새로고침해주세요.");
       return;
     }
@@ -137,7 +139,7 @@ export default function PaymentWidget({
       logger.info("[PaymentWidget] requestPayment 호출");
       
       // 결제 요청
-      await paymentWidgetRef.current.requestPayment({
+      await widgetsRef.current.requestPayment({
         orderId: orderId,
         orderName: orderName,
         customerName: customerName,
@@ -233,7 +235,7 @@ export default function PaymentWidget({
         </div>
 
         {/* Payment Widget 렌더링 영역 */}
-        <div id="payment-widget" className="mb-4"></div>
+        <div id="payment-widget" className="mb-4 min-h-[200px]"></div>
 
         <div className="bg-[#fffaeb] border border-[#ffeaa7] rounded-lg p-4 mb-4">
           <p className="text-sm text-[#4a3f48] mb-2">
