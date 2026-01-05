@@ -100,9 +100,11 @@ export default function RootLayout({
     });
   }
 
+  // Type assertion for Next.js 15 compatibility
+  const ClerkProviderWrapper = ClerkProvider as any;
+
   return (
-    // @ts-expect-error - ClerkProvider types may not be fully compatible with Next.js 15
-    <ClerkProvider
+    <ClerkProviderWrapper
       localization={customKoKR}
       {...(clerkDomain ? { domain: clerkDomain } : {})}
     >
@@ -333,6 +335,6 @@ export default function RootLayout({
           <ChatbotLottieLauncher />
         </body>
       </html>
-    </ClerkProvider>
+    </ClerkProviderWrapper>
   );
 }
