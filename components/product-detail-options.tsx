@@ -54,7 +54,7 @@ export default function ProductDetailOptions({
   const [quantity, setQuantity] = useState(1); // 옵션이 없는 상품의 수량
   const [isPending, startTransition] = useTransition();
   const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const { isSignedIn, getToken } = useAuth();
+  const { isLoaded, userId, isSignedIn, getToken } = useAuth();
   const router = useRouter();
 
   console.group("🟡 [ProductDetailOptions] 컴포넌트 렌더링");
@@ -121,55 +121,25 @@ export default function ProductDetailOptions({
 
   const handleAddToCart = async () => {
     console.log("[ProductDetailOptions] 장바구니 담기 버튼 클릭:", {
+      isLoaded,
+      userId,
       isSignedIn,
       hasVariants,
       selectedOptionsCount: selectedOptions.length,
     });
 
-    if (!isSignedIn) {
-      console.log("[ProductDetailOptions] 로그인 필요");
-      router.push("/sign-in?redirect_url=" + window.location.pathname);
+    // Clerk 인증 상태가 아직 로드되지 않았으면 대기
+    if (!isLoaded) {
+      console.log("[ProductDetailOptions] Clerk 인증 상태 로딩 중...");
       return;
     }
 
-    // 서버 사이드 세션 확인 (배포 환경에서 클라이언트-서버 동기화 문제 해결)
-    console.log("🔍 서버 세션 확인 시작...");
-    try {
-      const sessionCheckResponse = await fetch("/api/auth/check-session", {
-        method: "GET",
-        credentials: "include", // 쿠키 포함
-        cache: "no-store",
-      });
-
-      if (!sessionCheckResponse.ok) {
-        console.error("[ProductDetailOptions] 세션 확인 API 실패:", sessionCheckResponse.status);
-        throw new Error(`세션 확인 실패: ${sessionCheckResponse.status}`);
-      }
-
-      const sessionData = await sessionCheckResponse.json();
-      console.log("서버 세션 확인 결과:", sessionData);
-
-      if (!sessionData.isAuthenticated || !sessionData.userId) {
-        console.warn("⚠️ [ProductDetailOptions] 서버에서 세션 없음 확인");
-        console.warn("클라이언트 isSignedIn:", isSignedIn);
-        console.warn("서버 userId:", sessionData.userId);
-        alert("로그인 세션이 만료되었습니다. 다시 로그인해주세요.");
-        router.push("/sign-in?redirect_url=" + window.location.pathname);
-        return;
-      }
-
-      // 클라이언트 토큰도 확인
-      const token = await getToken();
-      if (!token) {
-        console.warn("[ProductDetailOptions] 클라이언트 토큰 없음 (서버 세션은 있음)");
-        // 서버 세션이 있으면 토큰이 곧 생성될 수 있으므로 계속 진행
-      } else {
-        console.log("✅ 클라이언트 토큰 확인 완료");
-      }
-    } catch (error) {
-      console.error("❌ [ProductDetailOptions] 세션 확인 실패:", error);
-      // 네트워크 에러 등으로 세션 확인 실패 시, 서버 액션에서 처리하도록 진행
-      console.log("세션 확인 실패했지만 서버 액션에서 재확인하도록 진행");
+    // 인증 상태가 로드되었는데 userId가 없으면 로그인 필요
+    if (!userId) {
+      console.log("[ProductDetailOptions] 로그인 필요");
+      const currentUrl = window.location.pathname + window.location.search;
+      router.push("/sign-in?redirect_url=" + encodeURIComponent(currentUrl));
+      return;
     }
 
     // 옵션이 있는 상품은 옵션 선택 필수
@@ -246,6 +216,8 @@ export default function ProductDetailOptions({
     console.group("🔵 [ProductDetailOptions] 바로 구매 버튼 클릭");
     console.log("클릭 시간:", new Date().toISOString());
     console.log("상태:", {
+      isLoaded,
+      userId,
       isSignedIn,
       hasVariants,
       selectedOptionsCount: selectedOptions.length,
@@ -253,25 +225,17 @@ export default function ProductDetailOptions({
       quantity,
     });
 
-    if (!isSignedIn) {
-      console.log("[ProductDetailOptions] 로그인 필요");
-      router.push("/sign-in?redirect_url=" + window.location.pathname);
+    // Clerk 인증 상태가 아직 로드되지 않았으면 대기
+    if (!isLoaded) {
+      console.log("[ProductDetailOptions] Clerk 인증 상태 로딩 중...");
       return;
     }
 
-    // 실제 토큰 존재 여부 확인 (Vercel 배포 환경에서 세션 동기화 문제 대비)
-    try {
-      const token = await getToken();
-      if (!token) {
-        console.warn("[ProductDetailOptions] isSignedIn이 true지만 토큰이 없음 - 세션 동기화 필요");
-        alert("로그인 세션이 만료되었습니다. 페이지를 새로고침한 후 다시 시도해주세요.");
-        window.location.reload();
-        return;
-      }
-    } catch (error) {
-      console.error("[ProductDetailOptions] 토큰 확인 실패:", error);
-      alert("로그인 세션이 만료되었습니다. 다시 로그인해주세요.");
-      router.push("/sign-in?redirect_url=" + window.location.pathname);
+    // 인증 상태가 로드되었는데 userId가 없으면 로그인 필요
+    if (!userId) {
+      console.log("[ProductDetailOptions] 로그인 필요");
+      const currentUrl = window.location.pathname + window.location.search;
+      router.push("/sign-in?redirect_url=" + encodeURIComponent(currentUrl));
       return;
     }
 
@@ -493,31 +457,33 @@ export default function ProductDetailOptions({
         <Button
           onClick={handleAddToCart}
           disabled={
+            !isLoaded ||
             (hasVariants && selectedOptions.length === 0) ||
-            isLoading ||
+            isPending ||
             isSoldOut
           }
           variant="outline"
           className="flex-1 h-14 border-2 border-[#fad2e6] text-[#4a3f48] hover:bg-[#ffeef5] rounded-xl text-base font-bold"
         >
           <ShoppingCart className="w-5 h-5 mr-2" />
-          {isLoading ? "담는 중..." : "장바구니"}
+          {!isLoaded ? "로딩 중..." : isPending ? "담는 중..." : "장바구니"}
         </Button>
         <Button
           onClick={(e) => {
             console.log("🟢 [ProductDetailOptions] 바로 구매 버튼 클릭 이벤트 발생!");
             console.log("이벤트:", e);
-            console.log("현재 상태:", { isSignedIn, hasVariants, selectedOptionsCount: selectedOptions.length });
+            console.log("현재 상태:", { isLoaded, userId, isSignedIn, hasVariants, selectedOptionsCount: selectedOptions.length });
             handleBuyNow();
           }}
           disabled={
+            !isLoaded ||
             (hasVariants && selectedOptions.length === 0) ||
-            isLoading ||
+            isPending ||
             isSoldOut
           }
           className="flex-1 h-14 bg-[#ff6b9d] hover:bg-[#ff5088] text-white rounded-xl text-base font-bold"
         >
-          {isLoading ? "처리 중..." : "바로 구매"}
+          {!isLoaded ? "로딩 중..." : isPending ? "처리 중..." : "바로 구매"}
         </Button>
       </div>
 

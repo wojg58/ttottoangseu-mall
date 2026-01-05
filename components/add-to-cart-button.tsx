@@ -45,7 +45,7 @@ export default function AddToCartButton({
   const [quantity, setQuantity] = useState(1);
   const [isPending, startTransition] = useTransition();
   const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const { isSignedIn, getToken } = useAuth();
+  const { isLoaded, userId, isSignedIn, getToken } = useAuth();
   const router = useRouter();
 
   console.log("[AddToCartButton] 렌더링:", {
@@ -63,50 +63,27 @@ export default function AddToCartButton({
   };
 
   const handleAddToCart = async () => {
-    if (!isSignedIn) {
-      console.log("[AddToCartButton] 로그인 필요");
-      router.push("/sign-in?redirect_url=" + window.location.pathname);
+    console.log("[AddToCartButton] 장바구니 담기 버튼 클릭:", {
+      isLoaded,
+      userId,
+      isSignedIn,
+      productId,
+      quantity,
+      variantId,
+    });
+
+    // Clerk 인증 상태가 아직 로드되지 않았으면 대기
+    if (!isLoaded) {
+      console.log("[AddToCartButton] Clerk 인증 상태 로딩 중...");
       return;
     }
 
-    // 서버 사이드 세션 확인 (배포 환경에서 클라이언트-서버 동기화 문제 해결)
-    console.log("🔍 서버 세션 확인 시작...");
-    try {
-      const sessionCheckResponse = await fetch("/api/auth/check-session", {
-        method: "GET",
-        credentials: "include", // 쿠키 포함
-        cache: "no-store",
-      });
-
-      if (!sessionCheckResponse.ok) {
-        console.error("[AddToCartButton] 세션 확인 API 실패:", sessionCheckResponse.status);
-        throw new Error(`세션 확인 실패: ${sessionCheckResponse.status}`);
-      }
-
-      const sessionData = await sessionCheckResponse.json();
-      console.log("서버 세션 확인 결과:", sessionData);
-
-      if (!sessionData.isAuthenticated || !sessionData.userId) {
-        console.warn("⚠️ [AddToCartButton] 서버에서 세션 없음 확인");
-        console.warn("클라이언트 isSignedIn:", isSignedIn);
-        console.warn("서버 userId:", sessionData.userId);
-        alert("로그인 세션이 만료되었습니다. 다시 로그인해주세요.");
-        router.push("/sign-in?redirect_url=" + window.location.pathname);
-        return;
-      }
-
-      // 클라이언트 토큰도 확인
-      const token = await getToken();
-      if (!token) {
-        console.warn("[AddToCartButton] 클라이언트 토큰 없음 (서버 세션은 있음)");
-        // 서버 세션이 있으면 토큰이 곧 생성될 수 있으므로 계속 진행
-      } else {
-        console.log("✅ 클라이언트 토큰 확인 완료");
-      }
-    } catch (error) {
-      console.error("❌ [AddToCartButton] 세션 확인 실패:", error);
-      // 네트워크 에러 등으로 세션 확인 실패 시, 서버 액션에서 처리하도록 진행
-      console.log("세션 확인 실패했지만 서버 액션에서 재확인하도록 진행");
+    // 인증 상태가 로드되었는데 userId가 없으면 로그인 필요
+    if (!userId) {
+      console.log("[AddToCartButton] 로그인 필요");
+      const currentUrl = window.location.pathname + window.location.search;
+      router.push("/sign-in?redirect_url=" + encodeURIComponent(currentUrl));
+      return;
     }
 
     console.log("[AddToCartButton] 장바구니 담기 시작:", {
@@ -138,56 +115,26 @@ export default function AddToCartButton({
 
   const handleBuyNow = async () => {
     console.log("[AddToCartButton] 바로 구매 버튼 클릭:", {
+      isLoaded,
+      userId,
       isSignedIn,
       productId,
       quantity,
       variantId,
     });
 
-    if (!isSignedIn) {
-      console.log("[AddToCartButton] 로그인 필요");
-      router.push("/sign-in?redirect_url=" + window.location.pathname);
+    // Clerk 인증 상태가 아직 로드되지 않았으면 대기
+    if (!isLoaded) {
+      console.log("[AddToCartButton] Clerk 인증 상태 로딩 중...");
       return;
     }
 
-    // 서버 사이드 세션 확인 (배포 환경에서 클라이언트-서버 동기화 문제 해결)
-    console.log("🔍 서버 세션 확인 시작...");
-    try {
-      const sessionCheckResponse = await fetch("/api/auth/check-session", {
-        method: "GET",
-        credentials: "include", // 쿠키 포함
-        cache: "no-store",
-      });
-
-      if (!sessionCheckResponse.ok) {
-        console.error("[AddToCartButton] 세션 확인 API 실패:", sessionCheckResponse.status);
-        throw new Error(`세션 확인 실패: ${sessionCheckResponse.status}`);
-      }
-
-      const sessionData = await sessionCheckResponse.json();
-      console.log("서버 세션 확인 결과:", sessionData);
-
-      if (!sessionData.isAuthenticated || !sessionData.userId) {
-        console.warn("⚠️ [AddToCartButton] 서버에서 세션 없음 확인");
-        console.warn("클라이언트 isSignedIn:", isSignedIn);
-        console.warn("서버 userId:", sessionData.userId);
-        alert("로그인 세션이 만료되었습니다. 다시 로그인해주세요.");
-        router.push("/sign-in?redirect_url=" + window.location.pathname);
-        return;
-      }
-
-      // 클라이언트 토큰도 확인
-      const token = await getToken();
-      if (!token) {
-        console.warn("[AddToCartButton] 클라이언트 토큰 없음 (서버 세션은 있음)");
-        // 서버 세션이 있으면 토큰이 곧 생성될 수 있으므로 계속 진행
-      } else {
-        console.log("✅ 클라이언트 토큰 확인 완료");
-      }
-    } catch (error) {
-      console.error("❌ [AddToCartButton] 세션 확인 실패:", error);
-      // 네트워크 에러 등으로 세션 확인 실패 시, 서버 액션에서 처리하도록 진행
-      console.log("세션 확인 실패했지만 서버 액션에서 재확인하도록 진행");
+    // 인증 상태가 로드되었는데 userId가 없으면 로그인 필요
+    if (!userId) {
+      console.log("[AddToCartButton] 로그인 필요");
+      const currentUrl = window.location.pathname + window.location.search;
+      router.push("/sign-in?redirect_url=" + encodeURIComponent(currentUrl));
+      return;
     }
 
     console.log("[AddToCartButton] 바로 구매 시작:", {
@@ -264,19 +211,19 @@ export default function AddToCartButton({
       <div className="flex gap-3">
         <Button
           onClick={handleAddToCart}
-          disabled={isSoldOut || isLoading}
+          disabled={!isLoaded || isSoldOut || isPending}
           variant="outline"
           className="flex-1 h-14 border-2 border-[#fad2e6] text-[#4a3f48] hover:bg-[#ffeef5] rounded-xl text-base font-bold"
         >
           <ShoppingCart className="w-5 h-5 mr-2" />
-          {isLoading ? "담는 중..." : "장바구니"}
+          {!isLoaded ? "로딩 중..." : isPending ? "담는 중..." : "장바구니"}
         </Button>
         <Button
           onClick={handleBuyNow}
-          disabled={isSoldOut || isLoading}
+          disabled={!isLoaded || isSoldOut || isPending}
           className="flex-1 h-14 bg-[#ff6b9d] hover:bg-[#ff5088] text-white rounded-xl text-base font-bold"
         >
-          {isSoldOut ? "품절" : "바로 구매"}
+          {!isLoaded ? "로딩 중..." : isSoldOut ? "품절" : isPending ? "처리 중..." : "바로 구매"}
         </Button>
       </div>
 
