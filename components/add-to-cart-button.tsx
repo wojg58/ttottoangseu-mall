@@ -69,20 +69,44 @@ export default function AddToCartButton({
       return;
     }
 
-    // 실제 토큰 존재 여부 확인 (Vercel 배포 환경에서 세션 동기화 문제 대비)
+    // 서버 사이드 세션 확인 (배포 환경에서 클라이언트-서버 동기화 문제 해결)
+    console.log("🔍 서버 세션 확인 시작...");
     try {
-      const token = await getToken();
-      if (!token) {
-        console.warn("[AddToCartButton] isSignedIn이 true지만 토큰이 없음 - 세션 동기화 필요");
-        alert("로그인 세션이 만료되었습니다. 페이지를 새로고침한 후 다시 시도해주세요.");
-        window.location.reload();
+      const sessionCheckResponse = await fetch("/api/auth/check-session", {
+        method: "GET",
+        credentials: "include", // 쿠키 포함
+        cache: "no-store",
+      });
+
+      if (!sessionCheckResponse.ok) {
+        console.error("[AddToCartButton] 세션 확인 API 실패:", sessionCheckResponse.status);
+        throw new Error(`세션 확인 실패: ${sessionCheckResponse.status}`);
+      }
+
+      const sessionData = await sessionCheckResponse.json();
+      console.log("서버 세션 확인 결과:", sessionData);
+
+      if (!sessionData.isAuthenticated || !sessionData.userId) {
+        console.warn("⚠️ [AddToCartButton] 서버에서 세션 없음 확인");
+        console.warn("클라이언트 isSignedIn:", isSignedIn);
+        console.warn("서버 userId:", sessionData.userId);
+        alert("로그인 세션이 만료되었습니다. 다시 로그인해주세요.");
+        router.push("/sign-in?redirect_url=" + window.location.pathname);
         return;
       }
+
+      // 클라이언트 토큰도 확인
+      const token = await getToken();
+      if (!token) {
+        console.warn("[AddToCartButton] 클라이언트 토큰 없음 (서버 세션은 있음)");
+        // 서버 세션이 있으면 토큰이 곧 생성될 수 있으므로 계속 진행
+      } else {
+        console.log("✅ 클라이언트 토큰 확인 완료");
+      }
     } catch (error) {
-      console.error("[AddToCartButton] 토큰 확인 실패:", error);
-      alert("로그인 세션이 만료되었습니다. 다시 로그인해주세요.");
-      router.push("/sign-in?redirect_url=" + window.location.pathname);
-      return;
+      console.error("❌ [AddToCartButton] 세션 확인 실패:", error);
+      // 네트워크 에러 등으로 세션 확인 실패 시, 서버 액션에서 처리하도록 진행
+      console.log("세션 확인 실패했지만 서버 액션에서 재확인하도록 진행");
     }
 
     console.log("[AddToCartButton] 장바구니 담기 시작:", {
@@ -97,8 +121,17 @@ export default function AddToCartButton({
         console.log("[AddToCartButton] 장바구니 담기 성공");
         setShowSuccessModal(true);
       } else {
-        alert(result.message);
         console.error("[AddToCartButton] 장바구니 담기 실패:", result.message);
+        
+        // 서버에서 반환한 로그인 관련 에러인 경우 (실제 세션 만료)
+        if (result.message.includes("로그인이 필요")) {
+          console.error("❌ 서버에서 로그인 필요 응답 - 실제 세션 만료");
+          alert("로그인 세션이 만료되었습니다. 다시 로그인해주세요.");
+          router.push("/sign-in?redirect_url=" + window.location.pathname);
+          return;
+        }
+        
+        alert(result.message);
       }
     });
   };

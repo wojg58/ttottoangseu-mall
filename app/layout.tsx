@@ -86,8 +86,25 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // 운영 환경에서 Clerk 도메인 명시적 설정
+  const clerkDomain = process.env.NEXT_PUBLIC_CLERK_DOMAIN;
+  const clerkPublishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+
+  // 배포 환경 디버깅 로그
+  if (typeof window === "undefined") {
+    console.log("[RootLayout] Clerk 설정:", {
+      hasDomain: !!clerkDomain,
+      hasPublishableKey: !!clerkPublishableKey,
+      publishableKeyPrefix: clerkPublishableKey?.substring(0, 10) || "none",
+      isProduction: process.env.NODE_ENV === "production",
+    });
+  }
+
   return (
-    <ClerkProvider localization={customKoKR}>
+    <ClerkProvider
+      localization={customKoKR}
+      {...(clerkDomain ? { domain: clerkDomain } : {})}
+    >
       <html
         lang="ko"
         className={`${gowunDodum.variable} ${plusJakartaSans.variable} ${notoSansKR.variable}`}
