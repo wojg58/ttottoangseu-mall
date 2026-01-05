@@ -68,16 +68,34 @@ export default function PaymentWidget({
           throw new Error("TossPayments 클라이언트 키가 설정되지 않았습니다.");
         }
 
-        // customerKey 생성: 이메일을 형식에 맞게 변환
+        // customerKey 생성: 이메일을 안전한 형식으로 변환
         // 형식: 영문 대소문자, 숫자, 특수문자('-','_','=','','@')로 최소 2자 이상 최대 50자 이하
-        // 이메일 주소를 그대로 사용하되, 길이 제한 확인
-        let customerKey = customerEmail;
-        if (customerKey.length > 50) {
-          // 이메일이 50자 초과 시 앞부분만 사용
-          customerKey = customerKey.substring(0, 50);
+        // 이메일 주소를 base64로 인코딩한 후 형식에 맞게 변환
+        let customerKey = '';
+        try {
+          // 이메일을 base64로 인코딩
+          const base64Email = btoa(customerEmail).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+          // base64는 이미 영문, 숫자, '-', '_'만 포함하므로 형식에 맞음
+          // 길이 제한 확인 (최대 50자)
+          customerKey = base64Email.length > 50 ? base64Email.substring(0, 50) : base64Email;
+          
+          // 최소 길이 확인 (2자 이상)
+          if (customerKey.length < 2) {
+            // 이메일이 너무 짧으면 이메일의 사용자 부분만 사용
+            const emailUser = customerEmail.split('@')[0] || 'user';
+            customerKey = emailUser.replace(/[^a-zA-Z0-9\-_=@.]/g, '_').substring(0, 50);
+            if (customerKey.length < 2) {
+              customerKey = 'customer_' + Date.now().toString().slice(-10);
+            }
+          }
+        } catch (e) {
+          // base64 인코딩 실패 시 이메일의 사용자 부분만 사용
+          const emailUser = customerEmail.split('@')[0] || 'user';
+          customerKey = emailUser.replace(/[^a-zA-Z0-9\-_=@.]/g, '_').substring(0, 50);
+          if (customerKey.length < 2) {
+            customerKey = 'customer_' + Date.now().toString().slice(-10);
+          }
         }
-        // 형식 검증: 영문, 숫자, 특수문자('-','_','=','','@')만 허용
-        customerKey = customerKey.replace(/[^a-zA-Z0-9\-_=@.]/g, '_');
         
         logger.debug("[PaymentWidget] 결제 위젯 로드 시작", {
           clientKeyPrefix: clientKey.substring(0, 10) + "...",
