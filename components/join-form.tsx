@@ -232,7 +232,16 @@ export default function JoinForm() {
 
   // 모달이 열릴 때 주소 검색 UI를 embed
   useEffect(() => {
-    if (!isPostcodeOpen || !postcodeRef.current || !window.daum) return;
+    logger.debug("[JoinForm] useEffect 실행", {
+      isPostcodeOpen,
+      hasPostcodeRef: !!postcodeRef.current,
+      hasDaumAPI: !!window.daum,
+    });
+
+    if (!isPostcodeOpen || !postcodeRef.current || !window.daum) {
+      logger.debug("[JoinForm] 조건 미충족으로 주소 검색 UI embed 건너뜀");
+      return;
+    }
 
     logger.debug("[JoinForm] 주소 검색 UI embed 시작");
 
