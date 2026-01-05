@@ -204,6 +204,7 @@ export default function CheckoutForm({
 }: CheckoutFormProps) {
   const [isPending, startTransition] = useTransition();
   const searchParams = useSearchParams();
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_orderId, setOrderId] = useState<string | null>(null);
   const [orderNumber, setOrderNumber] = useState<string | null>(null);
   const [showPaymentWidget, setShowPaymentWidget] = useState(false);
@@ -603,6 +604,7 @@ export default function CheckoutForm({
     });
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const onSubmit = (_data: CheckoutFormData) => {
     // 이 함수는 더 이상 사용하지 않지만, 폼 제출을 위해 유지
     // 실제 결제는 handlePaymentClick에서 처리

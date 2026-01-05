@@ -1064,21 +1064,14 @@ export default function SignInContent() {
                 // 상태별 안내 메시지
                 let errorMessage = "로그인을 완료할 수 없습니다. 다시 시도해주세요.";
                 
-                if (result.status === "needs_verification") {
-                  errorMessage = 
-                    "이메일 인증이 필요합니다.\n\n" +
-                    "회원가입 시 발송된 이메일의 인증 링크를 클릭해주세요.\n" +
-                    "또는 이메일 인증 페이지로 이동하시겠습니까?";
-                  
-                  const shouldGoToVerification = confirm(errorMessage);
-                  if (shouldGoToVerification) {
-                    router.push(`/sign-up/verify-email?email=${encodeURIComponent(emailValue)}`);
-                    return;
-                  }
-                } else if (result.status === "needs_new_password") {
+                if (result.status === "needs_new_password") {
                   errorMessage = "비밀번호를 재설정해야 합니다.";
                 } else if (result.status === "needs_second_factor") {
                   errorMessage = "2단계 인증이 필요합니다.";
+                } else if (result.status === "needs_identifier") {
+                  errorMessage = "로그인 정보를 확인해주세요.";
+                } else if (result.status === "needs_first_factor") {
+                  errorMessage = "추가 인증이 필요합니다.";
                 } else {
                   errorMessage = `로그인 상태: ${result.status}\n\n로그인을 완료할 수 없습니다. 다시 시도해주세요.`;
                 }
