@@ -25,7 +25,7 @@ const clerkMiddlewareHandler = hasClerkKeys
   ? clerkMiddleware(async (auth, request) => {
       // 공개 경로가 아니면 인증 요구
       if (!isPublicRoute(request)) {
-        (await auth()).protect();
+        await auth.protect();
       }
     })
   : undefined;
