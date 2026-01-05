@@ -22,10 +22,10 @@ const isPublicRoute = createRouteMatcher([
 
 // Clerk 미들웨어 생성 (환경 변수가 있을 때만)
 const clerkMiddlewareHandler = hasClerkKeys
-  ? clerkMiddleware((auth, request) => {
+  ? clerkMiddleware(async (auth, request) => {
       // 공개 경로가 아니면 인증 요구
       if (!isPublicRoute(request)) {
-        auth().protect();
+        (await auth()).protect();
       }
     })
   : undefined;
