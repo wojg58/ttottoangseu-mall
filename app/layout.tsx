@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { ClerkProvider, type ClerkProviderProps } from "@clerk/nextjs";
+import { ClerkProvider } from "@clerk/nextjs";
 import { koKR } from "@clerk/localizations";
 import { Gowun_Dodum, Plus_Jakarta_Sans, Noto_Sans_KR } from "next/font/google";
 
@@ -100,14 +100,12 @@ export default function RootLayout({
     });
   }
 
-  // ClerkProvider props for Next.js 15 compatibility
-  const clerkProviderProps: ClerkProviderProps = {
-    localization: customKoKR,
-    ...(clerkDomain ? { domain: clerkDomain } : {}),
-  } as ClerkProviderProps;
-
   return (
-    <ClerkProvider {...clerkProviderProps}>
+    // @ts-expect-error - ClerkProvider types may not be fully compatible with Next.js 15
+    <ClerkProvider
+      localization={customKoKR}
+      {...(clerkDomain ? { domain: clerkDomain } : {})}
+    >
       <html
         lang="ko"
         className={`${gowunDodum.variable} ${plusJakartaSans.variable} ${notoSansKR.variable}`}
