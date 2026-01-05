@@ -1107,11 +1107,6 @@ export default function CheckoutForm({
                 <span className="text-sm font-medium text-[#4a3f48]">에스크로(계좌이체)</span>
               </label>
             </div>
-            
-            {/* 소액 결제 안내 */}
-            <p className="text-xs text-[#8b7d84] mt-2">
-              - 소액 결제의 경우 PG사 정책에 따라 결제 금액 제한이 있을 수 있습니다.
-            </p>
           </div>
 
           {/* 결제 수단 상세 설정 */}
