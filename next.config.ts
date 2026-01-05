@@ -45,6 +45,7 @@ const nextConfig: NextConfig = {
   },
 };
 
+// Sentry 설정 (빌드 속도 개선을 위해 일부 옵션 비활성화)
 export default withSentryConfig(nextConfig, {
   // For all available options, see:
   // https://www.npmjs.com/package/@sentry/webpack-plugin#options
@@ -60,7 +61,8 @@ export default withSentryConfig(nextConfig, {
   // https://docs.sentry.io/platforms/javascript/guides/nextjs/manual-setup/
 
   // Upload a larger set of source maps for prettier stack traces (increases build time)
-  widenClientFileUpload: true,
+  // 빌드 속도 개선을 위해 비활성화 (필요시 활성화)
+  widenClientFileUpload: false,
 
   // Route browser requests to Sentry through a Next.js rewrite to circumvent ad-blockers.
   // This can increase your server load as well as your hosting bill.
