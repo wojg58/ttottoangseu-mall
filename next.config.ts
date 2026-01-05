@@ -43,29 +43,6 @@ const nextConfig: NextConfig = {
       exclude: ["error", "warn"], // error와 warn은 유지
     } : false,
   },
-  // 보안 헤더 설정
-  async headers() {
-    return [
-      {
-        source: "/:path*",
-        headers: [
-          {
-            key: "Content-Security-Policy",
-            value: [
-              "default-src 'self'",
-              "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://js.tosspayments.com https://*.tosspayments.com",
-              "style-src 'self' 'unsafe-inline'",
-              "img-src 'self' data: blob: https: http:",
-              "font-src 'self' data:",
-              "connect-src 'self' https://api.tosspayments.com https://log.tosspayments.com https://*.tosspayments.com https://*.supabase.co wss://*.supabase.co https://*.clerk.accounts.dev",
-              "frame-src 'self' https://*.tosspayments.com https://pay.toss.im",
-              "worker-src 'self' blob:",
-            ].join("; "),
-          },
-        ],
-      },
-    ];
-  },
 };
 
 export default withSentryConfig(nextConfig, {

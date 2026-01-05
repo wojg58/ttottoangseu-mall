@@ -70,14 +70,12 @@ export default function PaymentWidget({
 
       try {
         logger.info("[PaymentWidget] TossPayments SDK 로드 시작");
+        logger.info("[PaymentWidget] 클라이언트 키:", clientKey?.substring(0, 20) + "...");
+        
         const tossPayments = await loadTossPayments(clientKey);
         logger.info("[PaymentWidget] ✅ TossPayments SDK 로드 완료");
 
-        // Payment 인스턴스 생성 (customerKey는 이메일 사용)
-        const payment = tossPayments.payment({ customerKey: customerEmail });
-        logger.info("[PaymentWidget] ✅ Payment 인스턴스 생성 완료");
-
-        // 필수 값 검증
+        // 필수 값 검증 (Payment 인스턴스 생성 전에 먼저 확인)
         if (!orderId || !amount || !customerName || !customerEmail || !paymentMethod) {
           logger.error("[PaymentWidget] ❌ 필수 입력값 누락:", {
             orderId: !!orderId,
@@ -85,6 +83,13 @@ export default function PaymentWidget({
             customerName: !!customerName,
             customerEmail: !!customerEmail,
             paymentMethod: !!paymentMethod,
+            actualValues: {
+              orderId,
+              amount,
+              customerName,
+              customerEmail,
+              paymentMethod,
+            }
           });
           alert("결제 정보가 불완전합니다. 페이지를 새로고침해주세요.");
           onClose?.();
@@ -92,8 +97,16 @@ export default function PaymentWidget({
           return;
         }
 
+        logger.info("[PaymentWidget] 필수 값 검증 완료");
+        logger.info("[PaymentWidget] customerKey (이메일):", customerEmail);
+
+        // Payment 인스턴스 생성 (customerKey는 이메일 사용)
+        const payment = tossPayments.payment({ customerKey: customerEmail });
+        logger.info("[PaymentWidget] ✅ Payment 인스턴스 생성 완료");
+
         // BASE_URL 설정
         const BASE_URL = window.location.origin;
+        logger.info("[PaymentWidget] BASE_URL:", BASE_URL);
 
         // 결제 요청 객체 생성
         const paymentRequest: any = {
@@ -109,6 +122,13 @@ export default function PaymentWidget({
           successUrl: `${BASE_URL}/order/success?paymentKey={paymentKey}&orderId=${orderId}&amount=${amount}`,
           failUrl: `${BASE_URL}/order/fail?message={message}`,
         };
+
+        logger.info("[PaymentWidget] 결제 요청 객체 생성 완료:", {
+          method: paymentRequest.method,
+          amount: paymentRequest.amount,
+          orderId: paymentRequest.orderId,
+          orderName: paymentRequest.orderName,
+        });
 
         // 결제수단별 추가 설정
         if (paymentMethod === "CARD") {
