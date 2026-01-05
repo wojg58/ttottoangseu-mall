@@ -19,6 +19,13 @@ import { getAvailableCoupons, type Coupon } from "@/actions/coupons";
 import { calculateCouponDiscount } from "@/lib/coupon-utils";
 import type { CartItemWithProduct } from "@/types/database";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import PaymentWidget from "@/components/payment-widget";
@@ -264,6 +271,9 @@ export default function CheckoutForm({
   // 약관 동의 상태
   const [agreeAll, setAgreeAll] = useState(false);
   const [agreePurchase, setAgreePurchase] = useState(false); // 필수 동의
+  
+  // 배송정보 제공방침 모달 상태
+  const [showShippingPolicyModal, setShowShippingPolicyModal] = useState(false);
   const [orderData, setOrderData] = useState<{
     subtotal: number;
     shippingFee: number;
@@ -1169,7 +1179,13 @@ export default function CheckoutForm({
           {/* 배송정보 제공방침 동의 */}
           <div className="mb-4">
             <p className="text-xs text-[#8b7d84]">
-              배송정보 제공방침 동의 <span className="text-[#4a3f48] underline cursor-pointer">자세히 &gt;</span>
+              배송정보 제공방침 동의{" "}
+              <span
+                onClick={() => setShowShippingPolicyModal(true)}
+                className="text-[#4a3f48] underline cursor-pointer hover:text-[#ff6b9d] transition-colors"
+              >
+                자세히 &gt;
+              </span>
             </p>
           </div>
 
@@ -1246,6 +1262,71 @@ export default function CheckoutForm({
           }}
         />
       )}
+
+      {/* 배송정보 제공방침 모달 */}
+      <Dialog open={showShippingPolicyModal} onOpenChange={setShowShippingPolicyModal}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-[#4a3f48]">
+              배송정보 제공방침
+            </DialogTitle>
+            <DialogDescription className="text-sm text-[#8b7d84]">
+              고객님의 개인정보 보호를 위한 배송정보 제공방침입니다.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 text-sm text-[#4a3f48]">
+            <div>
+              <h3 className="font-bold mb-2">1. 개인정보 제공 목적</h3>
+              <p className="text-[#8b7d84]">
+                상품 배송 및 배송 관련 안내를 위해 필요한 최소한의 개인정보를 배송업체에 제공합니다.
+              </p>
+            </div>
+
+            <div>
+              <h3 className="font-bold mb-2">2. 제공되는 개인정보 항목</h3>
+              <ul className="list-disc list-inside text-[#8b7d84] space-y-1">
+                <li>수령인 성명</li>
+                <li>수령인 연락처</li>
+                <li>배송지 주소</li>
+                <li>우편번호</li>
+              </ul>
+            </div>
+
+            <div>
+              <h3 className="font-bold mb-2">3. 개인정보를 제공받는 자</h3>
+              <p className="text-[#8b7d84]">
+                CJ대한통운, 한진택배, 롯데택배 등 상품 배송을 위해 계약한 배송업체
+              </p>
+            </div>
+
+            <div>
+              <h3 className="font-bold mb-2">4. 개인정보 보유 및 이용 기간</h3>
+              <p className="text-[#8b7d84]">
+                배송 완료 후 최대 3개월까지 보관하며, 이후 즉시 파기합니다.
+                단, 관련 법령에 의거하여 보존할 필요가 있는 경우 해당 기간 동안 보관합니다.
+              </p>
+            </div>
+
+            <div>
+              <h3 className="font-bold mb-2">5. 동의 거부 권리 및 불이익</h3>
+              <p className="text-[#8b7d84]">
+                고객님께서는 개인정보 제공 동의를 거부하실 수 있으나, 
+                동의하지 않으실 경우 상품 배송이 불가능합니다.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex justify-end pt-4">
+            <Button
+              onClick={() => setShowShippingPolicyModal(false)}
+              className="bg-[#ff6b9d] hover:bg-[#ff5a8d] text-white"
+            >
+              확인
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
