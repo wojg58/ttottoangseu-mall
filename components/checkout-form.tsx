@@ -251,7 +251,7 @@ export default function CheckoutForm({
 }: CheckoutFormProps) {
   const [isPending, startTransition] = useTransition();
   const searchParams = useSearchParams();
-  const [orderId, setOrderId] = useState<string | null>(null);
+  const [_orderId, setOrderId] = useState<string | null>(null);
   const [orderNumber, setOrderNumber] = useState<string | null>(null);
   const [showPaymentWidget, setShowPaymentWidget] = useState(false);
   const [paymentWidgetData, setPaymentWidgetData] = useState<{
@@ -411,7 +411,8 @@ export default function CheckoutForm({
           console.error("[CheckoutForm] 주문 정보 로드 실패:", error);
         });
     }
-  }, [searchParams, orderNumber, form, user]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, orderNumber]);
 
   // 쿠폰 목록 가져오기
   useEffect(() => {
