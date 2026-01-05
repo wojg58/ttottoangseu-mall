@@ -145,6 +145,7 @@ export default function SignUpContent() {
             path="/sign-up"
             signInUrl="/sign-in"
             afterSignUpUrl={redirectUrl}
+            fallbackRedirectUrl={redirectUrl}
             forceRedirectUrl={redirectUrl}
             appearance={{
               elements: {
