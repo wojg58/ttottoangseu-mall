@@ -5,7 +5,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -18,6 +18,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { saveMemberAdditionalInfo } from "@/actions/member-actions";
 import logger from "@/lib/logger";
 import type { Gender } from "@/types/member";
@@ -92,6 +93,8 @@ export default function JoinForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [agreeAll, setAgreeAll] = useState(false);
   const [isPostcodeReady, setIsPostcodeReady] = useState(false);
+  const [isPostcodeOpen, setIsPostcodeOpen] = useState(false);
+  const postcodeRef = useRef<HTMLDivElement>(null);
 
   const {
     register,
@@ -209,45 +212,10 @@ export default function JoinForm() {
         retryCount++;
         
         if (window.daum) {
-          logger.debug("[JoinForm] Daum Postcode API 로드 완료, 주소 검색 팝업 열기");
+          logger.debug("[JoinForm] Daum Postcode API 로드 완료, 주소 검색 모달 열기");
           clearInterval(retryInterval);
           setIsPostcodeReady(true);
-          
-          // 주소 검색 팝업 열기
-          try {
-            const postcode = new window.daum.Postcode({
-              oncomplete: function (data: any) {
-                logger.group("[JoinForm] 주소 선택 완료");
-                logger.debug("우편번호:", data.zonecode);
-                logger.debug("주소:", data.address);
-                logger.debug("주소 타입:", data.addressType);
-                logger.debug("도로명 주소:", data.roadAddress);
-                logger.debug("지번 주소:", data.jibunAddress);
-                logger.groupEnd();
-
-                // 도로명 주소 우선, 없으면 지번 주소 사용
-                const address = data.addressType === 'R' ? data.roadAddress : data.jibunAddress;
-                
-                setValue("postcode", data.zonecode);
-                setValue("addr1", address || data.address);
-                trigger(["postcode", "addr1"]);
-              },
-              onresize: function (size: { width: number; height: number }) {
-                logger.debug("[JoinForm] 팝업 크기 변경:", size);
-              },
-              onclose: function (state: 'COMPLETE' | 'FORCE_CLOSE') {
-                logger.debug("[JoinForm] 팝업 닫힘:", state);
-              },
-              width: '100%',
-              height: '100%',
-            });
-            
-            // 팝업 열기 (인자 없이 호출)
-            postcode.open();
-          } catch (error: any) {
-            logger.error("[JoinForm] 주소 검색 팝업 열기 실패:", error);
-            alert("주소 검색 팝업을 열 수 없습니다. 팝업 차단기를 확인해주세요.");
-          }
+          setIsPostcodeOpen(true);
         } else if (retryCount >= maxRetries) {
           logger.error("[JoinForm] Daum Postcode API 로드 실패 (재시도 한도 초과)");
           clearInterval(retryInterval);
@@ -258,7 +226,15 @@ export default function JoinForm() {
       return;
     }
 
-    logger.debug("[JoinForm] 주소 검색 팝업 열기");
+    logger.debug("[JoinForm] 주소 검색 모달 열기");
+    setIsPostcodeOpen(true);
+  };
+
+  // 모달이 열릴 때 주소 검색 UI를 embed
+  useEffect(() => {
+    if (!isPostcodeOpen || !postcodeRef.current || !window.daum) return;
+
+    logger.debug("[JoinForm] 주소 검색 UI embed 시작");
 
     try {
       const postcode = new window.daum.Postcode({
@@ -277,24 +253,30 @@ export default function JoinForm() {
           setValue("postcode", data.zonecode);
           setValue("addr1", address || data.address);
           trigger(["postcode", "addr1"]);
+          
+          // 주소 선택 후 모달 닫기
+          setIsPostcodeOpen(false);
         },
         onresize: function (size: { width: number; height: number }) {
-          logger.debug("[JoinForm] 팝업 크기 변경:", size);
+          logger.debug("[JoinForm] UI 크기 변경:", size);
         },
         onclose: function (state: 'COMPLETE' | 'FORCE_CLOSE') {
-          logger.debug("[JoinForm] 팝업 닫힘:", state);
+          logger.debug("[JoinForm] UI 닫힘:", state);
+          setIsPostcodeOpen(false);
         },
         width: '100%',
         height: '100%',
       });
       
-      // 팝업 열기 (인자 없이 호출)
-      postcode.open();
+      // 모달 내부에 주소 검색 UI 삽입
+      postcode.embed(postcodeRef.current);
+      logger.debug("[JoinForm] 주소 검색 UI embed 완료");
     } catch (error: any) {
-      logger.error("[JoinForm] 주소 검색 팝업 열기 실패:", error);
-      alert("주소 검색 팝업을 열 수 없습니다. 팝업 차단기를 확인해주세요.");
+      logger.error("[JoinForm] 주소 검색 UI embed 실패:", error);
+      alert("주소 검색을 불러올 수 없습니다. 페이지를 새로고침한 후 다시 시도해주세요.");
+      setIsPostcodeOpen(false);
     }
-  };
+  }, [isPostcodeOpen, setValue, trigger]);
 
   // 폼 제출
   const onSubmit = async (data: JoinFormData) => {
@@ -876,6 +858,19 @@ export default function JoinForm() {
           </Button>
         </div>
       </form>
+
+      {/* 주소 검색 모달 */}
+      <Dialog open={isPostcodeOpen} onOpenChange={setIsPostcodeOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] p-0">
+          <DialogHeader className="p-4 border-b">
+            <DialogTitle>주소 검색</DialogTitle>
+          </DialogHeader>
+          <div 
+            ref={postcodeRef} 
+            className="w-full h-[500px] overflow-auto"
+          />
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
