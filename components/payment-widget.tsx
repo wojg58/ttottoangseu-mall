@@ -172,7 +172,28 @@ export default function PaymentWidget({
     }
 
     try {
-      logger.debug("[PaymentWidget] 결제 요청 API 호출 시작");
+      // 필수 값 검증
+      if (!orderId || !orderNumber || !amount || !customerName || !customerEmail) {
+        logger.error("[PaymentWidget] ❌ 필수 입력값 누락:", {
+          orderId: !!orderId,
+          orderNumber: !!orderNumber,
+          amount: !!amount,
+          customerName: !!customerName,
+          customerEmail: !!customerEmail,
+        });
+        alert("결제 정보가 불완전합니다. 페이지를 새로고침해주세요.");
+        logger.groupEnd();
+        return;
+      }
+
+      logger.info("[PaymentWidget] 결제 요청 API 호출 시작", {
+        orderId,
+        orderNumber,
+        amount,
+        customerName: customerName.substring(0, 1) + "***",
+        customerEmail: customerEmail.substring(0, 3) + "***",
+      });
+      
       // 결제 요청 API 호출 (결제 정보 저장)
       const response = await fetch("/api/payments", {
         method: "POST",

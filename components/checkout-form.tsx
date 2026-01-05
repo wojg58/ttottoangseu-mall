@@ -366,6 +366,24 @@ export default function CheckoutForm({
             
             // 주문 정보 로드 후 결제 위젯 표시
             setOrderId(urlOrderId);
+            
+            // 사용자 정보가 있으면 폼에 채우기 (주문자 정보)
+            if (user) {
+              const ordererName = user.fullName || user.firstName || "";
+              const ordererEmail = user.primaryEmailAddress?.emailAddress || "";
+              const ordererPhone = user.phoneNumbers?.[0]?.phoneNumber || "";
+              
+              if (ordererName) {
+                form.setValue("ordererName", ordererName);
+              }
+              if (ordererEmail) {
+                form.setValue("ordererEmail", ordererEmail);
+              }
+              if (ordererPhone) {
+                form.setValue("ordererPhone", ordererPhone);
+              }
+            }
+            
             setShowPaymentWidget(true);
           }
         })
@@ -573,8 +591,8 @@ export default function CheckoutForm({
           orderId={orderId}
           orderNumber={orderNumber}
           amount={displayTotal}
-          customerName={form.getValues("ordererName")}
-          customerEmail={form.getValues("ordererEmail")}
+          customerName={form.getValues("ordererName") || user?.fullName || user?.firstName || "고객"}
+          customerEmail={form.getValues("ordererEmail") || user?.primaryEmailAddress?.emailAddress || ""}
         />
       </div>
     );
