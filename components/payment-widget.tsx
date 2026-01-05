@@ -104,7 +104,20 @@ export default function PaymentWidget({
       } catch (err) {
         logger.error("[PaymentWidget] ❌ 초기화 실패:", err);
         logger.groupEnd();
-        setError("결제 위젯을 불러오는데 실패했습니다.");
+        
+        const errorMessage = err instanceof Error ? err.message : String(err);
+        
+        // 결제위젯 연동 키 관련 에러인 경우 명확한 안내
+        if (errorMessage.includes("결제위젯 연동 키") || errorMessage.includes("API 개별 연동 키")) {
+          setError(
+            "결제위젯 연동 키가 필요합니다.\n\n" +
+            "현재 사용 중인 클라이언트 키는 API 개별 연동 키입니다.\n" +
+            "Payment Widget SDK를 사용하려면 결제위젯 연동 키가 필요합니다.\n\n" +
+            "개발자센터 > API 키 메뉴에서 '결제위젯 연동 키'를 확인하세요."
+          );
+        } else {
+          setError(`결제 위젯을 불러오는데 실패했습니다.\n\n${errorMessage}`);
+        }
         setIsLoading(false);
       }
     };
