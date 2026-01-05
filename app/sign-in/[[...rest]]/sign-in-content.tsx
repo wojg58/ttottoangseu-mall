@@ -1562,7 +1562,7 @@ export default function SignInContent() {
               <SignIn
                 routing="path"
                 path="/sign-in"
-                signUpUrl={null}
+                signUpUrl="/sign-up/join"
                 afterSignInUrl={redirectUrl}
                 fallbackRedirectUrl={redirectUrl}
                 forceRedirectUrl={redirectUrl}
@@ -1938,11 +1938,13 @@ export default function SignInContent() {
                 <Link
                   href="/sign-up/join"
                   className="text-[#ff6b9d] hover:text-[#ff5088] font-semibold transition-colors"
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.preventDefault();
                     console.log(
                       "[SignInContent] 회원가입 페이지로 이동: /sign-up/join",
                     );
-                    router.push("/sign-up/join");
+                    // window.location을 사용하여 강제로 페이지 이동 (서버 컴포넌트 리렌더링 보장)
+                    window.location.href = "/sign-up/join";
                   }}
                 >
                   회원가입하기
