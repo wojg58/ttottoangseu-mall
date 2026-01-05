@@ -43,10 +43,13 @@ declare global {
           postCodeSeq: string;
           postCodeType: string;
         }) => void;
+        onresize?: (size: { width: number; height: number }) => void;
+        onclose?: (state: 'COMPLETE' | 'FORCE_CLOSE') => void;
         width?: string | number;
         height?: string | number;
       }) => {
         open: () => void;
+        embed?: (element: HTMLElement) => void;
       };
     };
   }
