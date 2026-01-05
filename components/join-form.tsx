@@ -137,6 +137,7 @@ export default function JoinForm() {
   const { signUp, setActive } = useSignUp();
   const [isLoading, setIsLoading] = useState(false);
   const [agreeAll, setAgreeAll] = useState(false);
+  const [isPostcodeReady, setIsPostcodeReady] = useState(false);
 
   const {
     register,
@@ -170,18 +171,70 @@ export default function JoinForm() {
 
   // Daum Postcode API 스크립트 로드
   useEffect(() => {
+    // 이미 스크립트가 로드되어 있는지 확인
+    if (window.daum) {
+      logger.debug("[JoinForm] Daum Postcode API가 이미 로드되어 있습니다");
+      setIsPostcodeReady(true);
+      return;
+    }
+
+    // 이미 스크립트 태그가 있는지 확인
+    const existingScript = document.querySelector(
+      'script[src*="postcode.v2.js"]'
+    );
+    if (existingScript) {
+      logger.debug("[JoinForm] Daum Postcode API 스크립트 태그가 이미 존재합니다");
+      // 스크립트가 로드될 때까지 대기
+      const checkInterval = setInterval(() => {
+        if (window.daum) {
+          logger.debug("[JoinForm] Daum Postcode API 로드 완료 확인");
+          setIsPostcodeReady(true);
+          clearInterval(checkInterval);
+        }
+      }, 100);
+
+      // 최대 10초 대기
+      setTimeout(() => {
+        clearInterval(checkInterval);
+        if (window.daum) {
+          setIsPostcodeReady(true);
+        } else {
+          logger.error("[JoinForm] Daum Postcode API 로드 타임아웃");
+        }
+      }, 10000);
+
+      return () => clearInterval(checkInterval);
+    }
+
+    // 새 스크립트 생성 및 로드
     const script = document.createElement("script");
     script.src =
       "//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js";
     script.async = true;
-    document.head.appendChild(script);
 
+    script.onload = () => {
+      logger.debug("[JoinForm] Daum Postcode API 스크립트 로드 완료");
+      setIsPostcodeReady(true);
+    };
+
+    script.onerror = () => {
+      logger.error("[JoinForm] Daum Postcode API 스크립트 로드 실패");
+      setIsPostcodeReady(false);
+    };
+
+    document.head.appendChild(script);
     logger.debug("[JoinForm] Daum Postcode API 스크립트 로드 시작");
 
     return () => {
-      // 컴포넌트 언마운트 시 스크립트 제거
+      // 컴포넌트 언마운트 시 스크립트 제거 (다른 곳에서 사용 중이 아닐 때만)
       if (document.head.contains(script)) {
-        document.head.removeChild(script);
+        // 다른 컴포넌트에서 사용 중인지 확인
+        const otherScripts = document.querySelectorAll(
+          'script[src*="postcode.v2.js"]'
+        );
+        if (otherScripts.length === 1) {
+          document.head.removeChild(script);
+        }
       }
     };
   }, []);
@@ -190,9 +243,44 @@ export default function JoinForm() {
   const openPostcode = () => {
     if (typeof window === "undefined") return;
 
-    if (!window.daum) {
-      logger.error("[JoinForm] Daum Postcode API가 로드되지 않았습니다");
-      alert("주소 검색 서비스를 불러오는 중입니다. 잠시 후 다시 시도해주세요.");
+    // 스크립트가 아직 로드되지 않았으면 재시도 로직
+    if (!window.daum || !isPostcodeReady) {
+      logger.warn("[JoinForm] Daum Postcode API가 아직 로드되지 않았습니다. 재시도 중...");
+      
+      // 최대 3초간 재시도
+      let retryCount = 0;
+      const maxRetries = 30; // 100ms * 30 = 3초
+      
+      const retryInterval = setInterval(() => {
+        retryCount++;
+        
+        if (window.daum) {
+          logger.debug("[JoinForm] Daum Postcode API 로드 완료, 주소 검색 팝업 열기");
+          clearInterval(retryInterval);
+          setIsPostcodeReady(true);
+          
+          // 주소 검색 팝업 열기
+          new window.daum.Postcode({
+            oncomplete: function (data: any) {
+              logger.group("[JoinForm] 주소 선택 완료");
+              logger.debug("우편번호:", data.zonecode);
+              logger.debug("주소:", data.address);
+              logger.groupEnd();
+
+              setValue("postcode", data.zonecode);
+              setValue("addr1", data.address);
+              trigger(["postcode", "addr1"]);
+            },
+            width: "100%",
+            height: "100%",
+          }).open();
+        } else if (retryCount >= maxRetries) {
+          logger.error("[JoinForm] Daum Postcode API 로드 실패 (재시도 한도 초과)");
+          clearInterval(retryInterval);
+          alert("주소 검색 서비스를 불러올 수 없습니다. 페이지를 새로고침한 후 다시 시도해주세요.");
+        }
+      }, 100);
+
       return;
     }
 
@@ -496,8 +584,14 @@ export default function JoinForm() {
                           readOnly
                           className={`flex-1 ${errors.postcode ? "border-red-500" : ""}`}
                         />
-                        <Button type="button" onClick={openPostcode} variant="outline">
-                          주소검색
+                        <Button 
+                          type="button" 
+                          onClick={openPostcode} 
+                          variant="outline"
+                          disabled={!isPostcodeReady}
+                          title={!isPostcodeReady ? "주소 검색 서비스를 불러오는 중..." : "주소 검색"}
+                        >
+                          {isPostcodeReady ? "주소검색" : "로딩 중..."}
                         </Button>
                       </div>
                       {errors.postcode && (
