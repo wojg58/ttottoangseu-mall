@@ -522,7 +522,19 @@ export default function CheckoutForm({
     // 2. 폼 유효성 검사
     const isValid = await form.trigger();
     if (!isValid) {
+      const errors = form.formState.errors;
       logger.warn("[CheckoutForm] 폼 유효성 검사 실패");
+      logger.error("[CheckoutForm] 유효성 검사 에러 목록:", {
+        ordererName: errors.ordererName?.message,
+        ordererPhone: errors.ordererPhone?.message,
+        ordererEmail: errors.ordererEmail?.message,
+        shippingName: errors.shippingName?.message,
+        shippingPhone: errors.shippingPhone?.message,
+        shippingAddress: errors.shippingAddress?.message,
+        shippingZipCode: errors.shippingZipCode?.message,
+        allErrors: errors,
+      });
+      alert("입력 정보를 확인해주세요.\n\n주문자 정보와 배송 정보를 모두 입력해야 합니다.");
       logger.groupEnd();
       return;
     }

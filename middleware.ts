@@ -48,6 +48,7 @@ export default async function middleware(
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net data:",
       "img-src 'self' data: https: blob:",
+      "media-src 'self' data: blob:",
       "connect-src 'self' https://www.google-analytics.com https://analytics.google.com https://*.clerk.accounts.dev https://*.clerk-telemetry.com https://*.supabase.co https://api.channel.io https://*.ingest.sentry.io https://*.sentry.io https://t1.daumcdn.net https://api.tosspayments.com https://log.tosspayments.com https://*.tosspayments.com",
       "frame-src 'self' https://*.clerk.accounts.dev https://channels.angel.co https://t1.daumcdn.net https://pay.tosspayments.com https://*.tosspayments.com https://pay.toss.im",
       "object-src 'none'",
