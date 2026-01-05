@@ -1,4 +1,4 @@
-import { clerkMiddleware } from "@clerk/nextjs/server";
+import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import type { NextRequest, NextFetchEvent } from "next/server";
 
@@ -7,22 +7,26 @@ const hasClerkKeys =
   !!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY &&
   !!process.env.CLERK_SECRET_KEY;
 
+// 인증 없이 접근 가능한 공개 경로 정의
+const isPublicRoute = createRouteMatcher([
+  "/",
+  "/sign-in(.*)",
+  "/sign-up(.*)",
+  "/api/webhooks(.*)",
+  "/products(.*)",
+  "/company",
+  "/terms",
+  "/privacy",
+  "/guide",
+]);
+
 // Clerk 미들웨어 생성 (환경 변수가 있을 때만)
-// publicRoutes: 인증 없이 접근 가능한 경로
-// ignoredRoutes: Clerk 미들웨어가 완전히 무시하는 경로
 const clerkMiddlewareHandler = hasClerkKeys
-  ? clerkMiddleware({
-      publicRoutes: [
-        "/",
-        "/sign-in(.*)",
-        "/sign-up(.*)",
-        "/api/webhooks(.*)",
-        "/products(.*)",
-        "/company",
-        "/terms",
-        "/privacy",
-        "/guide",
-      ],
+  ? clerkMiddleware((auth, request) => {
+      // 공개 경로가 아니면 인증 요구
+      if (!isPublicRoute(request)) {
+        auth().protect();
+      }
     })
   : undefined;
 
