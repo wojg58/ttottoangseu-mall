@@ -45,7 +45,7 @@ export default function AddToCartButton({
   const [quantity, setQuantity] = useState(1);
   const [isPending, startTransition] = useTransition();
   const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const { isLoaded, userId, isSignedIn, getToken } = useAuth();
+  const { isLoaded, userId, isSignedIn } = useAuth();
   const router = useRouter();
 
   console.log("[AddToCartButton] 렌더링:", {
@@ -170,8 +170,6 @@ export default function AddToCartButton({
       }
     });
   };
-
-  const isLoading = isPending;
 
   // 총 금액 계산
   const totalPrice = price * quantity;
