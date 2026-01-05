@@ -31,6 +31,7 @@ export default function SignInContent() {
   const redirectUrl = searchParams.get("redirect_url") || "/";
   const kakaoButtonRef = useRef<HTMLButtonElement>(null);
   const naverButtonRef = useRef<HTMLButtonElement>(null);
+  const googleButtonRef = useRef<HTMLButtonElement>(null);
 
   // 클라이언트 사이드에서만 실행 (useEffect 안으로 이동하여 hydration mismatch 방지)
   useEffect(() => {
@@ -1444,8 +1445,9 @@ export default function SignInContent() {
     const insertNaverButton = () => {
       const kakaoButton = kakaoButtonRef.current;
       const naverButton = naverButtonRef.current;
+      const googleButton = googleButtonRef.current;
 
-      if (kakaoButton && naverButton && kakaoButton.parentElement) {
+      if (kakaoButton && naverButton && googleButton && kakaoButton.parentElement) {
         // 이미 삽입되어 있는지 확인
         const parent = naverButton.parentElement;
         if (
@@ -1493,6 +1495,67 @@ export default function SignInContent() {
     // 초기 실행 및 주기적 확인
     const initialTimeout = setTimeout(insertNaverButton, 600);
     const interval = setInterval(insertNaverButton, 1000);
+
+    return () => {
+      clearTimeout(initialTimeout);
+      clearInterval(interval);
+    };
+  }, []);
+
+  // 구글 버튼을 네이버 버튼 아래에 삽입
+  useEffect(() => {
+    const insertGoogleButton = () => {
+      const naverButton = naverButtonRef.current;
+      const googleButton = googleButtonRef.current;
+
+      if (naverButton && googleButton && naverButton.parentElement) {
+        // 이미 삽입되어 있는지 확인
+        const parent = googleButton.parentElement;
+        if (
+          parent &&
+          parent === naverButton.parentElement &&
+          naverButton.nextSibling === googleButton
+        ) {
+          // 이미 올바른 위치에 있으면 리턴
+          return;
+        }
+
+        // 기존 위치에서 제거
+        if (googleButton.parentElement) {
+          googleButton.parentElement.removeChild(googleButton);
+        }
+
+        console.log("[SignInContent] 구글 버튼을 네이버 버튼 아래에 삽입");
+
+        // 구글 버튼을 보이도록 설정
+        googleButton.classList.remove("hidden");
+
+        // 버튼이 클릭 가능하도록 스타일 강제 적용
+        googleButton.style.cssText += `
+          display: block !important;
+          visibility: visible !important;
+          opacity: 1 !important;
+          pointer-events: auto !important;
+          cursor: pointer !important;
+          z-index: 10 !important;
+        `;
+
+        // 버튼이 비활성화되지 않도록 보장
+        googleButton.removeAttribute("disabled");
+        googleButton.setAttribute("tabindex", "0");
+        googleButton.setAttribute("aria-disabled", "false");
+
+        // 네이버 버튼 다음에 삽입
+        naverButton.parentElement.insertBefore(
+          googleButton,
+          naverButton.nextSibling,
+        );
+      }
+    };
+
+    // 초기 실행 및 주기적 확인
+    const initialTimeout = setTimeout(insertGoogleButton, 800);
+    const interval = setInterval(insertGoogleButton, 1000);
 
     return () => {
       clearTimeout(initialTimeout);
@@ -1928,6 +1991,153 @@ export default function SignInContent() {
                 }}
               >
                 네이버 로그인
+              </button>
+
+              {/* 구글 로그인 버튼 */}
+              <button
+                ref={googleButtonRef}
+                onClick={async () => {
+                  console.group("[SignInContent] 구글 로그인 버튼 클릭");
+                  console.log("시간:", new Date().toISOString());
+                  console.log("리다이렉트 URL:", redirectUrl);
+
+                  try {
+                    // Clerk 초기화 대기
+                    if (!isLoaded || !signInLoaded) {
+                      console.warn(
+                        "[SignInContent] Clerk가 아직 초기화 중입니다. 잠시 후 다시 시도해주세요.",
+                      );
+                      alert(
+                        "로그인 기능을 준비하는 중입니다. 잠시 후 다시 시도해주세요.",
+                      );
+                      console.groupEnd();
+                      return;
+                    }
+
+                    if (!clerk || !signIn) {
+                      console.error(
+                        "[SignInContent] Clerk 또는 signIn이 초기화되지 않음",
+                        {
+                          clerk: !!clerk,
+                          signIn: !!signIn,
+                          isLoaded,
+                          signInLoaded,
+                        },
+                      );
+                      alert(
+                        "로그인 기능을 준비하는 중입니다. 잠시 후 다시 시도해주세요.",
+                      );
+                      console.groupEnd();
+                      return;
+                    }
+
+                    console.log("[SignInContent] 구글 로그인 시작");
+                    console.log("[SignInContent] Clerk 상태:", {
+                      isLoaded,
+                      signInLoaded,
+                      hasClerk: !!clerk,
+                      hasSignIn: !!signIn,
+                    });
+
+                    // 구글 로그인은 Clerk의 기본 소셜 로그인이므로 "oauth_google" 전략 사용
+                    const strategy = "oauth_google";
+
+                    try {
+                      console.log(
+                        `[SignInContent] 구글 로그인 시도 - 전략: ${strategy}`,
+                      );
+                      await (signIn.authenticateWithRedirect as any)({
+                        strategy: strategy,
+                        redirectUrl: redirectUrl,
+                        redirectUrlComplete: redirectUrl,
+                      });
+                      console.log(
+                        `[SignInContent] 구글 로그인 리다이렉트 완료`,
+                      );
+                    } catch (error: any) {
+                      const errorMsg = error.message || String(error);
+                      console.error(
+                        `[SignInContent] 구글 로그인 실패:`,
+                        errorMsg,
+                      );
+
+                      // 에러 메시지 추출 및 개선
+                      let errorMessage =
+                        "구글 로그인에 실패했습니다. 다시 시도해주세요.";
+                      if (error.errors && error.errors.length > 0) {
+                        const firstError = error.errors[0];
+                        errorMessage = firstError.message || errorMessage;
+                      } else if (error.message) {
+                        errorMessage = error.message;
+                      }
+
+                      // Clerk 대시보드 설정 확인 안내 메시지
+                      if (
+                        errorMessage.includes("strategy") ||
+                        errorMessage.includes("전략") ||
+                        errorMessage.includes("not found")
+                      ) {
+                        errorMessage =
+                          "구글 로그인 전략을 찾을 수 없습니다.\n\n" +
+                          "가능한 원인:\n" +
+                          "1. Clerk 대시보드에서 구글 OAuth가 활성화되지 않았습니다.\n" +
+                          "2. 프로덕션 인스턴스에서 구글 OAuth 설정이 누락되었습니다.\n\n" +
+                          "해결 방법:\n" +
+                          "1. Clerk Dashboard → User & Authentication → Social Connections\n" +
+                          "2. Google OAuth 활성화 확인\n" +
+                          "3. 프로덕션 인스턴스에서도 구글 OAuth가 활성화되어 있는지 확인\n\n" +
+                          `에러 상세: ${errorMsg}`;
+                      }
+
+                      alert(errorMessage);
+                    }
+                  } catch (error: any) {
+                    console.error("[SignInContent] 구글 로그인 실패:", error);
+                    console.error("[SignInContent] 에러 상세:", {
+                      message: error.message,
+                      errors: error.errors,
+                      status: error.status,
+                      stack: error.stack,
+                    });
+
+                    alert(
+                      error.message ||
+                        "구글 로그인에 실패했습니다. 다시 시도해주세요.",
+                    );
+                  } finally {
+                    console.groupEnd();
+                  }
+                }}
+                className="w-full bg-white hover:bg-gray-50 text-gray-700 font-semibold h-8 py-2 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md mb-4 flex items-center justify-center border border-gray-300"
+                style={{
+                  backgroundColor: "#ffffff",
+                  height: "32px",
+                }}
+              >
+                <svg
+                  className="w-5 h-5 mr-2"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                    fill="#4285F4"
+                  />
+                  <path
+                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                    fill="#34A853"
+                  />
+                  <path
+                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                    fill="#FBBC05"
+                  />
+                  <path
+                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                    fill="#EA4335"
+                  />
+                </svg>
+                구글로 로그인
               </button>
             </div>
 
