@@ -880,7 +880,7 @@ export default function JoinForm() {
       {/* 주소 검색 모달 */}
       <Dialog open={isPostcodeOpen} onOpenChange={setIsPostcodeOpen}>
         <DialogContent className="max-w-2xl max-h-[80vh] p-0">
-          <DialogHeader className="p-4 border-b">
+          <DialogHeader className="p-4 border-b bg-white">
             <DialogTitle>주소 검색</DialogTitle>
           </DialogHeader>
           <div 
