@@ -232,59 +232,68 @@ export default function JoinForm() {
 
   // 모달이 열릴 때 주소 검색 UI를 embed
   useEffect(() => {
-    logger.debug("[JoinForm] useEffect 실행", {
-      isPostcodeOpen,
-      hasPostcodeRef: !!postcodeRef.current,
-      hasDaumAPI: !!window.daum,
-    });
-
-    if (!isPostcodeOpen || !postcodeRef.current || !window.daum) {
-      logger.debug("[JoinForm] 조건 미충족으로 주소 검색 UI embed 건너뜀");
+    if (!isPostcodeOpen || !window.daum) {
       return;
     }
 
-    logger.debug("[JoinForm] 주소 검색 UI embed 시작");
-
-    try {
-      const postcode = new window.daum.Postcode({
-        oncomplete: function (data: any) {
-          logger.group("[JoinForm] 주소 선택 완료");
-          logger.debug("우편번호:", data.zonecode);
-          logger.debug("주소:", data.address);
-          logger.debug("주소 타입:", data.addressType);
-          logger.debug("도로명 주소:", data.roadAddress);
-          logger.debug("지번 주소:", data.jibunAddress);
-          logger.groupEnd();
-
-          // 도로명 주소 우선, 없으면 지번 주소 사용
-          const address = data.addressType === 'R' ? data.roadAddress : data.jibunAddress;
-          
-          setValue("postcode", data.zonecode);
-          setValue("addr1", address || data.address);
-          trigger(["postcode", "addr1"]);
-          
-          // 주소 선택 후 모달 닫기
-          setIsPostcodeOpen(false);
-        },
-        onresize: function (size: { width: number; height: number }) {
-          logger.debug("[JoinForm] UI 크기 변경:", size);
-        },
-        onclose: function (state: 'COMPLETE' | 'FORCE_CLOSE') {
-          logger.debug("[JoinForm] UI 닫힘:", state);
-          setIsPostcodeOpen(false);
-        },
-        width: '100%',
-        height: '100%',
+    // Dialog가 렌더링되기를 기다림 (DOM이 준비되도록)
+    const timer = setTimeout(() => {
+      logger.debug("[JoinForm] useEffect 실행 (타이머 후)", {
+        isPostcodeOpen,
+        hasPostcodeRef: !!postcodeRef.current,
+        hasDaumAPI: !!window.daum,
       });
-      
-      // 모달 내부에 주소 검색 UI 삽입
-      postcode.embed(postcodeRef.current);
-      logger.debug("[JoinForm] 주소 검색 UI embed 완료");
-    } catch (error: any) {
-      logger.error("[JoinForm] 주소 검색 UI embed 실패:", error);
-      alert("주소 검색을 불러올 수 없습니다. 페이지를 새로고침한 후 다시 시도해주세요.");
-      setIsPostcodeOpen(false);
-    }
+
+      if (!postcodeRef.current) {
+        logger.error("[JoinForm] postcodeRef.current가 여전히 null입니다");
+        return;
+      }
+
+      logger.debug("[JoinForm] 주소 검색 UI embed 시작");
+
+      try {
+        const postcode = new window.daum.Postcode({
+          oncomplete: function (data: any) {
+            logger.group("[JoinForm] 주소 선택 완료");
+            logger.debug("우편번호:", data.zonecode);
+            logger.debug("주소:", data.address);
+            logger.debug("주소 타입:", data.addressType);
+            logger.debug("도로명 주소:", data.roadAddress);
+            logger.debug("지번 주소:", data.jibunAddress);
+            logger.groupEnd();
+
+            // 도로명 주소 우선, 없으면 지번 주소 사용
+            const address = data.addressType === 'R' ? data.roadAddress : data.jibunAddress;
+            
+            setValue("postcode", data.zonecode);
+            setValue("addr1", address || data.address);
+            trigger(["postcode", "addr1"]);
+            
+            // 주소 선택 후 모달 닫기
+            setIsPostcodeOpen(false);
+          },
+          onresize: function (size: { width: number; height: number }) {
+            logger.debug("[JoinForm] UI 크기 변경:", size);
+          },
+          onclose: function (state: 'COMPLETE' | 'FORCE_CLOSE') {
+            logger.debug("[JoinForm] UI 닫힘:", state);
+            setIsPostcodeOpen(false);
+          },
+          width: '100%',
+          height: '100%',
+        });
+        
+        // 모달 내부에 주소 검색 UI 삽입
+        postcode.embed(postcodeRef.current);
+        logger.debug("[JoinForm] 주소 검색 UI embed 완료");
+      } catch (error: any) {
+        logger.error("[JoinForm] 주소 검색 UI embed 실패:", error);
+        alert("주소 검색을 불러올 수 없습니다. 페이지를 새로고침한 후 다시 시도해주세요.");
+        setIsPostcodeOpen(false);
+      }
+    }, 100); // DOM 렌더링을 위해 100ms 대기
+
+    return () => clearTimeout(timer);
   }, [isPostcodeOpen, setValue, trigger]);
 
   // 폼 제출
