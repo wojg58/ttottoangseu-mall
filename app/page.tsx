@@ -15,7 +15,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowRight, Sparkles, TrendingUp } from "lucide-react";
-import { createClient } from "@/lib/supabase/server";
+import { createPublicClient } from "@/lib/supabase/server";
 import ProductCard from "@/components/product-card";
 import AllProductsSection from "@/components/all-products-section";
 import EventBanner from "@/components/event-banner";
@@ -154,7 +154,8 @@ async function getProducts() {
   logger.group("[HomePage] 상품 데이터 fetching");
   logger.time("getProducts");
 
-  const supabase = await createClient();
+  // 공개 데이터이므로 인증 없이 접근 (모든 사용자가 상품을 볼 수 있어야 함)
+  const supabase = createPublicClient();
 
   // 모든 활성 상품을 한 번에 가져오기
   const { data: allProductsRaw, error } = await supabase

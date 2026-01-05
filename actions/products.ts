@@ -13,7 +13,7 @@
 
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
+import { createPublicClient } from "@/lib/supabase/server";
 import type {
   ProductListItem,
   ProductWithDetails,
@@ -43,7 +43,8 @@ export async function getProducts(
   console.log("필터:", filters);
   console.log("페이지:", page, "페이지 크기:", pageSize);
 
-  const supabase = await createClient();
+  // 공개 데이터이므로 인증 없이 접근 (모든 사용자가 상품을 볼 수 있어야 함)
+  const supabase = createPublicClient();
 
   // 카테고리 필터 (다중 카테고리 지원)
   let categoryFilteredProductIds: string[] | null = null;
@@ -305,7 +306,8 @@ export async function getProductBySlug(
   console.log("slug length:", slug.length);
   console.log("slug encoded:", encodeURIComponent(slug));
 
-  const supabase = await createClient();
+  // 공개 데이터이므로 인증 없이 접근 (모든 사용자가 상품을 볼 수 있어야 함)
+  const supabase = createPublicClient();
 
   // slug 디코딩 (URL 인코딩된 경우)
   const decodedSlug = decodeURIComponent(slug);
@@ -408,7 +410,8 @@ export async function getCategoryBySlug(
   console.group("[getCategoryBySlug] 카테고리 상세 조회");
   console.log("slug:", slug);
 
-  const supabase = await createClient();
+  // 공개 데이터이므로 인증 없이 접근 (모든 사용자가 카테고리를 볼 수 있어야 함)
+  const supabase = createPublicClient();
 
   const { data, error } = await supabase
     .from("categories")

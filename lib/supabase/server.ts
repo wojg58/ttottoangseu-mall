@@ -32,5 +32,30 @@ export async function createClient() {
   });
 }
 
+/**
+ * 공개 데이터용 Supabase 클라이언트 (Server Component용)
+ * 
+ * 인증 없이 공개 데이터에 접근할 때 사용합니다.
+ * 예: 상품 목록, 카테고리 목록 등 모든 사용자가 볼 수 있는 데이터
+ * 
+ * @example
+ * ```tsx
+ * // Server Component / Server Action
+ * import { createPublicClient } from '@/lib/supabase/server';
+ *
+ * export default async function ProductsPage() {
+ *   const supabase = createPublicClient();
+ *   const { data } = await supabase.from('products').select('*');
+ *   return <div>...</div>;
+ * }
+ * ```
+ */
+export function createPublicClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
+  return createSupabaseClient(supabaseUrl, supabaseKey);
+}
+
 // 하위 호환성을 위한 alias
 export const createClerkSupabaseClient = createClient;
