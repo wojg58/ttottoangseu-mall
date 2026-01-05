@@ -268,10 +268,6 @@ export default function CheckoutForm({
   const [depositorName, setDepositorName] = useState("");
   const [useEscrow, setUseEscrow] = useState(false);
   
-  // 약관 동의 상태
-  const [agreeAll, setAgreeAll] = useState(false);
-  const [agreePurchase, setAgreePurchase] = useState(false); // 필수 동의
-  
   // 배송정보 제공방침 모달 상태
   const [showShippingPolicyModal, setShowShippingPolicyModal] = useState(false);
   const [orderData, setOrderData] = useState<{
@@ -520,34 +516,10 @@ export default function CheckoutForm({
     }
   }, [ordererName, ordererPhone, useMemberInfo, form]);
 
-  // 약관 동의 핸들러
-  const handleAgreeAll = (checked: boolean) => {
-    setAgreeAll(checked);
-    setAgreePurchase(checked);
-  };
-
-  const handleAgreePurchase = (checked: boolean) => {
-    setAgreePurchase(checked);
-    if (!checked) {
-      setAgreeAll(false);
-    } else {
-      // 모든 필수 동의가 체크되면 전체 동의도 체크
-      setAgreeAll(true);
-    }
-  };
-
   // 결제하기 버튼 클릭 핸들러 (토스페이먼츠 결제위젯 오버레이 방식)
   const handlePaymentClick = async () => {
     logger.group("[CheckoutForm] 결제하기 버튼 클릭");
     logger.info("[CheckoutForm] 현재 selectedPaymentMethod state:", selectedPaymentMethod);
-    
-    // 0. 필수 약관 동의 확인
-    if (!agreePurchase) {
-      logger.warn("[CheckoutForm] 필수 약관 미동의");
-      alert("구매조건 확인 및 결제진행에 동의해주세요.");
-      logger.groupEnd();
-      return;
-    }
     
     // 1. 결제수단 선택 확인 (가장 먼저 검증)
     if (!selectedPaymentMethod || (selectedPaymentMethod !== "CARD" && selectedPaymentMethod !== "TRANSFER")) {
@@ -1189,35 +1161,11 @@ export default function CheckoutForm({
             </p>
           </div>
 
-          {/* 주문 내용 확인 및 약관 동의 */}
-          {/* 약관 동의 */}
-          <div className="mb-6 space-y-3 p-4 bg-[#fef8fb] rounded-lg border border-[#f5d5e3]">
-            {/* 전체 동의 */}
-            <label className="flex items-start gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={agreeAll}
-                onChange={(e) => handleAgreeAll(e.target.checked)}
-                className="w-5 h-5 text-[#ff6b9d] border-[#d4d4d4] rounded focus:ring-[#ff6b9d] mt-0.5"
-              />
-              <span className="text-sm font-bold text-[#4a3f48]">전체 동의</span>
-            </label>
-
-            {/* 구분선 */}
-            <div className="border-t border-[#f5d5e3]"></div>
-
-            {/* 필수 동의 항목 */}
-            <label className="flex items-start gap-2 cursor-pointer pl-2">
-              <input
-                type="checkbox"
-                checked={agreePurchase}
-                onChange={(e) => handleAgreePurchase(e.target.checked)}
-                className="w-4 h-4 text-[#ff6b9d] border-[#d4d4d4] rounded focus:ring-[#ff6b9d] mt-0.5"
-              />
-              <span className="text-sm text-[#4a3f48]">
-                구매조건 확인 및 결제진행에 동의 <span className="text-[#ff6b9d]">(필수)</span>
-              </span>
-            </label>
+          {/* 주문 내용 확인 */}
+          <div className="mb-6">
+            <p className="text-xs text-[#4a3f48]">
+              주문 내용을 확인하였으며 약관에 동의합니다.
+            </p>
           </div>
 
           <Button
@@ -1225,7 +1173,6 @@ export default function CheckoutForm({
             disabled={
               isPending || 
               !selectedPaymentMethod ||
-              !agreePurchase ||
               (selectedPaymentMethod === "TRANSFER" && !depositorName.trim())
             }
             className="w-full h-14 bg-black hover:bg-gray-800 text-white rounded-lg text-base font-bold disabled:opacity-50 disabled:cursor-not-allowed"
@@ -1234,8 +1181,6 @@ export default function CheckoutForm({
               ? "처리 중..." 
               : !selectedPaymentMethod 
               ? "결제 수단을 선택해주세요" 
-              : !agreePurchase
-              ? "약관에 동의해주세요"
               : selectedPaymentMethod === "TRANSFER" && !depositorName.trim()
               ? "예금주명을 입력해주세요"
               : `${displayTotal.toLocaleString("ko-KR")}원 결제하기`}
