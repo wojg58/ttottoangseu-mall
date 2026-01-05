@@ -108,6 +108,13 @@ export default function PaymentWidget({
         const BASE_URL = window.location.origin;
         logger.info("[PaymentWidget] BASE_URL:", BASE_URL);
 
+        // successUrl과 failUrl - 토스페이먼츠는 {paymentKey}, {orderId}, {amount} 템플릿을 자동 치환
+        const successUrl = `${BASE_URL}/order/success`;
+        const failUrl = `${BASE_URL}/order/fail`;
+        
+        logger.info("[PaymentWidget] successUrl:", successUrl);
+        logger.info("[PaymentWidget] failUrl:", failUrl);
+
         // 결제 요청 객체 생성
         const paymentRequest: any = {
           method: paymentMethod === "CARD" ? "CARD" : "TRANSFER",
@@ -119,8 +126,8 @@ export default function PaymentWidget({
           orderName: orderName,
           customerName: customerName,
           customerEmail: customerEmail,
-          successUrl: `${BASE_URL}/order/success?paymentKey={paymentKey}&orderId=${orderId}&amount=${amount}`,
-          failUrl: `${BASE_URL}/order/fail?message={message}`,
+          successUrl: successUrl,
+          failUrl: failUrl,
         };
 
         logger.info("[PaymentWidget] 결제 요청 객체 생성 완료:", {
