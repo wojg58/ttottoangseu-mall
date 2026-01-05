@@ -45,7 +45,7 @@ export default function AddToCartButton({
   const [quantity, setQuantity] = useState(1);
   const [isPending, startTransition] = useTransition();
   const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const { isSignedIn } = useAuth();
+  const { isSignedIn, getToken } = useAuth();
   const router = useRouter();
 
   console.log("[AddToCartButton] 렌더링:", {
@@ -65,6 +65,22 @@ export default function AddToCartButton({
   const handleAddToCart = async () => {
     if (!isSignedIn) {
       console.log("[AddToCartButton] 로그인 필요");
+      router.push("/sign-in?redirect_url=" + window.location.pathname);
+      return;
+    }
+
+    // 실제 토큰 존재 여부 확인 (Vercel 배포 환경에서 세션 동기화 문제 대비)
+    try {
+      const token = await getToken();
+      if (!token) {
+        console.warn("[AddToCartButton] isSignedIn이 true지만 토큰이 없음 - 세션 동기화 필요");
+        alert("로그인 세션이 만료되었습니다. 페이지를 새로고침한 후 다시 시도해주세요.");
+        window.location.reload();
+        return;
+      }
+    } catch (error) {
+      console.error("[AddToCartButton] 토큰 확인 실패:", error);
+      alert("로그인 세션이 만료되었습니다. 다시 로그인해주세요.");
       router.push("/sign-in?redirect_url=" + window.location.pathname);
       return;
     }
@@ -97,6 +113,22 @@ export default function AddToCartButton({
 
     if (!isSignedIn) {
       console.log("[AddToCartButton] 로그인 필요");
+      router.push("/sign-in?redirect_url=" + window.location.pathname);
+      return;
+    }
+
+    // 실제 토큰 존재 여부 확인 (Vercel 배포 환경에서 세션 동기화 문제 대비)
+    try {
+      const token = await getToken();
+      if (!token) {
+        console.warn("[AddToCartButton] isSignedIn이 true지만 토큰이 없음 - 세션 동기화 필요");
+        alert("로그인 세션이 만료되었습니다. 페이지를 새로고침한 후 다시 시도해주세요.");
+        window.location.reload();
+        return;
+      }
+    } catch (error) {
+      console.error("[AddToCartButton] 토큰 확인 실패:", error);
+      alert("로그인 세션이 만료되었습니다. 다시 로그인해주세요.");
       router.push("/sign-in?redirect_url=" + window.location.pathname);
       return;
     }

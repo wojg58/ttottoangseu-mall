@@ -54,7 +54,7 @@ export default function ProductDetailOptions({
   const [quantity, setQuantity] = useState(1); // 옵션이 없는 상품의 수량
   const [isPending, startTransition] = useTransition();
   const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const { isSignedIn } = useAuth();
+  const { isSignedIn, getToken } = useAuth();
   const router = useRouter();
 
   console.log("[ProductDetailOptions] 렌더링:", {
@@ -123,6 +123,22 @@ export default function ProductDetailOptions({
 
     if (!isSignedIn) {
       console.log("[ProductDetailOptions] 로그인 필요");
+      router.push("/sign-in?redirect_url=" + window.location.pathname);
+      return;
+    }
+
+    // 실제 토큰 존재 여부 확인 (Vercel 배포 환경에서 세션 동기화 문제 대비)
+    try {
+      const token = await getToken();
+      if (!token) {
+        console.warn("[ProductDetailOptions] isSignedIn이 true지만 토큰이 없음 - 세션 동기화 필요");
+        alert("로그인 세션이 만료되었습니다. 페이지를 새로고침한 후 다시 시도해주세요.");
+        window.location.reload();
+        return;
+      }
+    } catch (error) {
+      console.error("[ProductDetailOptions] 토큰 확인 실패:", error);
+      alert("로그인 세션이 만료되었습니다. 다시 로그인해주세요.");
       router.push("/sign-in?redirect_url=" + window.location.pathname);
       return;
     }
@@ -206,6 +222,22 @@ export default function ProductDetailOptions({
 
     if (!isSignedIn) {
       console.log("[ProductDetailOptions] 로그인 필요");
+      router.push("/sign-in?redirect_url=" + window.location.pathname);
+      return;
+    }
+
+    // 실제 토큰 존재 여부 확인 (Vercel 배포 환경에서 세션 동기화 문제 대비)
+    try {
+      const token = await getToken();
+      if (!token) {
+        console.warn("[ProductDetailOptions] isSignedIn이 true지만 토큰이 없음 - 세션 동기화 필요");
+        alert("로그인 세션이 만료되었습니다. 페이지를 새로고침한 후 다시 시도해주세요.");
+        window.location.reload();
+        return;
+      }
+    } catch (error) {
+      console.error("[ProductDetailOptions] 토큰 확인 실패:", error);
+      alert("로그인 세션이 만료되었습니다. 다시 로그인해주세요.");
       router.push("/sign-in?redirect_url=" + window.location.pathname);
       return;
     }
