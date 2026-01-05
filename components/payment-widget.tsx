@@ -217,6 +217,7 @@ export default function PaymentWidget({
       const BASE_URL = window.location.origin;
 
       // 결제 위젯 실행 (TossPayments 위젯이 자동으로 오버레이로 결제창 표시)
+      // requestPayment 호출 시 자동으로 오버레이 모달이 표시됨 (카드사 선택, 약관 동의, 카드번호 입력 화면 포함)
       const paymentRequest: any = {
         orderId: orderId,
         orderName: orderName,
@@ -228,11 +229,12 @@ export default function PaymentWidget({
 
       // 결제수단에 따라 method 지정
       if (paymentMethod === "CARD") {
-        // 신용카드 결제
-        paymentRequest.method = "카드";
+        // 신용카드 결제 - method를 "CARD"로 설정하면 카드사 선택 화면이 오버레이로 표시됨
+        paymentRequest.method = "CARD";
+        logger.info("[PaymentWidget] 신용카드 결제 모드 - 카드사 선택 화면이 오버레이로 표시됩니다");
       } else if (paymentMethod === "TRANSFER") {
         // 실시간 계좌이체
-        paymentRequest.method = "계좌이체";
+        paymentRequest.method = "TRANSFER";
         paymentRequest.transfer = {
           useEscrow: useEscrow,
         };
@@ -253,9 +255,15 @@ export default function PaymentWidget({
       
       try {
         logger.debug("[PaymentWidget] requestPayment 호출 직전");
+        logger.info("[PaymentWidget] 결제위젯 오버레이 모달 표시 시작", {
+          method: paymentRequest.method,
+          orderId: paymentRequest.orderId,
+          orderName: paymentRequest.orderName,
+        });
         // requestPayment 호출 시 자동으로 오버레이 형태로 결제창이 표시됨
+        // CARD 모드일 경우: 카드사 선택 → 약관 동의 → 카드번호/유효기간/CVC 입력 화면 순서로 진행
         await paymentWidgetRef.current.requestPayment(paymentRequest);
-        logger.debug("[PaymentWidget] ✅ requestPayment 호출 완료 (오버레이 표시됨)");
+        logger.debug("[PaymentWidget] ✅ requestPayment 호출 완료 (오버레이 모달 표시됨)");
       } catch (paymentError) {
         logger.error("[PaymentWidget] ❌ requestPayment 에러:", {
           name: paymentError instanceof Error ? paymentError.name : undefined,
@@ -313,22 +321,7 @@ export default function PaymentWidget({
   }
 
   // 결제 위젯이 초기화되면 자동으로 결제 요청이 시작되므로
-  // 여기서는 로딩 상태만 표시
-  return (
-    <div className="space-y-4">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#ff6b9d] mx-auto mb-4"></div>
-        <p className="text-sm text-[#8b7d84]">결제창을 불러오는 중...</p>
-      </div>
-      {onClose && (
-        <Button
-          onClick={onClose}
-          variant="outline"
-          className="w-full border-[#f5d5e3] text-[#4a3f48] hover:bg-[#fef8fb]"
-        >
-          취소
-        </Button>
-      )}
-    </div>
-  );
+  // Toss Payments SDK가 자체 오버레이를 생성하므로 여기서는 숨겨진 컴포넌트로 렌더링
+  // requestPayment 호출 시 Toss Payments가 자동으로 오버레이 모달을 표시함
+  return null;
 }

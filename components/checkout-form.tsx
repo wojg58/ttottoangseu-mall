@@ -1166,27 +1166,23 @@ export default function CheckoutForm({
       </div>
       </div>
 
-      {/* PaymentWidget 오버레이 (모달 형태) */}
+      {/* PaymentWidget - Toss Payments SDK가 자체 오버레이를 생성하므로 여기서는 컴포넌트만 렌더링 */}
       {showPaymentWidget && paymentWidgetData && selectedPaymentMethod && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <PaymentWidget
-              orderId={paymentWidgetData.orderId}
-              amount={paymentWidgetData.amount}
-              orderName={paymentWidgetData.orderName}
-              customerName={paymentWidgetData.customerName}
-              customerEmail={paymentWidgetData.customerEmail}
-              paymentMethod={selectedPaymentMethod}
-              depositorName={selectedPaymentMethod === "TRANSFER" ? depositorName : undefined}
-              useEscrow={selectedPaymentMethod === "TRANSFER" ? useEscrow : false}
-              onClose={() => {
-                logger.info("[CheckoutForm] PaymentWidget 닫기");
-                setShowPaymentWidget(false);
-                setPaymentWidgetData(null);
-              }}
-            />
-          </div>
-        </div>
+        <PaymentWidget
+          orderId={paymentWidgetData.orderId}
+          amount={paymentWidgetData.amount}
+          orderName={paymentWidgetData.orderName}
+          customerName={paymentWidgetData.customerName}
+          customerEmail={paymentWidgetData.customerEmail}
+          paymentMethod={selectedPaymentMethod}
+          depositorName={selectedPaymentMethod === "TRANSFER" ? depositorName : undefined}
+          useEscrow={selectedPaymentMethod === "TRANSFER" ? useEscrow : false}
+          onClose={() => {
+            logger.info("[CheckoutForm] PaymentWidget 닫기");
+            setShowPaymentWidget(false);
+            setPaymentWidgetData(null);
+          }}
+        />
       )}
     </>
   );
