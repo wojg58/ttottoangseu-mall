@@ -146,16 +146,31 @@ export default function PaymentWidget({
         logger.info("[PaymentWidget] ✅ 결제창 호출 완료 (오버레이 모달 표시됨)");
         logger.groupEnd();
       } catch (err) {
-        logger.error("[PaymentWidget] ❌ 결제 요청 에러:", {
-          error: err,
-          message: err instanceof Error ? err.message : String(err),
-        });
+        // 에러 객체를 자세히 로깅
+        logger.error("[PaymentWidget] ❌ 결제 요청 에러:", err);
+        
+        if (err && typeof err === 'object') {
+          logger.error("[PaymentWidget] 에러 상세:", {
+            name: (err as any).name,
+            message: (err as any).message,
+            code: (err as any).code,
+            stack: (err as any).stack,
+            allKeys: Object.keys(err),
+            fullError: JSON.stringify(err, null, 2),
+          });
+        }
         logger.groupEnd();
 
         // 사용자가 결제창을 닫은 경우는 에러로 처리하지 않음
         const errorMessage = err instanceof Error ? err.message : String(err);
-        if (!errorMessage.includes("CANCELED") && !errorMessage.includes("USER_CANCEL")) {
-          alert(`결제 요청 중 오류가 발생했습니다: ${errorMessage}`);
+        const errorCode = (err as any)?.code || '';
+        
+        if (!errorMessage.includes("CANCELED") && 
+            !errorMessage.includes("USER_CANCEL") &&
+            errorCode !== "USER_CANCEL") {
+          alert(`결제 요청 중 오류가 발생했습니다.\n\n에러 코드: ${errorCode}\n에러 메시지: ${errorMessage}`);
+        } else {
+          logger.info("[PaymentWidget] 사용자가 결제를 취소했습니다");
         }
 
         onClose?.();
