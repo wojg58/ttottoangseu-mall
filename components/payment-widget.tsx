@@ -1,24 +1,20 @@
 /**
  * @file components/payment-widget.tsx
- * @description TossPayments 결제 위젯 컴포넌트
+ * @description TossPayments 결제창 컴포넌트
  *
  * 주요 기능:
- * 1. TossPayments 결제 위젯 초기화
- * 2. 결제 요청 처리
- * 3. 결제 완료/실패 처리
+ * 1. TossPayments 결제창 자동 호출
+ * 2. 오버레이 모달 형태로 결제창 표시
+ * 3. 카드사 선택 및 카드 정보 입력 화면 제공
  *
  * @dependencies
- * - @tosspayments/payment-widget-sdk: TossPayments 결제 위젯 SDK
+ * - @tosspayments/tosspayments-sdk: TossPayments SDK
  */
 
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import {
-  PaymentWidgetInstance,
-  loadPaymentWidget,
-} from "@tosspayments/payment-widget-sdk";
-import { Button } from "@/components/ui/button";
+import { useEffect, useState } from "react";
+import { loadTossPayments } from "@tosspayments/tosspayments-sdk";
 import logger from "@/lib/logger";
 
 interface PaymentWidgetProps {
@@ -44,14 +40,23 @@ export default function PaymentWidget({
   useEscrow = false,
   onClose,
 }: PaymentWidgetProps) {
-  const paymentWidgetRef = useRef<PaymentWidgetInstance | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [isRequesting, setIsRequesting] = useState(false);
 
+  // 결제창 자동 호출
   useEffect(() => {
-    logger.group("[PaymentWidget] 결제 위젯 초기화 시작");
-    logger.debug("주문 정보:", {
+    if (isRequesting) return;
+
+    const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY || process.env.NEXT_PUBLIC_TOSS_PAYMENTS_CLIENT_KEY;
+
+    if (!clientKey) {
+      logger.error("[PaymentWidget] ❌ NEXT_PUBLIC_TOSS_CLIENT_KEY 환경변수가 설정되지 않았습니다.");
+      alert("결제 설정이 올바르지 않습니다.");
+      onClose?.();
+      return;
+    }
+
+    logger.group("[PaymentWidget] 결제창 초기화 시작");
+    logger.info("주문 정보:", {
       orderId,
       orderName,
       amount: amount.toLocaleString("ko-KR") + "원",
@@ -60,268 +65,119 @@ export default function PaymentWidget({
       paymentMethod,
     });
 
-    const initializePaymentWidget = async () => {
+    const requestPayment = async () => {
+      setIsRequesting(true);
+
       try {
-        // 클라이언트 키는 환경 변수에서 가져옴
-        const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY || process.env.NEXT_PUBLIC_TOSS_PAYMENTS_CLIENT_KEY;
-        logger.debug("[PaymentWidget] 클라이언트 키 확인:", {
-          exists: !!clientKey,
-          startsWithTest: clientKey?.startsWith("test_"),
-          length: clientKey?.length,
-        });
-        
-        if (!clientKey) {
-          throw new Error("TossPayments 클라이언트 키가 설정되지 않았습니다.");
+        logger.info("[PaymentWidget] TossPayments SDK 로드 시작");
+        const tossPayments = await loadTossPayments(clientKey);
+        logger.info("[PaymentWidget] ✅ TossPayments SDK 로드 완료");
+
+        // Payment 인스턴스 생성 (customerKey는 이메일 사용)
+        const payment = tossPayments.payment({ customerKey: customerEmail });
+        logger.info("[PaymentWidget] ✅ Payment 인스턴스 생성 완료");
+
+        // 필수 값 검증
+        if (!orderId || !amount || !customerName || !customerEmail || !paymentMethod) {
+          logger.error("[PaymentWidget] ❌ 필수 입력값 누락:", {
+            orderId: !!orderId,
+            amount: !!amount,
+            customerName: !!customerName,
+            customerEmail: !!customerEmail,
+            paymentMethod: !!paymentMethod,
+          });
+          alert("결제 정보가 불완전합니다. 페이지를 새로고침해주세요.");
+          onClose?.();
+          logger.groupEnd();
+          return;
         }
 
-        // customerKey 생성: 이메일을 안전한 형식으로 변환
-        // 형식: 영문 대소문자, 숫자, 특수문자('-','_','=','','@')로 최소 2자 이상 최대 50자 이하
-        // 이메일 주소를 base64로 인코딩한 후 형식에 맞게 변환
-        let customerKey = '';
-        try {
-          // 이메일을 base64로 인코딩
-          const base64Email = btoa(customerEmail).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
-          // base64는 이미 영문, 숫자, '-', '_'만 포함하므로 형식에 맞음
-          // 길이 제한 확인 (최대 50자)
-          customerKey = base64Email.length > 50 ? base64Email.substring(0, 50) : base64Email;
-          
-          // 최소 길이 확인 (2자 이상)
-          if (customerKey.length < 2) {
-            // 이메일이 너무 짧으면 이메일의 사용자 부분만 사용
-            const emailUser = customerEmail.split('@')[0] || 'user';
-            customerKey = emailUser.replace(/[^a-zA-Z0-9\-_=@.]/g, '_').substring(0, 50);
-            if (customerKey.length < 2) {
-              customerKey = 'customer_' + Date.now().toString().slice(-10);
-            }
-          }
-        } catch (e) {
-          // base64 인코딩 실패 시 이메일의 사용자 부분만 사용
-          const emailUser = customerEmail.split('@')[0] || 'user';
-          customerKey = emailUser.replace(/[^a-zA-Z0-9\-_=@.]/g, '_').substring(0, 50);
-          if (customerKey.length < 2) {
-            customerKey = 'customer_' + Date.now().toString().slice(-10);
-          }
-        }
-        
-        logger.debug("[PaymentWidget] 결제 위젯 로드 시작", {
-          clientKeyPrefix: clientKey.substring(0, 10) + "...",
-          customerEmail,
-          customerKey,
-          customerKeyLength: customerKey.length,
-        });
-        
-        const paymentWidget = await loadPaymentWidget(clientKey, customerKey);
-        paymentWidgetRef.current = paymentWidget;
-        logger.debug("[PaymentWidget] ✅ 결제 위젯 인스턴스 생성 완료");
+        // BASE_URL 설정
+        const BASE_URL = window.location.origin;
 
-        setIsLoading(false);
-        logger.debug("[PaymentWidget] ✅ 결제 위젯 초기화 완료");
-        logger.groupEnd();
-      } catch (err) {
-        logger.error("[PaymentWidget] ❌ 결제 위젯 초기화 에러:", err);
-        setError(
-          err instanceof Error
-            ? err.message
-            : "결제 위젯 초기화에 실패했습니다.",
-        );
-        setIsLoading(false);
-        logger.groupEnd();
-      }
-    };
-
-    initializePaymentWidget();
-  }, [orderId, amount, customerEmail, customerName]);
-
-  // 결제 위젯 초기화 후 자동으로 결제 요청 (오버레이 표시)
-  useEffect(() => {
-    if (!isLoading && !error && paymentWidgetRef.current && paymentMethod && !isRequesting) {
-      logger.info("[PaymentWidget] 결제 위젯 초기화 완료 - 자동 결제 요청 (오버레이 표시)");
-      // 약간의 지연 후 결제 요청 (위젯이 완전히 로드되도록)
-      const timer = setTimeout(() => {
-        handlePayment();
-      }, 300);
-      return () => clearTimeout(timer);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoading, error, paymentMethod]);
-
-  const handlePayment = async () => {
-    if (isRequesting) {
-      logger.warn("[PaymentWidget] 이미 결제 요청 중");
-      return;
-    }
-
-    logger.group("[PaymentWidget] 결제 요청 시작");
-    logger.debug("결제 정보:", {
-      orderId,
-      orderName,
-      amount: amount.toLocaleString("ko-KR") + "원",
-      paymentMethod,
-      customerName,
-      customerEmail,
-    });
-    logger.debug("결제 위젯 상태:", {
-      paymentWidget: !!paymentWidgetRef.current,
-      isLoading,
-      error,
-    });
-
-    // 계좌이체 선택 시 입금자명 검증
-    if (paymentMethod === "TRANSFER" && (!depositorName || !depositorName.trim())) {
-      logger.warn("[PaymentWidget] 입금자명 미입력");
-      alert("입금자명을 입력해주세요.");
-      logger.groupEnd();
-      return;
-    }
-
-    if (!paymentWidgetRef.current) {
-      logger.error("[PaymentWidget] ❌ 결제 위젯이 초기화되지 않음");
-      alert("결제 위젯을 불러오는 중입니다. 잠시 후 다시 시도해주세요.");
-      logger.groupEnd();
-      return;
-    }
-
-    if (isLoading) {
-      logger.error("[PaymentWidget] ❌ 결제 위젯이 아직 로딩 중");
-      alert("결제 위젯을 불러오는 중입니다. 잠시 후 다시 시도해주세요.");
-      logger.groupEnd();
-      return;
-    }
-
-    if (error) {
-      logger.error("[PaymentWidget] ❌ 결제 위젯 초기화 에러:", error);
-      alert(`결제 위젯 오류: ${error}`);
-      logger.groupEnd();
-      return;
-    }
-
-    setIsRequesting(true);
-
-    try {
-      // 필수 값 검증
-      if (!orderId || !amount || !customerName || !customerEmail || !paymentMethod) {
-        logger.error("[PaymentWidget] ❌ 필수 입력값 누락:", {
-          orderId: !!orderId,
-          amount: !!amount,
-          customerName: !!customerName,
-          customerEmail: !!customerEmail,
-          paymentMethod: !!paymentMethod,
-        });
-        alert("결제 정보가 불완전합니다. 페이지를 새로고침해주세요.");
-        logger.groupEnd();
-        setIsRequesting(false);
-        return;
-      }
-
-      // BASE_URL 설정
-      const BASE_URL = window.location.origin;
-
-      // 결제 위젯 실행 (TossPayments 위젯이 자동으로 오버레이로 결제창 표시)
-      // requestPayment 호출 시 자동으로 오버레이 모달이 표시됨 (카드사 선택, 약관 동의, 카드번호 입력 화면 포함)
-      const paymentRequest: any = {
-        orderId: orderId,
-        orderName: orderName,
-        customerName,
-        customerEmail,
-        successUrl: `${BASE_URL}/order/success?paymentKey={paymentKey}&orderId=${orderId}&amount=${amount}`,
-        failUrl: `${BASE_URL}/order/fail?message={message}`,
-      };
-
-      // 결제수단에 따라 method 지정
-      if (paymentMethod === "CARD") {
-        // 신용카드 결제 - method를 "CARD"로 설정하면 카드사 선택 화면이 오버레이로 표시됨
-        paymentRequest.method = "CARD";
-        logger.info("[PaymentWidget] 신용카드 결제 모드 - 카드사 선택 화면이 오버레이로 표시됩니다");
-      } else if (paymentMethod === "TRANSFER") {
-        // 실시간 계좌이체
-        paymentRequest.method = "TRANSFER";
-        paymentRequest.transfer = {
-          useEscrow: useEscrow,
+        // 결제 요청 객체 생성
+        const paymentRequest: any = {
+          method: paymentMethod === "CARD" ? "CARD" : "TRANSFER",
+          amount: {
+            currency: "KRW",
+            value: amount,
+          },
+          orderId: orderId,
+          orderName: orderName,
+          customerName: customerName,
+          customerEmail: customerEmail,
+          successUrl: `${BASE_URL}/order/success?paymentKey={paymentKey}&orderId=${orderId}&amount=${amount}`,
+          failUrl: `${BASE_URL}/order/fail?message={message}`,
         };
-        // 입금자명이 있으면 추가
-        if (depositorName && depositorName.trim()) {
-          paymentRequest.customerName = depositorName.trim();
-        }
-      }
 
-      logger.info("[PaymentWidget] TossPayments 결제 위젯 실행 (오버레이):", {
-        orderId: paymentRequest.orderId,
-        orderName: paymentRequest.orderName,
-        paymentMethod,
-        method: paymentRequest.method,
-        successUrl: paymentRequest.successUrl,
-        failUrl: paymentRequest.failUrl,
-      });
-      
-      try {
-        logger.debug("[PaymentWidget] requestPayment 호출 직전");
-        logger.info("[PaymentWidget] 결제위젯 오버레이 모달 표시 시작", {
+        // 결제수단별 추가 설정
+        if (paymentMethod === "CARD") {
+          // 신용카드 결제
+          paymentRequest.card = {
+            useEscrow: false,
+            flowMode: "DEFAULT", // DEFAULT: 통합 결제창 (카드사 선택 화면 포함)
+            useCardPoint: false,
+            useAppCardOnly: false,
+          };
+          logger.info("[PaymentWidget] 신용카드 결제 모드 - 통합 결제창이 오버레이로 표시됩니다");
+          logger.info("[PaymentWidget] 카드사 선택 → 약관 동의 → 카드번호/유효기간/CVC 입력 화면이 순서대로 표시됩니다");
+        } else if (paymentMethod === "TRANSFER") {
+          // 실시간 계좌이체
+          paymentRequest.transfer = {
+            useEscrow: useEscrow,
+          };
+          // 입금자명이 있으면 추가
+          if (depositorName && depositorName.trim()) {
+            paymentRequest.customerName = depositorName.trim();
+          }
+          logger.info("[PaymentWidget] 계좌이체 결제 모드");
+        }
+
+        logger.info("[PaymentWidget] 결제창 호출:", {
           method: paymentRequest.method,
           orderId: paymentRequest.orderId,
           orderName: paymentRequest.orderName,
+          amount: paymentRequest.amount,
         });
-        // requestPayment 호출 시 자동으로 오버레이 형태로 결제창이 표시됨
-        // CARD 모드일 경우: 카드사 선택 → 약관 동의 → 카드번호/유효기간/CVC 입력 화면 순서로 진행
-        await paymentWidgetRef.current.requestPayment(paymentRequest);
-        logger.debug("[PaymentWidget] ✅ requestPayment 호출 완료 (오버레이 모달 표시됨)");
-      } catch (paymentError) {
-        logger.error("[PaymentWidget] ❌ requestPayment 에러:", {
-          name: paymentError instanceof Error ? paymentError.name : undefined,
-          message: paymentError instanceof Error ? paymentError.message : String(paymentError),
-          stack: paymentError instanceof Error ? paymentError.stack : undefined,
+
+        // 결제창 호출 - 자동으로 오버레이 모달이 표시됨
+        // CARD 모드: 카드사 선택 화면 → 약관 동의 → 카드 정보 입력 화면
+        await payment.requestPayment(paymentRequest);
+        logger.info("[PaymentWidget] ✅ 결제창 호출 완료 (오버레이 모달 표시됨)");
+        logger.groupEnd();
+      } catch (err) {
+        logger.error("[PaymentWidget] ❌ 결제 요청 에러:", {
+          error: err,
+          message: err instanceof Error ? err.message : String(err),
         });
-        throw paymentError;
+        logger.groupEnd();
+
+        // 사용자가 결제창을 닫은 경우는 에러로 처리하지 않음
+        const errorMessage = err instanceof Error ? err.message : String(err);
+        if (!errorMessage.includes("CANCELED") && !errorMessage.includes("USER_CANCEL")) {
+          alert(`결제 요청 중 오류가 발생했습니다: ${errorMessage}`);
+        }
+
+        onClose?.();
+      } finally {
+        setIsRequesting(false);
       }
+    };
 
-      logger.groupEnd();
-    } catch (err) {
-      logger.error("[PaymentWidget] ❌ 결제 요청 전체 프로세스 에러:", {
-        error: err,
-        message: err instanceof Error ? err.message : String(err),
-        stack: err instanceof Error ? err.stack : undefined,
-      });
-      const errorMessage = err instanceof Error ? err.message : "결제 요청에 실패했습니다.";
-      alert(errorMessage);
-      setIsRequesting(false);
-      logger.groupEnd();
-    }
-  };
+    requestPayment();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // 컴포넌트 마운트 시 한 번만 실행
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-8">
+  // 결제창이 열리는 동안 로딩 표시
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+      <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#ff6b9d] mx-auto mb-4"></div>
-          <p className="text-sm text-[#8b7d84]">결제 위젯을 불러오는 중...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#ff6b9d] mx-auto mb-4"></div>
+          <p className="text-base font-medium text-[#4a3f48] mb-2">결제창을 불러오는 중...</p>
+          <p className="text-sm text-[#8b7d84]">잠시만 기다려주세요</p>
         </div>
       </div>
-    );
-  }
-
-  // 에러 메시지 표시
-  if (error) {
-    return (
-      <div className="space-y-4">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <p className="text-sm text-red-600">{error}</p>
-          <p className="text-xs text-red-500 mt-2">
-            ⚠️ 결제 위젯 초기화에 문제가 있습니다. 페이지를 새로고침해주세요.
-          </p>
-        </div>
-        {onClose && (
-          <Button
-            onClick={onClose}
-            className="w-full bg-[#ff6b9d] hover:bg-[#ff5088] text-white"
-          >
-            닫기
-          </Button>
-        )}
-      </div>
-    );
-  }
-
-  // 결제 위젯이 초기화되면 자동으로 결제 요청이 시작되므로
-  // Toss Payments SDK가 자체 오버레이를 생성하므로 여기서는 숨겨진 컴포넌트로 렌더링
-  // requestPayment 호출 시 Toss Payments가 자동으로 오버레이 모달을 표시함
-  return null;
+    </div>
+  );
 }
