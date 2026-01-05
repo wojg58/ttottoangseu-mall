@@ -59,16 +59,17 @@ export default async function middleware(
     const headers = new Headers(response.headers);
     
     // Content Security Policy - 서드 파티 스크립트 허용 (필요한 도메인만)
+    // Clerk Production 도메인 추가: https://clerk.ttottoangseu.co.kr, https://*.clerk.services
     const csp = [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.clerk.accounts.dev https://www.googletagmanager.com https://www.google-analytics.com https://cdn.channel.io https://channels.angel.co https://t1.daumcdn.net https://js.tosspayments.com",
-      "worker-src 'self' blob: https://*.clerk.accounts.dev",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.clerk.accounts.dev https://clerk.ttottoangseu.co.kr https://*.clerk.services https://www.googletagmanager.com https://www.google-analytics.com https://cdn.channel.io https://channels.angel.co https://t1.daumcdn.net https://js.tosspayments.com",
+      "worker-src 'self' blob: https://*.clerk.accounts.dev https://clerk.ttottoangseu.co.kr https://*.clerk.services",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net data:",
       "img-src 'self' data: https: blob:",
       "media-src 'self' data: blob:",
-      "connect-src 'self' https://www.google-analytics.com https://analytics.google.com https://*.clerk.accounts.dev https://*.clerk-telemetry.com https://*.supabase.co https://api.channel.io https://*.ingest.sentry.io https://*.sentry.io https://t1.daumcdn.net https://api.tosspayments.com https://log.tosspayments.com https://*.tosspayments.com",
-      "frame-src 'self' https://*.clerk.accounts.dev https://channels.angel.co https://t1.daumcdn.net https://postcode.map.daum.net https://pay.tosspayments.com https://*.tosspayments.com https://pay.toss.im",
+      "connect-src 'self' https://www.google-analytics.com https://analytics.google.com https://*.clerk.accounts.dev https://clerk.ttottoangseu.co.kr https://*.clerk.services https://*.clerk-telemetry.com https://*.supabase.co https://api.channel.io https://*.ingest.sentry.io https://*.sentry.io https://t1.daumcdn.net https://api.tosspayments.com https://log.tosspayments.com https://*.tosspayments.com",
+      "frame-src 'self' https://*.clerk.accounts.dev https://clerk.ttottoangseu.co.kr https://*.clerk.services https://channels.angel.co https://t1.daumcdn.net https://postcode.map.daum.net https://pay.tosspayments.com https://*.tosspayments.com https://pay.toss.im",
       "object-src 'none'",
       "base-uri 'self'",
       "form-action 'self'",
