@@ -509,19 +509,20 @@ export default function CheckoutForm({
   // 결제하기 버튼 클릭 핸들러 (토스페이먼츠 결제위젯 오버레이 방식)
   const handlePaymentClick = async () => {
     logger.group("[CheckoutForm] 결제하기 버튼 클릭");
+    logger.info("[CheckoutForm] 현재 selectedPaymentMethod state:", selectedPaymentMethod);
     
-    // 1. 폼 유효성 검사
-    const isValid = await form.trigger();
-    if (!isValid) {
-      logger.warn("[CheckoutForm] 폼 유효성 검사 실패");
+    // 1. 결제수단 선택 확인 (가장 먼저 검증)
+    if (!selectedPaymentMethod || (selectedPaymentMethod !== "CARD" && selectedPaymentMethod !== "TRANSFER")) {
+      logger.warn("[CheckoutForm] 결제수단 미선택 또는 잘못된 값", { selectedPaymentMethod });
+      alert("결제수단이 아직 선택되지 않았어요. 결제수단을 선택해 주세요.");
       logger.groupEnd();
       return;
     }
 
-    // 2. 결제수단 선택 확인
-    if (!selectedPaymentMethod) {
-      logger.warn("[CheckoutForm] 결제수단 미선택");
-      alert("결제 수단을 선택해주세요");
+    // 2. 폼 유효성 검사
+    const isValid = await form.trigger();
+    if (!isValid) {
+      logger.warn("[CheckoutForm] 폼 유효성 검사 실패");
       logger.groupEnd();
       return;
     }
@@ -1017,10 +1018,12 @@ export default function CheckoutForm({
                   name="paymentMethod"
                   value="CARD"
                   checked={selectedPaymentMethod === "CARD"}
-                  onChange={() => {
-                    logger.info("[결제수단] 신용카드 결제 선택");
-                    setSelectedPaymentMethod("CARD");
+                  onChange={(e) => {
+                    const value = e.target.value as "CARD";
+                    logger.info("[결제수단] 신용카드 결제 선택", { value });
+                    setSelectedPaymentMethod(value);
                     form.setValue("paymentMethod", "TOSS_PAYMENTS");
+                    logger.info("[결제수단] selectedPaymentMethod state 업데이트:", value);
                   }}
                   className="w-5 h-5 text-[#ff6b9d] border-[#f5d5e3] focus:ring-[#ff6b9d]"
                 />
@@ -1040,10 +1043,12 @@ export default function CheckoutForm({
                   name="paymentMethod"
                   value="TRANSFER"
                   checked={selectedPaymentMethod === "TRANSFER"}
-                  onChange={() => {
-                    logger.info("[결제수단] 에스크로(실시간 계좌이체) 선택");
-                    setSelectedPaymentMethod("TRANSFER");
+                  onChange={(e) => {
+                    const value = e.target.value as "TRANSFER";
+                    logger.info("[결제수단] 에스크로(실시간 계좌이체) 선택", { value });
+                    setSelectedPaymentMethod(value);
                     form.setValue("paymentMethod", "TOSS_PAYMENTS");
+                    logger.info("[결제수단] selectedPaymentMethod state 업데이트:", value);
                   }}
                   className="w-5 h-5 text-[#ff6b9d] border-[#f5d5e3] focus:ring-[#ff6b9d]"
                 />
