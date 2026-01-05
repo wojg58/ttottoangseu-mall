@@ -124,10 +124,11 @@ export default function QuickPaymentForm() {
         {/* 결제 위젯 */}
         <PaymentWidget
           orderId={orderId}
-          orderNumber={orderNumber}
+          orderName={`간편 결제 주문 (${orderNumber})`}
           amount={PAYMENT_AMOUNT}
           customerName={form.getValues("customerName")}
           customerEmail={form.getValues("customerEmail")}
+          paymentMethod="CARD"
         />
       </div>
     );
