@@ -12,11 +12,12 @@
 
 "use client";
 
+import { Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { XCircle } from "lucide-react";
 
-export default function OrderFailPage() {
+function OrderFailContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -49,6 +50,18 @@ export default function OrderFailPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function OrderFailPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">로딩 중...</div>
+      </div>
+    }>
+      <OrderFailContent />
+    </Suspense>
   );
 }
 
