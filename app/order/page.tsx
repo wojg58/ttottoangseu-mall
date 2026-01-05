@@ -72,19 +72,27 @@ export default function OrderPage() {
 
         logger.info("✅ 결제위젯 인스턴스 생성 완료");
 
-        // 장바구니에서 금액 계산 (표시용, 실제 금액은 서버에서 검증)
+        // 장바구니에서 금액 계산 (서버와 동일한 로직 사용)
         try {
           const cartItems = await getCartItems();
-          const subtotal = cartItems.reduce(
-            (sum, item) => sum + item.price * item.quantity,
-            0
-          );
+          
+          // 서버와 동일한 로직으로 금액 계산
+          let subtotal = 0;
+          for (const item of cartItems) {
+            // discount_price가 있으면 우선 사용, 없으면 price 사용
+            const basePrice = item.product.discount_price ?? item.product.price;
+            // variant의 price_adjustment 고려
+            const adjustment = item.variant?.price_adjustment ?? 0;
+            const itemPrice = basePrice + adjustment;
+            subtotal += itemPrice * item.quantity;
+          }
+          
           const shippingFee = subtotal >= 50000 ? 0 : 3000;
           const total = subtotal + shippingFee;
 
           setTotalAmount(total);
 
-          logger.info("장바구니 금액 계산 완료:", {
+          logger.info("장바구니 금액 계산 완료 (서버 로직과 동일):", {
             subtotal,
             shippingFee,
             total,
@@ -182,6 +190,11 @@ export default function OrderPage() {
         orderName,
         customerName,
         customerEmail,
+        // 결제 금액 설정 (서버에서 계산한 정확한 금액 사용)
+        amount: {
+          currency: "KRW",
+          value: amount,
+        },
         successUrl: `${successUrl}?paymentKey={paymentKey}&orderId=${orderId}&amount=${amount}`,
         failUrl: `${failUrl}?message={message}`,
         // 모달/오버레이 형태로 열리도록 설정
