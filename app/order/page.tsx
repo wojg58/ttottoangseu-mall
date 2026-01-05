@@ -36,7 +36,6 @@ export default function OrderPage() {
   );
   const [totalAmount, setTotalAmount] = useState<number>(0);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [paymentMethodsWidget, setPaymentMethodsWidget] = useState<any>(null);
   const [isWidgetReady, setIsWidgetReady] = useState(false);
 
   // 결제위젯 초기화 및 장바구니 금액 계산
@@ -90,39 +89,13 @@ export default function OrderPage() {
             shippingFee,
             total,
           });
-
-          // 결제위젯 UI를 미리 렌더링 (금액은 임시로 설정, 나중에 업데이트)
-          const container = document.getElementById("payment-methods");
-          if (container) {
-            const widget = paymentWidgetRef.current.renderPaymentMethods(
-              "#payment-methods",
-              { value: total }
-            );
-            setPaymentMethodsWidget(widget);
-
-            // 위젯이 준비되면 이벤트 리스너 등록
-            widget.on("ready", () => {
-              logger.info("✅ 결제위젯 UI 렌더링 완료");
-              setIsWidgetReady(true);
-            });
-
-            // 결제수단 선택 이벤트 리스너
-            widget.on("paymentMethodSelect", (selectedPaymentMethod: any) => {
-              logger.info("결제수단 선택됨 (위젯 내부):", selectedPaymentMethod);
-              // 위젯 내에서 선택된 결제수단에 따라 상태 업데이트
-              if (selectedPaymentMethod.code === "카드") {
-                setPaymentMethod("CARD");
-              } else if (selectedPaymentMethod.code === "계좌이체") {
-                setPaymentMethod("TRANSFER");
-              }
-            });
-          }
         } catch (cartError) {
           logger.warn("장바구니 조회 실패 (표시용이므로 계속 진행):", cartError);
           // 장바구니 조회 실패해도 결제는 가능 (서버에서 재계산)
         }
 
         setIsLoading(false);
+        setIsWidgetReady(true);
 
         logger.info("✅ 결제위젯 초기화 완료");
         logger.groupEnd();
@@ -200,62 +173,7 @@ export default function OrderPage() {
       const baseUrl =
         process.env.NEXT_PUBLIC_BASE_URL || window.location.origin;
 
-      // 3. 결제위젯 금액 업데이트
-      logger.info("결제위젯 금액 업데이트 시작");
-      
-      // 결제위젯이 이미 렌더링되어 있다면 금액만 업데이트
-      if (paymentMethodsWidget) {
-        // 금액 업데이트 (updateAmount 메서드가 있다면 사용)
-        try {
-          if (typeof paymentMethodsWidget.updateAmount === "function") {
-            paymentMethodsWidget.updateAmount({ value: amount });
-            logger.info("✅ 결제위젯 금액 업데이트 완료");
-          } else {
-            // updateAmount가 없다면 다시 렌더링
-            paymentMethodsWidget.destroy?.();
-            const widget = paymentWidgetRef.current.renderPaymentMethods(
-              "#payment-methods",
-              { value: amount }
-            );
-            setPaymentMethodsWidget(widget);
-            logger.info("✅ 결제위젯 재렌더링 완료");
-          }
-        } catch (updateError) {
-          logger.warn("금액 업데이트 실패, 재렌더링 시도:", updateError);
-          // 재렌더링
-          if (paymentMethodsWidget.destroy) {
-            await paymentMethodsWidget.destroy();
-          }
-          const widget = paymentWidgetRef.current.renderPaymentMethods(
-            "#payment-methods",
-            { value: amount }
-          );
-          setPaymentMethodsWidget(widget);
-        }
-      } else {
-        // 결제위젯이 렌더링되지 않았다면 렌더링
-        const container = document.getElementById("payment-methods");
-        if (!container) {
-          const newContainer = document.createElement("div");
-          newContainer.id = "payment-methods";
-          document.body.appendChild(newContainer);
-        }
-        const widget = paymentWidgetRef.current.renderPaymentMethods(
-          "#payment-methods",
-          { value: amount }
-        );
-        setPaymentMethodsWidget(widget);
-        logger.info("✅ 결제위젯 렌더링 완료");
-      }
-
-      // 4. 위젯이 준비될 때까지 대기
-      if (!isWidgetReady && paymentMethodsWidget) {
-        logger.info("결제위젯 준비 대기 중...");
-        // 위젯이 준비될 때까지 잠시 대기
-        await new Promise((resolve) => setTimeout(resolve, 500));
-      }
-
-      // 5. 결제수단에 따라 requestPayment 호출
+      // 3. 결제수단에 따라 requestPayment 호출
       const successUrl = `${baseUrl}/order/success`;
       const failUrl = `${baseUrl}/order/fail`;
 
@@ -266,27 +184,37 @@ export default function OrderPage() {
         customerEmail,
         successUrl: `${successUrl}?paymentKey={paymentKey}&orderId=${orderId}&amount=${amount}`,
         failUrl: `${failUrl}?message={message}`,
+        // 모달/오버레이 형태로 열리도록 설정
+        windowTarget: "iframe", // PC 환경에서 iframe으로 열림 (모달 형태)
       };
 
-      // 결제수단 설정 (위젯 내에서 선택된 결제수단 사용)
-      // 위젯 내에서 선택되지 않았다면 method를 지정
+      // 결제수단 설정
       if (paymentMethod === "CARD") {
-        paymentRequest.method = "카드";
+        paymentRequest.method = "CARD";
+        paymentRequest.card = {
+          useEscrow: false,
+          useCardPoint: false,
+          useAppCardOnly: false,
+        };
         logger.info("신용카드 결제 요청");
       } else if (paymentMethod === "TRANSFER") {
-        paymentRequest.method = "계좌이체";
-        logger.info("계좌이체 결제 요청");
+        paymentRequest.method = "TRANSFER";
+        paymentRequest.transfer = {
+          useEscrow: true, // 에스크로 계좌이체
+        };
+        logger.info("에스크로 계좌이체 결제 요청");
       }
 
       logger.info("requestPayment 호출:", {
         orderId: paymentRequest.orderId,
         method: paymentRequest.method,
+        windowTarget: paymentRequest.windowTarget,
         successUrl: paymentRequest.successUrl,
         failUrl: paymentRequest.failUrl,
       });
 
-      // 6. 결제 요청 (모달이 자동으로 열림)
-      // 위젯 내에서 결제수단이 선택되지 않았어도 method를 지정하면 진행 가능
+      // 4. 결제 요청 (모달이 자동으로 열림)
+      // requestPayment를 호출하면 결제위젯이 모달/오버레이 형태로 열림
       await paymentWidgetRef.current.requestPayment(paymentRequest);
 
       logger.info("✅ requestPayment 호출 완료 (리다이렉트 예정)");
@@ -333,12 +261,44 @@ export default function OrderPage() {
       <div className="shop-container max-w-2xl mx-auto">
         <h1 className="text-2xl font-bold text-[#4a3f48] mb-8">주문/결제</h1>
 
-        {/* 결제수단 선택 안내 */}
+        {/* 결제수단 선택 */}
         <div className="space-y-4 mb-8">
           <h2 className="text-lg font-semibold text-[#4a3f48]">결제수단</h2>
-          <p className="text-sm text-[#8b7d84]">
-            아래에서 결제수단을 선택해주세요.
-          </p>
+          <div className="space-y-2">
+            <label className="flex items-center gap-2 cursor-pointer p-4 border border-[#f5d5e3] rounded-lg hover:bg-[#fef8fb] transition-colors">
+              <input
+                type="radio"
+                name="paymentMethod"
+                value="CARD"
+                checked={paymentMethod === "CARD"}
+                onChange={(e) => {
+                  logger.info("결제수단 선택: 신용카드");
+                  setPaymentMethod(e.target.value as PaymentMethod);
+                }}
+                className="w-4 h-4 text-[#ff6b9d] border-[#f5d5e3] focus:ring-[#ff6b9d]"
+              />
+              <span className="text-sm text-[#4a3f48] font-medium">
+                신용카드 결제
+              </span>
+            </label>
+
+            <label className="flex items-center gap-2 cursor-pointer p-4 border border-[#f5d5e3] rounded-lg hover:bg-[#fef8fb] transition-colors">
+              <input
+                type="radio"
+                name="paymentMethod"
+                value="TRANSFER"
+                checked={paymentMethod === "TRANSFER"}
+                onChange={(e) => {
+                  logger.info("결제수단 선택: 에스크로 계좌이체");
+                  setPaymentMethod(e.target.value as PaymentMethod);
+                }}
+                className="w-4 h-4 text-[#ff6b9d] border-[#f5d5e3] focus:ring-[#ff6b9d]"
+              />
+              <span className="text-sm text-[#4a3f48] font-medium">
+                에스크로(계좌이체)
+              </span>
+            </label>
+          </div>
         </div>
 
         {/* 결제금액 표시 */}
@@ -355,9 +315,6 @@ export default function OrderPage() {
             </div>
           </div>
         </div>
-
-        {/* 결제위젯 렌더링 영역 (표시) */}
-        <div id="payment-methods" className="mt-4"></div>
 
         {/* 결제하기 버튼 */}
         <Button
