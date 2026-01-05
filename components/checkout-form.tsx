@@ -30,6 +30,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import logger from "@/lib/logger";
 
 // Daum Postcode API 타입 정의
 declare global {
@@ -241,6 +242,7 @@ export default function CheckoutForm({
   shippingFee,
   total,
 }: CheckoutFormProps) {
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const searchParams = useSearchParams();
   const [orderId, setOrderId] = useState<string | null>(null);
@@ -474,23 +476,23 @@ export default function CheckoutForm({
   }, [ordererName, ordererPhone, useMemberInfo, form]);
 
   const onSubmit = (data: CheckoutFormData) => {
-    console.group("[CheckoutForm] 주문 생성 시작");
-    console.log("주문자 정보:", {
+    logger.group("[CheckoutForm] 주문 생성 시작");
+    logger.log("주문자 정보:", {
       name: data.ordererName,
       phone: data.ordererPhone,
       email: data.ordererEmail,
     });
-    console.log("배송 정보:", {
+    logger.log("배송 정보:", {
       name: data.shippingName,
       phone: data.shippingPhone,
       address: data.shippingAddress,
       zipCode: data.shippingZipCode,
       memo: data.shippingMemo,
     });
-    console.log("선택된 쿠폰:", selectedCoupon);
-    console.log("최종 결제 금액:", displayTotal);
-    console.log("결제 수단:", data.paymentMethod);
-    console.groupEnd();
+    logger.log("선택된 쿠폰:", selectedCoupon);
+    logger.log("최종 결제 금액:", displayTotal);
+    logger.log("결제 수단:", data.paymentMethod);
+    logger.groupEnd();
 
     startTransition(async () => {
       const result = await createOrder({
@@ -505,30 +507,35 @@ export default function CheckoutForm({
         couponId: selectedCoupon?.id || null,
       });
 
-      console.group("[CheckoutForm] 주문 생성 결과");
-      console.log("성공 여부:", result.success);
-      console.log("주문 ID:", result.orderId);
-      console.log("주문 번호:", result.orderNumber);
-      console.log("메시지:", result.message);
-      console.groupEnd();
+      logger.group("[CheckoutForm] 주문 생성 결과");
+      logger.log("성공 여부:", result.success);
+      logger.log("주문 ID:", result.orderId);
+      logger.log("주문 번호:", result.orderNumber);
+      logger.log("메시지:", result.message);
+      logger.groupEnd();
 
       if (result.success && result.orderId && result.orderNumber) {
-        console.log("[CheckoutForm] ✅ 주문 생성 성공 - 토스페이먼츠 결제 시작");
+        logger.log("[CheckoutForm] ✅ 주문 생성 성공 - 토스페이먼츠 결제 시작");
         
         // 주문 정보 상태 저장
         setOrderId(result.orderId);
         setOrderNumber(result.orderNumber);
         
         // 토스페이먼츠 결제 위젯 표시
-        console.log("[CheckoutForm] 토스페이먼츠 결제 위젯 표시", {
+        logger.log("[CheckoutForm] 토스페이먼츠 결제 위젯 표시", {
           orderId: result.orderId,
           orderNumber: result.orderNumber,
           amount: displayTotal,
         });
         
+        // Next.js 라우터를 사용하여 URL에 orderId 추가
+        // router.replace()를 사용하면 서버 컴포넌트도 새로운 URL을 인지합니다
+        logger.log("[CheckoutForm] URL에 orderId 추가 (router.replace):", result.orderId);
+        router.replace(`/checkout?orderId=${result.orderId}`, { scroll: false });
+        
         setShowPaymentWidget(true);
       } else {
-        console.error("[CheckoutForm] ❌ 주문 생성 실패:", result.message);
+        logger.error("[CheckoutForm] ❌ 주문 생성 실패:", result.message);
         alert(result.message);
       }
     });
@@ -886,7 +893,7 @@ export default function CheckoutForm({
                   onChange={(e) => {
                     const coupon = coupons.find((c) => c.id === e.target.value);
                     setSelectedCoupon(coupon || null);
-                    console.log("[CheckoutForm] 쿠폰 선택:", coupon);
+                    logger.log("[CheckoutForm] 쿠폰 선택:", coupon);
                   }}
                   className="w-full px-3 py-2 border border-[#f5d5e3] rounded-lg text-sm focus:border-[#ff6b9d] focus:ring-[#ff6b9d] focus:outline-none"
                   disabled={coupons.length === 0}
@@ -978,7 +985,7 @@ export default function CheckoutForm({
                   value="카드"
                   checked={selectedPaymentMethod === "카드"}
                   onChange={() => {
-                    console.log("[결제수단] 신용카드 결제 선택");
+                    logger.log("[결제수단] 신용카드 결제 선택");
                     setSelectedPaymentMethod("카드");
                     form.setValue("paymentMethod", "TOSS_PAYMENTS");
                   }}
@@ -1001,7 +1008,7 @@ export default function CheckoutForm({
                   value="계좌이체"
                   checked={selectedPaymentMethod === "계좌이체"}
                   onChange={() => {
-                    console.log("[결제수단] 에스크로(실시간 계좌이체) 선택");
+                    logger.log("[결제수단] 에스크로(실시간 계좌이체) 선택");
                     setSelectedPaymentMethod("계좌이체");
                     form.setValue("paymentMethod", "TOSS_PAYMENTS");
                   }}
@@ -1033,7 +1040,7 @@ export default function CheckoutForm({
                       type="text"
                       value={depositorName}
                       onChange={(e) => {
-                        console.log("[예금주명] 입력:", e.target.value);
+                        logger.log("[예금주명] 입력:", e.target.value);
                         setDepositorName(e.target.value);
                       }}
                       placeholder=""
@@ -1048,7 +1055,7 @@ export default function CheckoutForm({
                       id="escrow-checkout"
                       checked={useEscrow}
                       onChange={(e) => {
-                        console.log("[에스크로] 체크:", e.target.checked);
+                        logger.log("[에스크로] 체크:", e.target.checked);
                         setUseEscrow(e.target.checked);
                       }}
                       className="w-4 h-4 text-[#ff6b9d] border-[#d4d4d4] rounded focus:ring-[#ff6b9d] mt-0.5"
@@ -1102,9 +1109,9 @@ export default function CheckoutForm({
 
           <Button
             onClick={() => {
-              console.log("[CheckoutForm] 결제하기 버튼 클릭");
+              logger.log("[CheckoutForm] 결제하기 버튼 클릭");
               if (!selectedPaymentMethod) {
-                alert("토스페이먼츠 결제 연동중입니다");
+                alert("결제 수단을 선택해주세요");
                 return;
               }
               form.handleSubmit(onSubmit)();
