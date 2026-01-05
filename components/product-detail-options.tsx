@@ -115,6 +115,12 @@ export default function ProductDetailOptions({
   );
 
   const handleAddToCart = async () => {
+    console.log("[ProductDetailOptions] 장바구니 담기 버튼 클릭:", {
+      isSignedIn,
+      hasVariants,
+      selectedOptionsCount: selectedOptions.length,
+    });
+
     if (!isSignedIn) {
       console.log("[ProductDetailOptions] 로그인 필요");
       router.push("/sign-in?redirect_url=" + window.location.pathname);
@@ -144,6 +150,18 @@ export default function ProductDetailOptions({
               option.variant.id,
             );
             if (!result.success) {
+              console.error("[ProductDetailOptions] 장바구니 담기 실패:", {
+                option: option.variant.variant_value,
+                message: result.message,
+              });
+              
+              // 로그인 관련 에러인 경우 로그인 페이지로 리다이렉트
+              if (result.message.includes("로그인이 필요")) {
+                alert("로그인 세션이 만료되었습니다. 다시 로그인해주세요.");
+                router.push("/sign-in?redirect_url=" + window.location.pathname);
+                return;
+              }
+              
               alert(`${option.variant.variant_value}: ${result.message}`);
               return;
             }
@@ -155,6 +173,17 @@ export default function ProductDetailOptions({
           // 옵션이 없는 상품: 수량만 지정하여 장바구니에 추가
           const result = await addToCart(productId, quantity);
           if (!result.success) {
+            console.error("[ProductDetailOptions] 장바구니 담기 실패:", {
+              message: result.message,
+            });
+            
+            // 로그인 관련 에러인 경우 로그인 페이지로 리다이렉트
+            if (result.message.includes("로그인이 필요")) {
+              alert("로그인 세션이 만료되었습니다. 다시 로그인해주세요.");
+              router.push("/sign-in?redirect_url=" + window.location.pathname);
+              return;
+            }
+            
             alert(result.message);
             return;
           }

@@ -14,7 +14,15 @@ import type { CartItemWithProduct } from "@/types/database";
 // 현재 사용자의 Supabase user ID 조회
 async function getCurrentUserId(): Promise<string | null> {
   const { userId: clerkUserId } = await auth();
-  if (!clerkUserId) return null;
+  
+  logger.group("[getCurrentUserId] 사용자 ID 조회 시작");
+  logger.info("[getCurrentUserId] Clerk userId:", clerkUserId);
+  
+  if (!clerkUserId) {
+    logger.warn("[getCurrentUserId] Clerk userId가 없음 - 로그인하지 않음");
+    logger.groupEnd();
+    return null;
+  }
 
   const supabase = await createClient();
   let { data: user, error } = await supabase
@@ -24,8 +32,14 @@ async function getCurrentUserId(): Promise<string | null> {
     .is("deleted_at", null)
     .maybeSingle();
 
+  logger.info("[getCurrentUserId] Supabase 사용자 조회 결과:", {
+    found: !!user,
+    error: error?.message,
+  });
+
   // 사용자가 없으면 동기화 시도
   if (!user && !error) {
+    logger.info("[getCurrentUserId] 사용자가 없음 - 동기화 시도");
     try {
       const { clerkClient } = await import("@clerk/nextjs/server");
       const { getServiceRoleClient } = await import("@/lib/supabase/service-role");
@@ -34,6 +48,11 @@ async function getCurrentUserId(): Promise<string | null> {
       const clerkUser = await client.users.getUser(clerkUserId);
 
       if (clerkUser) {
+        logger.info("[getCurrentUserId] Clerk 사용자 정보 조회 성공:", {
+          id: clerkUser.id,
+          email: clerkUser.emailAddresses[0]?.emailAddress,
+        });
+
         const serviceSupabase = getServiceRoleClient();
         const userData = {
           clerk_user_id: clerkUser.id,
@@ -49,29 +68,46 @@ async function getCurrentUserId(): Promise<string | null> {
           .single();
 
         if (!insertError && newUser) {
+          logger.info("[getCurrentUserId] 사용자 동기화 성공:", newUser.id);
+          logger.groupEnd();
           return newUser.id;
+        } else {
+          logger.error("[getCurrentUserId] 사용자 동기화 실패:", insertError);
         }
+      } else {
+        logger.warn("[getCurrentUserId] Clerk 사용자 정보 조회 실패");
       }
     } catch (syncError) {
-      logger.error("사용자 동기화 실패", syncError);
+      logger.error("[getCurrentUserId] 사용자 동기화 중 예외 발생:", syncError);
     }
 
-    const { data: retryUser } = await supabase
+    // 동기화 후 다시 조회
+    const { data: retryUser, error: retryError } = await supabase
       .from("users")
       .select("id")
       .eq("clerk_user_id", clerkUserId)
       .is("deleted_at", null)
       .maybeSingle();
 
+    if (retryError) {
+      logger.error("[getCurrentUserId] 재조회 실패:", retryError);
+    } else if (retryUser) {
+      logger.info("[getCurrentUserId] 재조회 성공:", retryUser.id);
+    }
+
     user = retryUser;
   }
 
   if (error) {
-    logger.error("사용자 조회 실패", error);
+    logger.error("[getCurrentUserId] 사용자 조회 실패:", error);
+    logger.groupEnd();
     return null;
   }
 
-  return user?.id ?? null;
+  const result = user?.id ?? null;
+  logger.info("[getCurrentUserId] 최종 결과:", result);
+  logger.groupEnd();
+  return result;
 }
 
 // 장바구니 ID 조회/생성
