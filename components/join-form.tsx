@@ -311,11 +311,23 @@ export default function JoinForm() {
         throw new Error("Clerk SignUp이 초기화되지 않았습니다.");
       }
 
-      const result = await signUp.create({
+      // CAPTCHA 우회를 위한 옵션 (개발 환경)
+      const signUpOptions: any = {
         emailAddress: data.email,
         password: data.password,
         firstName: data.name,
-      });
+      };
+
+      // 개발 환경에서는 CAPTCHA를 우회
+      if (process.env.NODE_ENV === "development") {
+        logger.debug("[JoinForm] 개발 환경: CAPTCHA 우회 시도");
+        signUpOptions.unsafeMetadata = {
+          skipCaptcha: true,
+        };
+      }
+
+      logger.debug("[JoinForm] SignUp 옵션:", signUpOptions);
+      const result = await signUp.create(signUpOptions);
 
       logger.debug("[JoinForm] Clerk 회원가입 완료:", result);
 
@@ -374,11 +386,23 @@ export default function JoinForm() {
       logger.error("[JoinForm] 회원가입 에러:", error);
       logger.groupEnd();
 
-      alert(
-        error.errors?.[0]?.message ||
-          error.message ||
-          "회원가입 중 오류가 발생했습니다."
-      );
+      // CAPTCHA 에러 특별 처리
+      const errorMessage = error.errors?.[0]?.message || error.message || "";
+      const isCaptchaError = errorMessage.toLowerCase().includes("captcha");
+
+      if (isCaptchaError) {
+        alert(
+          "봇 방지 검증 중 오류가 발생했습니다.\n\n" +
+          "개발 환경에서는 Clerk Dashboard의 Bot Protection 설정을 확인해주세요.\n" +
+          "또는 페이지를 새로고침한 후 다시 시도해주세요."
+        );
+      } else {
+        alert(
+          error.errors?.[0]?.message ||
+            error.message ||
+            "회원가입 중 오류가 발생했습니다."
+        );
+      }
     } finally {
       setIsLoading(false);
     }
