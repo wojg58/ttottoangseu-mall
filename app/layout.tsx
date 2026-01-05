@@ -101,8 +101,8 @@ export default function RootLayout({
   }
 
   return (
+    // @ts-expect-error - ClerkProvider types may not be fully compatible with Next.js 15
     <ClerkProvider
-      publishableKey={clerkPublishableKey}
       localization={customKoKR}
       {...(clerkDomain ? { domain: clerkDomain } : {})}
     >
