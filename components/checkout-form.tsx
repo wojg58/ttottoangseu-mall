@@ -13,7 +13,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useUser } from "@clerk/nextjs";
 import { X, Plus, Minus } from "lucide-react";
-import { createOrder, getOrderById } from "@/actions/orders";
+import { getOrderById } from "@/actions/orders";
 import { removeFromCart, updateCartItemQuantity } from "@/actions/cart";
 import { getAvailableCoupons, type Coupon } from "@/actions/coupons";
 import { calculateCouponDiscount } from "@/lib/coupon-utils";
@@ -249,7 +249,6 @@ export default function CheckoutForm({
   shippingFee,
   total,
 }: CheckoutFormProps) {
-  const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const searchParams = useSearchParams();
   const [orderId, setOrderId] = useState<string | null>(null);
@@ -412,7 +411,7 @@ export default function CheckoutForm({
           console.error("[CheckoutForm] 주문 정보 로드 실패:", error);
         });
     }
-  }, [searchParams, orderNumber]);
+  }, [searchParams, orderNumber, form, user]);
 
   // 쿠폰 목록 가져오기
   useEffect(() => {
@@ -650,7 +649,7 @@ export default function CheckoutForm({
     });
   };
 
-  const onSubmit = (data: CheckoutFormData) => {
+  const onSubmit = (_data: CheckoutFormData) => {
     // 이 함수는 더 이상 사용하지 않지만, 폼 제출을 위해 유지
     // 실제 결제는 handlePaymentClick에서 처리
     logger.warn("[CheckoutForm] onSubmit 호출됨 (사용되지 않음)");

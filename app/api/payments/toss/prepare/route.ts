@@ -264,7 +264,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    logger.info("✅ 주문 아이템 생성 완료:", orderItemsData.length, "개");
+    logger.info(`✅ 주문 아이템 생성 완료: ${orderItemsData.length}개`);
 
     // 11. 주문명 생성 (상품명들 조합)
     const productNames = orderItems
