@@ -248,9 +248,16 @@ export default function CheckoutForm({
   const [orderId, setOrderId] = useState<string | null>(null);
   const [orderNumber, setOrderNumber] = useState<string | null>(null);
   const [showPaymentWidget, setShowPaymentWidget] = useState(false);
+  const [paymentWidgetData, setPaymentWidgetData] = useState<{
+    orderId: string;
+    amount: number;
+    orderName: string;
+    customerName: string;
+    customerEmail: string;
+  } | null>(null);
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [selectedCoupon, setSelectedCoupon] = useState<Coupon | null>(null);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<"카드" | "계좌이체" | null>(null);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<"CARD" | "TRANSFER" | null>(null);
   const [depositorName, setDepositorName] = useState("");
   const [useEscrow, setUseEscrow] = useState(false);
   const [orderData, setOrderData] = useState<{
@@ -499,104 +506,105 @@ export default function CheckoutForm({
     }
   }, [ordererName, ordererPhone, useMemberInfo, form]);
 
-  const onSubmit = (data: CheckoutFormData) => {
-    logger.group("[CheckoutForm] 주문 생성 시작");
+  // 결제하기 버튼 클릭 핸들러 (토스페이먼츠 결제위젯 오버레이 방식)
+  const handlePaymentClick = async () => {
+    logger.group("[CheckoutForm] 결제하기 버튼 클릭");
+    
+    // 1. 폼 유효성 검사
+    const isValid = await form.trigger();
+    if (!isValid) {
+      logger.warn("[CheckoutForm] 폼 유효성 검사 실패");
+      logger.groupEnd();
+      return;
+    }
+
+    // 2. 결제수단 선택 확인
+    if (!selectedPaymentMethod) {
+      logger.warn("[CheckoutForm] 결제수단 미선택");
+      alert("결제 수단을 선택해주세요");
+      logger.groupEnd();
+      return;
+    }
+
+    // 3. 계좌이체 선택 시 예금주명 확인
+    if (selectedPaymentMethod === "TRANSFER" && !depositorName.trim()) {
+      logger.warn("[CheckoutForm] 예금주명 미입력");
+      alert("예금주명을 입력해주세요");
+      logger.groupEnd();
+      return;
+    }
+
+    const formData = form.getValues();
     logger.info("주문자 정보:", {
-      name: data.ordererName,
-      phone: data.ordererPhone,
-      email: data.ordererEmail,
+      name: formData.ordererName,
+      phone: formData.ordererPhone,
+      email: formData.ordererEmail,
     });
     logger.info("배송 정보:", {
-      name: data.shippingName,
-      phone: data.shippingPhone,
-      address: data.shippingAddress,
-      zipCode: data.shippingZipCode,
-      memo: data.shippingMemo,
+      name: formData.shippingName,
+      phone: formData.shippingPhone,
+      address: formData.shippingAddress,
+      zipCode: formData.shippingZipCode,
     });
     logger.info("선택된 쿠폰:", selectedCoupon);
     logger.info("최종 결제 금액:", displayTotal);
-    logger.info("결제 수단:", data.paymentMethod);
+    logger.info("결제 수단:", selectedPaymentMethod);
     logger.groupEnd();
 
     startTransition(async () => {
-      const result = await createOrder({
-        ordererName: data.ordererName,
-        ordererPhone: data.ordererPhone,
-        ordererEmail: data.ordererEmail,
-        shippingName: data.shippingName,
-        shippingPhone: data.shippingPhone,
-        shippingAddress: data.shippingAddress,
-        shippingZipCode: data.shippingZipCode,
-        shippingMemo: data.shippingMemo,
-        couponId: selectedCoupon?.id || null,
-      });
-
-      logger.group("[CheckoutForm] 주문 생성 결과");
-      logger.info("성공 여부:", result.success);
-      logger.info("주문 ID:", result.orderId);
-      logger.info("주문 번호:", result.orderNumber);
-      logger.info("메시지:", result.message);
-      logger.groupEnd();
-
-      if (result.success && result.orderId && result.orderNumber) {
-        logger.info("[CheckoutForm] ✅ 주문 생성 성공 - 토스페이먼츠 결제 시작");
-        
-        // 주문 정보 상태 저장
-        setOrderId(result.orderId);
-        setOrderNumber(result.orderNumber);
-        
-        // 토스페이먼츠 결제 위젯 표시
-        logger.info("[CheckoutForm] 토스페이먼츠 결제 위젯 표시", {
-          orderId: result.orderId,
-          orderNumber: result.orderNumber,
-          amount: displayTotal,
+      try {
+        // 4. 토스페이먼츠 결제 준비 API 호출 (주문 생성 + 결제 준비)
+        logger.group("[CheckoutForm] 토스페이먼츠 결제 준비 API 호출");
+        const prepareResponse = await fetch("/api/payments/toss/prepare", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            amount: displayTotal,
+            // 배송 정보는 나중에 주문 업데이트로 처리하거나, prepare API에서 받도록 수정 필요
+            // 일단 기본 동작 확인을 위해 amount만 전달
+          }),
         });
-        
-        // Next.js 라우터를 사용하여 URL에 orderId 추가
-        // router.replace()를 사용하면 서버 컴포넌트도 새로운 URL을 인지합니다
-        logger.info("[CheckoutForm] URL에 orderId 추가 (router.replace):", result.orderId);
-        router.replace(`/checkout?orderId=${result.orderId}`, { scroll: false });
-        
+
+        const prepareData = await prepareResponse.json();
+        logger.info("결제 준비 API 응답:", {
+          success: prepareData.success,
+          orderId: prepareData.orderId,
+          amount: prepareData.amount,
+        });
+        logger.groupEnd();
+
+        if (!prepareData.success || !prepareData.orderId) {
+          logger.error("[CheckoutForm] ❌ 결제 준비 실패:", prepareData.message);
+          alert(prepareData.message || "결제 준비에 실패했습니다.");
+          return;
+        }
+
+        // 6. PaymentWidget 오버레이 표시를 위한 데이터 설정
+        logger.info("[CheckoutForm] ✅ 결제 준비 완료 - PaymentWidget 오버레이 표시");
+        setPaymentWidgetData({
+          orderId: prepareData.orderId,
+          amount: prepareData.amount,
+          orderName: prepareData.orderName,
+          customerName: prepareData.customerName,
+          customerEmail: prepareData.customerEmail,
+        });
+        setOrderId(prepareData.orderId);
         setShowPaymentWidget(true);
-      } else {
-        logger.error("[CheckoutForm] ❌ 주문 생성 실패:", result.message);
-        alert(result.message);
+      } catch (error) {
+        logger.error("[CheckoutForm] ❌ 결제 프로세스 에러:", error);
+        alert("결제 처리 중 오류가 발생했습니다. 다시 시도해주세요.");
       }
     });
   };
 
-  // 주문 생성 후 결제 위젯 표시
-  if (showPaymentWidget && orderId && orderNumber && user) {
-    return (
-      <div className="space-y-6">
-        {/* 주문 정보 요약 */}
-        <div className="bg-[#ffeef5] border border-[#f5d5e3] rounded-lg p-6">
-          <h2 className="text-lg font-bold text-[#4a3f48] mb-4">주문 정보</h2>
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-[#8b7d84]">주문번호</span>
-              <span className="font-bold text-[#4a3f48]">{orderNumber}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-[#8b7d84]">결제 금액</span>
-              <span className="font-bold text-[#ff6b9d]">
-                {displayTotal.toLocaleString("ko-KR")}원
-              </span>
-            </div>
-          </div>
-        </div>
+  const onSubmit = (data: CheckoutFormData) => {
+    // 이 함수는 더 이상 사용하지 않지만, 폼 제출을 위해 유지
+    // 실제 결제는 handlePaymentClick에서 처리
+    logger.warn("[CheckoutForm] onSubmit 호출됨 (사용되지 않음)");
+  };
 
-        {/* 결제 위젯 */}
-        <PaymentWidget
-          orderId={orderId}
-          orderNumber={orderNumber}
-          amount={displayTotal}
-          customerName={form.getValues("ordererName") || user?.fullName || user?.firstName || "고객"}
-          customerEmail={form.getValues("ordererEmail") || user?.primaryEmailAddress?.emailAddress || ""}
-        />
-      </div>
-    );
-  }
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -998,7 +1006,7 @@ export default function CheckoutForm({
               {/* 신용카드 결제 */}
               <label 
                 className={`flex items-center gap-3 p-4 border-2 rounded-lg cursor-pointer transition-colors ${
-                  selectedPaymentMethod === "카드" 
+                  selectedPaymentMethod === "CARD" 
                     ? "border-black bg-white" 
                     : "border-[#f5d5e3] hover:bg-[#fef8fb]"
                 }`}
@@ -1006,11 +1014,11 @@ export default function CheckoutForm({
                 <input
                   type="radio"
                   name="paymentMethod"
-                  value="카드"
-                  checked={selectedPaymentMethod === "카드"}
+                  value="CARD"
+                  checked={selectedPaymentMethod === "CARD"}
                   onChange={() => {
                     logger.info("[결제수단] 신용카드 결제 선택");
-                    setSelectedPaymentMethod("카드");
+                    setSelectedPaymentMethod("CARD");
                     form.setValue("paymentMethod", "TOSS_PAYMENTS");
                   }}
                   className="w-5 h-5 text-[#ff6b9d] border-[#f5d5e3] focus:ring-[#ff6b9d]"
@@ -1021,7 +1029,7 @@ export default function CheckoutForm({
               {/* 에스크로(실시간 계좌이체) */}
               <label 
                 className={`flex items-center gap-3 p-4 border-2 rounded-lg cursor-pointer transition-colors ${
-                  selectedPaymentMethod === "계좌이체" 
+                  selectedPaymentMethod === "TRANSFER" 
                     ? "border-black bg-white" 
                     : "border-[#f5d5e3] hover:bg-[#fef8fb]"
                 }`}
@@ -1029,11 +1037,11 @@ export default function CheckoutForm({
                 <input
                   type="radio"
                   name="paymentMethod"
-                  value="계좌이체"
-                  checked={selectedPaymentMethod === "계좌이체"}
+                  value="TRANSFER"
+                  checked={selectedPaymentMethod === "TRANSFER"}
                   onChange={() => {
                     logger.info("[결제수단] 에스크로(실시간 계좌이체) 선택");
-                    setSelectedPaymentMethod("계좌이체");
+                    setSelectedPaymentMethod("TRANSFER");
                     form.setValue("paymentMethod", "TOSS_PAYMENTS");
                   }}
                   className="w-5 h-5 text-[#ff6b9d] border-[#f5d5e3] focus:ring-[#ff6b9d]"
@@ -1053,7 +1061,7 @@ export default function CheckoutForm({
             <div className="mb-6 space-y-4">
 
               {/* 에스크로(실시간 계좌이체) 선택 시 추가 입력 필드 */}
-              {selectedPaymentMethod === "계좌이체" && (
+              {selectedPaymentMethod === "TRANSFER" && (
                 <div className="space-y-4">
                   {/* 예금주명 */}
                   <div>
@@ -1132,18 +1140,11 @@ export default function CheckoutForm({
           </div>
 
           <Button
-            onClick={() => {
-              logger.info("[CheckoutForm] 결제하기 버튼 클릭");
-              if (!selectedPaymentMethod) {
-                alert("결제 수단을 선택해주세요");
-                return;
-              }
-              form.handleSubmit(onSubmit)();
-            }}
+            onClick={handlePaymentClick}
             disabled={
               isPending || 
               !selectedPaymentMethod ||
-              (selectedPaymentMethod === "계좌이체" && !depositorName.trim())
+              (selectedPaymentMethod === "TRANSFER" && !depositorName.trim())
             }
             className="w-full h-14 bg-black hover:bg-gray-800 text-white rounded-lg text-base font-bold disabled:opacity-50 disabled:cursor-not-allowed"
           >
@@ -1151,12 +1152,35 @@ export default function CheckoutForm({
               ? "처리 중..." 
               : !selectedPaymentMethod 
               ? "결제 수단을 선택해주세요" 
-              : selectedPaymentMethod === "계좌이체" && !depositorName.trim()
+              : selectedPaymentMethod === "TRANSFER" && !depositorName.trim()
               ? "예금주명을 입력해주세요"
               : `${displayTotal.toLocaleString("ko-KR")}원 결제하기`}
           </Button>
         </div>
       </div>
-    </div>
+
+      {/* PaymentWidget 오버레이 (모달 형태) */}
+      {showPaymentWidget && paymentWidgetData && selectedPaymentMethod && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <PaymentWidget
+              orderId={paymentWidgetData.orderId}
+              amount={paymentWidgetData.amount}
+              orderName={paymentWidgetData.orderName}
+              customerName={paymentWidgetData.customerName}
+              customerEmail={paymentWidgetData.customerEmail}
+              paymentMethod={selectedPaymentMethod}
+              depositorName={selectedPaymentMethod === "TRANSFER" ? depositorName : undefined}
+              useEscrow={selectedPaymentMethod === "TRANSFER" ? useEscrow : false}
+              onClose={() => {
+                logger.info("[CheckoutForm] PaymentWidget 닫기");
+                setShowPaymentWidget(false);
+                setPaymentWidgetData(null);
+              }}
+            />
+          </div>
+        </div>
+      )}
+    </>
   );
 }
