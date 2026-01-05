@@ -905,6 +905,13 @@ export default function SignInContent() {
 
               // 2단계: 비밀번호로 인증 시도
               console.log("[SignInContent] attemptFirstFactor 호출 중...");
+              console.log("[SignInContent] 현재 환경:", {
+                isProduction: window.location.hostname !== "localhost",
+                hostname: window.location.hostname,
+                protocol: window.location.protocol,
+                href: window.location.href,
+              });
+              
               const result = await signInAttempt.attemptFirstFactor({
                 strategy: "password",
                 password: passwordValue,
@@ -912,6 +919,7 @@ export default function SignInContent() {
 
               console.log("[SignInContent] 로그인 성공, 상태:", result.status);
               console.log("[SignInContent] result 전체:", result);
+              console.log("[SignInContent] createdSessionId:", result.createdSessionId);
 
               // 로그인 성공 후 세션 활성화 및 리다이렉트
               if (result.status === "complete") {
@@ -932,8 +940,39 @@ export default function SignInContent() {
                       "[SignInContent] setActive 호출 중, sessionId:",
                       result.createdSessionId,
                     );
-                    await clerk.setActive({ session: result.createdSessionId });
-                    console.log("[SignInContent] setActive 완료");
+                    
+                    // 프로덕션 환경에서 세션 활성화 재시도 로직
+                    let setActiveSuccess = false;
+                    let lastError: any = null;
+                    
+                    for (let attempt = 1; attempt <= 3; attempt++) {
+                      try {
+                        console.log(
+                          `[SignInContent] setActive 시도 ${attempt}/3`,
+                        );
+                        await clerk.setActive({ session: result.createdSessionId });
+                        setActiveSuccess = true;
+                        console.log("[SignInContent] setActive 완료");
+                        break;
+                      } catch (retryError: any) {
+                        lastError = retryError;
+                        console.warn(
+                          `[SignInContent] setActive 시도 ${attempt} 실패:`,
+                          retryError,
+                        );
+                        
+                        if (attempt < 3) {
+                          // 재시도 전 대기
+                          await new Promise((resolve) =>
+                            setTimeout(resolve, 500 * attempt),
+                          );
+                        }
+                      }
+                    }
+                    
+                    if (!setActiveSuccess) {
+                      throw lastError || new Error("setActive 실패");
+                    }
 
                     // setActive 후 세션 동기화를 위해 약간의 딜레이
                     await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -941,9 +980,18 @@ export default function SignInContent() {
                     console.log(
                       "[SignInContent] 세션 활성화 완료, 리다이렉트 시작",
                     );
+                    console.log("[SignInContent] 리다이렉트 URL:", redirectUrl);
+                    
+                    // 프로덕션 환경에서는 절대 경로로 리다이렉트
+                    const redirectPath = redirectUrl.startsWith("http")
+                      ? redirectUrl
+                      : `${window.location.origin}${redirectUrl}`;
+                    
+                    console.log("[SignInContent] 최종 리다이렉트 경로:", redirectPath);
+                    
                     // window.location.href를 사용하여 전체 페이지 리로드로 세션 상태를 확실히 반영
                     // 이렇게 하면 구글 로그인과 동일하게 세션이 확실히 활성화됨
-                    window.location.href = redirectUrl;
+                    window.location.href = redirectPath;
                   } catch (setActiveError: any) {
                     console.error(
                       "[SignInContent] setActive 실패:",
@@ -953,11 +1001,35 @@ export default function SignInContent() {
                       message: setActiveError.message,
                       errors: setActiveError.errors,
                       status: setActiveError.status,
+                      stack: setActiveError.stack,
                     });
-                    alert(
-                      "세션 활성화에 실패했습니다. 페이지를 새로고침해주세요.",
-                    );
-                    window.location.reload();
+                    
+                    // 프로덕션 환경에서의 에러 메시지 개선
+                    const isProduction = window.location.hostname !== "localhost";
+                    const errorMessage = isProduction
+                      ? "세션 활성화에 실패했습니다.\n\n" +
+                        "브라우저 쿠키 설정을 확인해주세요:\n" +
+                        "1. 쿠키가 차단되지 않았는지 확인\n" +
+                        "2. 시크릿 모드가 아닌지 확인\n" +
+                        "3. 페이지를 새로고침해주세요"
+                      : "세션 활성화에 실패했습니다. 페이지를 새로고침해주세요.";
+                    
+                    alert(errorMessage);
+                    
+                    // 프로덕션에서는 리다이렉트를 시도하고, 실패하면 새로고침
+                    if (isProduction) {
+                      try {
+                        window.location.href = redirectUrl;
+                        // 리다이렉트가 실패하면 새로고침
+                        setTimeout(() => {
+                          window.location.reload();
+                        }, 2000);
+                      } catch {
+                        window.location.reload();
+                      }
+                    } else {
+                      window.location.reload();
+                    }
                     return;
                   }
                 } else {
@@ -1014,12 +1086,22 @@ export default function SignInContent() {
                 alert(errorMessage);
               }
             } catch (err: any) {
+              const isProduction = window.location.hostname !== "localhost";
+              
               console.error("[SignInContent] 로그인 실패:", err);
+              console.error("[SignInContent] 환경 정보:", {
+                isProduction,
+                hostname: window.location.hostname,
+                protocol: window.location.protocol,
+                href: window.location.href,
+              });
               console.error("[SignInContent] 에러 상세:", {
                 message: err.message,
                 errors: err.errors,
                 status: err.status,
                 statusCode: err.statusCode,
+                name: err.name,
+                stack: err.stack,
               });
 
               // 에러 코드 확인
@@ -1055,8 +1137,25 @@ export default function SignInContent() {
                 errorMessage = err.message;
               }
 
-              // 사용자 친화적인 메시지로 변환 (에러 코드가 없을 경우)
+              // 네트워크 에러 또는 CORS 에러 확인
               if (
+                err.message?.includes("Network") ||
+                err.message?.includes("Failed to fetch") ||
+                err.message?.includes("CORS") ||
+                err.name === "NetworkError" ||
+                err.name === "TypeError"
+              ) {
+                errorMessage = isProduction
+                  ? "네트워크 연결에 문제가 있습니다.\n\n" +
+                    "다음을 확인해주세요:\n" +
+                    "1. 인터넷 연결 상태 확인\n" +
+                    "2. 브라우저를 새로고침한 후 다시 시도\n" +
+                    "3. 다른 브라우저에서 시도"
+                  : "네트워크 연결에 문제가 있습니다. 다시 시도해주세요.";
+                errorField = "general";
+              }
+              // 사용자 친화적인 메시지로 변환 (에러 코드가 없을 경우)
+              else if (
                 errorMessage.includes("identifier") ||
                 errorMessage.includes("email") ||
                 errorMessage.includes("Couldn't find your account") ||
