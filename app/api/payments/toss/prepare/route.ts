@@ -54,18 +54,89 @@ export async function POST(request: NextRequest) {
     const supabase = await createClient();
 
     // 4. 사용자 ID 조회
-    const { data: user } = await supabase
+    let { data: user, error: userError } = await supabase
       .from("users")
       .select("id, name, email")
       .eq("clerk_user_id", clerkUserId)
-      .single();
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    // 사용자가 없으면 동기화 시도
+    if (!user && !userError) {
+      logger.info("사용자가 없음 - 동기화 시도");
+      try {
+        const { clerkClient } = await import("@clerk/nextjs/server");
+        const { getServiceRoleClient } = await import(
+          "@/lib/supabase/service-role"
+        );
+
+        const client = await clerkClient();
+        const clerkUser = await client.users.getUser(clerkUserId);
+
+        if (clerkUser) {
+          logger.info("Clerk 사용자 정보 조회 성공:", {
+            id: clerkUser.id,
+            email: clerkUser.emailAddresses[0]?.emailAddress,
+          });
+
+          const serviceSupabase = getServiceRoleClient();
+          const userData = {
+            clerk_user_id: clerkUser.id,
+            name:
+              clerkUser.fullName ||
+              clerkUser.username ||
+              clerkUser.emailAddresses[0]?.emailAddress ||
+              "Unknown",
+            email: clerkUser.emailAddresses[0]?.emailAddress || "",
+            role: "customer",
+          };
+
+          const { data: newUser, error: insertError } = await serviceSupabase
+            .from("users")
+            .insert(userData)
+            .select("id, name, email")
+            .single();
+
+          if (!insertError && newUser) {
+            logger.info("사용자 동기화 성공:", newUser.id);
+            user = newUser;
+          } else {
+            logger.error("사용자 동기화 실패:", insertError);
+          }
+        } else {
+          logger.warn("Clerk 사용자 정보 조회 실패");
+        }
+      } catch (syncError) {
+        logger.error("사용자 동기화 중 예외 발생:", syncError);
+      }
+
+      // 동기화 후 다시 조회
+      if (!user) {
+        const { data: retryUser } = await supabase
+          .from("users")
+          .select("id, name, email")
+          .eq("clerk_user_id", clerkUserId)
+          .is("deleted_at", null)
+          .maybeSingle();
+        user = retryUser || undefined;
+      }
+    }
 
     if (!user) {
-      logger.error("사용자를 찾을 수 없음");
+      logger.error("사용자를 찾을 수 없음 (동기화 시도 후에도 실패)");
       logger.groupEnd();
       return NextResponse.json(
-        { success: false, message: "사용자를 찾을 수 없습니다." },
+        { success: false, message: "사용자를 찾을 수 없습니다. 잠시 후 다시 시도해주세요." },
         { status: 404 }
+      );
+    }
+
+    if (userError) {
+      logger.error("사용자 조회 에러:", userError);
+      logger.groupEnd();
+      return NextResponse.json(
+        { success: false, message: "사용자 정보 조회 중 오류가 발생했습니다." },
+        { status: 500 }
       );
     }
 
