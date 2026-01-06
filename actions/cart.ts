@@ -52,6 +52,35 @@ async function getCurrentUserId(): Promise<string | null> {
     hasToken: !!token,
   });
 
+  // PGRST301 에러 발생 시 service role 클라이언트로 재시도
+  if (error && error.code === 'PGRST301') {
+    logger.warn("[getCurrentUserId] PGRST301 에러 발생 - service role 클라이언트로 재시도");
+    const { getServiceRoleClient } = await import("@/lib/supabase/service-role");
+    const serviceSupabase = getServiceRoleClient();
+    
+    const { data: retryUser, error: retryError } = await serviceSupabase
+      .from("users")
+      .select("id")
+      .eq("clerk_user_id", clerkUserId)
+      .is("deleted_at", null)
+      .maybeSingle();
+    
+    if (retryError) {
+      logger.error("[getCurrentUserId] service role 클라이언트로도 조회 실패:", {
+        error: retryError.message,
+        code: retryError.code,
+      });
+      logger.groupEnd();
+      return null;
+    }
+    
+    if (retryUser) {
+      logger.info("[getCurrentUserId] service role 클라이언트로 조회 성공:", retryUser.id);
+      logger.groupEnd();
+      return retryUser.id;
+    }
+  }
+
   // 사용자가 없으면 동기화 시도
   if (!user && !error) {
     logger.info("[getCurrentUserId] 사용자가 없음 - 동기화 시도");
@@ -116,8 +145,12 @@ async function getCurrentUserId(): Promise<string | null> {
     user = retryUser;
   }
 
-  if (error) {
-    logger.error("[getCurrentUserId] 사용자 조회 실패:", error);
+  // 일반 에러 처리 (PGRST301이 아닌 경우)
+  if (error && error.code !== 'PGRST301') {
+    logger.error("[getCurrentUserId] 사용자 조회 실패:", {
+      error: error.message,
+      code: error.code,
+    });
     logger.groupEnd();
     return null;
   }
