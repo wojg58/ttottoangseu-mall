@@ -40,6 +40,14 @@ interface TossPaymentResponse {
     bankCode: string;
     settlementStatus: string;
   };
+  virtualAccount?: {
+    accountNumber: string;
+    bankCode: string;
+    customerName: string;
+    dueDate: string;
+    refundStatus: string;
+    bankName?: string;
+  };
   receipt?: {
     url: string;
   };
@@ -268,6 +276,8 @@ export async function POST(request: NextRequest) {
       message: "결제가 완료되었습니다.",
       paymentKey: paymentData.paymentKey,
       orderId: order.order_number,
+      method: paymentData.method,
+      virtualAccount: paymentData.virtualAccount,
     });
   } catch (error) {
     logger.error("결제 승인 중 예외 발생:", error);

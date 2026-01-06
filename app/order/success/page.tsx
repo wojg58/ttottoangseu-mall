@@ -27,6 +27,14 @@ function OrderSuccessContent() {
     success: boolean;
     message: string;
     orderId?: string;
+    method?: string;
+    virtualAccount?: {
+      accountNumber: string;
+      bankCode: string;
+      customerName: string;
+      dueDate: string;
+      refundStatus: string;
+    };
   } | null>(null);
 
   useEffect(() => {
@@ -96,6 +104,8 @@ function OrderSuccessContent() {
           success: data.success,
           message: data.message,
           orderId: data.orderId,
+          method: data.method,
+          virtualAccount: data.virtualAccount,
         });
       } catch (error) {
         logger.error("confirm API 호출 에러:", error);
@@ -128,6 +138,28 @@ function OrderSuccessContent() {
 
   if (!result) {
     return null;
+  }
+
+  // 계좌이체이고 가상계좌 정보가 있으면 입금 대기 페이지로 리다이렉트
+  if (
+    result.success &&
+    result.method === "TRANSFER" &&
+    result.virtualAccount
+  ) {
+    const paymentKey = searchParams.get("paymentKey");
+    const orderId = searchParams.get("orderId");
+    const amount = searchParams.get("amount");
+    router.push(
+      `/order/waiting-deposit?paymentKey=${paymentKey}&orderId=${orderId}&amount=${amount}`
+    );
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#ff6b9d] mx-auto mb-4"></div>
+          <p className="text-sm text-[#8b7d84]">입금 대기 페이지로 이동 중...</p>
+        </div>
+      </div>
+    );
   }
 
   if (!result.success) {
