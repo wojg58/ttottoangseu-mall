@@ -947,9 +947,10 @@ export default function SignInContent() {
                 "[SignInContent] Clerk 초기화 확인 완료, 로그인 시작",
               );
 
-              // 1단계: 이메일로 signIn 생성
+              // 이메일과 비밀번호를 함께 전달하여 로그인 시도
               console.log("[SignInContent] SignIn.create 호출 중...");
               console.log("[SignInContent] 전달할 identifier:", emailValue);
+              console.log("[SignInContent] 전달할 password:", passwordValue ? "***" : "(없음)");
               console.log(
                 "[SignInContent] identifier 타입:",
                 typeof emailValue,
@@ -978,29 +979,66 @@ export default function SignInContent() {
                 return;
               }
 
-              const signInAttempt = await signIn.create({
-                identifier: emailValue,
-              });
+              // Clerk 문서에 따르면 identifier와 password를 함께 전달할 수 있습니다
+              // 한 번에 처리하거나, 두 단계로 나눌 수 있습니다
+              // 먼저 identifier만으로 시도하고, 필요시 password를 전달합니다
+              let signInAttempt;
+              let result;
 
-              console.log("[SignInContent] SignIn.create 응답:", signInAttempt);
+              try {
+                // 방법 1: identifier와 password를 함께 전달 (권장)
+                console.log("[SignInContent] identifier와 password를 함께 전달하여 로그인 시도");
+                signInAttempt = await signIn.create({
+                  identifier: emailValue,
+                  password: passwordValue,
+                });
 
-              console.log(
-                "[SignInContent] SignIn 생성 완료, 비밀번호 인증 시도",
-              );
+                console.log("[SignInContent] SignIn.create 응답:", signInAttempt);
 
-              // 2단계: 비밀번호로 인증 시도
-              console.log("[SignInContent] attemptFirstFactor 호출 중...");
-              console.log("[SignInContent] 현재 환경:", {
-                isProduction: window.location.hostname !== "localhost",
-                hostname: window.location.hostname,
-                protocol: window.location.protocol,
-                href: window.location.href,
-              });
+                // 이미 완료된 경우 (password를 함께 전달했을 때)
+                if (signInAttempt.status === "complete") {
+                  console.log("[SignInContent] 로그인 완료 (한 번에 처리됨)");
+                  result = signInAttempt;
+                } else {
+                  // 추가 단계가 필요한 경우
+                  console.log(
+                    "[SignInContent] 추가 인증 단계 필요, 상태:",
+                    signInAttempt.status,
+                  );
+                  result = signInAttempt;
+                }
+              } catch (createError: any) {
+                // identifier만으로 시도했을 때 에러가 발생하면, 두 단계로 나눠서 처리
+                console.log(
+                  "[SignInContent] password와 함께 전달 실패, 두 단계로 나눠서 처리 시도",
+                );
+                console.log("[SignInContent] 에러:", createError);
 
-              const result = await signInAttempt.attemptFirstFactor({
-                strategy: "password",
-                password: passwordValue,
-              });
+                // 1단계: identifier만으로 signIn 생성
+                signInAttempt = await signIn.create({
+                  identifier: emailValue,
+                });
+
+                console.log("[SignInContent] SignIn.create 응답:", signInAttempt);
+
+                console.log(
+                  "[SignInContent] SignIn 생성 완료, 비밀번호 인증 시도",
+                );
+
+                // 2단계: 비밀번호로 인증 시도
+                console.log("[SignInContent] attemptFirstFactor 호출 중...");
+                console.log("[SignInContent] 현재 환경:", {
+                  isProduction: window.location.hostname !== "localhost",
+                  hostname: window.location.hostname,
+                  protocol: window.location.protocol,
+                  href: window.location.href,
+                });
+
+                result = await signInAttempt.attemptFirstFactor({
+                  strategy: "password",
+                  password: passwordValue,
+                });
+              }
 
               console.log("[SignInContent] 로그인 성공, 상태:", result.status);
               console.log("[SignInContent] result 전체:", result);
