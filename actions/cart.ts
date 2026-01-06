@@ -183,24 +183,90 @@ async function getCurrentUserId(): Promise<string | null> {
 
 // 장바구니 ID 조회/생성
 async function getOrCreateCartId(userId: string): Promise<string> {
-  const supabase = await createClient();
+  // PGRST301 에러 방지를 위해 토큰 확인
+  const authResult = await auth();
+  const token = await authResult.getToken();
+  let supabase;
 
-  const { data: existingCart } = await supabase
+  if (!token) {
+    logger.warn(
+      "[getOrCreateCartId] Clerk 토큰이 없음 - service role 클라이언트 사용",
+    );
+    const { getServiceRoleClient } = await import(
+      "@/lib/supabase/service-role"
+    );
+    supabase = getServiceRoleClient();
+  } else {
+    supabase = await createClient();
+  }
+
+  let { data: existingCart, error: selectError } = await supabase
     .from("carts")
     .select("id")
     .eq("user_id", userId)
     .single();
 
+  // PGRST301 에러 발생 시 service role 클라이언트로 재시도
+  if (selectError && selectError.code === "PGRST301") {
+    logger.warn(
+      "[getOrCreateCartId] PGRST301 에러 발생 - service role 클라이언트로 재시도",
+    );
+    const { getServiceRoleClient } = await import(
+      "@/lib/supabase/service-role"
+    );
+    supabase = getServiceRoleClient();
+
+    const { data: retryCart, error: retrySelectError } = await supabase
+      .from("carts")
+      .select("id")
+      .eq("user_id", userId)
+      .single();
+
+    if (retrySelectError && retrySelectError.code !== "PGRST116") {
+      // PGRST116은 "no rows returned" 에러이므로 정상
+      logger.error("[getOrCreateCartId] 재조회 실패:", retrySelectError);
+    } else {
+      existingCart = retryCart;
+    }
+  }
+
   if (existingCart) return existingCart.id;
 
-  const { data: newCart, error } = await supabase
+  // 장바구니 생성
+  let { data: newCart, error: insertError } = await supabase
     .from("carts")
     .insert({ user_id: userId })
     .select("id")
     .single();
 
-  if (error) {
-    logger.error("장바구니 생성 실패", error);
+  // PGRST301 에러 발생 시 service role 클라이언트로 재시도
+  if (insertError && insertError.code === "PGRST301") {
+    logger.warn(
+      "[getOrCreateCartId] INSERT 시 PGRST301 에러 발생 - service role 클라이언트로 재시도",
+    );
+    const { getServiceRoleClient } = await import(
+      "@/lib/supabase/service-role"
+    );
+    supabase = getServiceRoleClient();
+
+    const { data: retryNewCart, error: retryInsertError } = await supabase
+      .from("carts")
+      .insert({ user_id: userId })
+      .select("id")
+      .single();
+
+    if (retryInsertError) {
+      logger.error("[getOrCreateCartId] 장바구니 생성 실패", retryInsertError);
+      throw new Error("장바구니 생성에 실패했습니다.");
+    }
+
+    newCart = retryNewCart;
+  } else if (insertError) {
+    logger.error("장바구니 생성 실패", insertError);
+    throw new Error("장바구니 생성에 실패했습니다.");
+  }
+
+  if (!newCart) {
     throw new Error("장바구니 생성에 실패했습니다.");
   }
 
