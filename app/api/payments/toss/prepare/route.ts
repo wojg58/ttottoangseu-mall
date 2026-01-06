@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
       .eq("clerk_user_id", clerkUserId)
       .is("deleted_at", null)
       .maybeSingle();
-    
+
     let user = initialUser;
 
     // 사용자가 없으면 동기화 시도
