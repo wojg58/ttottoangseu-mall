@@ -41,17 +41,23 @@ export default function PaymentWidget({
   onClose,
 }: PaymentWidgetProps) {
   const [isRequesting, setIsRequesting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // 결제창 자동 호출
   useEffect(() => {
     if (isRequesting) return;
+    
+    // 에러 상태 초기화
+    setError(null);
 
     const clientKey = process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY || process.env.NEXT_PUBLIC_TOSS_PAYMENTS_CLIENT_KEY;
 
     if (!clientKey) {
-      logger.error("[PaymentWidget] ❌ NEXT_PUBLIC_TOSS_CLIENT_KEY 환경변수가 설정되지 않았습니다.");
-      alert("결제 설정이 올바르지 않습니다.");
-      onClose?.();
+      const errorMsg = "결제 설정이 올바르지 않습니다. (NEXT_PUBLIC_TOSS_CLIENT_KEY 환경변수 미설정)";
+      logger.error("[PaymentWidget] ❌", errorMsg);
+      setError(errorMsg);
+      alert(errorMsg);
+      setTimeout(() => onClose?.(), 2000);
       return;
     }
 
@@ -77,6 +83,7 @@ export default function PaymentWidget({
 
         // 필수 값 검증 (Payment 인스턴스 생성 전에 먼저 확인)
         if (!orderId || !amount || !customerName || !customerEmail || !paymentMethod) {
+          const errorMsg = "결제 정보가 불완전합니다. 페이지를 새로고침해주세요.";
           logger.error("[PaymentWidget] ❌ 필수 입력값 누락:", {
             orderId: !!orderId,
             amount: !!amount,
@@ -91,8 +98,9 @@ export default function PaymentWidget({
               paymentMethod,
             }
           });
-          alert("결제 정보가 불완전합니다. 페이지를 새로고침해주세요.");
-          onClose?.();
+          setError(errorMsg);
+          alert(errorMsg);
+          setTimeout(() => onClose?.(), 2000);
           logger.groupEnd();
           return;
         }
@@ -206,12 +214,14 @@ export default function PaymentWidget({
         if (!errorMessage.includes("CANCELED") && 
             !errorMessage.includes("USER_CANCEL") &&
             errorCode !== "USER_CANCEL") {
-          alert(`결제 요청 중 오류가 발생했습니다.\n\n에러 코드: ${errorCode}\n에러 메시지: ${errorMessage}`);
+          const errorMsg = `결제 요청 중 오류가 발생했습니다.\n\n에러 코드: ${errorCode}\n에러 메시지: ${errorMessage}`;
+          setError(errorMsg);
+          alert(errorMsg);
+          setTimeout(() => onClose?.(), 3000);
         } else {
           logger.info("[PaymentWidget] 사용자가 결제를 취소했습니다");
+          onClose?.();
         }
-
-        onClose?.();
       } finally {
         setIsRequesting(false);
       }
@@ -219,7 +229,28 @@ export default function PaymentWidget({
 
     requestPayment();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // 컴포넌트 마운트 시 한 번만 실행
+  }, []); // 컴포넌트 마운트 시 한 번만 실행 (key prop으로 재마운트 제어)
+
+  // 에러가 발생한 경우 에러 메시지 표시
+  if (error) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+        <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4">
+          <div className="text-center">
+            <div className="text-red-500 text-4xl mb-4">⚠️</div>
+            <p className="text-base font-medium text-[#4a3f48] mb-2">결제 오류</p>
+            <p className="text-sm text-[#8b7d84] mb-4 whitespace-pre-line">{error}</p>
+            <button
+              onClick={() => onClose?.()}
+              className="px-4 py-2 bg-[#ff6b9d] text-white rounded-lg hover:bg-[#ff5a8d] transition-colors"
+            >
+              닫기
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // 결제창이 열리는 동안 로딩 표시
   return (
@@ -229,6 +260,9 @@ export default function PaymentWidget({
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#ff6b9d] mx-auto mb-4"></div>
           <p className="text-base font-medium text-[#4a3f48] mb-2">결제창을 불러오는 중...</p>
           <p className="text-sm text-[#8b7d84]">잠시만 기다려주세요</p>
+          {paymentMethod === "TRANSFER" && (
+            <p className="text-xs text-[#8b7d84] mt-2">실시간 계좌이체 창이 곧 열립니다</p>
+          )}
         </div>
       </div>
     </div>
