@@ -54,12 +54,14 @@ export async function POST(request: NextRequest) {
     const supabase = getServiceRoleClient();
 
     // 4. 사용자 ID 조회
-    let { data: user, error: userError } = await supabase
+    const { data: initialUser, error: userError } = await supabase
       .from("users")
       .select("id, name, email")
       .eq("clerk_user_id", clerkUserId)
       .is("deleted_at", null)
       .maybeSingle();
+    
+    let user = initialUser;
 
     // 사용자가 없으면 동기화 시도
     if (!user && !userError) {
