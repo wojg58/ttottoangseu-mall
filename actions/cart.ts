@@ -1185,12 +1185,14 @@ export async function buyNowAndRedirect(
 
     logger.info("[buyNowAndRedirect] ✅ 5단계: 모든 검증 완료");
     logger.info("[buyNowAndRedirect] 6단계: revalidatePath 실행");
-    
+
     // 캐시 갱신
     revalidatePath("/checkout");
     revalidatePath("/cart");
-    
-    logger.info("[buyNowAndRedirect] ✅ 7단계: 완료 - 클라이언트에서 리다이렉트 필요");
+
+    logger.info(
+      "[buyNowAndRedirect] ✅ 7단계: 완료 - 클라이언트에서 리다이렉트 필요",
+    );
     logger.groupEnd();
 
     // 성공 반환 (클라이언트에서 리다이렉트)
@@ -1364,12 +1366,14 @@ export async function buyNowWithOptionsAndRedirect(
 
     logger.info("[buyNowWithOptionsAndRedirect] ✅ 6단계: 모든 검증 완료");
     logger.info("[buyNowWithOptionsAndRedirect] 7단계: revalidatePath 실행");
-    
+
     // 캐시 갱신
     revalidatePath("/checkout");
     revalidatePath("/cart");
-    
-    logger.info("[buyNowWithOptionsAndRedirect] ✅ 8단계: 완료 - 클라이언트에서 리다이렉트 필요");
+
+    logger.info(
+      "[buyNowWithOptionsAndRedirect] ✅ 8단계: 완료 - 클라이언트에서 리다이렉트 필요",
+    );
     logger.groupEnd();
 
     // 성공 반환 (클라이언트에서 리다이렉트)
