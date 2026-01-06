@@ -1113,58 +1113,109 @@ export async function buyNowAndRedirect(
   logger.info("입력 파라미터:", { productId, quantity, variantId });
   logger.info("타임스탬프:", new Date().toISOString());
 
-  logger.info("[buyNowAndRedirect] 2단계: addToCart() 호출 시작");
-  const result = await addToCart(productId, quantity, variantId);
-  logger.info("[buyNowAndRedirect] addToCart() 결과:", {
-    success: result.success,
-    message: result.message,
-  });
+  try {
+    logger.info("[buyNowAndRedirect] 2단계: addToCart() 호출 시작");
+    const result = await addToCart(productId, quantity, variantId);
+    logger.info("[buyNowAndRedirect] addToCart() 결과:", {
+      success: result.success,
+      message: result.message,
+    });
 
-  if (!result.success) {
-    logger.error("[buyNowAndRedirect] ❌ 3단계: 장바구니 추가 실패");
-    logger.error("실패 원인:", result.message);
+    if (!result.success) {
+      logger.error("[buyNowAndRedirect] ❌ 3단계: 장바구니 추가 실패");
+      logger.error("실패 원인:", result.message);
+      logger.groupEnd();
+      // 에러는 클라이언트에서 처리하도록 하기 위해 throw
+      throw new Error(result.message);
+    }
+
+    logger.info("[buyNowAndRedirect] ✅ 3단계: 장바구니 추가 API 성공");
+    logger.info("[buyNowAndRedirect] 4단계: DB 반영 확인 시작");
+
+    // DB에 실제로 반영되었는지 확인 (폴링 방식)
+    logger.info("[buyNowAndRedirect] getCurrentUserId() 호출");
+    let userId: string | null;
+    try {
+      userId = await getCurrentUserId();
+      logger.info("[buyNowAndRedirect] getCurrentUserId() 결과:", {
+        userId: userId || null,
+        hasUserId: !!userId,
+      });
+    } catch (userIdError) {
+      logger.error(
+        "[buyNowAndRedirect] ❌ getCurrentUserId() 예외 발생:",
+        userIdError,
+      );
+      logger.groupEnd();
+      throw new Error(
+        `사용자 정보를 가져오는 중 오류가 발생했습니다: ${
+          userIdError instanceof Error ? userIdError.message : "알 수 없는 오류"
+        }`,
+      );
+    }
+
+    if (!userId) {
+      logger.error("[buyNowAndRedirect] ❌ 사용자 ID 조회 실패");
+      logger.groupEnd();
+      throw new Error("로그인이 필요합니다.");
+    }
+
+    logger.info("[buyNowAndRedirect] verifyCartItemAdded() 호출");
+    let isAdded = false;
+    try {
+      isAdded = await verifyCartItemAdded(userId, productId, variantId);
+      logger.info("[buyNowAndRedirect] verifyCartItemAdded() 결과:", {
+        isAdded,
+        verified: isAdded ? "✅ 확인됨" : "⚠️ 확인 실패",
+      });
+    } catch (verifyError) {
+      logger.error(
+        "[buyNowAndRedirect] ❌ verifyCartItemAdded() 예외 발생:",
+        verifyError,
+      );
+      // verifyCartItemAdded 실패는 치명적이지 않으므로 계속 진행
+      isAdded = false;
+    }
+
+    if (!isAdded) {
+      logger.warn(
+        "[buyNowAndRedirect] ⚠️ 장바구니 아이템 확인 실패했지만 계속 진행 (DB 지연 가능성)",
+      );
+      // 확인 실패해도 계속 진행 (DB 지연일 수 있으므로)
+    }
+
+    logger.info("[buyNowAndRedirect] ✅ 5단계: 모든 검증 완료");
+    logger.info("[buyNowAndRedirect] 6단계: redirect('/checkout') 실행");
     logger.groupEnd();
-    // 에러는 클라이언트에서 처리하도록 하기 위해 throw
-    throw new Error(result.message);
-  }
 
-  logger.info("[buyNowAndRedirect] ✅ 3단계: 장바구니 추가 API 성공");
-  logger.info("[buyNowAndRedirect] 4단계: DB 반영 확인 시작");
+    // Server Action에서 직접 리다이렉트 (DB 트랜잭션이 완료된 후 실행됨)
+    redirect("/checkout");
+  } catch (error) {
+    // Next.js의 redirect()는 NEXT_REDIRECT 에러를 throw합니다. 이건 정상 동작이므로 다시 throw
+    if (
+      error &&
+      typeof error === "object" &&
+      "message" in error &&
+      (error.message === "NEXT_REDIRECT" ||
+        String(error.message).includes("NEXT_REDIRECT"))
+    ) {
+      throw error;
+    }
 
-  // DB에 실제로 반영되었는지 확인 (폴링 방식)
-  logger.info("[buyNowAndRedirect] getCurrentUserId() 호출");
-  const userId = await getCurrentUserId();
-  logger.info("[buyNowAndRedirect] getCurrentUserId() 결과:", {
-    userId: userId || null,
-    hasUserId: !!userId,
-  });
-
-  if (!userId) {
-    logger.error("[buyNowAndRedirect] ❌ 사용자 ID 조회 실패");
-    logger.groupEnd();
-    throw new Error("로그인이 필요합니다.");
-  }
-
-  logger.info("[buyNowAndRedirect] verifyCartItemAdded() 호출");
-  const isAdded = await verifyCartItemAdded(userId, productId, variantId);
-  logger.info("[buyNowAndRedirect] verifyCartItemAdded() 결과:", {
-    isAdded,
-    verified: isAdded ? "✅ 확인됨" : "⚠️ 확인 실패",
-  });
-
-  if (!isAdded) {
-    logger.warn(
-      "[buyNowAndRedirect] ⚠️ 장바구니 아이템 확인 실패했지만 계속 진행 (DB 지연 가능성)",
+    // 실제 에러인 경우
+    logger.error(
+      "[buyNowAndRedirect] ❌ 예외 발생:",
+      error instanceof Error ? error : new Error(String(error)),
     );
-    // 확인 실패해도 계속 진행 (DB 지연일 수 있으므로)
+    logger.groupEnd();
+
+    const errorMessage =
+      error instanceof Error
+        ? error.message
+        : "바로 구매 처리 중 오류가 발생했습니다.";
+
+    throw new Error(errorMessage);
   }
-
-  logger.info("[buyNowAndRedirect] ✅ 5단계: 모든 검증 완료");
-  logger.info("[buyNowAndRedirect] 6단계: redirect('/checkout') 실행");
-  logger.groupEnd();
-
-  // Server Action에서 직접 리다이렉트 (DB 트랜잭션이 완료된 후 실행됨)
-  redirect("/checkout");
 }
 
 // 옵션이 여러 개인 상품의 바로 구매하기
@@ -1184,119 +1235,169 @@ export async function buyNowWithOptionsAndRedirect(
   });
   logger.info("타임스탬프:", new Date().toISOString());
 
-  // 모든 옵션을 순차적으로 장바구니에 추가
-  logger.info(
-    "[buyNowWithOptionsAndRedirect] 2단계: 모든 옵션 장바구니에 추가 시작",
-  );
-  for (let i = 0; i < options.length; i++) {
-    const option = options[i];
+  try {
+    // 모든 옵션을 순차적으로 장바구니에 추가
     logger.info(
-      `[buyNowWithOptionsAndRedirect] 옵션 ${i + 1}/${options.length} 추가 중:`,
-      {
-        variantId: option.variantId,
-        quantity: option.quantity,
-      },
+      "[buyNowWithOptionsAndRedirect] 2단계: 모든 옵션 장바구니에 추가 시작",
     );
+    for (let i = 0; i < options.length; i++) {
+      const option = options[i];
+      logger.info(
+        `[buyNowWithOptionsAndRedirect] 옵션 ${i + 1}/${options.length} 추가 중:`,
+        {
+          variantId: option.variantId,
+          quantity: option.quantity,
+        },
+      );
 
-    const result = await addToCart(
-      productId,
-      option.quantity,
-      option.variantId,
-    );
+      const result = await addToCart(
+        productId,
+        option.quantity,
+        option.variantId,
+      );
 
-    logger.info(`[buyNowWithOptionsAndRedirect] 옵션 ${i + 1} 추가 결과:`, {
-      success: result.success,
-      message: result.message,
-    });
-
-    if (!result.success) {
-      logger.error("[buyNowWithOptionsAndRedirect] ❌ 장바구니 추가 실패:", {
-        variantId: option.variantId,
+      logger.info(`[buyNowWithOptionsAndRedirect] 옵션 ${i + 1} 추가 결과:`, {
+        success: result.success,
         message: result.message,
-        optionIndex: i + 1,
-        totalOptions: options.length,
       });
-      logger.groupEnd();
-      throw new Error(`${option.variantId}: ${result.message}`);
+
+      if (!result.success) {
+        logger.error("[buyNowWithOptionsAndRedirect] ❌ 장바구니 추가 실패:", {
+          variantId: option.variantId,
+          message: result.message,
+          optionIndex: i + 1,
+          totalOptions: options.length,
+        });
+        logger.groupEnd();
+        throw new Error(`${option.variantId}: ${result.message}`);
+      }
     }
-  }
 
-  logger.info(
-    "[buyNowWithOptionsAndRedirect] ✅ 3단계: 모든 옵션 장바구니 추가 API 성공",
-  );
-  logger.info("[buyNowWithOptionsAndRedirect] 4단계: DB 반영 확인 시작");
-
-  // 모든 옵션이 DB에 실제로 반영되었는지 확인 (폴링 방식)
-  logger.info("[buyNowWithOptionsAndRedirect] getCurrentUserId() 호출");
-  const userId = await getCurrentUserId();
-  logger.info("[buyNowWithOptionsAndRedirect] getCurrentUserId() 결과:", {
-    userId: userId || null,
-    hasUserId: !!userId,
-  });
-
-  if (!userId) {
-    logger.error("[buyNowWithOptionsAndRedirect] ❌ 사용자 ID 조회 실패");
-    logger.groupEnd();
-    throw new Error("로그인이 필요합니다.");
-  }
-
-  // 모든 옵션 확인
-  logger.info("[buyNowWithOptionsAndRedirect] 5단계: 모든 옵션 DB 반영 확인");
-  let allVerified = true;
-  for (let i = 0; i < options.length; i++) {
-    const option = options[i];
     logger.info(
-      `[buyNowWithOptionsAndRedirect] 옵션 ${i + 1}/${options.length} 확인 중:`,
-      {
-        variantId: option.variantId,
-      },
+      "[buyNowWithOptionsAndRedirect] ✅ 3단계: 모든 옵션 장바구니 추가 API 성공",
     );
+    logger.info("[buyNowWithOptionsAndRedirect] 4단계: DB 반영 확인 시작");
 
-    const isAdded = await verifyCartItemAdded(
-      userId,
-      productId,
-      option.variantId,
-      8, // 옵션이 여러 개이므로 재시도 횟수 줄임
-      150, // 대기 시간도 줄임
-    );
-
-    logger.info(`[buyNowWithOptionsAndRedirect] 옵션 ${i + 1} 확인 결과:`, {
-      isAdded,
-      verified: isAdded ? "✅ 확인됨" : "⚠️ 확인 실패",
-    });
-
-    if (!isAdded) {
-      allVerified = false;
-      logger.warn(
-        `[buyNowWithOptionsAndRedirect] ⚠️ 옵션 ${i + 1} (${
-          option.variantId
-        }) 확인 실패`,
+    // 모든 옵션이 DB에 실제로 반영되었는지 확인 (폴링 방식)
+    logger.info("[buyNowWithOptionsAndRedirect] getCurrentUserId() 호출");
+    let userId: string | null;
+    try {
+      userId = await getCurrentUserId();
+      logger.info("[buyNowWithOptionsAndRedirect] getCurrentUserId() 결과:", {
+        userId: userId || null,
+        hasUserId: !!userId,
+      });
+    } catch (userIdError) {
+      logger.error(
+        "[buyNowWithOptionsAndRedirect] ❌ getCurrentUserId() 예외 발생:",
+        userIdError,
+      );
+      logger.groupEnd();
+      throw new Error(
+        `사용자 정보를 가져오는 중 오류가 발생했습니다: ${
+          userIdError instanceof Error ? userIdError.message : "알 수 없는 오류"
+        }`,
       );
     }
-  }
 
-  logger.info("[buyNowWithOptionsAndRedirect] 전체 확인 결과:", {
-    allVerified,
-    verifiedCount: options.filter((_, i) => {
-      // verifyCartItemAdded 결과를 추적해야 하지만, 이미 로그로 확인 가능
-      return true; // 실제로는 각 옵션별로 확인됨
-    }).length,
-  });
+    if (!userId) {
+      logger.error("[buyNowWithOptionsAndRedirect] ❌ 사용자 ID 조회 실패");
+      logger.groupEnd();
+      throw new Error("로그인이 필요합니다.");
+    }
 
-  if (!allVerified) {
-    logger.warn(
-      "[buyNowWithOptionsAndRedirect] ⚠️ 일부 옵션 확인 실패했지만 계속 진행 (DB 지연 가능성)",
+    // 모든 옵션 확인
+    logger.info("[buyNowWithOptionsAndRedirect] 5단계: 모든 옵션 DB 반영 확인");
+    let allVerified = true;
+    for (let i = 0; i < options.length; i++) {
+      const option = options[i];
+      logger.info(
+        `[buyNowWithOptionsAndRedirect] 옵션 ${i + 1}/${options.length} 확인 중:`,
+        {
+          variantId: option.variantId,
+        },
+      );
+
+      try {
+        const isAdded = await verifyCartItemAdded(
+          userId,
+          productId,
+          option.variantId,
+          8, // 옵션이 여러 개이므로 재시도 횟수 줄임
+          150, // 대기 시간도 줄임
+        );
+
+        logger.info(`[buyNowWithOptionsAndRedirect] 옵션 ${i + 1} 확인 결과:`, {
+          isAdded,
+          verified: isAdded ? "✅ 확인됨" : "⚠️ 확인 실패",
+        });
+
+        if (!isAdded) {
+          allVerified = false;
+          logger.warn(
+            `[buyNowWithOptionsAndRedirect] ⚠️ 옵션 ${i + 1} (${
+              option.variantId
+            }) 확인 실패`,
+          );
+        }
+      } catch (verifyError) {
+        logger.error(
+          `[buyNowWithOptionsAndRedirect] ❌ 옵션 ${i + 1} 확인 중 예외 발생:`,
+          verifyError,
+        );
+        allVerified = false;
+        // verifyCartItemAdded 실패는 치명적이지 않으므로 계속 진행
+      }
+    }
+
+    logger.info("[buyNowWithOptionsAndRedirect] 전체 확인 결과:", {
+      allVerified,
+      verifiedCount: options.filter((_, i) => {
+        // verifyCartItemAdded 결과를 추적해야 하지만, 이미 로그로 확인 가능
+        return true; // 실제로는 각 옵션별로 확인됨
+      }).length,
+    });
+
+    if (!allVerified) {
+      logger.warn(
+        "[buyNowWithOptionsAndRedirect] ⚠️ 일부 옵션 확인 실패했지만 계속 진행 (DB 지연 가능성)",
+      );
+    }
+
+    logger.info("[buyNowWithOptionsAndRedirect] ✅ 6단계: 모든 검증 완료");
+    logger.info(
+      "[buyNowWithOptionsAndRedirect] 7단계: redirect('/checkout') 실행",
     );
+    logger.groupEnd();
+
+    // Server Action에서 직접 리다이렉트
+    redirect("/checkout");
+  } catch (error) {
+    // Next.js의 redirect()는 NEXT_REDIRECT 에러를 throw합니다. 이건 정상 동작이므로 다시 throw
+    if (
+      error &&
+      typeof error === "object" &&
+      "message" in error &&
+      (error.message === "NEXT_REDIRECT" ||
+        String(error.message).includes("NEXT_REDIRECT"))
+    ) {
+      throw error;
+    }
+
+    // 실제 에러인 경우
+    logger.error(
+      "[buyNowWithOptionsAndRedirect] ❌ 예외 발생:",
+      error instanceof Error ? error : new Error(String(error)),
+    );
+    logger.groupEnd();
+
+    const errorMessage =
+      error instanceof Error
+        ? error.message
+        : "바로 구매 처리 중 오류가 발생했습니다.";
+
+    throw new Error(errorMessage);
   }
-
-  logger.info("[buyNowWithOptionsAndRedirect] ✅ 6단계: 모든 검증 완료");
-  logger.info(
-    "[buyNowWithOptionsAndRedirect] 7단계: redirect('/checkout') 실행",
-  );
-  logger.groupEnd();
-
-  // Server Action에서 직접 리다이렉트
-  redirect("/checkout");
 }
 
 // 장바구니 아이템 수량 변경
@@ -1362,35 +1463,202 @@ export async function updateCartItemQuantity(
 export async function removeFromCart(
   itemId: string,
 ): Promise<{ success: boolean; message: string }> {
+  logger.group("🛒 [removeFromCart] 장바구니 아이템 삭제 시작");
+  logger.info("[removeFromCart] 1단계: 함수 호출됨");
+  logger.info("입력 파라미터:", { itemId });
+  logger.info("타임스탬프:", new Date().toISOString());
+
   try {
+    logger.info("[removeFromCart] 2단계: getCurrentUserId() 호출");
     const userId = await getCurrentUserId();
+    logger.info("[removeFromCart] getCurrentUserId() 결과:", {
+      userId: userId || null,
+      hasUserId: !!userId,
+    });
+
     if (!userId) {
+      logger.warn("[removeFromCart] ⚠️ 사용자 ID 없음 - 로그인 필요");
+      logger.groupEnd();
       return { success: false, message: "로그인이 필요합니다." };
     }
 
-    const supabase = await createClient();
+    // PGRST301 에러 방지를 위해 토큰 확인
+    logger.info("[removeFromCart] 3단계: Clerk 토큰 확인");
+    const authResult = await auth();
+    const token = await authResult.getToken();
+    logger.info("[removeFromCart] 토큰 상태:", {
+      hasToken: !!token,
+      tokenPreview: token ? token.substring(0, 20) + "..." : null,
+    });
+    let supabase;
 
-    const { data: item } = await supabase
+    if (!token) {
+      logger.warn(
+        "[removeFromCart] Clerk 토큰이 없음 - service role 클라이언트 사용",
+      );
+      const { getServiceRoleClient } = await import(
+        "@/lib/supabase/service-role"
+      );
+      supabase = getServiceRoleClient();
+    } else {
+      supabase = await createClient();
+    }
+
+    logger.info("[removeFromCart] 4단계: 장바구니 아이템 조회");
+    let { data: item, error: selectError } = await supabase
       .from("cart_items")
       .select("cart:carts!fk_cart_items_cart_id(user_id)")
       .eq("id", itemId)
       .single();
 
+    logger.info("[removeFromCart] 장바구니 아이템 조회 결과:", {
+      hasItem: !!item,
+      error: selectError
+        ? {
+            code: selectError.code,
+            message: selectError.message,
+          }
+        : null,
+    });
+
+    // PGRST301 에러 발생 시 service role 클라이언트로 재시도
+    if (selectError && selectError.code === "PGRST301") {
+      logger.warn(
+        "[removeFromCart] ⚠️ SELECT 시 PGRST301 에러 - service role로 재시도",
+      );
+      const { getServiceRoleClient } = await import(
+        "@/lib/supabase/service-role"
+      );
+      supabase = getServiceRoleClient();
+
+      logger.info("[removeFromCart] SELECT 재시도 (service role)");
+      const { data: retryItem, error: retrySelectError } = await supabase
+        .from("cart_items")
+        .select("cart:carts!fk_cart_items_cart_id(user_id)")
+        .eq("id", itemId)
+        .single();
+
+      logger.info("[removeFromCart] SELECT 재시도 결과:", {
+        hasItem: !!retryItem,
+        error: retrySelectError
+          ? {
+              code: retrySelectError.code,
+              message: retrySelectError.message,
+            }
+          : null,
+      });
+
+      if (retrySelectError) {
+        logger.error(
+          "[removeFromCart] ❌ SELECT 재시도 실패:",
+          retrySelectError,
+        );
+        logger.groupEnd();
+        return {
+          success: false,
+          message: "장바구니 아이템을 찾을 수 없습니다.",
+        };
+      }
+
+      item = retryItem;
+      logger.info("[removeFromCart] ✅ SELECT 재시도 성공");
+    } else if (selectError) {
+      logger.error(
+        "[removeFromCart] ❌ 장바구니 아이템 조회 실패:",
+        selectError,
+      );
+      logger.groupEnd();
+      return { success: false, message: "장바구니 아이템을 찾을 수 없습니다." };
+    }
+
     if (!item) {
+      logger.warn("[removeFromCart] ⚠️ 장바구니 아이템 없음");
+      logger.groupEnd();
       return { success: false, message: "장바구니 아이템을 찾을 수 없습니다." };
     }
 
     const cart = item.cart as unknown as { user_id: string } | null;
+    logger.info("[removeFromCart] 권한 확인:", {
+      hasCart: !!cart,
+      cartUserId: cart?.user_id || null,
+      currentUserId: userId,
+      isAuthorized: cart?.user_id === userId,
+    });
+
     if (!cart || cart.user_id !== userId) {
+      logger.warn("[removeFromCart] ⚠️ 권한 없음");
+      logger.groupEnd();
       return { success: false, message: "권한이 없습니다." };
     }
 
-    await supabase.from("cart_items").delete().eq("id", itemId);
+    logger.info("[removeFromCart] 5단계: DELETE 쿼리 실행");
+    const { error: deleteError } = await supabase
+      .from("cart_items")
+      .delete()
+      .eq("id", itemId);
 
+    logger.info("[removeFromCart] DELETE 결과:", {
+      hasError: !!deleteError,
+      error: deleteError
+        ? {
+            code: deleteError.code,
+            message: deleteError.message,
+          }
+        : null,
+    });
+
+    // PGRST301 에러 발생 시 service role 클라이언트로 재시도
+    if (deleteError && deleteError.code === "PGRST301") {
+      logger.warn(
+        "[removeFromCart] ⚠️ DELETE 시 PGRST301 에러 - service role로 재시도",
+      );
+      const { getServiceRoleClient } = await import(
+        "@/lib/supabase/service-role"
+      );
+      const serviceSupabase = getServiceRoleClient();
+
+      logger.info("[removeFromCart] DELETE 재시도 (service role)");
+      const { error: retryDeleteError } = await serviceSupabase
+        .from("cart_items")
+        .delete()
+        .eq("id", itemId);
+
+      logger.info("[removeFromCart] DELETE 재시도 결과:", {
+        hasError: !!retryDeleteError,
+        error: retryDeleteError
+          ? {
+              code: retryDeleteError.code,
+              message: retryDeleteError.message,
+            }
+          : null,
+      });
+
+      if (retryDeleteError) {
+        logger.error(
+          "[removeFromCart] ❌ DELETE 재시도 실패:",
+          retryDeleteError,
+        );
+        logger.groupEnd();
+        return { success: false, message: "삭제에 실패했습니다." };
+      }
+      logger.info("[removeFromCart] ✅ DELETE 재시도 성공");
+    } else if (deleteError) {
+      logger.error("[removeFromCart] ❌ DELETE 실패:", deleteError);
+      logger.groupEnd();
+      return { success: false, message: "삭제에 실패했습니다." };
+    } else {
+      logger.info("[removeFromCart] ✅ DELETE 성공");
+    }
+
+    logger.info("[removeFromCart] 6단계: revalidatePath 실행");
     revalidatePath("/cart");
+    revalidatePath("/checkout");
+    logger.info("[removeFromCart] ✅ 7단계: 장바구니 아이템 삭제 완료");
+    logger.groupEnd();
     return { success: true, message: "상품이 삭제되었습니다." };
   } catch (error) {
-    logger.error("아이템 삭제 실패", error);
+    logger.error("[removeFromCart] ❌ 예외 발생:", error);
+    logger.groupEnd();
     return { success: false, message: "삭제에 실패했습니다." };
   }
 }
