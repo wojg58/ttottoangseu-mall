@@ -1006,7 +1006,7 @@ export default function CheckoutForm({
             </span>
           </div>
 
-          {/* 결제 수단 선택 - 약관 동의보다 먼저 표시 */}
+          {/* 결제 수단 선택 */}
           <div className="mb-6">
             <h3 className="text-sm font-bold text-[#4a3f48] mb-3">결제수단 선택</h3>
             <div className="space-y-3">
@@ -1074,49 +1074,72 @@ export default function CheckoutForm({
             </div>
           </div>
 
+          {/* 약관 동의 */}
+          <div className="mb-6 space-y-3 p-4 bg-[#fef8fb] rounded-lg border border-[#f5d5e3]">
+            {/* 전체 동의 */}
+            <label 
+              className={`flex items-start gap-2 ${
+                !selectedPaymentMethod 
+                  ? "cursor-not-allowed opacity-50" 
+                  : "cursor-pointer"
+              }`}
+            >
+              <input
+                type="checkbox"
+                checked={agreeAll}
+                onChange={(e) => handleAgreeAll(e.target.checked)}
+                disabled={!selectedPaymentMethod}
+                className="w-5 h-5 text-[#ff6b9d] border-[#d4d4d4] rounded focus:ring-[#ff6b9d] mt-0.5 disabled:cursor-not-allowed"
+              />
+              <span className="text-sm font-bold text-[#4a3f48]">전체 동의</span>
+            </label>
+
+            {/* 구분선 */}
+            <div className="border-t border-[#f5d5e3]"></div>
+
+            {/* 필수 동의 항목 */}
+            <label 
+              className={`flex items-start gap-2 pl-2 ${
+                !selectedPaymentMethod 
+                  ? "cursor-not-allowed opacity-50" 
+                  : "cursor-pointer"
+              }`}
+            >
+              <input
+                type="checkbox"
+                checked={agreePurchase}
+                onChange={(e) => handleAgreePurchase(e.target.checked)}
+                disabled={!selectedPaymentMethod}
+                className="w-4 h-4 text-[#ff6b9d] border-[#d4d4d4] rounded focus:ring-[#ff6b9d] mt-0.5 disabled:cursor-not-allowed"
+              />
+              <span className="text-sm text-[#4a3f48]">
+                구매조건 확인 및 결제진행에 동의 <span className="text-[#ff6b9d]">(필수)</span>
+              </span>
+            </label>
+          </div>
+
           {/* 결제 수단 상세 설정 */}
           {selectedPaymentMethod && (
             <div className="mb-6 space-y-4">
-
               {/* 에스크로(실시간 계좌이체) 선택 시 추가 입력 필드 */}
               {selectedPaymentMethod === "TRANSFER" && (
-                <div className="space-y-4">
+                <div>
                   {/* 예금주명 */}
-                  <div>
-                    <label className="block text-sm font-medium text-[#4a3f48] mb-2">
-                      예금주명<span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={depositorName}
-                      onChange={(e) => {
-                        logger.info("[예금주명] 입력:", e.target.value);
-                        setDepositorName(e.target.value);
-                      }}
-                      placeholder=""
-                      className="w-full px-3 py-2 border border-[#d4d4d4] rounded text-sm focus:outline-none focus:border-[#ff6b9d] focus:ring-1 focus:ring-[#ff6b9d]"
-                    />
-                  </div>
-
-                  {/* 에스크로 서비스 체크박스 */}
-                  <div className="flex items-start gap-2">
-                    <input
-                      type="checkbox"
-                      id="escrow-checkout"
-                      checked={useEscrow}
-                      onChange={(e) => {
-                        logger.info("[에스크로] 체크:", e.target.checked);
-                        setUseEscrow(e.target.checked);
-                      }}
-                      className="w-4 h-4 text-[#ff6b9d] border-[#d4d4d4] rounded focus:ring-[#ff6b9d] mt-0.5"
-                    />
-                    <label htmlFor="escrow-checkout" className="text-sm text-[#4a3f48] cursor-pointer">
-                      에스크로(구매안전서비스를 적용합니다.
-                    </label>
-                  </div>
+                  <label className="block text-sm font-medium text-[#4a3f48] mb-2">
+                    예금주명<span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={depositorName}
+                    onChange={(e) => {
+                      logger.info("[예금주명] 입력:", e.target.value);
+                      setDepositorName(e.target.value);
+                    }}
+                    placeholder=""
+                    className="w-full px-3 py-2 border border-[#d4d4d4] rounded text-sm focus:outline-none focus:border-[#ff6b9d] focus:ring-1 focus:ring-[#ff6b9d]"
+                  />
                 </div>
               )}
-
             </div>
           )}
 
@@ -1142,62 +1165,6 @@ export default function CheckoutForm({
                 자세히 &gt;
               </span>
             </p>
-          </div>
-
-          {/* 약관 동의 */}
-          <div className="mb-6 space-y-3 p-4 bg-[#fef8fb] rounded-lg border border-[#f5d5e3]">
-            {/* 전체 동의 */}
-            <label 
-              className={`flex items-start gap-2 ${
-                !selectedPaymentMethod 
-                  ? "cursor-not-allowed opacity-50" 
-                  : "cursor-pointer"
-              }`}
-            >
-              <input
-                type="checkbox"
-                checked={agreeAll}
-                onChange={(e) => handleAgreeAll(e.target.checked)}
-                disabled={!selectedPaymentMethod}
-                className="w-5 h-5 text-[#ff6b9d] border-[#d4d4d4] rounded focus:ring-[#ff6b9d] mt-0.5 disabled:cursor-not-allowed"
-              />
-              <span className="text-sm font-bold text-[#4a3f48]">
-                전체 동의
-                {!selectedPaymentMethod && (
-                  <span className="text-xs text-[#8b7d84] block mt-1 font-normal">
-                    (결제수단을 먼저 선택해주세요)
-                  </span>
-                )}
-              </span>
-            </label>
-
-            {/* 구분선 */}
-            <div className="border-t border-[#f5d5e3]"></div>
-
-            {/* 필수 동의 항목 */}
-            <label 
-              className={`flex items-start gap-2 pl-2 ${
-                !selectedPaymentMethod 
-                  ? "cursor-not-allowed opacity-50" 
-                  : "cursor-pointer"
-              }`}
-            >
-              <input
-                type="checkbox"
-                checked={agreePurchase}
-                onChange={(e) => handleAgreePurchase(e.target.checked)}
-                disabled={!selectedPaymentMethod}
-                className="w-4 h-4 text-[#ff6b9d] border-[#d4d4d4] rounded focus:ring-[#ff6b9d] mt-0.5 disabled:cursor-not-allowed"
-              />
-              <span className="text-sm text-[#4a3f48]">
-                구매조건 확인 및 결제진행에 동의 <span className="text-[#ff6b9d]">(필수)</span>
-                {!selectedPaymentMethod && (
-                  <span className="text-xs text-[#8b7d84] block mt-1">
-                    결제수단을 먼저 선택해주세요
-                  </span>
-                )}
-              </span>
-            </label>
           </div>
 
           <Button
