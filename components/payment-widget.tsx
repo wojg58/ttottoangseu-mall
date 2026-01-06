@@ -153,11 +153,15 @@ export default function PaymentWidget({
           paymentRequest.transfer = {
             useEscrow: useEscrow,
           };
-          // 입금자명이 있으면 추가
+          // 입금자명이 있으면 customerName에 설정 (실시간 계좌이체에서 입금자명으로 사용)
           if (depositorName && depositorName.trim()) {
             paymentRequest.customerName = depositorName.trim();
+            logger.info("[PaymentWidget] 입금자명 설정:", depositorName.trim());
           }
-          logger.info("[PaymentWidget] 계좌이체 결제 모드");
+          logger.info("[PaymentWidget] 실시간 계좌이체 결제 모드");
+          logger.info("[PaymentWidget] 에스크로 사용 여부:", useEscrow);
+          logger.info("[PaymentWidget] 계좌이체 팝업창이 오버레이로 표시됩니다");
+          logger.info("[PaymentWidget] 은행 선택 → 계좌번호 입력 → 인증 화면이 순서대로 표시됩니다");
         }
 
         logger.info("[PaymentWidget] 결제창 호출:", {
@@ -165,12 +169,19 @@ export default function PaymentWidget({
           orderId: paymentRequest.orderId,
           orderName: paymentRequest.orderName,
           amount: paymentRequest.amount,
+          transfer: paymentRequest.transfer,
+          customerName: paymentRequest.customerName,
         });
 
         // 결제창 호출 - 자동으로 오버레이 모달이 표시됨
         // CARD 모드: 카드사 선택 화면 → 약관 동의 → 카드 정보 입력 화면
+        // TRANSFER 모드: 은행 선택 화면 → 계좌번호 입력 → 인증 화면
+        logger.info("[PaymentWidget] payment.requestPayment() 호출 시작");
         await payment.requestPayment(paymentRequest);
         logger.info("[PaymentWidget] ✅ 결제창 호출 완료 (오버레이 모달 표시됨)");
+        if (paymentMethod === "TRANSFER") {
+          logger.info("[PaymentWidget] 실시간 계좌이체 팝업창이 활성화되었습니다");
+        }
         logger.groupEnd();
       } catch (err) {
         // 에러 객체를 자세히 로깅
