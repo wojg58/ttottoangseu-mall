@@ -255,19 +255,31 @@ export default function ProductDetailOptions({
 
     startTransition(async () => {
       try {
+        console.log("[ProductDetailOptions] 2단계: 인증 확인 완료 - Server Action 호출 시작");
+        console.log("요청 데이터:", {
+          productId,
+          hasVariants,
+          optionsCount: hasVariants ? selectedOptions.length : 0,
+          quantity: hasVariants ? undefined : quantity,
+        });
+
         if (hasVariants) {
           // 옵션이 있는 상품: Server Action에서 모든 옵션을 처리하고 리다이렉트
           const options = selectedOptions.map((option) => ({
             variantId: option.variant.id,
             quantity: option.quantity,
           }));
+          console.log("[ProductDetailOptions] 3단계: buyNowWithOptionsAndRedirect() 호출");
+          console.log("옵션 목록:", options);
           await buyNowWithOptionsAndRedirect(productId, options);
           // redirect()는 never를 반환하므로 여기 도달하지 않음
         } else {
           // 옵션이 없는 상품: Server Action에서 직접 리다이렉트
+          console.log("[ProductDetailOptions] 3단계: buyNowAndRedirect() 호출");
           await buyNowAndRedirect(productId, quantity);
           // redirect()는 never를 반환하므로 여기 도달하지 않음
         }
+        console.log("[ProductDetailOptions] ✅ 리다이렉트 완료 (이 로그는 보이지 않아야 함)");
       } catch (error: any) {
         // Next.js의 redirect()는 NEXT_REDIRECT 에러를 throw합니다. 이건 정상 동작이므로 다시 throw
         // redirect 에러는 message나 digest 속성에 NEXT_REDIRECT가 포함됨
@@ -282,7 +294,14 @@ export default function ProductDetailOptions({
         }
 
         // 실제 에러인 경우에만 로그 및 알림 표시
-        console.error("[ProductDetailOptions] 바로 구매 실패:", error);
+        console.error("[ProductDetailOptions] ❌ 4단계: 바로 구매 실패");
+        console.error("에러 상세:", {
+          message: error?.message,
+          code: error?.code,
+          digest: error?.digest,
+          stack: error?.stack,
+          fullError: error,
+        });
         const errorMessage = error instanceof Error ? error.message : "주문에 실패했습니다.";
         
         // 서버에서 반환한 로그인 관련 에러인 경우 (실제 세션 만료)
@@ -290,10 +309,12 @@ export default function ProductDetailOptions({
           console.error("❌ 서버에서 로그인 필요 응답 - 실제 세션 만료");
           alert("로그인 세션이 만료되었습니다. 다시 로그인해주세요.");
           router.push("/sign-in?redirect_url=" + window.location.pathname);
+          console.groupEnd();
           return;
         }
         
         alert(errorMessage);
+        console.groupEnd();
       }
     });
   };

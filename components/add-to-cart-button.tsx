@@ -114,30 +114,36 @@ export default function AddToCartButton({
   };
 
   const handleBuyNow = async () => {
-    console.log("[AddToCartButton] 바로 구매 버튼 클릭:", {
+    console.group("🛒 [바로 구매하기] 시작");
+    console.log("[AddToCartButton] 1단계: 바로 구매 버튼 클릭");
+    console.log("상태:", {
       isLoaded,
       userId,
       isSignedIn,
       productId,
       quantity,
       variantId,
+      timestamp: new Date().toISOString(),
     });
 
     // Clerk 인증 상태가 아직 로드되지 않았으면 대기
     if (!isLoaded) {
-      console.log("[AddToCartButton] Clerk 인증 상태 로딩 중...");
+      console.warn("[AddToCartButton] ⚠️ Clerk 인증 상태 로딩 중...");
+      console.groupEnd();
       return;
     }
 
     // 인증 상태가 로드되었는데 userId가 없으면 로그인 필요
     if (!userId) {
-      console.log("[AddToCartButton] 로그인 필요");
+      console.warn("[AddToCartButton] ⚠️ 로그인 필요 - 로그인 페이지로 이동");
       const currentUrl = window.location.pathname + window.location.search;
       router.push("/sign-in?redirect_url=" + encodeURIComponent(currentUrl));
+      console.groupEnd();
       return;
     }
 
-    console.log("[AddToCartButton] 바로 구매 시작:", {
+    console.log("[AddToCartButton] 2단계: 인증 확인 완료 - Server Action 호출 시작");
+    console.log("요청 데이터:", {
       productId,
       quantity,
       variantId,
@@ -145,9 +151,11 @@ export default function AddToCartButton({
 
     startTransition(async () => {
       try {
+        console.log("[AddToCartButton] 3단계: buyNowAndRedirect() 호출");
         // Server Action에서 직접 리다이렉트 (DB 트랜잭션 완료 후 실행됨)
         await buyNowAndRedirect(productId, quantity, variantId);
         // redirect()는 never를 반환하므로 여기 도달하지 않음
+        console.log("[AddToCartButton] ✅ 리다이렉트 완료 (이 로그는 보이지 않아야 함)");
       } catch (error: any) {
         // Next.js의 redirect()는 NEXT_REDIRECT 에러를 throw합니다. 이건 정상 동작이므로 다시 throw
         // redirect 에러는 message나 digest 속성에 NEXT_REDIRECT가 포함됨
@@ -162,7 +170,14 @@ export default function AddToCartButton({
         }
 
         // 실제 에러인 경우에만 로그 및 알림 표시
-        console.error("[AddToCartButton] 바로 구매 실패:", error);
+        console.error("[AddToCartButton] ❌ 4단계: 바로 구매 실패");
+        console.error("에러 상세:", {
+          message: error?.message,
+          code: error?.code,
+          digest: error?.digest,
+          stack: error?.stack,
+          fullError: error,
+        });
         const errorMessage =
           error instanceof Error ? error.message : "주문에 실패했습니다.";
 
@@ -171,10 +186,12 @@ export default function AddToCartButton({
           console.error("❌ 서버에서 로그인 필요 응답 - 실제 세션 만료");
           alert("로그인 세션이 만료되었습니다. 다시 로그인해주세요.");
           router.push("/sign-in?redirect_url=" + window.location.pathname);
+          console.groupEnd();
           return;
         }
 
         alert(errorMessage);
+        console.groupEnd();
       }
     });
   };
