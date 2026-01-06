@@ -871,9 +871,21 @@ export default function SignInContent() {
           }
 
           // 추가 공백 제거 및 정규화
-          emailValue = emailValue.toLowerCase().trim();
+          // 보이지 않는 문자 제거 (zero-width space, non-breaking space 등)
+          emailValue = emailValue
+            .toLowerCase()
+            .trim()
+            .replace(/[\u200B-\u200D\uFEFF]/g, "") // Zero-width characters 제거
+            .replace(/\u00A0/g, " ") // Non-breaking space를 일반 공백으로 변환
+            .replace(/\s+/g, "") // 모든 공백 제거
+            .replace(/[^\x00-\x7F]/g, (char) => {
+              // ASCII가 아닌 문자는 유지하되, 특수한 경우만 허용
+              // 이메일 주소에서 일반적으로 사용되는 문자만 허용
+              return char;
+            });
 
           console.log("[SignInContent] 최종 검증된 이메일:", emailValue);
+          console.log("[SignInContent] 이메일 정제 후 길이:", emailValue.length);
 
           if (emailValue && passwordValue) {
             try {
@@ -979,53 +991,32 @@ export default function SignInContent() {
                 return;
               }
 
-              // Clerk 문서에 따르면 identifier와 password를 함께 전달할 수 있습니다
-              // 한 번에 처리하거나, 두 단계로 나눌 수 있습니다
-              // 먼저 identifier만으로 시도하고, 필요시 password를 전달합니다
+              // Clerk 로그인: 두 단계 방식으로 처리
+              // 1단계: identifier만으로 signIn 생성
+              // 2단계: password로 인증 시도
               let signInAttempt;
               let result;
 
               try {
-                // 방법 1: identifier와 password를 함께 전달 (권장)
-                console.log("[SignInContent] identifier와 password를 함께 전달하여 로그인 시도");
-                signInAttempt = await signIn.create({
-                  identifier: emailValue,
-                  password: passwordValue,
-                });
-
-                console.log("[SignInContent] SignIn.create 응답:", signInAttempt);
-
-                // 이미 완료된 경우 (password를 함께 전달했을 때)
-                if (signInAttempt.status === "complete") {
-                  console.log("[SignInContent] 로그인 완료 (한 번에 처리됨)");
-                  result = signInAttempt;
-                } else {
-                  // 추가 단계가 필요한 경우
-                  console.log(
-                    "[SignInContent] 추가 인증 단계 필요, 상태:",
-                    signInAttempt.status,
-                  );
-                  result = signInAttempt;
-                }
-              } catch (createError: any) {
-                // identifier만으로 시도했을 때 에러가 발생하면, 두 단계로 나눠서 처리
-                console.log(
-                  "[SignInContent] password와 함께 전달 실패, 두 단계로 나눠서 처리 시도",
-                );
-                console.log("[SignInContent] 에러:", createError);
-
                 // 1단계: identifier만으로 signIn 생성
+                console.log("[SignInContent] 1단계: identifier만으로 SignIn.create 호출");
+                console.log("[SignInContent] 전달할 identifier 값:", {
+                  value: emailValue,
+                  type: typeof emailValue,
+                  length: emailValue.length,
+                  charCodes: Array.from(emailValue).map((char) => char.charCodeAt(0)),
+                  json: JSON.stringify(emailValue),
+                });
+
                 signInAttempt = await signIn.create({
                   identifier: emailValue,
                 });
 
-                console.log("[SignInContent] SignIn.create 응답:", signInAttempt);
-
-                console.log(
-                  "[SignInContent] SignIn 생성 완료, 비밀번호 인증 시도",
-                );
+                console.log("[SignInContent] SignIn.create 성공, 응답:", signInAttempt);
+                console.log("[SignInContent] SignIn 상태:", signInAttempt.status);
 
                 // 2단계: 비밀번호로 인증 시도
+                console.log("[SignInContent] 2단계: 비밀번호로 인증 시도");
                 console.log("[SignInContent] attemptFirstFactor 호출 중...");
                 console.log("[SignInContent] 현재 환경:", {
                   isProduction: window.location.hostname !== "localhost",
@@ -1038,6 +1029,19 @@ export default function SignInContent() {
                   strategy: "password",
                   password: passwordValue,
                 });
+
+                console.log("[SignInContent] attemptFirstFactor 성공, 상태:", result.status);
+              } catch (error: any) {
+                // 에러 상세 로깅
+                console.error("[SignInContent] 로그인 과정에서 에러 발생:", error);
+                console.error("[SignInContent] 에러 타입:", typeof error);
+                console.error("[SignInContent] 에러 이름:", error?.name);
+                console.error("[SignInContent] 에러 메시지:", error?.message);
+                console.error("[SignInContent] 에러 코드:", error?.errors?.[0]?.code);
+                console.error("[SignInContent] 에러 전체:", JSON.stringify(error, null, 2));
+
+                // 에러를 다시 throw하여 상위 catch 블록에서 처리
+                throw error;
               }
 
               console.log("[SignInContent] 로그인 성공, 상태:", result.status);
