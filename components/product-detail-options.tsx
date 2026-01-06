@@ -263,36 +263,36 @@ export default function ProductDetailOptions({
           quantity: hasVariants ? undefined : quantity,
         });
 
+        let result: { success: boolean; message?: string };
+        
         if (hasVariants) {
-          // 옵션이 있는 상품: Server Action에서 모든 옵션을 처리하고 리다이렉트
+          // 옵션이 있는 상품: Server Action에서 모든 옵션을 처리
           const options = selectedOptions.map((option) => ({
             variantId: option.variant.id,
             quantity: option.quantity,
           }));
           console.log("[ProductDetailOptions] 3단계: buyNowWithOptionsAndRedirect() 호출");
           console.log("옵션 목록:", options);
-          await buyNowWithOptionsAndRedirect(productId, options);
-          // redirect()는 never를 반환하므로 여기 도달하지 않음
+          result = await buyNowWithOptionsAndRedirect(productId, options);
         } else {
-          // 옵션이 없는 상품: Server Action에서 직접 리다이렉트
+          // 옵션이 없는 상품: Server Action에서 처리
           console.log("[ProductDetailOptions] 3단계: buyNowAndRedirect() 호출");
-          await buyNowAndRedirect(productId, quantity);
-          // redirect()는 never를 반환하므로 여기 도달하지 않음
+          result = await buyNowAndRedirect(productId, quantity);
         }
-        console.log("[ProductDetailOptions] ✅ 리다이렉트 완료 (이 로그는 보이지 않아야 함)");
+        
+        console.log("[ProductDetailOptions] Server Action 결과:", result);
+        
+        if (result.success) {
+          console.log("[ProductDetailOptions] ✅ 4단계: 성공 - 체크아웃 페이지로 이동");
+          // 클라이언트에서 리다이렉트
+          router.push("/checkout");
+          console.groupEnd();
+          return;
+        } else {
+          // 실패한 경우 에러로 처리
+          throw new Error(result.message || "바로 구매에 실패했습니다.");
+        }
       } catch (error: any) {
-        // Next.js의 redirect()는 NEXT_REDIRECT 에러를 throw합니다. 이건 정상 동작이므로 다시 throw
-        // redirect 에러는 message나 digest 속성에 NEXT_REDIRECT가 포함됨
-        if (
-          error &&
-          (error.message === "NEXT_REDIRECT" ||
-            error.message?.includes("NEXT_REDIRECT") ||
-            error.digest?.includes("NEXT_REDIRECT"))
-        ) {
-          // 리다이렉트 에러는 조용히 다시 throw (로그나 알림 없이)
-          throw error;
-        }
-
         // 실제 에러인 경우에만 로그 및 알림 표시
         console.error("[ProductDetailOptions] ❌ 4단계: 바로 구매 실패");
         console.error("에러 타입:", typeof error);

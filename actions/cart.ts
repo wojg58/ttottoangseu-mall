@@ -8,7 +8,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import logger from "@/lib/logger";
 import type { CartItemWithProduct } from "@/types/database";
 
@@ -1107,7 +1106,7 @@ export async function buyNowAndRedirect(
   productId: string,
   quantity: number = 1,
   variantId?: string,
-): Promise<never> {
+): Promise<{ success: boolean; message?: string }> {
   logger.group("🛒 [바로 구매하기] Server Action 시작");
   logger.info("[buyNowAndRedirect] 1단계: 함수 호출됨");
   logger.info("입력 파라미터:", { productId, quantity, variantId });
@@ -1185,23 +1184,18 @@ export async function buyNowAndRedirect(
     }
 
     logger.info("[buyNowAndRedirect] ✅ 5단계: 모든 검증 완료");
-    logger.info("[buyNowAndRedirect] 6단계: redirect('/checkout') 실행");
+    logger.info("[buyNowAndRedirect] 6단계: revalidatePath 실행");
+    
+    // 캐시 갱신
+    revalidatePath("/checkout");
+    revalidatePath("/cart");
+    
+    logger.info("[buyNowAndRedirect] ✅ 7단계: 완료 - 클라이언트에서 리다이렉트 필요");
     logger.groupEnd();
 
-    // Server Action에서 직접 리다이렉트 (DB 트랜잭션이 완료된 후 실행됨)
-    redirect("/checkout");
+    // 성공 반환 (클라이언트에서 리다이렉트)
+    return { success: true };
   } catch (error) {
-    // Next.js의 redirect()는 NEXT_REDIRECT 에러를 throw합니다. 이건 정상 동작이므로 다시 throw
-    if (
-      error &&
-      typeof error === "object" &&
-      "message" in error &&
-      (error.message === "NEXT_REDIRECT" ||
-        String(error.message).includes("NEXT_REDIRECT"))
-    ) {
-      throw error;
-    }
-
     // 실제 에러인 경우
     logger.error(
       "[buyNowAndRedirect] ❌ 예외 발생:",
@@ -1214,7 +1208,7 @@ export async function buyNowAndRedirect(
         ? error.message
         : "바로 구매 처리 중 오류가 발생했습니다.";
 
-    throw new Error(errorMessage);
+    return { success: false, message: errorMessage };
   }
 }
 
@@ -1222,7 +1216,7 @@ export async function buyNowAndRedirect(
 export async function buyNowWithOptionsAndRedirect(
   productId: string,
   options: Array<{ variantId: string; quantity: number }>,
-): Promise<never> {
+): Promise<{ success: boolean; message?: string }> {
   logger.group("🛒 [바로 구매하기 - 옵션 여러 개] Server Action 시작");
   logger.info("[buyNowWithOptionsAndRedirect] 1단계: 함수 호출됨");
   logger.info("입력 파라미터:", {
@@ -1369,25 +1363,18 @@ export async function buyNowWithOptionsAndRedirect(
     }
 
     logger.info("[buyNowWithOptionsAndRedirect] ✅ 6단계: 모든 검증 완료");
-    logger.info(
-      "[buyNowWithOptionsAndRedirect] 7단계: redirect('/checkout') 실행",
-    );
+    logger.info("[buyNowWithOptionsAndRedirect] 7단계: revalidatePath 실행");
+    
+    // 캐시 갱신
+    revalidatePath("/checkout");
+    revalidatePath("/cart");
+    
+    logger.info("[buyNowWithOptionsAndRedirect] ✅ 8단계: 완료 - 클라이언트에서 리다이렉트 필요");
     logger.groupEnd();
 
-    // Server Action에서 직접 리다이렉트
-    redirect("/checkout");
+    // 성공 반환 (클라이언트에서 리다이렉트)
+    return { success: true };
   } catch (error) {
-    // Next.js의 redirect()는 NEXT_REDIRECT 에러를 throw합니다. 이건 정상 동작이므로 다시 throw
-    if (
-      error &&
-      typeof error === "object" &&
-      "message" in error &&
-      (error.message === "NEXT_REDIRECT" ||
-        String(error.message).includes("NEXT_REDIRECT"))
-    ) {
-      throw error;
-    }
-
     // 실제 에러인 경우
     logger.error(
       "[buyNowWithOptionsAndRedirect] ❌ 예외 발생:",
@@ -1400,7 +1387,7 @@ export async function buyNowWithOptionsAndRedirect(
         ? error.message
         : "바로 구매 처리 중 오류가 발생했습니다.";
 
-    throw new Error(errorMessage);
+    return { success: false, message: errorMessage };
   }
 }
 
