@@ -23,11 +23,11 @@
 
 ```sql
 -- users 테이블: clerk_user_id 일반 인덱스 추가
-CREATE INDEX IF NOT EXISTS idx_users_clerk_user_id_no_filter 
+CREATE INDEX IF NOT EXISTS idx_users_clerk_user_id_no_filter
 ON public.users(clerk_user_id);
 
 -- products 테이블: id와 deleted_at 복합 인덱스 추가
-CREATE INDEX IF NOT EXISTS idx_products_id_deleted_at 
+CREATE INDEX IF NOT EXISTS idx_products_id_deleted_at
 ON public.products(id, deleted_at);
 ```
 
@@ -84,4 +84,3 @@ if (!token) {
 
 - [Supabase PostgREST 인덱스 가이드](https://supabase.com/docs/guides/database/postgres/indexes)
 - [PGRST301 에러 문서](https://postgrest.org/en/stable/api.html#errors)
-

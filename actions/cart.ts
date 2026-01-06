@@ -352,11 +352,14 @@ export async function addToCart(
         .single();
 
       if (retryError) {
-        logger.error("[addToCart] service role 클라이언트로도 상품 조회 실패:", {
-          error: retryError.message,
-          code: retryError.code,
-          productId,
-        });
+        logger.error(
+          "[addToCart] service role 클라이언트로도 상품 조회 실패:",
+          {
+            error: retryError.message,
+            code: retryError.code,
+            productId,
+          },
+        );
         return { success: false, message: "상품을 찾을 수 없습니다." };
       }
 
