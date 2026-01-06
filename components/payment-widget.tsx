@@ -116,8 +116,14 @@ export default function PaymentWidget({
         logger.info("[PaymentWidget] failUrl:", failUrl);
 
         // 결제 요청 객체 생성
+        // 에스크로 계좌이체는 가상계좌(VIRTUAL_ACCOUNT)를 사용해야 함
+        const isEscrowTransfer = paymentMethod === "TRANSFER" && useEscrow;
         const paymentRequest: any = {
-          method: paymentMethod === "CARD" ? "CARD" : "TRANSFER",
+          method: paymentMethod === "CARD" 
+            ? "CARD" 
+            : isEscrowTransfer 
+            ? "VIRTUAL_ACCOUNT" 
+            : "TRANSFER",
           amount: {
             currency: "KRW",
             value: amount,
@@ -135,6 +141,7 @@ export default function PaymentWidget({
           amount: paymentRequest.amount,
           orderId: paymentRequest.orderId,
           orderName: paymentRequest.orderName,
+          isEscrowTransfer,
         });
 
         // 결제수단별 추가 설정
@@ -149,15 +156,24 @@ export default function PaymentWidget({
           logger.info("[PaymentWidget] 신용카드 결제 모드 - 통합 결제창이 오버레이로 표시됩니다");
           logger.info("[PaymentWidget] 카드사 선택 → 약관 동의 → 카드번호/유효기간/CVC 입력 화면이 순서대로 표시됩니다");
         } else if (paymentMethod === "TRANSFER") {
-          // 실시간 계좌이체
-          paymentRequest.transfer = {
-            useEscrow: useEscrow,
-          };
-          // 입금자명이 있으면 추가
-          if (depositorName && depositorName.trim()) {
-            paymentRequest.customerName = depositorName.trim();
+          if (isEscrowTransfer) {
+            // 에스크로 계좌이체 (가상계좌)
+            paymentRequest.virtualAccount = {
+              useEscrow: true,
+            };
+            // 입금자명이 있으면 추가
+            if (depositorName && depositorName.trim()) {
+              paymentRequest.customerName = depositorName.trim();
+            }
+            logger.info("[PaymentWidget] 에스크로 계좌이체 결제 모드 (가상계좌)");
+            logger.info("[PaymentWidget] 입금자명:", depositorName);
+          } else {
+            // 실시간 계좌이체
+            paymentRequest.transfer = {
+              useEscrow: false,
+            };
+            logger.info("[PaymentWidget] 실시간 계좌이체 결제 모드");
           }
-          logger.info("[PaymentWidget] 계좌이체 결제 모드");
         }
 
         logger.info("[PaymentWidget] 결제창 호출:", {
