@@ -100,9 +100,9 @@ function WaitingDepositContent() {
           return;
         }
 
-        // 계좌이체가 아니면 일반 성공 페이지로 리다이렉트
-        if (data.method !== "TRANSFER" && !data.virtualAccount) {
-          logger.info("계좌이체가 아님 - 일반 성공 페이지로 리다이렉트");
+        // 가상계좌 정보가 없으면 일반 성공 페이지로 리다이렉트 (실시간 계좌이체는 일반 성공 페이지로)
+        if (!data.virtualAccount || !data.virtualAccount.accountNumber) {
+          logger.info("가상계좌가 아님 (실시간 계좌이체 또는 다른 결제 수단) - 일반 성공 페이지로 리다이렉트");
           router.push(`/order/success?paymentKey=${paymentKey}&orderId=${orderId}&amount=${amount}`);
           return;
         }

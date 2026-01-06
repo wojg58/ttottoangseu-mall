@@ -140,11 +140,11 @@ function OrderSuccessContent() {
     return null;
   }
 
-  // 계좌이체이고 가상계좌 정보가 있으면 입금 대기 페이지로 리다이렉트
+  // 가상계좌 정보가 있으면 입금 대기 페이지로 리다이렉트 (실시간 계좌이체는 제외)
   if (
     result.success &&
-    result.method === "TRANSFER" &&
-    result.virtualAccount
+    result.virtualAccount &&
+    result.virtualAccount.accountNumber
   ) {
     const paymentKey = searchParams.get("paymentKey");
     const orderId = searchParams.get("orderId");
