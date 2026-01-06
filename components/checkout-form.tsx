@@ -1238,19 +1238,12 @@ export default function CheckoutForm({
             {/* 약관 동의 */}
             <div className="mb-6 space-y-3 p-4 bg-[#fef8fb] rounded-lg border border-[#f5d5e3]">
               {/* 전체 동의 */}
-              <label
-                className={`flex items-start gap-2 ${
-                  !selectedPaymentMethod
-                    ? "cursor-not-allowed opacity-50"
-                    : "cursor-pointer"
-                }`}
-              >
+              <label className="flex items-start gap-2 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={agreeAll}
                   onChange={(e) => handleAgreeAll(e.target.checked)}
-                  disabled={!selectedPaymentMethod}
-                  className="w-5 h-5 text-[#ff6b9d] border-[#d4d4d4] rounded focus:ring-[#ff6b9d] mt-0.5 disabled:cursor-not-allowed"
+                  className="w-5 h-5 text-[#ff6b9d] border-[#d4d4d4] rounded focus:ring-[#ff6b9d] mt-0.5"
                 />
                 <span className="text-sm font-bold text-[#4a3f48]">
                   전체 동의
@@ -1261,19 +1254,12 @@ export default function CheckoutForm({
               <div className="border-t border-[#f5d5e3]"></div>
 
               {/* 필수 동의 항목 */}
-              <label
-                className={`flex items-start gap-2 pl-2 ${
-                  !selectedPaymentMethod
-                    ? "cursor-not-allowed opacity-50"
-                    : "cursor-pointer"
-                }`}
-              >
+              <label className="flex items-start gap-2 pl-2 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={agreePurchase}
                   onChange={(e) => handleAgreePurchase(e.target.checked)}
-                  disabled={!selectedPaymentMethod}
-                  className="w-4 h-4 text-[#ff6b9d] border-[#d4d4d4] rounded focus:ring-[#ff6b9d] mt-0.5 disabled:cursor-not-allowed"
+                  className="w-4 h-4 text-[#ff6b9d] border-[#d4d4d4] rounded focus:ring-[#ff6b9d] mt-0.5"
                 />
                 <span className="text-sm text-[#4a3f48]">
                   구매조건 확인 및 결제진행에 동의{" "}
@@ -1309,7 +1295,9 @@ export default function CheckoutForm({
       {/* PaymentWidget - Toss Payments SDK가 자체 오버레이를 생성하므로 여기서는 컴포넌트만 렌더링 */}
       {showPaymentWidget && paymentWidgetData && selectedPaymentMethod && (
         <PaymentWidget
-          key={`${paymentWidgetData.orderId}-${selectedPaymentMethod}-${Date.now()}`}
+          key={`${
+            paymentWidgetData.orderId
+          }-${selectedPaymentMethod}-${Date.now()}`}
           orderId={paymentWidgetData.orderId}
           amount={paymentWidgetData.amount}
           orderName={paymentWidgetData.orderName}
