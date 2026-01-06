@@ -1006,7 +1006,7 @@ export default function CheckoutForm({
             </span>
           </div>
 
-          {/* 결제 수단 선택 */}
+          {/* 결제 수단 선택 - 약관 동의보다 먼저 표시 */}
           <div className="mb-6">
             <h3 className="text-sm font-bold text-[#4a3f48] mb-3">결제수단 선택</h3>
             <div className="space-y-3">
