@@ -148,7 +148,8 @@ export default function AddToCartButton({
         const result = await addToCart(productId, quantity, variantId);
         if (result.success) {
           console.log("[AddToCartButton] 바로 구매 성공 - 체크아웃 페이지로 이동");
-          router.push("/checkout");
+          // 전체 페이지 리로드를 통해 서버 사이드에서 최신 장바구니 데이터를 가져오도록 함
+          window.location.href = "/checkout";
         } else {
           console.error("[AddToCartButton] 바로 구매 실패:", {
             message: result.message,

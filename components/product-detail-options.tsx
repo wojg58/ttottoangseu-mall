@@ -302,7 +302,8 @@ export default function ProductDetailOptions({
           }
         }
         console.log("[ProductDetailOptions] 바로 구매 성공 - 체크아웃 페이지로 이동");
-        router.push("/checkout");
+        // 전체 페이지 리로드를 통해 서버 사이드에서 최신 장바구니 데이터를 가져오도록 함
+        window.location.href = "/checkout";
       } catch (error) {
         console.error("[ProductDetailOptions] 바로 구매 실패:", error);
         alert("주문에 실패했습니다.");
