@@ -1,12 +1,12 @@
 /**
  * @file app/api/payments/toss/prepare/route.ts
  * @description 토스페이먼츠 결제 준비 API
- * 
+ *
  * 주요 기능:
  * 1. 주문 생성 (orderId)
  * 2. 서버에서 금액 재계산 및 검증
  * 3. orderId, amount, orderName, customerName, customerEmail 반환
- * 
+ *
  * @dependencies
  * - @clerk/nextjs/server: 인증 확인
  * - @/lib/supabase/server: Supabase 클라이언트
@@ -14,7 +14,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import { createClient } from "@/lib/supabase/server";
+import { getServiceRoleClient } from "@/lib/supabase/service-role";
 import logger from "@/lib/logger";
 
 // 주문번호 생성
@@ -29,7 +29,7 @@ function generateOrderNumber(): string {
 
 export async function POST(request: NextRequest) {
   logger.group("[POST /api/payments/toss/prepare] 결제 준비 시작");
-  
+
   try {
     // 1. 인증 확인
     const { userId: clerkUserId } = await auth();
@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
       logger.groupEnd();
       return NextResponse.json(
         { success: false, message: "로그인이 필요합니다." },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -50,8 +50,8 @@ export async function POST(request: NextRequest) {
 
     logger.info("클라이언트에서 전달된 금액:", clientAmount);
 
-    // 3. Supabase 클라이언트 생성
-    const supabase = await createClient();
+    // 3. Supabase 서비스 롤 클라이언트 생성 (RLS 우회)
+    const supabase = getServiceRoleClient();
 
     // 4. 사용자 ID 조회
     let { data: user, error: userError } = await supabase
@@ -66,10 +66,6 @@ export async function POST(request: NextRequest) {
       logger.info("사용자가 없음 - 동기화 시도");
       try {
         const { clerkClient } = await import("@clerk/nextjs/server");
-        const { getServiceRoleClient } = await import(
-          "@/lib/supabase/service-role"
-        );
-
         const client = await clerkClient();
         const clerkUser = await client.users.getUser(clerkUserId);
 
@@ -126,8 +122,11 @@ export async function POST(request: NextRequest) {
       logger.error("사용자를 찾을 수 없음 (동기화 시도 후에도 실패)");
       logger.groupEnd();
       return NextResponse.json(
-        { success: false, message: "사용자를 찾을 수 없습니다. 잠시 후 다시 시도해주세요." },
-        { status: 404 }
+        {
+          success: false,
+          message: "사용자를 찾을 수 없습니다. 잠시 후 다시 시도해주세요.",
+        },
+        { status: 404 },
       );
     }
 
@@ -136,7 +135,7 @@ export async function POST(request: NextRequest) {
       logger.groupEnd();
       return NextResponse.json(
         { success: false, message: "사용자 정보 조회 중 오류가 발생했습니다." },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -158,7 +157,7 @@ export async function POST(request: NextRequest) {
       logger.groupEnd();
       return NextResponse.json(
         { success: false, message: "장바구니가 비어있습니다." },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -170,7 +169,7 @@ export async function POST(request: NextRequest) {
         *,
         product:products!fk_cart_items_product_id(id, name, price, discount_price, stock, status),
         variant:product_variants!fk_cart_items_variant_id(id, variant_value, price_adjustment, stock)
-      `
+      `,
       )
       .eq("cart_id", cart.id);
 
@@ -179,7 +178,7 @@ export async function POST(request: NextRequest) {
       logger.groupEnd();
       return NextResponse.json(
         { success: false, message: "장바구니가 비어있습니다." },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -217,8 +216,11 @@ export async function POST(request: NextRequest) {
         logger.error("품절 상품 발견:", product.name);
         logger.groupEnd();
         return NextResponse.json(
-          { success: false, message: `${product.name}은(는) 품절된 상품입니다.` },
-          { status: 400 }
+          {
+            success: false,
+            message: `${product.name}은(는) 품절된 상품입니다.`,
+          },
+          { status: 400 },
         );
       }
 
@@ -236,7 +238,7 @@ export async function POST(request: NextRequest) {
             success: false,
             message: `${product.name}의 재고가 부족합니다. (현재 재고: ${availableStock}개)`,
           },
-          { status: 400 }
+          { status: 400 },
         );
       }
 
@@ -300,7 +302,7 @@ export async function POST(request: NextRequest) {
       logger.groupEnd();
       return NextResponse.json(
         { success: false, message: "주문 생성에 실패했습니다." },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -331,7 +333,7 @@ export async function POST(request: NextRequest) {
       logger.groupEnd();
       return NextResponse.json(
         { success: false, message: "주문 아이템 생성에 실패했습니다." },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -378,8 +380,7 @@ export async function POST(request: NextRequest) {
             ? error.message
             : "결제 준비 중 오류가 발생했습니다.",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
-

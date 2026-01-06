@@ -14,7 +14,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import { createClient } from "@/lib/supabase/server";
+import { getServiceRoleClient } from "@/lib/supabase/service-role";
 import logger from "@/lib/logger";
 
 interface TossPaymentResponse {
@@ -94,8 +94,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 4. Supabase 클라이언트 생성
-    const supabase = await createClient();
+    // 4. Supabase 서비스 롤 클라이언트 생성 (RLS 우회)
+    const supabase = getServiceRoleClient();
 
     // 5. 사용자 ID 조회
     const { data: user } = await supabase
