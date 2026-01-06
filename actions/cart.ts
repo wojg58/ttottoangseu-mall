@@ -649,6 +649,60 @@ export async function addToCart(
   }
 }
 
+// 장바구니에 아이템이 실제로 추가되었는지 확인 (폴링 방식)
+async function verifyCartItemAdded(
+  userId: string,
+  productId: string,
+  variantId: string | undefined,
+  maxRetries: number = 10,
+  delayMs: number = 200,
+): Promise<boolean> {
+  const { getServiceRoleClient } = await import(
+    "@/lib/supabase/service-role"
+  );
+  const supabase = getServiceRoleClient();
+
+  for (let i = 0; i < maxRetries; i++) {
+    // 장바구니 조회
+    const { data: cart } = await supabase
+      .from("carts")
+      .select("id")
+      .eq("user_id", userId)
+      .single();
+
+    if (!cart) {
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+      continue;
+    }
+
+    // 장바구니 아이템 확인
+    const { data: item } = await supabase
+      .from("cart_items")
+      .select("id")
+      .eq("cart_id", cart.id)
+      .eq("product_id", productId)
+      .eq("variant_id", variantId ?? null)
+      .maybeSingle();
+
+    if (item) {
+      logger.info(
+        `[verifyCartItemAdded] ✅ 장바구니 아이템 확인 성공 (시도 ${i + 1}/${maxRetries})`,
+      );
+      return true;
+    }
+
+    logger.info(
+      `[verifyCartItemAdded] 장바구니 아이템 확인 중... (시도 ${i + 1}/${maxRetries})`,
+    );
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
+  }
+
+  logger.warn(
+    `[verifyCartItemAdded] ⚠️ 장바구니 아이템 확인 실패 (최대 재시도 횟수 초과)`,
+  );
+  return false;
+}
+
 // 바로 구매하기: 장바구니에 추가 후 체크아웃 페이지로 리다이렉트
 export async function buyNowAndRedirect(
   productId: string,
@@ -667,7 +721,26 @@ export async function buyNowAndRedirect(
     throw new Error(result.message);
   }
 
-  logger.info("[buyNowAndRedirect] ✅ 장바구니 추가 성공 - 체크아웃 페이지로 리다이렉트");
+  logger.info("[buyNowAndRedirect] 장바구니 추가 API 성공 - DB 반영 확인 시작");
+
+  // DB에 실제로 반영되었는지 확인 (폴링 방식)
+  const userId = await getCurrentUserId();
+  if (!userId) {
+    logger.error("[buyNowAndRedirect] 사용자 ID 조회 실패");
+    logger.groupEnd();
+    throw new Error("로그인이 필요합니다.");
+  }
+
+  const isAdded = await verifyCartItemAdded(userId, productId, variantId);
+  
+  if (!isAdded) {
+    logger.warn(
+      "[buyNowAndRedirect] ⚠️ 장바구니 아이템 확인 실패했지만 계속 진행 (DB 지연 가능성)",
+    );
+    // 확인 실패해도 계속 진행 (DB 지연일 수 있으므로)
+  }
+
+  logger.info("[buyNowAndRedirect] ✅ 장바구니 추가 완료 - 체크아웃 페이지로 리다이렉트");
   logger.groupEnd();
   
   // Server Action에서 직접 리다이렉트 (DB 트랜잭션이 완료된 후 실행됨)
@@ -695,7 +768,41 @@ export async function buyNowWithOptionsAndRedirect(
     }
   }
 
-  logger.info("[buyNowWithOptionsAndRedirect] ✅ 모든 옵션 장바구니 추가 성공 - 체크아웃 페이지로 리다이렉트");
+  logger.info("[buyNowWithOptionsAndRedirect] 장바구니 추가 API 성공 - DB 반영 확인 시작");
+
+  // 모든 옵션이 DB에 실제로 반영되었는지 확인 (폴링 방식)
+  const userId = await getCurrentUserId();
+  if (!userId) {
+    logger.error("[buyNowWithOptionsAndRedirect] 사용자 ID 조회 실패");
+    logger.groupEnd();
+    throw new Error("로그인이 필요합니다.");
+  }
+
+  // 모든 옵션 확인
+  let allVerified = true;
+  for (const option of options) {
+    const isAdded = await verifyCartItemAdded(
+      userId,
+      productId,
+      option.variantId,
+      8, // 옵션이 여러 개이므로 재시도 횟수 줄임
+      150, // 대기 시간도 줄임
+    );
+    if (!isAdded) {
+      allVerified = false;
+      logger.warn(
+        `[buyNowWithOptionsAndRedirect] ⚠️ 옵션 ${option.variantId} 확인 실패`,
+      );
+    }
+  }
+
+  if (!allVerified) {
+    logger.warn(
+      "[buyNowWithOptionsAndRedirect] ⚠️ 일부 옵션 확인 실패했지만 계속 진행 (DB 지연 가능성)",
+    );
+  }
+
+  logger.info("[buyNowWithOptionsAndRedirect] ✅ 모든 옵션 장바구니 추가 완료 - 체크아웃 페이지로 리다이렉트");
   logger.groupEnd();
   
   // Server Action에서 직접 리다이렉트

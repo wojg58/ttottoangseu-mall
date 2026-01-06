@@ -768,6 +768,7 @@ export default function SignInContent() {
   // Clerk 폼 제출을 가로채서 바로 로그인 처리
   useEffect(() => {
     let isIntercepted = false; // 이미 가로채기 설정되었는지 확인하는 플래그
+    let cleanupFunctions: (() => void)[] = []; // cleanup 함수들을 저장
 
     const interceptClerkFormSubmit = () => {
       // 이미 설정되었으면 실행하지 않음 (중복 방지)
@@ -1471,21 +1472,21 @@ export default function SignInContent() {
         // 가로채기 설정 완료 플래그
         isIntercepted = true;
 
-        // cleanup 함수에 버튼 클릭 이벤트 리스너 제거 추가
-        return () => {
+        // cleanup 함수들을 배열에 저장
+        cleanupFunctions.push(() => {
           clerkForm.removeEventListener("submit", handleFormSubmit, true);
           loginButton.removeEventListener("click", handleButtonClick, true);
           buttonObserver.disconnect();
-          isIntercepted = false; // 플래그 리셋
-        };
+        });
       } else {
         // 폼만 찾았지만 버튼은 없는 경우
         clerkForm.addEventListener("submit", handleFormSubmit, true);
         isIntercepted = true;
-        return () => {
+
+        // cleanup 함수를 배열에 저장
+        cleanupFunctions.push(() => {
           clerkForm.removeEventListener("submit", handleFormSubmit, true);
-          isIntercepted = false; // 플래그 리셋
-        };
+        });
       }
     };
 
@@ -1497,6 +1498,10 @@ export default function SignInContent() {
     return () => {
       clearTimeout(initialTimeout);
       clearTimeout(secondTimeout);
+      // 저장된 cleanup 함수들 모두 실행
+      cleanupFunctions.forEach((cleanup) => cleanup());
+      cleanupFunctions = [];
+      isIntercepted = false; // 플래그 리셋
     };
   }, [clerk, signIn, signInLoaded, router, redirectUrl, isLoaded, isSignedIn]);
 
