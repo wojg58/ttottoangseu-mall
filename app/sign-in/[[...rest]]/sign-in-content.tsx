@@ -835,7 +835,7 @@ export default function SignInContent() {
         ) as HTMLInputElement;
 
         if (identifierInput && passwordInput) {
-          const emailValue = identifierInput.value.trim();
+          let emailValue = identifierInput.value.trim();
           const passwordValue = passwordInput.value;
 
           console.log("[SignInContent] 입력값 확인:");
@@ -848,6 +848,32 @@ export default function SignInContent() {
             "  - 비밀번호 값 길이:",
             passwordValue ? passwordValue.length : 0,
           );
+
+          // 이메일 형식 검증
+          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+          if (emailValue && !emailRegex.test(emailValue)) {
+            console.error("[SignInContent] 이메일 형식이 올바르지 않음:", emailValue);
+            alert("올바른 이메일 주소 형식을 입력해주세요.\n예: example@email.com");
+            return;
+          }
+
+          // 빈 값 체크
+          if (!emailValue || emailValue.length === 0) {
+            console.error("[SignInContent] 이메일 값이 비어있음");
+            alert("이메일 주소를 입력해주세요.");
+            return;
+          }
+
+          if (!passwordValue || passwordValue.length === 0) {
+            console.error("[SignInContent] 비밀번호 값이 비어있음");
+            alert("비밀번호를 입력해주세요.");
+            return;
+          }
+
+          // 추가 공백 제거 및 정규화
+          emailValue = emailValue.toLowerCase().trim();
+
+          console.log("[SignInContent] 최종 검증된 이메일:", emailValue);
 
           if (emailValue && passwordValue) {
             try {
@@ -932,6 +958,25 @@ export default function SignInContent() {
                 "[SignInContent] identifier 길이:",
                 emailValue.length,
               );
+              console.log(
+                "[SignInContent] identifier 문자 코드:",
+                Array.from(emailValue).map((char) => char.charCodeAt(0)),
+              );
+              console.log(
+                "[SignInContent] identifier JSON:",
+                JSON.stringify(emailValue),
+              );
+
+              // 최종 검증: 이메일 형식 재확인
+              const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+              if (!emailRegex.test(emailValue)) {
+                console.error(
+                  "[SignInContent] 최종 검증 실패 - 이메일 형식이 올바르지 않음:",
+                  emailValue,
+                );
+                alert("올바른 이메일 주소 형식을 입력해주세요.\n예: example@email.com");
+                return;
+              }
 
               const signInAttempt = await signIn.create({
                 identifier: emailValue,
@@ -1212,8 +1257,12 @@ export default function SignInContent() {
                 } else if (errorCode === "form_password_incorrect") {
                   errorMessage = "비밀번호가 올바르지 않습니다.";
                   errorField = "password";
-                } else if (errorCode === "form_identifier_invalid") {
-                  errorMessage = "이메일 주소 형식이 올바르지 않습니다.";
+                } else if (
+                  errorCode === "form_identifier_invalid" ||
+                  errorCode === "form_param_format_invalid"
+                ) {
+                  errorMessage =
+                    "이메일 주소 형식이 올바르지 않습니다.\n\n올바른 형식: example@email.com";
                   errorField = "email";
                 }
               } else if (err.message) {
