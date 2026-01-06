@@ -13,7 +13,8 @@ import type { CartItemWithProduct } from "@/types/database";
 
 // 현재 사용자의 Supabase user ID 조회
 async function getCurrentUserId(): Promise<string | null> {
-  const { userId: clerkUserId } = await auth();
+  const authResult = await auth();
+  const { userId: clerkUserId } = authResult;
   
   logger.group("[getCurrentUserId] 사용자 ID 조회 시작");
   logger.info("[getCurrentUserId] Clerk userId:", clerkUserId);
@@ -24,7 +25,19 @@ async function getCurrentUserId(): Promise<string | null> {
     return null;
   }
 
-  const supabase = await createClient();
+  // Clerk 토큰 확인 (PGRST301 에러 방지)
+  const token = await authResult.getToken();
+  let supabase;
+  
+  if (!token) {
+    logger.warn("[getCurrentUserId] Clerk 토큰이 없음 - service role 클라이언트 사용");
+    const { getServiceRoleClient } = await import("@/lib/supabase/service-role");
+    supabase = getServiceRoleClient();
+  } else {
+    logger.info("[getCurrentUserId] Clerk 토큰 확인됨 - 일반 클라이언트 사용");
+    supabase = await createClient();
+  }
+
   let { data: user, error } = await supabase
     .from("users")
     .select("id")
@@ -35,6 +48,8 @@ async function getCurrentUserId(): Promise<string | null> {
   logger.info("[getCurrentUserId] Supabase 사용자 조회 결과:", {
     found: !!user,
     error: error?.message,
+    errorCode: error?.code,
+    hasToken: !!token,
   });
 
   // 사용자가 없으면 동기화 시도
@@ -81,7 +96,7 @@ async function getCurrentUserId(): Promise<string | null> {
       logger.error("[getCurrentUserId] 사용자 동기화 중 예외 발생:", syncError);
     }
 
-    // 동기화 후 다시 조회
+    // 동기화 후 다시 조회 (동일한 클라이언트 사용)
     const { data: retryUser, error: retryError } = await supabase
       .from("users")
       .select("id")
@@ -90,7 +105,10 @@ async function getCurrentUserId(): Promise<string | null> {
       .maybeSingle();
 
     if (retryError) {
-      logger.error("[getCurrentUserId] 재조회 실패:", retryError);
+      logger.error("[getCurrentUserId] 재조회 실패:", {
+        error: retryError.message,
+        code: retryError.code,
+      });
     } else if (retryUser) {
       logger.info("[getCurrentUserId] 재조회 성공:", retryUser.id);
     }
