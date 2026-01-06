@@ -495,6 +495,7 @@ export async function addToCart(
     }
 
     revalidatePath("/cart");
+    revalidatePath("/checkout");
     return { success: true, message: "장바구니에 추가되었습니다." };
   } catch (error) {
     logger.error("장바구니 추가 실패", error);

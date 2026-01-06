@@ -302,7 +302,9 @@ export default function ProductDetailOptions({
           }
         }
         console.log("[ProductDetailOptions] 바로 구매 성공 - 체크아웃 페이지로 이동");
+        // 데이터베이스 반영을 위해 약간의 지연 후 이동
         // 전체 페이지 리로드를 통해 서버 사이드에서 최신 장바구니 데이터를 가져오도록 함
+        await new Promise((resolve) => setTimeout(resolve, 300));
         window.location.href = "/checkout";
       } catch (error) {
         console.error("[ProductDetailOptions] 바로 구매 실패:", error);
