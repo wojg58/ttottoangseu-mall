@@ -142,7 +142,9 @@ export default function AddToCartButton({
       return;
     }
 
-    console.log("[AddToCartButton] 2단계: 인증 확인 완료 - Server Action 호출 시작");
+    console.log(
+      "[AddToCartButton] 2단계: 인증 확인 완료 - Server Action 호출 시작",
+    );
     console.log("요청 데이터:", {
       productId,
       quantity,
@@ -155,7 +157,9 @@ export default function AddToCartButton({
         // Server Action에서 직접 리다이렉트 (DB 트랜잭션 완료 후 실행됨)
         await buyNowAndRedirect(productId, quantity, variantId);
         // redirect()는 never를 반환하므로 여기 도달하지 않음
-        console.log("[AddToCartButton] ✅ 리다이렉트 완료 (이 로그는 보이지 않아야 함)");
+        console.log(
+          "[AddToCartButton] ✅ 리다이렉트 완료 (이 로그는 보이지 않아야 함)",
+        );
       } catch (error: any) {
         // Next.js의 redirect()는 NEXT_REDIRECT 에러를 throw합니다. 이건 정상 동작이므로 다시 throw
         // redirect 에러는 message나 digest 속성에 NEXT_REDIRECT가 포함됨

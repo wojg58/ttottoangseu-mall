@@ -67,10 +67,12 @@ async function getCurrentUserId(): Promise<string | null> {
   logger.info("[getCurrentUserId] Supabase 사용자 조회 결과:", {
     found: !!user,
     userId: user?.id || null,
-    error: error ? {
-      code: error.code,
-      message: error.message,
-    } : null,
+    error: error
+      ? {
+          code: error.code,
+          message: error.message,
+        }
+      : null,
     hasToken: !!token,
   });
 
@@ -238,10 +240,12 @@ async function getOrCreateCartId(userId: string): Promise<string> {
   logger.info("[getOrCreateCartId] 기존 장바구니 조회 결과:", {
     hasCart: !!existingCart,
     cartId: existingCart?.id || null,
-    error: selectError ? {
-      code: selectError.code,
-      message: selectError.message,
-    } : null,
+    error: selectError
+      ? {
+          code: selectError.code,
+          message: selectError.message,
+        }
+      : null,
   });
 
   // PGRST301 에러 발생 시 service role 클라이언트로 재시도
@@ -264,10 +268,12 @@ async function getOrCreateCartId(userId: string): Promise<string> {
     logger.info("[getOrCreateCartId] SELECT 재시도 결과:", {
       hasCart: !!retryCart,
       cartId: retryCart?.id || null,
-      error: retrySelectError ? {
-        code: retrySelectError.code,
-        message: retrySelectError.message,
-      } : null,
+      error: retrySelectError
+        ? {
+            code: retrySelectError.code,
+            message: retrySelectError.message,
+          }
+        : null,
     });
 
     if (retrySelectError && retrySelectError.code !== "PGRST116") {
@@ -300,10 +306,12 @@ async function getOrCreateCartId(userId: string): Promise<string> {
   logger.info("[getOrCreateCartId] 장바구니 생성 결과:", {
     hasCart: !!newCart,
     cartId: newCart?.id || null,
-    error: insertError ? {
-      code: insertError.code,
-      message: insertError.message,
-    } : null,
+    error: insertError
+      ? {
+          code: insertError.code,
+          message: insertError.message,
+        }
+      : null,
   });
 
   // PGRST301 에러 발생 시 service role 클라이언트로 재시도
@@ -326,14 +334,19 @@ async function getOrCreateCartId(userId: string): Promise<string> {
     logger.info("[getOrCreateCartId] INSERT 재시도 결과:", {
       hasCart: !!retryNewCart,
       cartId: retryNewCart?.id || null,
-      error: retryInsertError ? {
-        code: retryInsertError.code,
-        message: retryInsertError.message,
-      } : null,
+      error: retryInsertError
+        ? {
+            code: retryInsertError.code,
+            message: retryInsertError.message,
+          }
+        : null,
     });
 
     if (retryInsertError) {
-      logger.error("[getOrCreateCartId] ❌ 장바구니 생성 실패", retryInsertError);
+      logger.error(
+        "[getOrCreateCartId] ❌ 장바구니 생성 실패",
+        retryInsertError,
+      );
       logger.groupEnd();
       throw new Error("장바구니 생성에 실패했습니다.");
     }
@@ -409,10 +422,12 @@ export async function getCartItems(): Promise<CartItemWithProduct[]> {
   logger.info("[getCartItems] carts 조회 결과:", {
     hasCart: !!cart,
     cartId: cart?.id || null,
-    error: cartError ? {
-      code: cartError.code,
-      message: cartError.message,
-    } : null,
+    error: cartError
+      ? {
+          code: cartError.code,
+          message: cartError.message,
+        }
+      : null,
   });
 
   // PGRST301 에러 발생 시 service role 클라이언트로 재시도
@@ -474,10 +489,12 @@ export async function getCartItems(): Promise<CartItemWithProduct[]> {
   logger.info("[getCartItems] cart_items 조회 결과:", {
     itemsCount: items?.length || 0,
     hasError: !!error,
-    error: error ? {
-      code: error.code,
-      message: error.message,
-    } : null,
+    error: error
+      ? {
+          code: error.code,
+          message: error.message,
+        }
+      : null,
   });
 
   // PGRST301 에러 발생 시 service role 클라이언트로 재시도
@@ -832,15 +849,19 @@ export async function addToCart(
 
       logger.info("[addToCart] UPDATE 결과:", {
         hasError: !!updateError,
-        error: updateError ? {
-          code: updateError.code,
-          message: updateError.message,
-        } : null,
+        error: updateError
+          ? {
+              code: updateError.code,
+              message: updateError.message,
+            }
+          : null,
       });
 
       // PGRST301 에러 발생 시 service role 클라이언트로 재시도
       if (updateError && updateError.code === "PGRST301") {
-        logger.warn("[addToCart] ⚠️ UPDATE 시 PGRST301 에러 - service role로 재시도");
+        logger.warn(
+          "[addToCart] ⚠️ UPDATE 시 PGRST301 에러 - service role로 재시도",
+        );
         logger.warn(
           "[addToCart] UPDATE 시 PGRST301 에러 발생 - service role 클라이언트로 재시도",
         );
@@ -871,7 +892,10 @@ export async function addToCart(
         }
         logger.info("[addToCart] ✅ UPDATE 재시도 성공");
       } else if (updateError) {
-        logger.error("[addToCart] ❌ 장바구니 아이템 업데이트 실패:", updateError);
+        logger.error(
+          "[addToCart] ❌ 장바구니 아이템 업데이트 실패:",
+          updateError,
+        );
         logger.groupEnd();
         return {
           success: false,
@@ -901,12 +925,14 @@ export async function addToCart(
 
       logger.info("[addToCart] INSERT 결과:", {
         hasError: !!insertError,
-        error: insertError ? {
-          code: insertError.code,
-          message: insertError.message,
-          details: insertError.details,
-          hint: insertError.hint,
-        } : null,
+        error: insertError
+          ? {
+              code: insertError.code,
+              message: insertError.message,
+              details: insertError.details,
+              hint: insertError.hint,
+            }
+          : null,
       });
 
       // PGRST301 에러 발생 시 service role 클라이언트로 재시도
@@ -932,12 +958,14 @@ export async function addToCart(
 
         logger.info("[addToCart] INSERT 재시도 결과:", {
           hasError: !!retryInsertError,
-          error: retryInsertError ? {
-            code: retryInsertError.code,
-            message: retryInsertError.message,
-            details: retryInsertError.details,
-            hint: retryInsertError.hint,
-          } : null,
+          error: retryInsertError
+            ? {
+                code: retryInsertError.code,
+                message: retryInsertError.message,
+                details: retryInsertError.details,
+                hint: retryInsertError.hint,
+              }
+            : null,
         });
 
         if (retryInsertError) {
@@ -1157,13 +1185,18 @@ export async function buyNowWithOptionsAndRedirect(
   logger.info("타임스탬프:", new Date().toISOString());
 
   // 모든 옵션을 순차적으로 장바구니에 추가
-  logger.info("[buyNowWithOptionsAndRedirect] 2단계: 모든 옵션 장바구니에 추가 시작");
+  logger.info(
+    "[buyNowWithOptionsAndRedirect] 2단계: 모든 옵션 장바구니에 추가 시작",
+  );
   for (let i = 0; i < options.length; i++) {
     const option = options[i];
-    logger.info(`[buyNowWithOptionsAndRedirect] 옵션 ${i + 1}/${options.length} 추가 중:`, {
-      variantId: option.variantId,
-      quantity: option.quantity,
-    });
+    logger.info(
+      `[buyNowWithOptionsAndRedirect] 옵션 ${i + 1}/${options.length} 추가 중:`,
+      {
+        variantId: option.variantId,
+        quantity: option.quantity,
+      },
+    );
 
     const result = await addToCart(
       productId,
@@ -1188,7 +1221,9 @@ export async function buyNowWithOptionsAndRedirect(
     }
   }
 
-  logger.info("[buyNowWithOptionsAndRedirect] ✅ 3단계: 모든 옵션 장바구니 추가 API 성공");
+  logger.info(
+    "[buyNowWithOptionsAndRedirect] ✅ 3단계: 모든 옵션 장바구니 추가 API 성공",
+  );
   logger.info("[buyNowWithOptionsAndRedirect] 4단계: DB 반영 확인 시작");
 
   // 모든 옵션이 DB에 실제로 반영되었는지 확인 (폴링 방식)
@@ -1210,9 +1245,12 @@ export async function buyNowWithOptionsAndRedirect(
   let allVerified = true;
   for (let i = 0; i < options.length; i++) {
     const option = options[i];
-    logger.info(`[buyNowWithOptionsAndRedirect] 옵션 ${i + 1}/${options.length} 확인 중:`, {
-      variantId: option.variantId,
-    });
+    logger.info(
+      `[buyNowWithOptionsAndRedirect] 옵션 ${i + 1}/${options.length} 확인 중:`,
+      {
+        variantId: option.variantId,
+      },
+    );
 
     const isAdded = await verifyCartItemAdded(
       userId,
@@ -1230,7 +1268,9 @@ export async function buyNowWithOptionsAndRedirect(
     if (!isAdded) {
       allVerified = false;
       logger.warn(
-        `[buyNowWithOptionsAndRedirect] ⚠️ 옵션 ${i + 1} (${option.variantId}) 확인 실패`,
+        `[buyNowWithOptionsAndRedirect] ⚠️ 옵션 ${i + 1} (${
+          option.variantId
+        }) 확인 실패`,
       );
     }
   }
@@ -1250,7 +1290,9 @@ export async function buyNowWithOptionsAndRedirect(
   }
 
   logger.info("[buyNowWithOptionsAndRedirect] ✅ 6단계: 모든 검증 완료");
-  logger.info("[buyNowWithOptionsAndRedirect] 7단계: redirect('/checkout') 실행");
+  logger.info(
+    "[buyNowWithOptionsAndRedirect] 7단계: redirect('/checkout') 실행",
+  );
   logger.groupEnd();
 
   // Server Action에서 직접 리다이렉트
