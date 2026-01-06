@@ -1090,15 +1090,6 @@ export default function CheckoutForm({
               <div className="space-y-3">
                 {/* 신용카드 결제 */}
                 <label
-                  onClick={(e) => {
-                    e.preventDefault();
-                    logger.info("[결제수단] 신용카드 라벨 클릭");
-                    setSelectedPaymentMethod("CARD");
-                    form.setValue("paymentMethod", "TOSS_PAYMENTS");
-                    logger.info(
-                      "[결제수단] selectedPaymentMethod state 업데이트: CARD",
-                    );
-                  }}
                   className={`flex items-center gap-3 p-4 border-2 rounded-lg cursor-pointer transition-colors ${
                     selectedPaymentMethod === "CARD"
                       ? "border-black bg-white"
@@ -1112,9 +1103,7 @@ export default function CheckoutForm({
                     checked={selectedPaymentMethod === "CARD"}
                     onChange={(e) => {
                       const value = e.target.value as "CARD";
-                      logger.info("[결제수단] 신용카드 라디오 onChange", {
-                        value,
-                      });
+                      logger.info("[결제수단] 신용카드 선택:", { value });
                       setSelectedPaymentMethod(value);
                       form.setValue("paymentMethod", "TOSS_PAYMENTS");
                     }}
@@ -1127,15 +1116,6 @@ export default function CheckoutForm({
 
                 {/* 에스크로(실시간 계좌이체) */}
                 <label
-                  onClick={(e) => {
-                    e.preventDefault();
-                    logger.info("[결제수단] 에스크로 라벨 클릭");
-                    setSelectedPaymentMethod("TRANSFER");
-                    form.setValue("paymentMethod", "TOSS_PAYMENTS");
-                    logger.info(
-                      "[결제수단] selectedPaymentMethod state 업데이트: TRANSFER",
-                    );
-                  }}
                   className={`flex items-center gap-3 p-4 border-2 rounded-lg cursor-pointer transition-colors ${
                     selectedPaymentMethod === "TRANSFER"
                       ? "border-black bg-white"
@@ -1149,9 +1129,7 @@ export default function CheckoutForm({
                     checked={selectedPaymentMethod === "TRANSFER"}
                     onChange={(e) => {
                       const value = e.target.value as "TRANSFER";
-                      logger.info("[결제수단] 에스크로 라디오 onChange", {
-                        value,
-                      });
+                      logger.info("[결제수단] 에스크로 선택:", { value });
                       setSelectedPaymentMethod(value);
                       form.setValue("paymentMethod", "TOSS_PAYMENTS");
                     }}
