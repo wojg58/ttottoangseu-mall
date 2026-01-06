@@ -26,7 +26,15 @@ export default async function CheckoutPage({
   const params = await searchParams;
   const orderId = params.orderId;
 
-  const cartItems = await getCartItems();
+  // 장바구니 조회 (PGRST301 에러 처리 포함)
+  let cartItems = await getCartItems();
+
+  // 바로 구매하기로 온 경우, 장바구니가 비어있을 수 있으므로 잠시 대기 후 재시도
+  if (!orderId && cartItems.length === 0) {
+    // revalidatePath 후 데이터 반영을 위해 잠시 대기
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    cartItems = await getCartItems();
+  }
 
   // 주문이 생성된 상태(orderId가 있는 경우)가 아니고 장바구니가 비어있으면 장바구니 페이지로
   // 주문이 생성된 후에는 장바구니가 비워지므로, orderId가 있으면 체크를 건너뜀

@@ -279,13 +279,57 @@ export async function getCartItems(): Promise<CartItemWithProduct[]> {
   const userId = await getCurrentUserId();
   if (!userId) return [];
 
-  const supabase = await createClient();
+  // PGRST301 에러 방지를 위해 토큰 확인
+  const authResult = await auth();
+  const token = await authResult.getToken();
+  let supabase;
 
-  const { data: cart } = await supabase
+  if (!token) {
+    logger.warn(
+      "[getCartItems] Clerk 토큰이 없음 - service role 클라이언트 사용",
+    );
+    const { getServiceRoleClient } = await import(
+      "@/lib/supabase/service-role"
+    );
+    supabase = getServiceRoleClient();
+  } else {
+    supabase = await createClient();
+  }
+
+  let { data: cart, error: cartError } = await supabase
     .from("carts")
     .select("id")
     .eq("user_id", userId)
     .single();
+
+  // PGRST301 에러 발생 시 service role 클라이언트로 재시도
+  if (cartError && cartError.code === "PGRST301") {
+    logger.warn(
+      "[getCartItems] PGRST301 에러 발생 - service role 클라이언트로 재시도",
+    );
+    const { getServiceRoleClient } = await import(
+      "@/lib/supabase/service-role"
+    );
+    supabase = getServiceRoleClient();
+
+    const { data: retryCart, error: retryCartError } = await supabase
+      .from("carts")
+      .select("id")
+      .eq("user_id", userId)
+      .single();
+
+    if (retryCartError && retryCartError.code !== "PGRST116") {
+      // PGRST116은 "no rows returned" 에러이므로 정상
+      logger.error("[getCartItems] 장바구니 조회 실패:", retryCartError);
+      return [];
+    }
+
+    cart = retryCart;
+  } else if (cartError && cartError.code !== "PGRST116") {
+    // PGRST116은 "no rows returned" 에러이므로 정상
+    logger.error("[getCartItems] 장바구니 조회 실패:", cartError);
+    return [];
+  }
 
   if (!cart) return [];
 
@@ -303,6 +347,107 @@ export async function getCartItems(): Promise<CartItemWithProduct[]> {
     )
     .eq("cart_id", cart.id)
     .order("created_at", { ascending: false });
+
+  // PGRST301 에러 발생 시 service role 클라이언트로 재시도
+  if (error && error.code === "PGRST301") {
+    logger.warn(
+      "[getCartItems] cart_items 조회 시 PGRST301 에러 발생 - service role 클라이언트로 재시도",
+    );
+    const { getServiceRoleClient } = await import(
+      "@/lib/supabase/service-role"
+    );
+    const serviceSupabase = getServiceRoleClient();
+
+    const { data: retryItems, error: retryError } = await serviceSupabase
+      .from("cart_items")
+      .select(
+        `
+        *,
+        product:products!fk_cart_items_product_id(
+          *,
+          images:product_images(id, image_url, is_primary, alt_text)
+        ),
+        variant:product_variants!fk_cart_items_variant_id(*)
+      `,
+      )
+      .eq("cart_id", cart.id)
+      .order("created_at", { ascending: false });
+
+    if (retryError) {
+      logger.error("[getCartItems] cart_items 재조회 실패:", retryError);
+      return [];
+    }
+
+    // 재시도 성공 시 retryItems 사용
+    return (retryItems || []).map((item) => {
+      const product = item.product as {
+        id: string;
+        category_id: string;
+        name: string;
+        slug: string;
+        price: number;
+        discount_price: number | null;
+        description: string | null;
+        status: "active" | "hidden" | "sold_out";
+        stock: number;
+        is_featured: boolean;
+        is_new: boolean;
+        deleted_at: string | null;
+        created_at: string;
+        updated_at: string;
+        images: Array<{
+          id: string;
+          image_url: string;
+          is_primary: boolean;
+          alt_text: string | null;
+        }>;
+      };
+
+      const primaryImage =
+        product.images?.find((img) => img.is_primary) ||
+        product.images?.[0] ||
+        null;
+
+      return {
+        id: item.id,
+        cart_id: item.cart_id,
+        product_id: item.product_id,
+        variant_id: item.variant_id,
+        quantity: item.quantity,
+        price: item.price,
+        created_at: item.created_at,
+        updated_at: item.updated_at,
+        product: {
+          id: product.id,
+          category_id: product.category_id,
+          name: product.name,
+          slug: product.slug,
+          price: product.price,
+          discount_price: product.discount_price,
+          description: product.description,
+          status: product.status,
+          stock: product.stock,
+          is_featured: product.is_featured,
+          is_new: product.is_new,
+          deleted_at: product.deleted_at,
+          created_at: product.created_at,
+          updated_at: product.updated_at,
+        },
+        variant: item.variant,
+        primary_image: primaryImage
+          ? {
+              id: primaryImage.id,
+              product_id: product.id,
+              image_url: primaryImage.image_url,
+              is_primary: primaryImage.is_primary,
+              sort_order: 0,
+              alt_text: primaryImage.alt_text,
+              created_at: product.created_at,
+            }
+          : null,
+      };
+    });
+  }
 
   if (error) {
     logger.error("장바구니 조회 실패", error);
