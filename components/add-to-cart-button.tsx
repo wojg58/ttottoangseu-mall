@@ -148,7 +148,20 @@ export default function AddToCartButton({
         // Server Action에서 직접 리다이렉트 (DB 트랜잭션 완료 후 실행됨)
         await buyNowAndRedirect(productId, quantity, variantId);
         // redirect()는 never를 반환하므로 여기 도달하지 않음
-      } catch (error) {
+      } catch (error: any) {
+        // Next.js의 redirect()는 NEXT_REDIRECT 에러를 throw합니다. 이건 정상 동작이므로 다시 throw
+        // redirect 에러는 message나 digest 속성에 NEXT_REDIRECT가 포함됨
+        if (
+          error &&
+          (error.message === "NEXT_REDIRECT" ||
+            error.message?.includes("NEXT_REDIRECT") ||
+            error.digest?.includes("NEXT_REDIRECT"))
+        ) {
+          // 리다이렉트 에러는 조용히 다시 throw (로그나 알림 없이)
+          throw error;
+        }
+
+        // 실제 에러인 경우에만 로그 및 알림 표시
         console.error("[AddToCartButton] 바로 구매 실패:", error);
         const errorMessage =
           error instanceof Error ? error.message : "주문에 실패했습니다.";

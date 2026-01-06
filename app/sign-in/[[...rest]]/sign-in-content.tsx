@@ -767,7 +767,12 @@ export default function SignInContent() {
 
   // Clerk 폼 제출을 가로채서 바로 로그인 처리
   useEffect(() => {
+    let isIntercepted = false; // 이미 가로채기 설정되었는지 확인하는 플래그
+
     const interceptClerkFormSubmit = () => {
+      // 이미 설정되었으면 실행하지 않음 (중복 방지)
+      if (isIntercepted) return;
+
       const clerkForm = document.querySelector(
         "form.cl-form",
       ) as HTMLFormElement;
@@ -911,7 +916,7 @@ export default function SignInContent() {
                 protocol: window.location.protocol,
                 href: window.location.href,
               });
-              
+
               const result = await signInAttempt.attemptFirstFactor({
                 strategy: "password",
                 password: passwordValue,
@@ -919,7 +924,10 @@ export default function SignInContent() {
 
               console.log("[SignInContent] 로그인 성공, 상태:", result.status);
               console.log("[SignInContent] result 전체:", result);
-              console.log("[SignInContent] createdSessionId:", result.createdSessionId);
+              console.log(
+                "[SignInContent] createdSessionId:",
+                result.createdSessionId,
+              );
 
               // 로그인 성공 후 세션 활성화 및 리다이렉트
               if (result.status === "complete") {
@@ -940,17 +948,19 @@ export default function SignInContent() {
                       "[SignInContent] setActive 호출 중, sessionId:",
                       result.createdSessionId,
                     );
-                    
+
                     // 프로덕션 환경에서 세션 활성화 재시도 로직
                     let setActiveSuccess = false;
                     let lastError: any = null;
-                    
+
                     for (let attempt = 1; attempt <= 3; attempt++) {
                       try {
                         console.log(
                           `[SignInContent] setActive 시도 ${attempt}/3`,
                         );
-                        await clerk.setActive({ session: result.createdSessionId });
+                        await clerk.setActive({
+                          session: result.createdSessionId,
+                        });
                         setActiveSuccess = true;
                         console.log("[SignInContent] setActive 완료");
                         break;
@@ -960,7 +970,7 @@ export default function SignInContent() {
                           `[SignInContent] setActive 시도 ${attempt} 실패:`,
                           retryError,
                         );
-                        
+
                         if (attempt < 3) {
                           // 재시도 전 대기
                           await new Promise((resolve) =>
@@ -969,7 +979,7 @@ export default function SignInContent() {
                         }
                       }
                     }
-                    
+
                     if (!setActiveSuccess) {
                       throw lastError || new Error("setActive 실패");
                     }
@@ -981,14 +991,17 @@ export default function SignInContent() {
                       "[SignInContent] 세션 활성화 완료, 리다이렉트 시작",
                     );
                     console.log("[SignInContent] 리다이렉트 URL:", redirectUrl);
-                    
+
                     // 프로덕션 환경에서는 절대 경로로 리다이렉트
                     const redirectPath = redirectUrl.startsWith("http")
                       ? redirectUrl
                       : `${window.location.origin}${redirectUrl}`;
-                    
-                    console.log("[SignInContent] 최종 리다이렉트 경로:", redirectPath);
-                    
+
+                    console.log(
+                      "[SignInContent] 최종 리다이렉트 경로:",
+                      redirectPath,
+                    );
+
                     // window.location.href를 사용하여 전체 페이지 리로드로 세션 상태를 확실히 반영
                     // 이렇게 하면 구글 로그인과 동일하게 세션이 확실히 활성화됨
                     window.location.href = redirectPath;
@@ -1003,9 +1016,10 @@ export default function SignInContent() {
                       status: setActiveError.status,
                       stack: setActiveError.stack,
                     });
-                    
+
                     // 프로덕션 환경에서의 에러 메시지 개선
-                    const isProduction = window.location.hostname !== "localhost";
+                    const isProduction =
+                      window.location.hostname !== "localhost";
                     const errorMessage = isProduction
                       ? "세션 활성화에 실패했습니다.\n\n" +
                         "브라우저 쿠키 설정을 확인해주세요:\n" +
@@ -1013,9 +1027,9 @@ export default function SignInContent() {
                         "2. 시크릿 모드가 아닌지 확인\n" +
                         "3. 페이지를 새로고침해주세요"
                       : "세션 활성화에 실패했습니다. 페이지를 새로고침해주세요.";
-                    
+
                     alert(errorMessage);
-                    
+
                     // 프로덕션에서는 리다이렉트를 시도하고, 실패하면 새로고침
                     if (isProduction) {
                       try {
@@ -1060,10 +1074,11 @@ export default function SignInContent() {
                   "[SignInContent] result 전체:",
                   JSON.stringify(result, null, 2),
                 );
-                
+
                 // 상태별 안내 메시지
-                let errorMessage = "로그인을 완료할 수 없습니다. 다시 시도해주세요.";
-                
+                let errorMessage =
+                  "로그인을 완료할 수 없습니다. 다시 시도해주세요.";
+
                 if (result.status === "needs_new_password") {
                   errorMessage = "비밀번호를 재설정해야 합니다.";
                 } else if (result.status === "needs_second_factor") {
@@ -1075,12 +1090,12 @@ export default function SignInContent() {
                 } else {
                   errorMessage = `로그인 상태: ${result.status}\n\n로그인을 완료할 수 없습니다. 다시 시도해주세요.`;
                 }
-                
+
                 alert(errorMessage);
               }
             } catch (err: any) {
               const isProduction = window.location.hostname !== "localhost";
-              
+
               console.error("[SignInContent] 로그인 실패:", err);
               console.error("[SignInContent] 환경 정보:", {
                 isProduction,
@@ -1293,14 +1308,34 @@ export default function SignInContent() {
       ) as HTMLButtonElement;
       if (loginButton) {
         // 버튼 텍스트를 무조건 "로그인"으로 변경하는 함수
+        let isUpdating = false; // 무한 루프 방지 플래그
         const updateButtonText = () => {
+          // 이미 업데이트 중이면 실행하지 않음 (무한 루프 방지)
+          if (isUpdating) return;
+
+          // 버튼의 현재 텍스트 확인
+          const buttonText = loginButton.textContent || "";
+          // 이미 "로그인"이면 변경하지 않음
+          if (buttonText.trim() === "로그인" || buttonText.includes("로그인")) {
+            return;
+          }
+
+          // "계속"이나 "Continue"가 없으면 변경하지 않음
+          if (
+            !buttonText.includes("계속") &&
+            !buttonText.includes("Continue")
+          ) {
+            return;
+          }
+
+          isUpdating = true; // 업데이트 시작 플래그
           console.log("[SignInContent] 버튼 텍스트를 '로그인'으로 변경 시도");
 
           // 1. cl-internal-2iusy0 클래스를 가진 span 요소를 정확히 찾아서 변경
           const continueSpan = loginButton.querySelector(
             "span.cl-internal-2iusy0",
           ) as HTMLElement;
-          if (continueSpan) {
+          if (continueSpan && !continueSpan.textContent?.includes("로그인")) {
             console.log(
               "[SignInContent] cl-internal-2iusy0 span 요소 발견, 텍스트 변경 및 아이콘 제거",
             );
@@ -1319,11 +1354,11 @@ export default function SignInContent() {
             const spanElement = span as HTMLElement;
             const textContent = spanElement.textContent || "";
             if (
-              textContent.includes("계속") ||
-              textContent.includes("Continue") ||
+              (textContent.includes("계속") ||
+                textContent.includes("Continue")) &&
               !textContent.includes("로그인")
             ) {
-              // "로그인"이 아닌 경우 무조건 "로그인"으로 변경
+              // "로그인"이 아닌 경우만 "로그인"으로 변경
               spanElement.innerHTML = "로그인";
               console.log(
                 "[SignInContent] cl-internal span 요소에서 '로그인'으로 변경",
@@ -1337,8 +1372,9 @@ export default function SignInContent() {
             const spanElement = span as HTMLElement;
             const textContent = spanElement.textContent || "";
             if (
-              textContent.includes("계속") ||
-              textContent.includes("Continue")
+              (textContent.includes("계속") ||
+                textContent.includes("Continue")) &&
+              !textContent.includes("로그인")
             ) {
               // SVG 아이콘 제거하고 텍스트만 "로그인"으로 변경
               spanElement.innerHTML = "로그인";
@@ -1350,10 +1386,12 @@ export default function SignInContent() {
 
           // 4. 버튼 내의 모든 SVG 아이콘 제거 (화살표 아이콘 등)
           const allSvgs = loginButton.querySelectorAll("svg");
-          allSvgs.forEach((svg) => {
-            svg.remove();
-            console.log("[SignInContent] SVG 아이콘 제거");
-          });
+          if (allSvgs.length > 0) {
+            allSvgs.forEach((svg) => {
+              svg.remove();
+              console.log("[SignInContent] SVG 아이콘 제거");
+            });
+          }
 
           // 5. 버튼의 모든 텍스트 노드 찾아서 변경
           const walker = document.createTreeWalker(
@@ -1366,7 +1404,8 @@ export default function SignInContent() {
             if (
               node.textContent &&
               (node.textContent.includes("계속") ||
-                node.textContent.includes("Continue"))
+                node.textContent.includes("Continue")) &&
+              !node.textContent.includes("로그인")
             ) {
               node.textContent = "로그인";
               console.log(
@@ -1376,14 +1415,23 @@ export default function SignInContent() {
           }
 
           // 6. 최종 확인: 버튼의 textContent가 "계속"을 포함하면 강제로 변경
-          const buttonText = loginButton.textContent || "";
-          if (buttonText.includes("계속") || buttonText.includes("Continue")) {
+          const finalButtonText = loginButton.textContent || "";
+          if (
+            (finalButtonText.includes("계속") ||
+              finalButtonText.includes("Continue")) &&
+            !finalButtonText.includes("로그인")
+          ) {
             // 버튼의 모든 자식 요소를 제거하고 "로그인"만 추가
             loginButton.innerHTML = "로그인";
             console.log(
               "[SignInContent] 버튼 전체 내용을 '로그인'으로 강제 변경",
             );
           }
+
+          // 다음 프레임에서 플래그 해제 (MutationObserver가 트리거되지 않도록)
+          setTimeout(() => {
+            isUpdating = false;
+          }, 100);
         };
 
         // 즉시 실행
@@ -1391,7 +1439,10 @@ export default function SignInContent() {
 
         // MutationObserver로 버튼 내용이 변경될 때마다 다시 적용
         const buttonObserver = new MutationObserver(() => {
-          updateButtonText();
+          // isUpdating 플래그로 무한 루프 방지
+          if (!isUpdating) {
+            updateButtonText();
+          }
         });
 
         buttonObserver.observe(loginButton, {
@@ -1417,80 +1468,94 @@ export default function SignInContent() {
 
         loginButton.addEventListener("click", handleButtonClick, true);
 
+        // 가로채기 설정 완료 플래그
+        isIntercepted = true;
+
         // cleanup 함수에 버튼 클릭 이벤트 리스너 제거 추가
         return () => {
           clerkForm.removeEventListener("submit", handleFormSubmit, true);
           loginButton.removeEventListener("click", handleButtonClick, true);
           buttonObserver.disconnect();
+          isIntercepted = false; // 플래그 리셋
         };
       } else {
+        // 폼만 찾았지만 버튼은 없는 경우
+        clerkForm.addEventListener("submit", handleFormSubmit, true);
+        isIntercepted = true;
         return () => {
           clerkForm.removeEventListener("submit", handleFormSubmit, true);
+          isIntercepted = false; // 플래그 리셋
         };
       }
     };
 
-    // 초기 실행 및 주기적 확인
+    // 한 번만 실행 (setInterval 제거로 무한 루프 방지)
     const initialTimeout = setTimeout(interceptClerkFormSubmit, 500);
-    const interval = setInterval(interceptClerkFormSubmit, 1000);
+    // 추가 확인을 위해 한 번 더 실행 (더 긴 딜레이)
+    const secondTimeout = setTimeout(interceptClerkFormSubmit, 2000);
 
     return () => {
       clearTimeout(initialTimeout);
-      clearInterval(interval);
+      clearTimeout(secondTimeout);
     };
   }, [clerk, signIn, signInLoaded, router, redirectUrl, isLoaded, isSignedIn]);
 
-  // Clerk가 자동으로 생성한 카카오 버튼 삭제
-  useEffect(() => {
-    const removeClerkKakaoButton = () => {
-      // Clerk가 자동으로 생성한 카카오 버튼 찾기
-      const clerkKakaoButton = document.querySelector(
-        ".cl-socialButtonsIconButton__custom_kakao, button[class*='custom_kakao']",
-      ) as HTMLElement;
+  // // Clerk가 자동으로 생성한 카카오 버튼 삭제
+  // useEffect(() => {
+  //   const removeClerkKakaoButton = () => {
+  //     // Clerk가 자동으로 생성한 카카오 버튼 찾기
+  //     const clerkKakaoButton = document.querySelector(
+  //       ".cl-socialButtonsIconButton__custom_kakao, button[class*='custom_kakao']",
+  //     ) as HTMLElement;
 
-      if (clerkKakaoButton) {
-        console.log("[SignInContent] Clerk 자동 생성 카카오 버튼 삭제");
-        clerkKakaoButton.remove();
-      }
-    };
+  //     if (clerkKakaoButton) {
+  //       console.log("[SignInContent] Clerk 자동 생성 카카오 버튼 삭제");
+  //       clerkKakaoButton.remove();
+  //     }
+  //   };
 
-    // 초기 실행 및 주기적 확인
-    const initialTimeout = setTimeout(removeClerkKakaoButton, 500);
-    const interval = setInterval(removeClerkKakaoButton, 1000);
+  //   // 초기 실행 및 주기적 확인
+  //   const initialTimeout = setTimeout(removeClerkKakaoButton, 500);
+  //   const interval = setInterval(removeClerkKakaoButton, 1000);
 
-    return () => {
-      clearTimeout(initialTimeout);
-      clearInterval(interval);
-    };
-  }, []);
+  //   return () => {
+  //     clearTimeout(initialTimeout);
+  //     clearInterval(interval);
+  //   };
+  // }, []);
 
-  // Clerk가 자동으로 생성한 네이버 버튼 삭제
-  useEffect(() => {
-    const removeClerkNaverButton = () => {
-      // Clerk가 자동으로 생성한 네이버 버튼 찾기
-      const clerkNaverButton = document.querySelector(
-        ".cl-socialButtonsIconButton__custom_naver_auth, .cl-socialButtonsIconButton__custom_naver-auth, button[class*='custom_naver_auth'], button[class*='custom_naver-auth'], button[class*='custom_naver']",
-      ) as HTMLElement;
+  // // Clerk가 자동으로 생성한 네이버 버튼 삭제
+  // useEffect(() => {
+  //   const removeClerkNaverButton = () => {
+  //     // Clerk가 자동으로 생성한 네이버 버튼 찾기
+  //     const clerkNaverButton = document.querySelector(
+  //       ".cl-socialButtonsIconButton__custom_naver_auth, .cl-socialButtonsIconButton__custom_naver-auth, button[class*='custom_naver_auth'], button[class*='custom_naver-auth'], button[class*='custom_naver']",
+  //     ) as HTMLElement;
 
-      if (clerkNaverButton) {
-        console.log("[SignInContent] Clerk 자동 생성 네이버 버튼 삭제");
-        clerkNaverButton.remove();
-      }
-    };
+  //     if (clerkNaverButton) {
+  //       console.log("[SignInContent] Clerk 자동 생성 네이버 버튼 삭제");
+  //       clerkNaverButton.remove();
+  //     }
+  //   };
 
-    // 초기 실행 및 주기적 확인
-    const initialTimeout = setTimeout(removeClerkNaverButton, 500);
-    const interval = setInterval(removeClerkNaverButton, 1000);
+  //   // 초기 실행 및 주기적 확인
+  //   const initialTimeout = setTimeout(removeClerkNaverButton, 500);
+  //   const interval = setInterval(removeClerkNaverButton, 1000);
 
-    return () => {
-      clearTimeout(initialTimeout);
-      clearInterval(interval);
-    };
-  }, []);
+  //   return () => {
+  //     clearTimeout(initialTimeout);
+  //     clearInterval(interval);
+  //   };
+  // }, []);
 
   // 카카오 버튼을 소셜 버튼 영역에 삽입
   useEffect(() => {
+    let isInserted = false; // 삽입 완료 플래그로 무한 루프 방지
+
     const insertKakaoButton = () => {
+      // 이미 삽입 완료되었으면 실행하지 않음
+      if (isInserted) return;
+
       // 이메일 주소 필드 행을 찾기
       const identifierFieldRow = document.querySelector(
         ".cl-formFieldRow__identifier",
@@ -1505,7 +1570,8 @@ export default function SignInContent() {
           parent.contains(identifierFieldRow) &&
           identifierFieldRow.previousSibling === kakaoButton
         ) {
-          // 이미 올바른 위치에 있으면 리턴
+          // 이미 올바른 위치에 있으면 플래그 설정하고 리턴
+          isInserted = true;
           return;
         }
 
@@ -1538,23 +1604,30 @@ export default function SignInContent() {
         const formContainer = identifierFieldRow.parentElement;
         if (formContainer) {
           formContainer.insertBefore(kakaoButton, identifierFieldRow);
+          isInserted = true; // 삽입 완료 플래그 설정
         }
       }
     };
 
-    // 초기 실행 및 주기적 확인
+    // 한 번만 실행 (setInterval 제거로 무한 루프 방지)
     const initialTimeout = setTimeout(insertKakaoButton, 500);
-    const interval = setInterval(insertKakaoButton, 1000);
+    // 추가 확인을 위해 한 번 더 실행 (더 긴 딜레이)
+    const secondTimeout = setTimeout(insertKakaoButton, 2000);
 
     return () => {
       clearTimeout(initialTimeout);
-      clearInterval(interval);
+      clearTimeout(secondTimeout);
     };
   }, []);
 
   // 네이버 버튼을 카카오 버튼 아래에 삽입
   useEffect(() => {
+    let isInserted = false; // 삽입 완료 플래그로 무한 루프 방지
+
     const insertNaverButton = () => {
+      // 이미 삽입 완료되었으면 실행하지 않음
+      if (isInserted) return;
+
       const kakaoButton = kakaoButtonRef.current;
       const naverButton = naverButtonRef.current;
 
@@ -1566,7 +1639,8 @@ export default function SignInContent() {
           parent === kakaoButton.parentElement &&
           kakaoButton.nextSibling === naverButton
         ) {
-          // 이미 올바른 위치에 있으면 리턴
+          // 이미 올바른 위치에 있으면 플래그 설정하고 리턴
+          isInserted = true;
           return;
         }
 
@@ -1600,16 +1674,18 @@ export default function SignInContent() {
           naverButton,
           kakaoButton.nextSibling,
         );
+        isInserted = true; // 삽입 완료 플래그 설정
       }
     };
 
-    // 초기 실행 및 주기적 확인
+    // 한 번만 실행 (setInterval 제거로 무한 루프 방지)
     const initialTimeout = setTimeout(insertNaverButton, 600);
-    const interval = setInterval(insertNaverButton, 1000);
+    // 추가 확인을 위해 한 번 더 실행 (더 긴 딜레이)
+    const secondTimeout = setTimeout(insertNaverButton, 2500);
 
     return () => {
       clearTimeout(initialTimeout);
-      clearInterval(interval);
+      clearTimeout(secondTimeout);
     };
   }, []);
 
@@ -2001,19 +2077,37 @@ export default function SignInContent() {
                       errorMessage.includes("외부 계정을 찾을 수 없습니다") ||
                       errorMessage.includes("external account")
                     ) {
-                      console.error("❌ [네이버 로그인 실패] External Account was not found");
-                      console.error("   → Proxy 서버는 데이터를 반환했지만, Clerk가 외부 계정을 연결하지 못했습니다.");
+                      console.error(
+                        "❌ [네이버 로그인 실패] External Account was not found",
+                      );
+                      console.error(
+                        "   → Proxy 서버는 데이터를 반환했지만, Clerk가 외부 계정을 연결하지 못했습니다.",
+                      );
                       console.error("   → 가능한 원인:");
-                      console.error("      1. Proxy 서버 응답의 'sub' 값이 Clerk가 기대하는 형식과 다름");
-                      console.error("      2. Clerk Dashboard의 Attribute Mapping에서 'sub' → 'User ID / Subject' 매핑이 잘못됨");
-                      console.error("      3. 이미 같은 네이버 계정이 다른 Clerk 사용자와 연결되어 있음");
+                      console.error(
+                        "      1. Proxy 서버 응답의 'sub' 값이 Clerk가 기대하는 형식과 다름",
+                      );
+                      console.error(
+                        "      2. Clerk Dashboard의 Attribute Mapping에서 'sub' → 'User ID / Subject' 매핑이 잘못됨",
+                      );
+                      console.error(
+                        "      3. 이미 같은 네이버 계정이 다른 Clerk 사용자와 연결되어 있음",
+                      );
                       console.error("   → 확인 방법:");
-                      console.error("      1. Proxy 서버 로그에서 'sub' 값 확인");
-                      console.error("      2. Clerk Dashboard → 네이버 provider → Attribute Mapping 확인");
-                      console.error("         - User ID / Subject → sub (반드시 'sub'로 매핑)");
+                      console.error(
+                        "      1. Proxy 서버 로그에서 'sub' 값 확인",
+                      );
+                      console.error(
+                        "      2. Clerk Dashboard → 네이버 provider → Attribute Mapping 확인",
+                      );
+                      console.error(
+                        "         - User ID / Subject → sub (반드시 'sub'로 매핑)",
+                      );
                       console.error("         - Email → email");
-                      console.error("      3. Clerk Dashboard → Users에서 해당 네이버 계정이 이미 연결되어 있는지 확인");
-                      
+                      console.error(
+                        "      3. Clerk Dashboard → Users에서 해당 네이버 계정이 이미 연결되어 있는지 확인",
+                      );
+
                       errorMessage =
                         "네이버 로그인에 실패했습니다.\n\n" +
                         "에러: External Account was not found\n\n" +
