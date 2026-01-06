@@ -15,10 +15,10 @@ import type { CartItemWithProduct } from "@/types/database";
 async function getCurrentUserId(): Promise<string | null> {
   const authResult = await auth();
   const { userId: clerkUserId } = authResult;
-  
+
   logger.group("[getCurrentUserId] 사용자 ID 조회 시작");
   logger.info("[getCurrentUserId] Clerk userId:", clerkUserId);
-  
+
   if (!clerkUserId) {
     logger.warn("[getCurrentUserId] Clerk userId가 없음 - 로그인하지 않음");
     logger.groupEnd();
@@ -28,10 +28,14 @@ async function getCurrentUserId(): Promise<string | null> {
   // Clerk 토큰 확인 (PGRST301 에러 방지)
   const token = await authResult.getToken();
   let supabase;
-  
+
   if (!token) {
-    logger.warn("[getCurrentUserId] Clerk 토큰이 없음 - service role 클라이언트 사용");
-    const { getServiceRoleClient } = await import("@/lib/supabase/service-role");
+    logger.warn(
+      "[getCurrentUserId] Clerk 토큰이 없음 - service role 클라이언트 사용",
+    );
+    const { getServiceRoleClient } = await import(
+      "@/lib/supabase/service-role"
+    );
     supabase = getServiceRoleClient();
   } else {
     logger.info("[getCurrentUserId] Clerk 토큰 확인됨 - 일반 클라이언트 사용");
@@ -53,29 +57,39 @@ async function getCurrentUserId(): Promise<string | null> {
   });
 
   // PGRST301 에러 발생 시 service role 클라이언트로 재시도
-  if (error && error.code === 'PGRST301') {
-    logger.warn("[getCurrentUserId] PGRST301 에러 발생 - service role 클라이언트로 재시도");
-    const { getServiceRoleClient } = await import("@/lib/supabase/service-role");
+  if (error && error.code === "PGRST301") {
+    logger.warn(
+      "[getCurrentUserId] PGRST301 에러 발생 - service role 클라이언트로 재시도",
+    );
+    const { getServiceRoleClient } = await import(
+      "@/lib/supabase/service-role"
+    );
     const serviceSupabase = getServiceRoleClient();
-    
+
     const { data: retryUser, error: retryError } = await serviceSupabase
       .from("users")
       .select("id")
       .eq("clerk_user_id", clerkUserId)
       .is("deleted_at", null)
       .maybeSingle();
-    
+
     if (retryError) {
-      logger.error("[getCurrentUserId] service role 클라이언트로도 조회 실패:", {
-        error: retryError.message,
-        code: retryError.code,
-      });
+      logger.error(
+        "[getCurrentUserId] service role 클라이언트로도 조회 실패:",
+        {
+          error: retryError.message,
+          code: retryError.code,
+        },
+      );
       logger.groupEnd();
       return null;
     }
-    
+
     if (retryUser) {
-      logger.info("[getCurrentUserId] service role 클라이언트로 조회 성공:", retryUser.id);
+      logger.info(
+        "[getCurrentUserId] service role 클라이언트로 조회 성공:",
+        retryUser.id,
+      );
       logger.groupEnd();
       return retryUser.id;
     }
@@ -86,7 +100,9 @@ async function getCurrentUserId(): Promise<string | null> {
     logger.info("[getCurrentUserId] 사용자가 없음 - 동기화 시도");
     try {
       const { clerkClient } = await import("@clerk/nextjs/server");
-      const { getServiceRoleClient } = await import("@/lib/supabase/service-role");
+      const { getServiceRoleClient } = await import(
+        "@/lib/supabase/service-role"
+      );
 
       const client = await clerkClient();
       const clerkUser = await client.users.getUser(clerkUserId);
@@ -100,7 +116,11 @@ async function getCurrentUserId(): Promise<string | null> {
         const serviceSupabase = getServiceRoleClient();
         const userData = {
           clerk_user_id: clerkUser.id,
-          name: clerkUser.fullName || clerkUser.username || clerkUser.emailAddresses[0]?.emailAddress || "Unknown",
+          name:
+            clerkUser.fullName ||
+            clerkUser.username ||
+            clerkUser.emailAddresses[0]?.emailAddress ||
+            "Unknown",
           email: clerkUser.emailAddresses[0]?.emailAddress || "",
           role: "customer",
         };
@@ -146,7 +166,7 @@ async function getCurrentUserId(): Promise<string | null> {
   }
 
   // 일반 에러 처리 (PGRST301이 아닌 경우)
-  if (error && error.code !== 'PGRST301') {
+  if (error && error.code !== "PGRST301") {
     logger.error("[getCurrentUserId] 사용자 조회 실패:", {
       error: error.message,
       code: error.code,
@@ -306,14 +326,52 @@ export async function addToCart(
 
     const supabase = await createClient();
 
-    const { data: product } = await supabase
+    let { data: product, error: productError } = await supabase
       .from("products")
       .select("id, price, discount_price, stock, status")
       .eq("id", productId)
       .is("deleted_at", null)
       .single();
 
+    // PGRST301 에러 발생 시 service role 클라이언트로 재시도
+    if (productError && productError.code === "PGRST301") {
+      logger.warn(
+        "[addToCart] PGRST301 에러 발생 - service role 클라이언트로 재시도",
+        { productId },
+      );
+      const { getServiceRoleClient } = await import(
+        "@/lib/supabase/service-role"
+      );
+      const serviceSupabase = getServiceRoleClient();
+
+      const { data: retryProduct, error: retryError } = await serviceSupabase
+        .from("products")
+        .select("id, price, discount_price, stock, status")
+        .eq("id", productId)
+        .is("deleted_at", null)
+        .single();
+
+      if (retryError) {
+        logger.error("[addToCart] service role 클라이언트로도 상품 조회 실패:", {
+          error: retryError.message,
+          code: retryError.code,
+          productId,
+        });
+        return { success: false, message: "상품을 찾을 수 없습니다." };
+      }
+
+      product = retryProduct;
+    } else if (productError) {
+      logger.error("[addToCart] 상품 조회 실패:", {
+        error: productError.message,
+        code: productError.code,
+        productId,
+      });
+      return { success: false, message: "상품을 찾을 수 없습니다." };
+    }
+
     if (!product) {
+      logger.warn("[addToCart] 상품을 찾을 수 없음:", productId);
       return { success: false, message: "상품을 찾을 수 없습니다." };
     }
 
