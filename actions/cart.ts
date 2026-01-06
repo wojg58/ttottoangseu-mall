@@ -8,6 +8,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import logger from "@/lib/logger";
 import type { CartItemWithProduct } from "@/types/database";
 
@@ -501,6 +502,59 @@ export async function addToCart(
     logger.error("장바구니 추가 실패", error);
     return { success: false, message: "장바구니 추가에 실패했습니다." };
   }
+}
+
+// 바로 구매하기: 장바구니에 추가 후 체크아웃 페이지로 리다이렉트
+export async function buyNowAndRedirect(
+  productId: string,
+  quantity: number = 1,
+  variantId?: string,
+): Promise<never> {
+  logger.group("[buyNowAndRedirect] 바로 구매 시작");
+  logger.info("상품 정보:", { productId, quantity, variantId });
+
+  const result = await addToCart(productId, quantity, variantId);
+  
+  if (!result.success) {
+    logger.error("[buyNowAndRedirect] 장바구니 추가 실패:", result.message);
+    logger.groupEnd();
+    // 에러는 클라이언트에서 처리하도록 하기 위해 throw
+    throw new Error(result.message);
+  }
+
+  logger.info("[buyNowAndRedirect] ✅ 장바구니 추가 성공 - 체크아웃 페이지로 리다이렉트");
+  logger.groupEnd();
+  
+  // Server Action에서 직접 리다이렉트 (DB 트랜잭션이 완료된 후 실행됨)
+  redirect("/checkout");
+}
+
+// 옵션이 여러 개인 상품의 바로 구매하기
+export async function buyNowWithOptionsAndRedirect(
+  productId: string,
+  options: Array<{ variantId: string; quantity: number }>,
+): Promise<never> {
+  logger.group("[buyNowWithOptionsAndRedirect] 옵션 여러 개 바로 구매 시작");
+  logger.info("상품 정보:", { productId, optionsCount: options.length });
+
+  // 모든 옵션을 순차적으로 장바구니에 추가
+  for (const option of options) {
+    const result = await addToCart(productId, option.quantity, option.variantId);
+    if (!result.success) {
+      logger.error("[buyNowWithOptionsAndRedirect] 장바구니 추가 실패:", {
+        variantId: option.variantId,
+        message: result.message,
+      });
+      logger.groupEnd();
+      throw new Error(`${option.variantId}: ${result.message}`);
+    }
+  }
+
+  logger.info("[buyNowWithOptionsAndRedirect] ✅ 모든 옵션 장바구니 추가 성공 - 체크아웃 페이지로 리다이렉트");
+  logger.groupEnd();
+  
+  // Server Action에서 직접 리다이렉트
+  redirect("/checkout");
 }
 
 // 장바구니 아이템 수량 변경

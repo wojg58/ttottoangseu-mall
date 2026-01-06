@@ -23,7 +23,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { addToCart } from "@/actions/cart";
+import { addToCart, buyNowAndRedirect } from "@/actions/cart";
 
 interface AddToCartButtonProps {
   productId: string;
@@ -99,7 +99,7 @@ export default function AddToCartButton({
         setShowSuccessModal(true);
       } else {
         console.error("[AddToCartButton] 장바구니 담기 실패:", result.message);
-        
+
         // 서버에서 반환한 로그인 관련 에러인 경우 (실제 세션 만료)
         if (result.message.includes("로그인이 필요")) {
           console.error("❌ 서버에서 로그인 필요 응답 - 실제 세션 만료");
@@ -107,7 +107,7 @@ export default function AddToCartButton({
           router.push("/sign-in?redirect_url=" + window.location.pathname);
           return;
         }
-        
+
         alert(result.message);
       }
     });
@@ -145,31 +145,23 @@ export default function AddToCartButton({
 
     startTransition(async () => {
       try {
-        const result = await addToCart(productId, quantity, variantId);
-        if (result.success) {
-          console.log("[AddToCartButton] 바로 구매 성공 - 체크아웃 페이지로 이동");
-          // 데이터베이스 반영을 위해 약간의 지연 후 이동
-          // 전체 페이지 리로드를 통해 서버 사이드에서 최신 장바구니 데이터를 가져오도록 함
-          await new Promise((resolve) => setTimeout(resolve, 300));
-          window.location.href = "/checkout";
-        } else {
-          console.error("[AddToCartButton] 바로 구매 실패:", {
-            message: result.message,
-          });
-          
-          // 서버에서 반환한 로그인 관련 에러인 경우 (실제 세션 만료)
-          if (result.message.includes("로그인이 필요")) {
-            console.error("❌ 서버에서 로그인 필요 응답 - 실제 세션 만료");
-            alert("로그인 세션이 만료되었습니다. 다시 로그인해주세요.");
-            router.push("/sign-in?redirect_url=" + window.location.pathname);
-            return;
-          }
-          
-          alert(result.message);
-        }
+        // Server Action에서 직접 리다이렉트 (DB 트랜잭션 완료 후 실행됨)
+        await buyNowAndRedirect(productId, quantity, variantId);
+        // redirect()는 never를 반환하므로 여기 도달하지 않음
       } catch (error) {
         console.error("[AddToCartButton] 바로 구매 실패:", error);
-        alert("주문에 실패했습니다.");
+        const errorMessage =
+          error instanceof Error ? error.message : "주문에 실패했습니다.";
+
+        // 서버에서 반환한 로그인 관련 에러인 경우 (실제 세션 만료)
+        if (errorMessage.includes("로그인이 필요")) {
+          console.error("❌ 서버에서 로그인 필요 응답 - 실제 세션 만료");
+          alert("로그인 세션이 만료되었습니다. 다시 로그인해주세요.");
+          router.push("/sign-in?redirect_url=" + window.location.pathname);
+          return;
+        }
+
+        alert(errorMessage);
       }
     });
   };
@@ -224,7 +216,13 @@ export default function AddToCartButton({
           disabled={!isLoaded || isSoldOut || isPending}
           className="flex-1 h-14 bg-[#ff6b9d] hover:bg-[#ff5088] text-white rounded-xl text-base font-bold"
         >
-          {!isLoaded ? "로딩 중..." : isSoldOut ? "품절" : isPending ? "처리 중..." : "바로 구매"}
+          {!isLoaded
+            ? "로딩 중..."
+            : isSoldOut
+            ? "품절"
+            : isPending
+            ? "처리 중..."
+            : "바로 구매"}
         </Button>
       </div>
 
