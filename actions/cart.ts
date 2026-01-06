@@ -1243,7 +1243,9 @@ export async function buyNowWithOptionsAndRedirect(
     for (let i = 0; i < options.length; i++) {
       const option = options[i];
       logger.info(
-        `[buyNowWithOptionsAndRedirect] 옵션 ${i + 1}/${options.length} 추가 중:`,
+        `[buyNowWithOptionsAndRedirect] 옵션 ${i + 1}/${
+          options.length
+        } 추가 중:`,
         {
           variantId: option.variantId,
           quantity: option.quantity,
@@ -1312,7 +1314,9 @@ export async function buyNowWithOptionsAndRedirect(
     for (let i = 0; i < options.length; i++) {
       const option = options[i];
       logger.info(
-        `[buyNowWithOptionsAndRedirect] 옵션 ${i + 1}/${options.length} 확인 중:`,
+        `[buyNowWithOptionsAndRedirect] 옵션 ${i + 1}/${
+          options.length
+        } 확인 중:`,
         {
           variantId: option.variantId,
         },

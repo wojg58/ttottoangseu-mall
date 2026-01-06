@@ -175,13 +175,29 @@ export default function AddToCartButton({
 
         // 실제 에러인 경우에만 로그 및 알림 표시
         console.error("[AddToCartButton] ❌ 4단계: 바로 구매 실패");
-        console.error("에러 상세:", {
+        console.error("에러 타입:", typeof error);
+        console.error("에러 객체:", error);
+        console.error("에러 메시지:", error?.message);
+        console.error("에러 코드:", error?.code);
+        console.error("에러 digest:", error?.digest);
+        console.error("에러 stack:", error?.stack);
+        console.error(
+          "전체 에러 (JSON):",
+          JSON.stringify(error, Object.getOwnPropertyNames(error), 2),
+        );
+
+        // 에러 상세를 객체로도 출력 (개발자 도구에서 펼쳐볼 수 있도록)
+        const errorDetails = {
           message: error?.message,
           code: error?.code,
           digest: error?.digest,
           stack: error?.stack,
+          name: error?.name,
+          cause: error?.cause,
           fullError: error,
-        });
+        };
+        console.error("에러 상세 객체:", errorDetails);
+
         const errorMessage =
           error instanceof Error ? error.message : "주문에 실패했습니다.";
 

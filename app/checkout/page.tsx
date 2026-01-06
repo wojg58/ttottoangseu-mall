@@ -15,28 +15,43 @@ export default async function CheckoutPage({
 }: {
   searchParams: Promise<{ orderId?: string }>;
 }) {
-  const { userId } = await auth();
+  try {
+    const { userId } = await auth();
 
-  if (!userId) {
-    redirect("/sign-in?redirect_url=/checkout");
-  }
+    if (!userId) {
+      redirect("/sign-in?redirect_url=/checkout");
+    }
 
-  console.group("🛒 [CheckoutPage] 체크아웃 페이지 렌더링 시작");
-  console.log("[CheckoutPage] 1단계: 페이지 렌더링 시작");
-  console.log("상태:", {
-    userId: userId || null,
-    hasUserId: !!userId,
-    timestamp: new Date().toISOString(),
-  });
+    console.group("🛒 [CheckoutPage] 체크아웃 페이지 렌더링 시작");
+    console.log("[CheckoutPage] 1단계: 페이지 렌더링 시작");
+    console.log("상태:", {
+      userId: userId || null,
+      hasUserId: !!userId,
+      timestamp: new Date().toISOString(),
+    });
 
-  const params = await searchParams;
-  const orderId = params.orderId;
-  console.log("[CheckoutPage] 2단계: searchParams 확인");
-  console.log("orderId:", orderId || "없음");
+    const params = await searchParams;
+    const orderId = params.orderId;
+    console.log("[CheckoutPage] 2단계: searchParams 확인");
+    console.log("orderId:", orderId || "없음");
 
-  // 장바구니 조회 (PGRST301 에러 처리 포함)
-  console.log("[CheckoutPage] 3단계: getCartItems() 첫 번째 호출");
-  let cartItems = await getCartItems();
+    // 장바구니 조회 (PGRST301 에러 처리 포함)
+    console.log("[CheckoutPage] 3단계: getCartItems() 첫 번째 호출");
+    let cartItems: Awaited<ReturnType<typeof getCartItems>> = [];
+    
+    try {
+      cartItems = await getCartItems();
+    } catch (error) {
+      console.error("[CheckoutPage] ❌ getCartItems() 첫 번째 호출 실패:", error);
+      console.error("에러 상세:", {
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        name: error instanceof Error ? error.name : undefined,
+        digest: (error as any)?.digest,
+      });
+      // 에러 발생 시 빈 배열로 처리하고 계속 진행
+      cartItems = [];
+    }
   console.log("[CheckoutPage] 첫 번째 조회 결과:", {
     itemsCount: cartItems.length,
     items: cartItems.map((item) => ({
@@ -47,13 +62,25 @@ export default async function CheckoutPage({
     })),
   });
 
-  // 바로 구매하기로 온 경우, 장바구니가 비어있을 수 있으므로 잠시 대기 후 재시도
-  if (!orderId && cartItems.length === 0) {
-    console.log("[CheckoutPage] 4단계: 장바구니 비어있음 - 500ms 대기 후 재시도");
-    // revalidatePath 후 데이터 반영을 위해 잠시 대기
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    console.log("[CheckoutPage] 5단계: getCartItems() 두 번째 호출");
-    cartItems = await getCartItems();
+    // 바로 구매하기로 온 경우, 장바구니가 비어있을 수 있으므로 잠시 대기 후 재시도
+    if (!orderId && cartItems.length === 0) {
+      console.log("[CheckoutPage] 4단계: 장바구니 비어있음 - 500ms 대기 후 재시도");
+      // revalidatePath 후 데이터 반영을 위해 잠시 대기
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      console.log("[CheckoutPage] 5단계: getCartItems() 두 번째 호출");
+      try {
+        cartItems = await getCartItems();
+      } catch (error) {
+        console.error("[CheckoutPage] ❌ getCartItems() 두 번째 호출 실패:", error);
+        console.error("에러 상세:", {
+          message: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+          name: error instanceof Error ? error.name : undefined,
+          digest: (error as any)?.digest,
+        });
+        // 에러 발생 시 빈 배열로 처리하고 계속 진행
+        cartItems = [];
+      }
     console.log("[CheckoutPage] 두 번째 조회 결과:", {
       itemsCount: cartItems.length,
       items: cartItems.map((item) => ({
@@ -113,37 +140,70 @@ export default async function CheckoutPage({
     shippingFee,
     total,
   });
-  console.log("[CheckoutPage] ✅ 9단계: 체크아웃 페이지 렌더링 완료");
-  console.groupEnd();
+    console.log("[CheckoutPage] ✅ 9단계: 체크아웃 페이지 렌더링 완료");
+    console.groupEnd();
 
-  return (
-    <main className="py-8">
-      <div className="shop-container">
-        {/* 브레드크럼 */}
-        <nav className="flex items-center gap-2 text-sm text-[#8b7d84] mb-6">
-          <Link
-            href="/"
-            className="hover:text-[#ff6b9d] flex items-center gap-1"
-          >
-            <Home className="w-4 h-4" />홈
-          </Link>
-          <span>/</span>
-          <Link href="/cart" className="hover:text-[#ff6b9d]">
-            장바구니
-          </Link>
-          <span>/</span>
-          <span className="text-[#4a3f48]">주문/결제</span>
-        </nav>
+    return (
+      <main className="py-8">
+        <div className="shop-container">
+          {/* 브레드크럼 */}
+          <nav className="flex items-center gap-2 text-sm text-[#8b7d84] mb-6">
+            <Link
+              href="/"
+              className="hover:text-[#ff6b9d] flex items-center gap-1"
+            >
+              <Home className="w-4 h-4" />홈
+            </Link>
+            <span>/</span>
+            <Link href="/cart" className="hover:text-[#ff6b9d]">
+              장바구니
+            </Link>
+            <span>/</span>
+            <span className="text-[#4a3f48]">주문/결제</span>
+          </nav>
 
-        <h1 className="text-2xl font-bold text-[#4a3f48] mb-8">주문/결제</h1>
+          <h1 className="text-2xl font-bold text-[#4a3f48] mb-8">주문/결제</h1>
 
-        <CheckoutForm
-          cartItems={cartItems}
-          subtotal={subtotal}
-          shippingFee={shippingFee}
-          total={total}
-        />
-      </div>
-    </main>
-  );
+          <CheckoutForm
+            cartItems={cartItems}
+            subtotal={subtotal}
+            shippingFee={shippingFee}
+            total={total}
+          />
+        </div>
+      </main>
+    );
+  } catch (error) {
+    console.error("[CheckoutPage] ❌ Server Component 렌더링 에러:", error);
+    console.error("에러 상세:", {
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      name: error instanceof Error ? error.name : undefined,
+      digest: (error as any)?.digest,
+    });
+
+    // redirect() 에러인 경우 다시 throw (Next.js가 처리)
+    if (
+      error &&
+      typeof error === "object" &&
+      ("digest" in error || "message" in error)
+    ) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      const errorDigest = (error as any)?.digest;
+
+      if (
+        errorMessage === "NEXT_REDIRECT" ||
+        errorMessage?.includes("NEXT_REDIRECT") ||
+        errorDigest?.includes("NEXT_REDIRECT")
+      ) {
+        // redirect 에러는 다시 throw (Next.js가 처리)
+        throw error;
+      }
+    }
+
+    // 다른 에러는 장바구니로 리다이렉트
+    console.error("[CheckoutPage] 에러 발생 - 장바구니로 리다이렉트");
+    redirect("/cart");
+  }
 }

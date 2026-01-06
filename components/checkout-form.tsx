@@ -1147,29 +1147,55 @@ export default function CheckoutForm({
           {/* 약관 동의 */}
           <div className="mb-6 space-y-3 p-4 bg-[#fef8fb] rounded-lg border border-[#f5d5e3]">
             {/* 전체 동의 */}
-            <label className="flex items-start gap-2 cursor-pointer">
+            <label 
+              className={`flex items-start gap-2 ${
+                !selectedPaymentMethod 
+                  ? "cursor-not-allowed opacity-50" 
+                  : "cursor-pointer"
+              }`}
+            >
               <input
                 type="checkbox"
                 checked={agreeAll}
                 onChange={(e) => handleAgreeAll(e.target.checked)}
-                className="w-5 h-5 text-[#ff6b9d] border-[#d4d4d4] rounded focus:ring-[#ff6b9d] mt-0.5"
+                disabled={!selectedPaymentMethod}
+                className="w-5 h-5 text-[#ff6b9d] border-[#d4d4d4] rounded focus:ring-[#ff6b9d] mt-0.5 disabled:cursor-not-allowed"
               />
-              <span className="text-sm font-bold text-[#4a3f48]">전체 동의</span>
+              <span className="text-sm font-bold text-[#4a3f48]">
+                전체 동의
+                {!selectedPaymentMethod && (
+                  <span className="text-xs text-[#8b7d84] block mt-1 font-normal">
+                    (결제수단을 먼저 선택해주세요)
+                  </span>
+                )}
+              </span>
             </label>
 
             {/* 구분선 */}
             <div className="border-t border-[#f5d5e3]"></div>
 
             {/* 필수 동의 항목 */}
-            <label className="flex items-start gap-2 cursor-pointer pl-2">
+            <label 
+              className={`flex items-start gap-2 pl-2 ${
+                !selectedPaymentMethod 
+                  ? "cursor-not-allowed opacity-50" 
+                  : "cursor-pointer"
+              }`}
+            >
               <input
                 type="checkbox"
                 checked={agreePurchase}
                 onChange={(e) => handleAgreePurchase(e.target.checked)}
-                className="w-4 h-4 text-[#ff6b9d] border-[#d4d4d4] rounded focus:ring-[#ff6b9d] mt-0.5"
+                disabled={!selectedPaymentMethod}
+                className="w-4 h-4 text-[#ff6b9d] border-[#d4d4d4] rounded focus:ring-[#ff6b9d] mt-0.5 disabled:cursor-not-allowed"
               />
               <span className="text-sm text-[#4a3f48]">
                 구매조건 확인 및 결제진행에 동의 <span className="text-[#ff6b9d]">(필수)</span>
+                {!selectedPaymentMethod && (
+                  <span className="text-xs text-[#8b7d84] block mt-1">
+                    결제수단을 먼저 선택해주세요
+                  </span>
+                )}
               </span>
             </label>
           </div>

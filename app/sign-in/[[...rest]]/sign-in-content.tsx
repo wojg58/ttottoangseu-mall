@@ -48,6 +48,7 @@ export default function SignInContent() {
     let updateCount = 0;
     const MAX_UPDATES = 10; // 최대 업데이트 횟수 제한
     let buttonObserver: MutationObserver | null = null; // 버튼 텍스트 변경을 위한 Observer
+    let labelObserver: MutationObserver | null = null; // 라벨 텍스트 변경을 위한 Observer
 
     const updateForm = () => {
       // 무한 루프 방지: 최대 업데이트 횟수 제한
@@ -193,6 +194,36 @@ export default function SignInContent() {
 
       if (identifierRow && identifierInput && !isEmailFieldApplied) {
         console.log("[SignInContent] 이메일 주소 입력칸 스타일 적용 및 활성화");
+
+        // 라벨 텍스트를 "이메일 주소"로 변경
+        if (identifierLabel) {
+          identifierLabel.textContent = "이메일 주소";
+          console.log("[SignInContent] 라벨 텍스트를 '이메일 주소'로 변경");
+
+          // 기존 observer가 있으면 해제
+          if (labelObserver) {
+            labelObserver.disconnect();
+          }
+
+          // 라벨이 동적으로 변경되어도 "이메일 주소"로 유지
+          labelObserver = new MutationObserver(() => {
+            if (
+              identifierLabel &&
+              identifierLabel.textContent !== "이메일 주소"
+            ) {
+              identifierLabel.textContent = "이메일 주소";
+              console.log(
+                "[SignInContent] 라벨 텍스트를 '이메일 주소'로 재변경",
+              );
+            }
+          });
+
+          labelObserver.observe(identifierLabel, {
+            childList: true,
+            subtree: true,
+            characterData: true,
+          });
+        }
 
         // 이메일 주소 입력칸 컨테이너 표시 및 활성화
         identifierRow.style.cssText = `
@@ -681,6 +712,9 @@ export default function SignInContent() {
       observer.disconnect();
       if (buttonObserver) {
         buttonObserver.disconnect();
+      }
+      if (labelObserver) {
+        labelObserver.disconnect();
       }
       clearInterval(errorCheckInterval);
     };
