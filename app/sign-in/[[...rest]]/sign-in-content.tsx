@@ -1116,17 +1116,57 @@ export default function SignInContent() {
 
                 if (result.status === "needs_new_password") {
                   errorMessage = "비밀번호를 재설정해야 합니다.";
+                  alert(errorMessage);
                 } else if (result.status === "needs_second_factor") {
-                  errorMessage = "2단계 인증이 필요합니다.";
+                  // 2단계 인증이 필요한 경우 자동으로 이메일 코드 전송
+                  console.log("[SignInContent] 2단계 인증 필요, 자동 처리 시작");
+                  console.log("[SignInContent] supportedSecondFactors:", result.supportedSecondFactors);
+                  
+                  try {
+                    // 이메일 코드 전송 (email_code 전략 사용)
+                    const emailCodeStrategy = result.supportedSecondFactors?.find(
+                      (factor: any) => factor.strategy === "email_code"
+                    );
+                    
+                    if (emailCodeStrategy) {
+                      console.log("[SignInContent] 이메일 코드 전송 시작");
+                      // 2단계 인증 코드 전송
+                      await signInAttempt.prepareSecondFactor({
+                        strategy: "email_code",
+                      });
+                      
+                      console.log("[SignInContent] 이메일 코드 전송 완료");
+                      console.log("[SignInContent] 이메일 코드 입력 UI가 자동으로 표시됩니다");
+                      // 이메일 코드 입력 UI가 자동으로 표시됨 (Clerk가 처리)
+                      // 사용자가 코드를 입력하면 자동으로 인증 완료됨
+                      // alert 없이 계속 진행 (Clerk UI가 자동으로 표시됨)
+                      return;
+                    } else {
+                      // email_code 전략이 없는 경우
+                      console.warn("[SignInContent] email_code 전략을 찾을 수 없음");
+                      errorMessage = "2단계 인증이 필요합니다. 이메일을 확인해주세요.";
+                      alert(errorMessage);
+                    }
+                  } catch (mfaError: any) {
+                    console.error("[SignInContent] 2단계 인증 처리 중 에러:", mfaError);
+                    console.error("[SignInContent] 에러 상세:", {
+                      message: mfaError.message,
+                      errors: mfaError.errors,
+                      status: mfaError.status,
+                    });
+                    errorMessage = "2단계 인증 처리 중 오류가 발생했습니다. 다시 시도해주세요.";
+                    alert(errorMessage);
+                  }
                 } else if (result.status === "needs_identifier") {
                   errorMessage = "로그인 정보를 확인해주세요.";
+                  alert(errorMessage);
                 } else if (result.status === "needs_first_factor") {
                   errorMessage = "추가 인증이 필요합니다.";
+                  alert(errorMessage);
                 } else {
                   errorMessage = `로그인 상태: ${result.status}\n\n로그인을 완료할 수 없습니다. 다시 시도해주세요.`;
+                  alert(errorMessage);
                 }
-
-                alert(errorMessage);
               }
             } catch (err: any) {
               const isProduction = window.location.hostname !== "localhost";
