@@ -1205,12 +1205,42 @@ export default function SignInContent() {
                   errorMessage = "비밀번호를 재설정해야 합니다.";
                   alert(errorMessage);
                 } else if (result.status === "needs_second_factor") {
-                  // 2단계 인증이 필요한 경우 자동으로 이메일 코드 전송
+                  // 2단계 인증이 필요한 경우 (새로운 클라이언트/기기에서 로그인 시)
                   console.log("[SignInContent] 2단계 인증 필요, 자동 처리 시작");
                   console.log("[SignInContent] supportedSecondFactors:", result.supportedSecondFactors);
+                  console.log("[SignInContent] clientTrustState:", result.clientTrustState);
                   
                   try {
-                    // 이메일 코드 전송 (email_code 전략 사용)
+                    // 이메일 링크를 우선적으로 사용 (사용자가 링크를 클릭하면 자동으로 로그인됨)
+                    const emailLinkStrategy = result.supportedSecondFactors?.find(
+                      (factor: any) => factor.strategy === "email_link"
+                    );
+                    
+                    if (emailLinkStrategy) {
+                      console.log("[SignInContent] 이메일 링크 전송 시작");
+                      console.log("[SignInContent] 리다이렉트 URL:", redirectUrl);
+                      
+                      // 이메일 링크 전송 (링크를 클릭하면 자동으로 로그인됨)
+                      await signInAttempt.prepareSecondFactor({
+                        strategy: "email_link",
+                        redirectUrl: redirectUrl.startsWith("http")
+                          ? redirectUrl
+                          : `${window.location.origin}${redirectUrl}`,
+                      });
+                      
+                      console.log("[SignInContent] 이메일 링크 전송 완료");
+                      
+                      // 사용자에게 안내 메시지 표시
+                      alert(
+                        "보안을 위해 이메일 인증이 필요합니다.\n\n" +
+                        "이메일로 인증 링크를 보냈습니다.\n" +
+                        "이메일을 확인하고 링크를 클릭해주세요.\n\n" +
+                        "인증 링크를 클릭하면 자동으로 로그인됩니다."
+                      );
+                      return;
+                    }
+                    
+                    // 이메일 링크가 없으면 이메일 코드 사용
                     const emailCodeStrategy = result.supportedSecondFactors?.find(
                       (factor: any) => factor.strategy === "email_code"
                     );
@@ -1226,12 +1256,13 @@ export default function SignInContent() {
                       console.log("[SignInContent] 이메일 코드 입력 UI가 자동으로 표시됩니다");
                       // 이메일 코드 입력 UI가 자동으로 표시됨 (Clerk가 처리)
                       // 사용자가 코드를 입력하면 자동으로 인증 완료됨
-                      // alert 없이 계속 진행 (Clerk UI가 자동으로 표시됨)
                       return;
                     } else {
-                      // email_code 전략이 없는 경우
-                      console.warn("[SignInContent] email_code 전략을 찾을 수 없음");
-                      errorMessage = "2단계 인증이 필요합니다. 이메일을 확인해주세요.";
+                      // 지원되는 2단계 인증 방법이 없는 경우
+                      console.warn("[SignInContent] 지원되는 2단계 인증 방법을 찾을 수 없음");
+                      errorMessage =
+                        "2단계 인증이 필요하지만 지원되는 방법을 찾을 수 없습니다.\n\n" +
+                        "Clerk Dashboard에서 이메일 인증 설정을 확인해주세요.";
                       alert(errorMessage);
                     }
                   } catch (mfaError: any) {
@@ -1241,7 +1272,11 @@ export default function SignInContent() {
                       errors: mfaError.errors,
                       status: mfaError.status,
                     });
-                    errorMessage = "2단계 인증 처리 중 오류가 발생했습니다. 다시 시도해주세요.";
+                    errorMessage =
+                      "2단계 인증 처리 중 오류가 발생했습니다.\n\n" +
+                      "에러: " +
+                      (mfaError.errors?.[0]?.message || mfaError.message || "알 수 없는 오류") +
+                      "\n\n다시 시도해주세요.";
                     alert(errorMessage);
                   }
                 } else if (result.status === "needs_identifier") {
