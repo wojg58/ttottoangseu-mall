@@ -512,8 +512,6 @@ export async function updateProduct(
         console.groupEnd();
       } else {
         console.log("[updateProduct] 삭제할 이미지가 없습니다.");
-      } else {
-        console.log("[updateProduct] 삭제할 이미지가 없습니다.");
       }
 
       // 대표 이미지로 설정하는 경우, 기존 대표 이미지 해제

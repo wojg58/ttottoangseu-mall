@@ -266,6 +266,7 @@ export default function ProductForm({
         alt_text: img.alt_text,
       }));
       console.log("[ProductForm] product prop 변경으로 이미지 상태 업데이트:", updatedImages.length, "개");
+      console.log("[ProductForm] 업데이트된 이미지 ID 목록:", updatedImages.map(img => img.id).filter(Boolean));
       setProductImages(updatedImages);
       // 삭제된 이미지 ID 목록도 초기화 (새로운 상품 로드 시)
       setDeletedImageIds([]);
@@ -274,7 +275,7 @@ export default function ProductForm({
       setProductImages([]);
       setDeletedImageIds([]);
     }
-  }, [product?.id, product?.images?.length]); // product.id와 images.length를 의존성으로 사용
+  }, [product?.id, product?.images?.length, product?.images]); // product.images도 의존성에 추가하여 변경 감지
 
   // 옵션별 재고 합산하여 총 재고 자동 계산
   useEffect(() => {
