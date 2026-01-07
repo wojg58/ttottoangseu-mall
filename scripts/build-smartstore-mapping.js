@@ -15,7 +15,6 @@ require("dotenv").config();
 const { createClient } = require("@supabase/supabase-js");
 const bcrypt = require("bcrypt");
 const sharp = require("sharp");
-const cheerio = require("cheerio");
 
 // 환경변수 로드
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -255,38 +254,8 @@ async function downloadCompressAndUploadImage(
   }
 }
 
-// 상세 설명 HTML에서 이미지 URL 추출
-function extractDetailImagesFromHTML(htmlContent) {
-  if (!htmlContent || typeof htmlContent !== "string") {
-    return [];
-  }
-
-  try {
-    const $ = cheerio.load(htmlContent);
-    const imageUrls = [];
-
-    // <img> 태그에서 src 추출
-    $("img").each((i, elem) => {
-      const src = $(elem).attr("src");
-      if (src && src.trim()) {
-        imageUrls.push(src.trim());
-      }
-    });
-
-    // <amp-img> 태그도 처리
-    $("amp-img").each((i, elem) => {
-      const src = $(elem).attr("src");
-      if (src && src.trim()) {
-        imageUrls.push(src.trim());
-      }
-    });
-
-    return imageUrls;
-  } catch (error) {
-    console.error(`[ERROR] HTML 파싱 실패: ${error.message}`);
-    return [];
-  }
-}
+// 상세 설명 HTML에서 이미지 URL 추출 기능 제거됨
+// (상품 이미지 갤러리에서는 대표 이미지와 URL만 사용)
 
 // 스마트스토어 API에서 모든 상품 목록 가져오기 (v1/products/search API 사용)
 async function getAllSmartstoreProducts() {
@@ -708,38 +677,8 @@ async function buildMapping() {
           }
         }
 
-        // 1-4. 상세 설명 이미지 (HTML 파싱 → 800×800 압축 후 업로드)
-        if (originProduct?.detailContent) {
-          console.log(`[INFO]   상세 설명 이미지 추출 중...`);
-          const detailImageUrls = extractDetailImagesFromHTML(
-            originProduct.detailContent,
-          );
-          console.log(
-            `[INFO]   상세 설명에서 ${detailImageUrls.length}개 이미지 발견`,
-          );
-
-          for (let i = 0; i < detailImageUrls.length; i++) {
-            const imageUrl = detailImageUrls[i];
-            const result = await downloadCompressAndUploadImage(
-              imageUrl,
-              product.id,
-              "detail",
-            );
-            if (result.success) {
-              images.push({
-                image_url: result.url,
-                is_primary: false,
-                sort_order: images.length,
-                alt_text: `${product.name} - 상세 이미지 ${i + 1}`,
-              });
-            } else {
-              console.warn(
-                `[WARN]   상세 이미지 처리 실패: ${result.error}`,
-              );
-            }
-            await delay(200);
-          }
-        }
+        // 1-4. 상세 설명 이미지 처리 제거됨
+        // (상품 이미지 갤러리에서는 대표 이미지와 URL만 사용)
 
         // 1-5. DB에 저장
         if (images.length > 0) {
@@ -1166,38 +1105,8 @@ async function buildMapping() {
             }
           }
 
-          // 1-4. 상세 설명 이미지 (HTML 파싱 → 800×800 압축 후 업로드)
-          if (originProduct?.detailContent) {
-            console.log(`[INFO]   상세 설명 이미지 추출 중...`);
-            const detailImageUrls = extractDetailImagesFromHTML(
-              originProduct.detailContent,
-            );
-            console.log(
-              `[INFO]   상세 설명에서 ${detailImageUrls.length}개 이미지 발견`,
-            );
-
-            for (let i = 0; i < detailImageUrls.length; i++) {
-              const imageUrl = detailImageUrls[i];
-              const result = await downloadCompressAndUploadImage(
-                imageUrl,
-                newProduct.id,
-                "detail",
-              );
-              if (result.success) {
-                images.push({
-                  image_url: result.url,
-                  is_primary: false,
-                  sort_order: images.length,
-                  alt_text: `${smartstoreProduct.name} - 상세 이미지 ${i + 1}`,
-                });
-              } else {
-                console.warn(
-                  `[WARN]   상세 이미지 처리 실패: ${result.error}`,
-                );
-              }
-              await delay(200);
-            }
-          }
+          // 1-4. 상세 설명 이미지 처리 제거됨
+          // (상품 이미지 갤러리에서는 대표 이미지와 URL만 사용)
 
           if (images.length > 0) {
             const imageData = images.map((img) => ({
@@ -1212,13 +1121,8 @@ async function buildMapping() {
             if (imageError) {
               console.warn(`[WARN] 이미지 추가 실패: ${imageError.message}`);
             } else {
-              const detailImageCount =
-                originProduct?.detailContent
-                  ? extractDetailImagesFromHTML(originProduct.detailContent)
-                      .length
-                  : 0;
               console.log(
-                `[INFO]   ✅ 이미지 ${images.length}개 추가 완료 (대표: 1개, 추가: ${originProduct.images?.optionalImages?.length || 0}개, 옵션: ${originProduct?.standardOptionAttributes?.filter((o) => o.imageUrls?.length > 0).length || 0}개, 상세: ${detailImageCount}개)`,
+                `[INFO]   ✅ 이미지 ${images.length}개 추가 완료 (대표: 1개, 추가: ${originProduct.images?.optionalImages?.length || 0}개, 옵션: ${originProduct?.standardOptionAttributes?.filter((o) => o.imageUrls?.length > 0).length || 0}개)`,
               );
             }
           }
