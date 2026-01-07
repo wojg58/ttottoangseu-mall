@@ -1,0 +1,164 @@
+-- ============================================================================
+-- 카테고리 이름 및 설명 일괄 업데이트
+-- ============================================================================
+-- 
+-- 이 마이그레이션은 모든 카테고리의 이름과 설명을 일괄 업데이트합니다.
+-- 기존의 두 개의 마이그레이션 파일을 통합하여 리팩토링했습니다.
+-- 
+-- 변경 사항:
+-- 1. "캐릭터" → "치이카와"
+-- 2. "완구,스티커" → "모프샌드"
+-- 3. "키링,지비츠" 또는 "키링/지비츠" → "유키오"
+-- 4. "패션잡화" → "짱구"
+-- 5. "곰돌이" → "반다이"
+-- 6. "스마일" → "가차,리멘트"
+-- 7. "산리오" 설명 업데이트
+-- ============================================================================
+
+-- ----------------------------------------------------------------------------
+-- 1. 카테고리 이름 및 설명 업데이트
+-- ----------------------------------------------------------------------------
+
+-- 1-1. "캐릭터" → "치이카와" (이름 및 설명 업데이트)
+UPDATE categories 
+SET 
+  name = '치이카와',
+  description = '치이카와, 하치와레, 우사기, 쿠리만쥬, 모몽가, 랏코, 시사, 카니 귀여운 인기 캐릭터',
+  updated_at = now()
+WHERE name = '캐릭터' OR slug = 'character';
+
+-- 1-2. "완구,스티커" → "모프샌드" (이름 및 설명 업데이트)
+UPDATE categories 
+SET 
+  name = '모프샌드',
+  description = '사랑스럽고 귀여운 고양이',
+  updated_at = now()
+WHERE name = '완구,스티커' OR slug = 'phone-strap';
+
+-- 1-3. "키링,지비츠" 또는 "키링/지비츠" → "유키오" (이름 및 설명 업데이트)
+UPDATE categories 
+SET 
+  name = '유키오',
+  description = '순수하고 말없이 곁에 있어주는 납작한 친구',
+  updated_at = now()
+WHERE name IN ('키링,지비츠', '키링/지비츠') OR slug = 'keyring';
+
+-- 1-4. "패션잡화" → "짱구" (이름 및 설명 업데이트)
+UPDATE categories 
+SET 
+  name = '짱구',
+  description = '장난꾸러기지만 가족과 친구를 누구보다 아끼는 다섯 살 아이',
+  updated_at = now()
+WHERE name = '패션잡화' OR slug = 'fashion';
+
+-- 1-5. "곰돌이" → "반다이" (이름 및 설명 업데이트)
+UPDATE categories 
+SET 
+  name = '반다이',
+  description = '다마고치, 배스킨라빈스 등 반다이 상품',
+  updated_at = now()
+WHERE name = '곰돌이' OR slug = 'bear';
+
+-- 1-6. "스마일" → "가차,리멘트" (이름 및 설명 업데이트)
+UPDATE categories 
+SET 
+  name = '가차,리멘트',
+  description = '다양한 캡슐토이와 리멘트',
+  updated_at = now()
+WHERE name = '스마일' OR slug = 'stationery';
+
+-- ----------------------------------------------------------------------------
+-- 2. 카테고리 설명만 업데이트 (이름은 변경하지 않음)
+-- ----------------------------------------------------------------------------
+
+-- 2-1. 산리오 카테고리 설명 업데이트
+UPDATE categories 
+SET 
+  description = '헬로키티, 마이멜로디, 쿠로미, 시나모롤, 폼폼푸린, 포차코, 한교동 등 캐릭터 굿즈',
+  updated_at = now()
+WHERE slug = 'sanrio';
+
+-- ----------------------------------------------------------------------------
+-- 3. 이미 이름이 변경된 경우 설명 업데이트 (안전장치)
+-- ----------------------------------------------------------------------------
+-- 
+-- 이 섹션은 이미 이름이 변경되었지만 설명이 아직 업데이트되지 않은 경우를
+-- 대비한 안전장치입니다. 위의 업데이트가 이미 실행되었다면 이 쿼리들은
+-- 영향을 주지 않습니다.
+-- 
+
+-- 3-1. 치이카와 카테고리 설명 업데이트 (이미 이름이 변경된 경우)
+UPDATE categories 
+SET 
+  description = '치이카와, 하치와레, 우사기, 쿠리만쥬, 모몽가, 랏코, 시사, 카니 귀여운 인기 캐릭터',
+  updated_at = now()
+WHERE slug = 'character' 
+  AND name = '치이카와'
+  AND (description IS NULL OR description != '치이카와, 하치와레, 우사기, 쿠리만쥬, 모몽가, 랏코, 시사, 카니 귀여운 인기 캐릭터');
+
+-- 3-2. 모프샌드 카테고리 설명 업데이트 (이미 이름이 변경된 경우)
+UPDATE categories 
+SET 
+  description = '사랑스럽고 귀여운 고양이',
+  updated_at = now()
+WHERE slug = 'phone-strap' 
+  AND name = '모프샌드'
+  AND (description IS NULL OR description != '사랑스럽고 귀여운 고양이');
+
+-- 3-3. 유키오 카테고리 설명 업데이트 (이미 이름이 변경된 경우)
+UPDATE categories 
+SET 
+  description = '순수하고 말없이 곁에 있어주는 납작한 친구',
+  updated_at = now()
+WHERE slug = 'keyring' 
+  AND name = '유키오'
+  AND (description IS NULL OR description != '순수하고 말없이 곁에 있어주는 납작한 친구');
+
+-- 3-4. 짱구 카테고리 설명 업데이트 (이미 이름이 변경된 경우)
+UPDATE categories 
+SET 
+  description = '장난꾸러기지만 가족과 친구를 누구보다 아끼는 다섯 살 아이',
+  updated_at = now()
+WHERE slug = 'fashion' 
+  AND name = '짱구'
+  AND (description IS NULL OR description != '장난꾸러기지만 가족과 친구를 누구보다 아끼는 다섯 살 아이');
+
+-- 3-5. 반다이 카테고리 설명 업데이트 (이미 이름이 변경된 경우)
+UPDATE categories 
+SET 
+  description = '다마고치, 배스킨라빈스 등 반다이 상품',
+  updated_at = now()
+WHERE slug = 'bear' 
+  AND name = '반다이'
+  AND (description IS NULL OR description != '다마고치, 배스킨라빈스 등 반다이 상품');
+
+-- 3-6. 가차,리멘트 카테고리 설명 업데이트 (이미 이름이 변경된 경우)
+UPDATE categories 
+SET 
+  description = '다양한 캡슐토이와 리멘트',
+  updated_at = now()
+WHERE slug = 'stationery' 
+  AND name = '가차,리멘트'
+  AND (description IS NULL OR description != '다양한 캡슐토이와 리멘트');
+
+-- ----------------------------------------------------------------------------
+-- 4. 변경 확인 쿼리
+-- ----------------------------------------------------------------------------
+-- 업데이트된 카테고리 목록을 확인합니다.
+SELECT 
+  id,
+  name,
+  slug,
+  description,
+  updated_at
+FROM categories
+WHERE 
+  name IN ('치이카와', '모프샌드', '유키오', '짱구', '반다이', '가차,리멘트', '산리오')
+  OR slug IN ('sanrio', 'character', 'phone-strap', 'keyring', 'fashion', 'bear', 'stationery')
+ORDER BY 
+  COALESCE(sort_order, 0),
+  name;
+
+-- ============================================================================
+-- 마이그레이션 완료
+-- ============================================================================
