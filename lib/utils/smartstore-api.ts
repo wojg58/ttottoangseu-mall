@@ -418,13 +418,23 @@ export class SmartStoreApiClient {
 
       const data: SmartStoreChannelProductResponse = await response.json();
 
+      // originProductNo 추출 시도 (응답 구조에 따라 다를 수 있음)
+      // 채널 상품 조회 응답에서 직접 가져올 수 없으면 원상품 조회 API 호출 필요
+      let originProductNo: number | undefined = undefined;
+
+      // 응답 구조 확인: data.originProductNo 또는 data.originProduct.originProductNo 등
+      if ((data as any).originProductNo) {
+        originProductNo = (data as any).originProductNo;
+      } else if ((data.originProduct as any).originProductNo) {
+        originProductNo = (data.originProduct as any).originProductNo;
+      }
+
       // 응답을 정규화된 형태로 변환
       const normalized: SmartStoreProductWithOptions = {
         channelProductNo: parseInt(channelProductNo, 10),
         name: data.originProduct.name,
         optionInfo: data.originProduct.detailAttribute.optionInfo,
-        // originProductNo는 응답에 직접 없으므로 나중에 다른 API로 확인 필요
-        // 일단 undefined로 두고, 필요시 다른 API 호출로 채움
+        originProductNo: originProductNo,
       };
 
       logger.info("[SmartStoreAPI] 채널 상품 조회 성공", {

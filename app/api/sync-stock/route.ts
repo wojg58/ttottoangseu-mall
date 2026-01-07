@@ -19,6 +19,8 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   syncAllStocks,
   syncProductStock,
+  syncVariantStocks,
+  syncAllVariantStocks,
 } from "@/actions/sync-stock";
 import { logger } from "@/lib/logger";
 
@@ -28,8 +30,31 @@ export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     const productId = searchParams.get("productId");
+    const variantMode = searchParams.get("variant") === "true"; // 옵션 단위 동기화 여부
 
-    // 단일 상품 동기화
+    // 옵션 단위 동기화
+    if (variantMode) {
+      if (productId) {
+        logger.info(`[API] 단일 상품 옵션 재고 동기화: ${productId}`);
+        const result = await syncVariantStocks(productId);
+
+        console.groupEnd();
+        return NextResponse.json(result, {
+          status: result.success ? 200 : 500,
+        });
+      }
+
+      // 전체 상품 옵션 재고 동기화
+      logger.info("[API] 전체 상품 옵션 재고 동기화 시작");
+      const result = await syncAllVariantStocks();
+
+      console.groupEnd();
+      return NextResponse.json(result, {
+        status: result.success ? 200 : 500,
+      });
+    }
+
+    // 기존 상품 단위 동기화 (하위 호환성)
     if (productId) {
       logger.info(`[API] 단일 상품 재고 동기화: ${productId}`);
       const result = await syncProductStock(productId);
