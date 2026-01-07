@@ -252,6 +252,24 @@ export default function ProductForm({
     setIsMounted(true);
   }, []);
 
+  // product prop이 변경될 때 이미지 상태 업데이트
+  useEffect(() => {
+    if (product?.images) {
+      const updatedImages = product.images.map((img) => ({
+        id: img.id,
+        image_url: img.image_url,
+        is_primary: img.is_primary,
+        sort_order: img.sort_order,
+        alt_text: img.alt_text,
+      }));
+      console.log("[ProductForm] product prop 변경으로 이미지 상태 업데이트:", updatedImages.length, "개");
+      setProductImages(updatedImages);
+    } else if (product && !product.images) {
+      console.log("[ProductForm] product prop 변경으로 이미지 상태 초기화");
+      setProductImages([]);
+    }
+  }, [product?.id, product?.images?.length]); // product.id와 images.length를 의존성으로 사용
+
   // 옵션별 재고 합산하여 총 재고 자동 계산
   useEffect(() => {
     if (productVariants.length > 0) {
@@ -369,6 +387,8 @@ export default function ProductForm({
         }));
 
         console.log("[ProductForm] 수정 시 이미지 데이터:", imagesData);
+        console.log("[ProductForm] 이미지 ID 목록:", imagesData.map(img => img.id).filter(Boolean));
+        console.log("[ProductForm] 현재 productImages 상태:", productImages.map(img => ({ id: img.id, is_primary: img.is_primary })));
         console.log("[ProductForm] 수정 시 옵션 데이터:", productVariants);
 
         // 옵션 데이터 준비 (빈 값 필터링)

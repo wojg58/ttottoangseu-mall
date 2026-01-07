@@ -362,6 +362,8 @@ export async function updateProduct(
     // 이미지 업데이트 (images가 제공된 경우)
     if (input.images !== undefined) {
       console.log("[updateProduct] 이미지 업데이트 시작");
+      console.log("[updateProduct] 전달된 이미지 수:", input.images.length);
+      console.log("[updateProduct] 전달된 이미지 데이터:", JSON.stringify(input.images, null, 2));
       
       // 기존 이미지 목록 가져오기 (image_url 포함)
       const { data: existingImages } = await supabase
@@ -369,14 +371,22 @@ export async function updateProduct(
         .select("id, image_url")
         .eq("product_id", input.id);
 
+      console.log("[updateProduct] 기존 이미지 수:", existingImages?.length || 0);
+      console.log("[updateProduct] 기존 이미지 ID 목록:", existingImages?.map(img => img.id) || []);
+
       // 전달된 이미지 중 기존 이미지 ID 추출
       const existingImageIds = input.images
         .map((img) => img.id)
         .filter((id): id is string => !!id);
 
+      console.log("[updateProduct] 전달된 이미지 중 기존 ID 목록:", existingImageIds);
+
       // 삭제할 이미지 ID (기존에 있지만 전달되지 않은 이미지)
       const imagesToDelete =
         existingImages?.filter((img) => !existingImageIds.includes(img.id)) || [];
+
+      console.log("[updateProduct] 삭제 대상 이미지 수:", imagesToDelete.length);
+      console.log("[updateProduct] 삭제 대상 이미지 ID 목록:", imagesToDelete.map(img => img.id));
 
       // 삭제할 이미지가 있으면 삭제
       if (imagesToDelete.length > 0) {
