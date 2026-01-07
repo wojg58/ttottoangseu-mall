@@ -253,6 +253,7 @@ export interface UpdateProductInput {
     sort_order: number;
     alt_text?: string | null;
   }>;
+  deletedImageIds?: string[]; // 명시적으로 삭제할 이미지 ID 목록
   variants?: Array<{
     id?: string; // 기존 옵션의 경우 id가 있음
     variant_name: string;
@@ -364,6 +365,7 @@ export async function updateProduct(
       console.log("[updateProduct] 이미지 업데이트 시작");
       console.log("[updateProduct] 전달된 이미지 수:", input.images.length);
       console.log("[updateProduct] 전달된 이미지 데이터:", JSON.stringify(input.images, null, 2));
+      console.log("[updateProduct] 명시적으로 삭제할 이미지 ID 목록:", input.deletedImageIds || []);
       
       // 기존 이미지 목록 가져오기 (image_url 포함)
       const { data: existingImages } = await supabase
@@ -381,12 +383,28 @@ export async function updateProduct(
 
       console.log("[updateProduct] 전달된 이미지 중 기존 ID 목록:", existingImageIds);
 
-      // 삭제할 이미지 ID (기존에 있지만 전달되지 않은 이미지)
-      const imagesToDelete =
-        existingImages?.filter((img) => !existingImageIds.includes(img.id)) || [];
+      // 삭제할 이미지 ID 결정
+      // 1. 명시적으로 삭제할 이미지 ID가 있으면 우선 사용
+      // 2. 없으면 기존에 있지만 전달되지 않은 이미지
+      let imagesToDelete: Array<{ id: string; image_url: string }> = [];
+      
+      if (input.deletedImageIds && input.deletedImageIds.length > 0) {
+        // 명시적으로 삭제할 이미지 ID 사용
+        console.log("[updateProduct] 명시적 삭제 모드: 삭제할 이미지 ID 목록 사용");
+        imagesToDelete = existingImages?.filter((img) => 
+          input.deletedImageIds!.includes(img.id)
+        ) || [];
+      } else {
+        // 기존 로직: 기존에 있지만 전달되지 않은 이미지
+        console.log("[updateProduct] 자동 삭제 모드: 전달되지 않은 이미지 삭제");
+        imagesToDelete = existingImages?.filter((img) => 
+          !existingImageIds.includes(img.id)
+        ) || [];
+      }
 
       console.log("[updateProduct] 삭제 대상 이미지 수:", imagesToDelete.length);
       console.log("[updateProduct] 삭제 대상 이미지 ID 목록:", imagesToDelete.map(img => img.id));
+      console.log("[updateProduct] 삭제 대상 이미지 URL 목록:", imagesToDelete.map(img => img.image_url));
 
       // 삭제할 이미지가 있으면 삭제
       if (imagesToDelete.length > 0) {
@@ -431,9 +449,15 @@ export async function updateProduct(
               }
             } else {
               // 외부 URL인 경우 (네이버 스마트스토어 등) - Storage에 없으므로 삭제할 필요 없음
-              if (imageToDelete.image_url.includes("shop-phinf.pstatic.net") || 
-                  imageToDelete.image_url.includes("http://") || 
-                  imageToDelete.image_url.includes("https://")) {
+              // Supabase Storage URL이 아닌 경우만 외부 URL로 간주
+              const isSupabaseUrl = imageToDelete.image_url.includes("supabase.co/storage");
+              const isExternalUrl = !isSupabaseUrl && (
+                imageToDelete.image_url.includes("shop-phinf.pstatic.net") ||
+                imageToDelete.image_url.startsWith("http://") ||
+                imageToDelete.image_url.startsWith("https://")
+              );
+              
+              if (isExternalUrl) {
                 console.log(`[updateProduct] 외부 URL이므로 Storage 삭제 건너뜀: ${imageToDelete.image_url}`);
                 storageDeleteSuccessCount++; // 외부 URL은 성공으로 간주
               } else {

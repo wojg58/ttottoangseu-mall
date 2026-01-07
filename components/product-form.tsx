@@ -418,8 +418,14 @@ export default function ProductForm({
           category_ids: data.category_ids, // 다중 카테고리
           ...data,
           images: imagesData, // 이미지 데이터 추가
+          deletedImageIds: deletedImageIds.length > 0 ? deletedImageIds : undefined, // 명시적으로 삭제할 이미지 ID 목록
           variants: variantsData.length > 0 ? variantsData : undefined, // 옵션 데이터 추가
         });
+        
+        // 성공 시 삭제된 이미지 ID 목록 초기화
+        if (result.success) {
+          setDeletedImageIds([]);
+        }
 
         if (result.success) {
           alert(result.message);
@@ -1712,8 +1718,16 @@ export default function ProductForm({
                           console.log("[ProductForm] 삭제 대상 이미지 ID 목록:", deletedIds);
                           console.log("[ProductForm] 삭제 대상 이미지 URL 목록:", imagesToDelete.map(img => img.image_url));
                           
-                          // 삭제된 이미지 ID 저장 (폼 제출 시 사용)
-                          setDeletedImageIds((prev) => [...prev, ...deletedIds]);
+                          // 삭제된 이미지 ID 저장 (폼 제출 시 사용) - 중복 방지
+                          setDeletedImageIds((prev) => {
+                            const newIds = [...prev];
+                            deletedIds.forEach(id => {
+                              if (!newIds.includes(id)) {
+                                newIds.push(id);
+                              }
+                            });
+                            return newIds;
+                          });
                           
                           // 상태 업데이트 (대표 이미지만 남김)
                           setProductImages([primaryImage]);
@@ -1761,7 +1775,13 @@ export default function ProductForm({
                         // 삭제할 이미지가 기존 이미지인 경우 (id가 있는 경우) 삭제 목록에 추가
                         if (img.id) {
                           console.log("[ProductForm] 기존 이미지 삭제:", { id: img.id, image_url: img.image_url });
-                          setDeletedImageIds((prev) => [...prev, img.id!]);
+                          setDeletedImageIds((prev) => {
+                            // 중복 방지
+                            if (prev.includes(img.id!)) {
+                              return prev;
+                            }
+                            return [...prev, img.id!];
+                          });
                         }
                         
                         setProductImages((prev) => {
