@@ -478,38 +478,60 @@ export async function updateProduct(
           console.log(`[updateProduct] 데이터베이스에서 이미지 삭제 시도: ${deleteIds.length}개`);
           console.log(`[updateProduct] 삭제할 이미지 ID 목록:`, deleteIds);
           
-          const { data: deleteResult, error: deleteImageError } = await supabase
+          // 삭제 전에 실제로 존재하는 이미지 ID만 필터링
+          const { data: existingImageIds, error: checkError } = await supabase
             .from("product_images")
-            .delete()
-            .in("id", deleteIds)
-            .select(); // 삭제된 레코드 반환
-
-          if (deleteImageError) {
-            console.error("[updateProduct] 데이터베이스 이미지 삭제 에러:", deleteImageError);
-            console.error("[updateProduct] 에러 상세:", JSON.stringify(deleteImageError, null, 2));
-            // DB 삭제 실패는 치명적이므로 에러를 throw하지 않고 로그만 남김
-            // (이미지 삭제 실패가 전체 수정을 막지 않도록)
+            .select("id")
+            .eq("product_id", input.id)
+            .in("id", deleteIds);
+          
+          if (checkError) {
+            console.error("[updateProduct] 이미지 존재 확인 에러:", checkError);
           } else {
-            console.log(`[updateProduct] 데이터베이스에서 이미지 ${deleteIds.length}개 삭제 완료`);
-            console.log(`[updateProduct] 삭제된 레코드:`, deleteResult);
+            const validDeleteIds = existingImageIds?.map(img => img.id) || [];
+            const invalidIds = deleteIds.filter(id => !validDeleteIds.includes(id));
             
-            // 삭제 후 확인: 실제로 삭제되었는지 검증
-            const { data: remainingImages, error: verifyError } = await supabase
-              .from("product_images")
-              .select("id, image_url, is_primary")
-              .eq("product_id", input.id);
+            if (invalidIds.length > 0) {
+              console.warn(`[updateProduct] 존재하지 않는 이미지 ID (무시됨):`, invalidIds);
+            }
             
-            if (verifyError) {
-              console.error("[updateProduct] 삭제 후 검증 에러:", verifyError);
+            if (validDeleteIds.length > 0) {
+              const { data: deleteResult, error: deleteImageError } = await supabase
+                .from("product_images")
+                .delete()
+                .in("id", validDeleteIds)
+                .select(); // 삭제된 레코드 반환
+
+              if (deleteImageError) {
+                console.error("[updateProduct] 데이터베이스 이미지 삭제 에러:", deleteImageError);
+                console.error("[updateProduct] 에러 상세:", JSON.stringify(deleteImageError, null, 2));
+                throw new Error(`이미지 삭제 실패: ${deleteImageError.message}`);
+              } else {
+                console.log(`[updateProduct] 데이터베이스에서 이미지 ${validDeleteIds.length}개 삭제 완료`);
+                console.log(`[updateProduct] 삭제된 레코드:`, deleteResult);
+                
+                // 삭제 후 확인: 실제로 삭제되었는지 검증
+                const { data: remainingImages, error: verifyError } = await supabase
+                  .from("product_images")
+                  .select("id, image_url, is_primary")
+                  .eq("product_id", input.id);
+                
+                if (verifyError) {
+                  console.error("[updateProduct] 삭제 후 검증 에러:", verifyError);
+                } else {
+                  console.log(`[updateProduct] 삭제 후 남은 이미지 수: ${remainingImages?.length || 0}개`);
+                  console.log(`[updateProduct] 삭제 후 남은 이미지 ID 목록:`, remainingImages?.map(img => img.id) || []);
+                  console.log(`[updateProduct] 삭제 후 남은 이미지 정보:`, remainingImages);
+                }
+              }
             } else {
-              console.log(`[updateProduct] 삭제 후 남은 이미지 수: ${remainingImages?.length || 0}개`);
-              console.log(`[updateProduct] 삭제 후 남은 이미지 ID 목록:`, remainingImages?.map(img => img.id) || []);
-              console.log(`[updateProduct] 삭제 후 남은 이미지 정보:`, remainingImages);
+              console.warn("[updateProduct] 삭제할 유효한 이미지가 없습니다.");
             }
           }
         } catch (error) {
           console.error("[updateProduct] 데이터베이스 이미지 삭제 중 예외 발생:", error);
-          // 예외 발생해도 계속 진행 (이미지 삭제 실패가 전체 수정을 막지 않도록)
+          // 이미지 삭제 실패 시에도 상품 수정은 계속 진행하되, 경고 메시지 반환
+          console.warn("[updateProduct] 이미지 삭제 실패했지만 상품 수정은 계속 진행합니다.");
         }
         
         console.groupEnd();
