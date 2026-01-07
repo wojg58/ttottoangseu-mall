@@ -435,9 +435,22 @@ export async function updateProduct(
           .in("id", deleteIds);
 
         if (deleteImageError) {
-          console.error("이미지 삭제 에러:", deleteImageError);
+          console.error("[updateProduct] 이미지 삭제 에러:", deleteImageError);
         } else {
-          console.log(`기존 이미지 ${deleteIds.length}개 삭제 완료`);
+          console.log(`[updateProduct] 기존 이미지 ${deleteIds.length}개 삭제 완료`);
+          
+          // 삭제 후 확인: 실제로 삭제되었는지 검증
+          const { data: remainingImages, error: verifyError } = await supabase
+            .from("product_images")
+            .select("id")
+            .eq("product_id", input.id);
+          
+          if (verifyError) {
+            console.error("[updateProduct] 삭제 후 검증 에러:", verifyError);
+          } else {
+            console.log(`[updateProduct] 삭제 후 남은 이미지 수: ${remainingImages?.length || 0}개`);
+            console.log(`[updateProduct] 삭제 후 남은 이미지 ID 목록:`, remainingImages?.map(img => img.id) || []);
+          }
         }
       }
 
@@ -490,6 +503,8 @@ export async function updateProduct(
 
       // 기존 이미지 업데이트
       if (imagesToUpdate.length > 0) {
+        console.log(`[updateProduct] 업데이트할 이미지 수: ${imagesToUpdate.length}`);
+        console.log(`[updateProduct] 업데이트할 이미지 ID 목록:`, imagesToUpdate.map(img => img.id));
         for (const img of imagesToUpdate) {
           const { error: updateError } = await supabase
             .from("product_images")
@@ -501,14 +516,17 @@ export async function updateProduct(
             .eq("id", img.id);
 
           if (updateError) {
-            console.error(`이미지 ${img.id} 업데이트 에러:`, updateError);
+            console.error(`[updateProduct] 이미지 ${img.id} 업데이트 에러:`, updateError);
+          } else {
+            console.log(`[updateProduct] 이미지 ${img.id} 업데이트 성공`);
           }
         }
-        console.log(`기존 이미지 ${imagesToUpdate.length}개 업데이트 완료`);
+        console.log(`[updateProduct] 기존 이미지 ${imagesToUpdate.length}개 업데이트 완료`);
       }
 
       // 새 이미지 추가
       if (imagesToInsert.length > 0) {
+        console.log(`[updateProduct] 추가할 이미지 수: ${imagesToInsert.length}`);
         const { error: insertImageError } = await supabase
           .from("product_images")
           .insert(imagesToInsert);

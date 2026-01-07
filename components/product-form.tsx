@@ -1685,8 +1685,17 @@ export default function ProductForm({
                       onClick={() => {
                         const primaryImage = productImages.find((img) => img.is_primary);
                         if (primaryImage) {
-                          setProductImages([primaryImage]);
                           console.log("[ProductForm] 대표 이미지 제외하고 모두 삭제");
+                          console.log("[ProductForm] 대표 이미지 정보:", {
+                            id: primaryImage.id,
+                            image_url: primaryImage.image_url,
+                            is_primary: primaryImage.is_primary
+                          });
+                          console.log("[ProductForm] 삭제 전 이미지 수:", productImages.length);
+                          setProductImages([primaryImage]);
+                          console.log("[ProductForm] 삭제 후 이미지 수: 1 (대표 이미지만)");
+                        } else {
+                          console.warn("[ProductForm] 대표 이미지를 찾을 수 없습니다!");
                         }
                       }}
                       variant="outline"
