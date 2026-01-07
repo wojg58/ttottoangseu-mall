@@ -1080,7 +1080,250 @@ async function buildMapping() {
       result.newMappings += addedCount;
     }
 
-    // 5. 결과 요약
+    // 5. 재고 동기화 (판매중인 상품만)
+    console.log("\n" + "=".repeat(60));
+    console.log("[INFO] 📦 판매중인 상품 재고 동기화 시작...");
+    console.log("=".repeat(60));
+
+    const stockSyncResult = {
+      variantStockSynced: 0, // 옵션 재고 동기화 성공
+      productStockSynced: 0, // 기본 재고 동기화 성공
+      stockSyncFailed: 0, // 재고 동기화 실패
+    };
+
+    // 판매중인 상품만 필터링
+    const activeProducts = allOurProducts.filter(
+      (p) => p.status === "active" && p.smartstore_product_id,
+    );
+
+    console.log(
+      `[INFO] 재고 동기화 대상: ${activeProducts.length}개 상품\n`,
+    );
+
+    for (let i = 0; i < activeProducts.length; i++) {
+      const product = activeProducts[i];
+
+      console.log(
+        `[${i + 1}/${activeProducts.length}] 재고 동기화: ${product.name}`,
+      );
+
+      try {
+        // 채널 상품 조회 (옵션 정보 포함)
+        const channelProductData = await getChannelProduct(
+          product.smartstore_product_id,
+        );
+
+        if (!channelProductData) {
+          console.warn(`[WARN] 채널 상품 조회 실패: ${product.name}`);
+          stockSyncResult.stockSyncFailed++;
+          continue;
+        }
+
+        const options = extractOptionStocks(channelProductData);
+        const originProduct = channelProductData.originProduct;
+        const channelProductNo = parseInt(product.smartstore_product_id, 10);
+
+        // originProductNo 추출 시도
+        let originProductNo = null;
+        if (channelProductData.originProductNo) {
+          originProductNo = channelProductData.originProductNo;
+        } else {
+          // DB에서 기존 매핑 정보 확인
+          const { data: existingVariant } = await supabase
+            .from("product_variants")
+            .select("smartstore_origin_product_no")
+            .eq("product_id", product.id)
+            .not("smartstore_origin_product_no", "is", null)
+            .is("deleted_at", null)
+            .limit(1)
+            .single();
+
+          if (existingVariant) {
+            originProductNo = existingVariant.smartstore_origin_product_no;
+          }
+        }
+
+        // 옵션이 있는 상품: 옵션별 재고 동기화
+        if (options.length > 0) {
+          console.log(`[INFO]   옵션 ${options.length}개 재고 동기화 중...`);
+
+          let syncedCount = 0;
+          for (const option of options) {
+            let variant = null;
+
+            // 1차: originProductNo + optionId로 매핑
+            if (originProductNo) {
+              const { data } = await supabase
+                .from("product_variants")
+                .select("id, stock, variant_value")
+                .eq("product_id", product.id)
+                .eq("smartstore_origin_product_no", originProductNo)
+                .eq("smartstore_option_id", option.id)
+                .is("deleted_at", null)
+                .single();
+              variant = data;
+            }
+
+            // 2차: optionId + channelProductNo로 매핑 (originProductNo 없을 때)
+            if (!variant) {
+              const { data } = await supabase
+                .from("product_variants")
+                .select("id, stock, variant_value")
+                .eq("product_id", product.id)
+                .eq("smartstore_option_id", option.id)
+                .eq("smartstore_channel_product_no", channelProductNo)
+                .is("deleted_at", null)
+                .single();
+              variant = data;
+            }
+
+            // 3차: SKU로 매칭
+            if (!variant && option.sellerManagerCode) {
+              const { data } = await supabase
+                .from("product_variants")
+                .select("id, stock, variant_value")
+                .eq("product_id", product.id)
+                .eq("sku", option.sellerManagerCode)
+                .is("deleted_at", null)
+                .single();
+              variant = data;
+
+              // 매핑 정보 업데이트
+              if (variant) {
+                const updateData = {
+                  smartstore_option_id: option.id,
+                  smartstore_channel_product_no: channelProductNo,
+                };
+                if (originProductNo) {
+                  updateData.smartstore_origin_product_no = originProductNo;
+                }
+                await supabase
+                  .from("product_variants")
+                  .update(updateData)
+                  .eq("id", variant.id);
+              }
+            }
+
+            // 4차: 옵션명으로 매칭 (최후의 수단)
+            if (!variant && option.optionName1) {
+              const optionValue = option.optionName2
+                ? `${option.optionName1}/${option.optionName2}`
+                : option.optionName1;
+
+              const { data } = await supabase
+                .from("product_variants")
+                .select("id, stock, variant_value")
+                .eq("product_id", product.id)
+                .ilike("variant_value", `%${option.optionName1}%`)
+                .is("deleted_at", null)
+                .limit(1);
+
+              if (data && data.length > 0) {
+                variant = data[0];
+
+                // 매핑 정보 업데이트
+                const updateData = {
+                  smartstore_option_id: option.id,
+                  smartstore_channel_product_no: channelProductNo,
+                };
+                if (originProductNo) {
+                  updateData.smartstore_origin_product_no = originProductNo;
+                }
+                await supabase
+                  .from("product_variants")
+                  .update(updateData)
+                  .eq("id", variant.id);
+              }
+            }
+
+            if (variant) {
+              // 재고 업데이트
+              const { error: updateError } = await supabase
+                .from("product_variants")
+                .update({ stock: option.stockQuantity })
+                .eq("id", variant.id);
+
+              if (updateError) {
+                console.warn(
+                  `[WARN]   옵션 재고 업데이트 실패: ${variant.variant_value} - ${updateError.message}`,
+                );
+              } else {
+                syncedCount++;
+                console.log(
+                  `[INFO]   ✅ ${variant.variant_value || "옵션"}: ${variant.stock} → ${option.stockQuantity}`,
+                );
+              }
+            } else {
+              console.warn(
+                `[WARN]   매핑된 variant 없음: ${option.optionName1}${option.optionName2 ? `/${option.optionName2}` : ""}`,
+              );
+            }
+          }
+
+          if (syncedCount > 0) {
+            stockSyncResult.variantStockSynced++;
+          } else {
+            stockSyncResult.stockSyncFailed++;
+          }
+        } else {
+          // 옵션이 없는 상품: 기본 재고 동기화
+          console.log(`[INFO]   기본 재고 동기화 중...`);
+
+          const newStock = originProduct?.stockQuantity || 0;
+
+          // products 테이블 재고 업데이트
+          const { error: updateError } = await supabase
+            .from("products")
+            .update({ stock: newStock })
+            .eq("id", product.id);
+
+          if (updateError) {
+            console.warn(
+              `[WARN]   기본 재고 업데이트 실패: ${updateError.message}`,
+            );
+            stockSyncResult.stockSyncFailed++;
+          } else {
+            stockSyncResult.productStockSynced++;
+            console.log(
+              `[INFO]   ✅ 기본 재고: ${newStock}개`,
+            );
+          }
+
+          // 기본 variant 재고도 업데이트
+          const { data: defaultVariant } = await supabase
+            .from("product_variants")
+            .select("id, stock")
+            .eq("product_id", product.id)
+            .eq("variant_value", "기본")
+            .is("deleted_at", null)
+            .single();
+
+          if (defaultVariant) {
+            await supabase
+              .from("product_variants")
+              .update({ stock: newStock })
+              .eq("id", defaultVariant.id);
+          }
+        }
+
+        // API 레이트 리밋 방지
+        await delay(200);
+      } catch (error) {
+        console.error(
+          `[ERROR] 재고 동기화 중 오류: ${product.name} - ${error.message}`,
+        );
+        stockSyncResult.stockSyncFailed++;
+      }
+    }
+
+    console.log("\n" + "=".repeat(60));
+    console.log("📊 재고 동기화 결과");
+    console.log("=".repeat(60));
+    console.log(`✅ 옵션 재고 동기화: ${stockSyncResult.variantStockSynced}개 상품`);
+    console.log(`✅ 기본 재고 동기화: ${stockSyncResult.productStockSynced}개 상품`);
+    console.log(`❌ 재고 동기화 실패: ${stockSyncResult.stockSyncFailed}개 상품`);
+
+    // 6. 결과 요약
     console.log("\n" + "=".repeat(60));
     console.log("📊 매핑 빌드 결과 요약");
     console.log("=".repeat(60));
@@ -1092,6 +1335,10 @@ async function buildMapping() {
     console.log(
       `📊 처리된 상품: ${result.processedProducts}/${result.totalProducts}개`,
     );
+    console.log(`\n📦 재고 동기화:`);
+    console.log(`   - 옵션 재고: ${stockSyncResult.variantStockSynced}개 상품`);
+    console.log(`   - 기본 재고: ${stockSyncResult.productStockSynced}개 상품`);
+    console.log(`   - 실패: ${stockSyncResult.stockSyncFailed}개 상품`);
 
     if (result.unmappedOptions.length > 0) {
       console.log(
