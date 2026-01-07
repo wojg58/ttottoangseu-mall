@@ -84,18 +84,18 @@ export default function SignInContent() {
         ".cl-socialButtons",
       ) as NodeListOf<HTMLElement>;
       socialButtons.forEach((container) => {
-        // 구글 버튼이 있는 컨테이너만 보이도록 설정
-        const hasGoogleButton = container.querySelector(
-          ".cl-socialButtonsBlockButton__google",
+        // 소셜 버튼이 있는 컨테이너는 모두 표시 (구글, 카카오, 네이버 등)
+        const hasAnySocialButton = container.querySelector(
+          ".cl-socialButtonsBlockButton, .cl-socialButtonsIconButton",
         );
-        if (hasGoogleButton) {
+        if (hasAnySocialButton) {
           container.style.cssText = `
             display: flex !important;
             width: 100% !important;
             min-width: 0 !important;
           `;
         } else {
-          // 빈 컨테이너는 숨기기
+          // 완전히 빈 컨테이너만 숨기기
           container.style.cssText = `
             display: none !important;
           `;

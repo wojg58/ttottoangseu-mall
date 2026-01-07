@@ -1048,6 +1048,22 @@ button[type="submit"]:disabled {
   width: 100% !important;
   min-width: 0 !important;
   flex: 1 !important;
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+/* 구글 로그인 버튼 - 명시적으로 표시 */
+.cl-socialButtonsBlockButton__google,
+button[data-provider="google"],
+button[aria-label*="Google"],
+button[aria-label*="구글"] {
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  cursor: pointer !important;
+  z-index: 10 !important;
 }
 
 /* 소셜 버튼 아이콘 버튼 (GitHub 등) - 가로 배치 */
