@@ -636,24 +636,47 @@ export default function CheckoutForm({
         logger.info(
           "[CheckoutForm] ✅ 결제 준비 완료 - 결제 페이지로 이동",
         );
+        
         // 결제 정보를 URL 파라미터로 전달하여 결제 페이지로 이동
-        const paymentParams = new URLSearchParams({
-          orderId: prepareData.orderId,
-          amount: prepareData.amount.toString(),
-          orderName: prepareData.orderName,
-          customerName: prepareData.customerName,
-          customerEmail: prepareData.customerEmail,
-          paymentMethod: selectedPaymentMethod,
-          ...(selectedPaymentMethod === "TRANSFER" && depositorName.trim()
-            ? { depositorName: depositorName.trim() }
-            : {}),
-          ...(selectedPaymentMethod === "TRANSFER" && useEscrow
-            ? { useEscrow: "true" }
-            : {}),
-        });
-        router.push(`/checkout/payment?${paymentParams.toString()}`);
+        try {
+          const paymentParams = new URLSearchParams({
+            orderId: prepareData.orderId,
+            amount: prepareData.amount.toString(),
+            orderName: prepareData.orderName,
+            customerName: prepareData.customerName,
+            customerEmail: prepareData.customerEmail,
+            paymentMethod: selectedPaymentMethod,
+            ...(selectedPaymentMethod === "TRANSFER" && depositorName.trim()
+              ? { depositorName: depositorName.trim() }
+              : {}),
+            ...(selectedPaymentMethod === "TRANSFER" && useEscrow
+              ? { useEscrow: "true" }
+              : {}),
+          });
+          
+          const paymentUrl = `/checkout/payment?${paymentParams.toString()}`;
+          logger.info("[CheckoutForm] 결제 페이지 URL:", paymentUrl);
+          
+          // window.location을 사용하여 새 페이지로 이동 (더 안정적)
+          window.location.href = paymentUrl;
+          logger.info("[CheckoutForm] ✅ 결제 페이지로 리다이렉트 완료");
+        } catch (redirectError) {
+          logger.error("[CheckoutForm] ❌ 리다이렉트 에러:", redirectError);
+          logger.error("[CheckoutForm] 에러 상세:", {
+            message: redirectError instanceof Error ? redirectError.message : String(redirectError),
+            stack: redirectError instanceof Error ? redirectError.stack : undefined,
+            name: redirectError instanceof Error ? redirectError.name : undefined,
+          });
+          alert("결제 페이지로 이동하는 중 오류가 발생했습니다. 다시 시도해주세요.");
+        }
       } catch (error) {
         logger.error("[CheckoutForm] ❌ 결제 프로세스 에러:", error);
+        logger.error("[CheckoutForm] 에러 상세:", {
+          message: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+          name: error instanceof Error ? error.name : undefined,
+          fullError: error,
+        });
         alert("결제 처리 중 오류가 발생했습니다. 다시 시도해주세요.");
       }
     });
