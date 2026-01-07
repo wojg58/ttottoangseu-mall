@@ -632,19 +632,26 @@ export default function CheckoutForm({
           return;
         }
 
-        // 6. PaymentWidget 오버레이 표시를 위한 데이터 설정
+        // 6. 결제 전용 페이지로 리다이렉트
         logger.info(
-          "[CheckoutForm] ✅ 결제 준비 완료 - PaymentWidget 오버레이 표시",
+          "[CheckoutForm] ✅ 결제 준비 완료 - 결제 페이지로 이동",
         );
-        setPaymentWidgetData({
+        // 결제 정보를 URL 파라미터로 전달하여 결제 페이지로 이동
+        const paymentParams = new URLSearchParams({
           orderId: prepareData.orderId,
-          amount: prepareData.amount,
+          amount: prepareData.amount.toString(),
           orderName: prepareData.orderName,
           customerName: prepareData.customerName,
           customerEmail: prepareData.customerEmail,
+          paymentMethod: selectedPaymentMethod,
+          ...(selectedPaymentMethod === "TRANSFER" && depositorName.trim()
+            ? { depositorName: depositorName.trim() }
+            : {}),
+          ...(selectedPaymentMethod === "TRANSFER" && useEscrow
+            ? { useEscrow: "true" }
+            : {}),
         });
-        setOrderId(prepareData.orderId);
-        setShowPaymentWidget(true);
+        router.push(`/checkout/payment?${paymentParams.toString()}`);
       } catch (error) {
         logger.error("[CheckoutForm] ❌ 결제 프로세스 에러:", error);
         alert("결제 처리 중 오류가 발생했습니다. 다시 시도해주세요.");
