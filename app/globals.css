@@ -1203,27 +1203,20 @@ iframe[src*="channel.io"] {
   pointer-events: none !important;
 }
 
-/* Toss Payments 결제 팝업 오버레이 배경 제거 */
-/* Toss Payments SDK가 생성하는 모달 오버레이의 검정색 배경 제거 */
-[id*="tosspayments"],
-[class*="tosspayments"],
-[class*="TossPayments"],
-div[style*="background"][style*="rgba(0, 0, 0"],
-div[style*="background"][style*="rgb(0, 0, 0"],
-div[style*="background-color: rgba(0, 0, 0"],
-div[style*="background-color: rgb(0, 0, 0"],
-div[style*="background-color:#000"],
-div[style*="background-color: #000"] {
-  background: transparent !important;
-  background-color: transparent !important;
+/* Toss Payments 결제 팝업 오버레이 배경을 회색으로 변경 */
+/* Toss Payments SDK가 생성하는 모달 오버레이의 배경을 회색으로 설정 */
+#__tosspayments_payment-gateway_dimmer__,
+[id*="tosspayments"][id*="dimmer"],
+div[id*="tosspayments"][id*="dimmer"] {
+  background-color: rgba(128, 128, 128, 0.6) !important;
+  background: rgba(128, 128, 128, 0.6) !important;
 }
 
-/* Toss Payments 모달 오버레이 배경 제거 (더 구체적인 선택자) */
-body > div[style*="position: fixed"][style*="inset: 0"],
-body > div[style*="position:fixed"][style*="inset:0"],
-body > div[style*="z-index"][style*="background"] {
-  background: transparent !important;
-  background-color: transparent !important;
+/* Toss Payments 모달 오버레이 배경을 회색으로 변경 (더 구체적인 선택자) */
+body > div[id*="tosspayments"][style*="position: fixed"],
+body > div[id*="tosspayments"][style*="position:fixed"] {
+  background-color: rgba(128, 128, 128, 0.6) !important;
+  background: rgba(128, 128, 128, 0.6) !important;
 }
 
 /* Toss Payments iframe 컨테이너 배경 제거 */
