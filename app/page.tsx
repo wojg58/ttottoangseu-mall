@@ -347,7 +347,7 @@ export default async function HomePage() {
                        style={{
                          left: "50%",
                          top: "50%",
-                         transform: "translate(calc(50% - 300px), calc(50% + 30px))",
+                         transform: "translate(calc(50% - 300px), calc(50% + 50px))",
                        }}
                   />
                   <div className="relative w-full h-full flex items-center justify-center">
