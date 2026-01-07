@@ -62,11 +62,13 @@ export const metadata: Metadata = {
   },
 };
 
-// Clerk localization 커스터마이징 - "사용자 이름"을 "아이디"로 변경
+// Clerk localization 커스터마이징 - "사용자 이름"을 "아이디"로 변경, "계속"을 "로그인"으로 변경
 const customKoKR: any = {
   ...koKR,
   formFieldLabel__username: "아이디",
   formFieldLabel__identifier: "아이디",
+  formButtonPrimary: "로그인",
+  formButtonPrimary__continue: "로그인",
   // 중첩 구조도 시도
   formFields: {
     ...(koKR as any).formFields,
