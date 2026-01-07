@@ -781,15 +781,14 @@ export default function SignInContent() {
         currentPath.includes("/sign-up/")
       ) {
         console.group(
-          "[SignInContent] 두 번째 입력 페이지로 이동 감지, 즉시 차단",
+          "[SignInContent] 중간 페이지로 이동 감지, 즉시 홈으로 리다이렉트",
         );
         console.log("현재 경로:", currentPath);
         console.log("시간:", new Date().toISOString());
         console.groupEnd();
 
-        // 즉시 로그인 페이지로 다시 리다이렉트
-        window.history.replaceState(null, "", "/sign-in");
-        router.replace("/sign-in");
+        // 로그인 중간 페이지로 이동하려는 시도를 즉시 홈으로 리다이렉트
+        window.location.replace("/");
       }
     };
 
@@ -805,8 +804,17 @@ export default function SignInContent() {
 
     history.pushState = function (...args) {
       const url = typeof args[2] === "string" ? args[2] : "";
-      if (url.includes("/sign-in/") && url !== "/sign-in") {
-        console.log("[SignInContent] pushState 차단:", url);
+      // 로그인 중간 페이지로의 이동 완전 차단
+      if (
+        (url.includes("/sign-in/") && url !== "/sign-in") ||
+        url.includes("/sign-in/create") ||
+        url.includes("/sign-in/verify")
+      ) {
+        console.log("[SignInContent] pushState 차단 (중간 페이지 방지):", url);
+        // 중간 페이지로 이동하려는 시도를 홈으로 리다이렉트
+        if (window.location.pathname === "/sign-in") {
+          window.location.replace("/");
+        }
         return; // 두 번째 페이지로의 pushState 차단
       }
       originalPushState.apply(history, args);
@@ -815,8 +823,17 @@ export default function SignInContent() {
 
     history.replaceState = function (...args) {
       const url = typeof args[2] === "string" ? args[2] : "";
-      if (url.includes("/sign-in/") && url !== "/sign-in") {
-        console.log("[SignInContent] replaceState 차단:", url);
+      // 로그인 중간 페이지로의 이동 완전 차단
+      if (
+        (url.includes("/sign-in/") && url !== "/sign-in") ||
+        url.includes("/sign-in/create") ||
+        url.includes("/sign-in/verify")
+      ) {
+        console.log("[SignInContent] replaceState 차단 (중간 페이지 방지):", url);
+        // 중간 페이지로 이동하려는 시도를 홈으로 리다이렉트
+        if (window.location.pathname === "/sign-in") {
+          window.location.replace("/");
+        }
         return; // 두 번째 페이지로의 replaceState 차단
       }
       originalReplaceState.apply(history, args);
@@ -853,10 +870,22 @@ export default function SignInContent() {
         console.log("시간:", new Date().toISOString());
         console.log("이벤트 타입:", e.type);
 
-        // 기본 동작 방지
+        // 기본 동작 완전히 방지 (Clerk의 기본 리다이렉트 막기)
         e.preventDefault();
         e.stopPropagation();
         e.stopImmediatePropagation();
+        
+        // 추가로 모든 이벤트 전파 차단
+        if (e.cancelable) {
+          e.preventDefault();
+        }
+        
+        // Clerk의 기본 폼 제출 동작 완전히 차단
+        const form = e.target as HTMLFormElement;
+        if (form) {
+          form.action = "javascript:void(0)";
+          form.method = "get";
+        }
 
         // Clerk 폼에서 이메일과 비밀번호 추출
         const identifierInput = clerkForm.querySelector(
@@ -1117,7 +1146,11 @@ export default function SignInContent() {
                         });
                         setActiveSuccess = true;
                         console.log("[SignInContent] setActive 완료");
-                        break;
+                        
+                        // setActive 직후 즉시 홈으로 리다이렉트하여 중간 페이지 방지
+                        console.log("[SignInContent] setActive 직후 즉시 홈으로 리다이렉트");
+                        window.location.replace("/");
+                        return; // 즉시 함수 종료하여 추가 처리 방지
                       } catch (retryError: any) {
                         lastError = retryError;
                         console.warn(
@@ -1138,15 +1171,13 @@ export default function SignInContent() {
                       throw lastError || new Error("setActive 실패");
                     }
 
-                    // setActive 후 세션 동기화를 위해 약간의 딜레이
-                    await new Promise((resolve) => setTimeout(resolve, 1000));
-
+                    // setActive 후 즉시 홈으로 리다이렉트 (딜레이 제거하여 중간 페이지 방지)
                     console.log(
-                      "[SignInContent] 세션 활성화 완료, 홈으로 리다이렉트 시작",
+                      "[SignInContent] 세션 활성화 완료, 즉시 홈으로 리다이렉트",
                     );
                     console.log("[SignInContent] 항상 홈(/)으로 이동");
 
-                    // 로그인 성공 시 항상 홈으로 이동
+                    // 로그인 성공 시 즉시 홈으로 이동 (중간 페이지 방지)
                     const homePath = `${window.location.origin}/`;
 
                     console.log(
@@ -1154,9 +1185,9 @@ export default function SignInContent() {
                       homePath,
                     );
 
-                    // window.location.href를 사용하여 전체 페이지 리로드로 세션 상태를 확실히 반영
-                    // 이렇게 하면 구글 로그인과 동일하게 세션이 확실히 활성화됨
-                    window.location.href = homePath;
+                    // 즉시 홈으로 리다이렉트하여 중간 페이지로 이동하는 것을 방지
+                    // window.location.replace를 사용하여 히스토리에 남기지 않음
+                    window.location.replace(homePath);
                   } catch (setActiveError: any) {
                     console.error(
                       "[SignInContent] setActive 실패:",
@@ -1851,6 +1882,10 @@ export default function SignInContent() {
                 fallbackRedirectUrl="/"
                 forceRedirectUrl="/"
                 redirectUrl="/"
+                // Clerk의 기본 리다이렉트 동작 완전히 비활성화
+                unsafeMetadata={{}}
+                // 로그인 성공 후 자동 리다이렉트 비활성화 (수동으로 처리)
+                afterSignInFallbackRedirectUrl="/"
                 appearance={{
                   elements: {
                     rootBox: "mx-auto",
