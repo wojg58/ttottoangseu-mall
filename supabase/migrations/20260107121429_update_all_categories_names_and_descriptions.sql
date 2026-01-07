@@ -5,12 +5,14 @@
 -- 이 마이그레이션은 모든 카테고리의 이름과 설명을 일괄 업데이트합니다.
 -- 기존의 두 개의 마이그레이션 파일을 통합하여 리팩토링했습니다.
 -- 
+-- 참고: "곰돌이" 카테고리는 "라부부"로 직접 변경됩니다 (중간 단계 "반다이" 없음).
+-- 
 -- 변경 사항:
 -- 1. "캐릭터" → "치이카와"
 -- 2. "완구,스티커" → "모프샌드"
 -- 3. "키링,지비츠" 또는 "키링/지비츠" → "유키오"
 -- 4. "패션잡화" → "짱구"
--- 5. "곰돌이" → "반다이"
+-- 5. "곰돌이" → "라부부"
 -- 6. "산리오" 설명 업데이트
 -- ============================================================================
 
@@ -50,11 +52,11 @@ SET
   updated_at = now()
 WHERE name = '패션잡화' OR slug = 'fashion';
 
--- 1-5. "곰돌이" → "반다이" (이름 및 설명 업데이트)
+-- 1-5. "곰돌이" → "라부부" (이름 및 설명 업데이트)
 UPDATE categories 
 SET 
-  name = '반다이',
-  description = '다마고치, 배스킨라빈스 등 반다이 상품',
+  name = '라부부',
+  description = '귀엽고 엉뚱한 몬스터',
   updated_at = now()
 WHERE name = '곰돌이' OR slug = 'bear';
 
@@ -114,14 +116,14 @@ WHERE slug = 'fashion'
   AND name = '짱구'
   AND (description IS NULL OR description != '장난꾸러기지만 가족과 친구를 누구보다 아끼는 다섯 살 아이');
 
--- 3-5. 반다이 카테고리 설명 업데이트 (이미 이름이 변경된 경우)
+-- 3-5. 라부부 카테고리 설명 업데이트 (이미 이름이 변경된 경우)
 UPDATE categories 
 SET 
-  description = '다마고치, 배스킨라빈스 등 반다이 상품',
+  description = '귀엽고 엉뚱한 몬스터',
   updated_at = now()
 WHERE slug = 'bear' 
-  AND name = '반다이'
-  AND (description IS NULL OR description != '다마고치, 배스킨라빈스 등 반다이 상품');
+  AND name = '라부부'
+  AND (description IS NULL OR description != '귀엽고 엉뚱한 몬스터');
 
 -- ----------------------------------------------------------------------------
 -- 4. 변경 확인 쿼리
@@ -135,7 +137,7 @@ SELECT
   updated_at
 FROM categories
 WHERE 
-  name IN ('치이카와', '모프샌드', '유키오', '짱구', '반다이', '산리오')
+  name IN ('치이카와', '모프샌드', '유키오', '짱구', '라부부', '산리오')
   OR slug IN ('sanrio', 'character', 'phone-strap', 'keyring', 'fashion', 'bear')
 ORDER BY 
   COALESCE(sort_order, 0),
