@@ -977,7 +977,9 @@
 /* 로그인 버튼 - 명확하게 표시되도록 스타일 설정 (1cm 간격) 및 클릭 가능하도록, 빨간색 */
 .cl-formButtonPrimary {
   position: relative !important;
-  display: block !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
   visibility: visible !important;
   opacity: 1 !important;
   margin-top: 1cm !important;
@@ -1002,6 +1004,18 @@ button[type="submit"]:disabled {
   pointer-events: auto !important;
   cursor: pointer !important;
   opacity: 1 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* 로그인 버튼 내부 텍스트 중앙 정렬 */
+.cl-formButtonPrimary span,
+.cl-formButtonPrimary * {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
 }
 
 /* 비밀번호 필드 액션 */
