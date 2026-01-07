@@ -433,8 +433,8 @@ export default function ProductForm({
           // 성공 시 삭제된 이미지 ID 목록 초기화
           setDeletedImageIds([]);
           alert(result.message);
-          // 상품 목록 페이지로 이동
-          router.push("/admin/products");
+          // 상품 목록 페이지로 이동 (현재 페이지와 검색어 유지)
+          router.push(getReturnUrl());
         } else {
           alert(result.message);
         }
