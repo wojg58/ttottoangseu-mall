@@ -1655,9 +1655,29 @@ export default function ProductForm({
             {/* 이미지 목록 */}
             {productImages.length > 0 && (
               <div className="space-y-2">
-                <p className="text-xs text-[#8b7d84] mb-2">
-                  💡 이미지에 마우스를 올리면 순서 변경 버튼이 나타납니다.
-                </p>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs text-[#8b7d84]">
+                    💡 이미지에 마우스를 올리면 순서 변경 버튼이 나타납니다.
+                  </p>
+                  {productImages.filter((img) => !img.is_primary).length > 0 && (
+                    <Button
+                      type="button"
+                      onClick={() => {
+                        const primaryImage = productImages.find((img) => img.is_primary);
+                        if (primaryImage) {
+                          setProductImages([primaryImage]);
+                          console.log("[ProductForm] 대표 이미지 제외하고 모두 삭제");
+                        }
+                      }}
+                      variant="outline"
+                      size="sm"
+                      className="border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400"
+                    >
+                      <X className="w-3 h-3 mr-1" />
+                      대표 이미지 제외하고 모두 삭제
+                    </Button>
+                  )}
+                </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {productImages.map((img, index) => (
                   <div
