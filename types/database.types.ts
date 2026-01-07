@@ -278,8 +278,10 @@ export type Database = {
           processed_at: string | null
           product_id: string
           smartstore_id: string
+          smartstore_option_id: number | null
           status: string | null
           target_stock: number
+          variant_id: string | null
         }
         Insert: {
           created_at?: string | null
@@ -288,8 +290,10 @@ export type Database = {
           processed_at?: string | null
           product_id: string
           smartstore_id: string
+          smartstore_option_id?: number | null
           status?: string | null
           target_stock: number
+          variant_id?: string | null
         }
         Update: {
           created_at?: string | null
@@ -298,8 +302,10 @@ export type Database = {
           processed_at?: string | null
           product_id?: string
           smartstore_id?: string
+          smartstore_option_id?: number | null
           status?: string | null
           target_stock?: number
+          variant_id?: string | null
         }
         Relationships: []
       }
@@ -604,6 +610,9 @@ export type Database = {
           price_adjustment: number | null
           product_id: string
           sku: string | null
+          smartstore_channel_product_no: number | null
+          smartstore_option_id: number | null
+          smartstore_origin_product_no: number | null
           stock: number
           updated_at: string
           variant_name: string
@@ -616,6 +625,9 @@ export type Database = {
           price_adjustment?: number | null
           product_id: string
           sku?: string | null
+          smartstore_channel_product_no?: number | null
+          smartstore_option_id?: number | null
+          smartstore_origin_product_no?: number | null
           stock?: number
           updated_at?: string
           variant_name: string
@@ -628,6 +640,9 @@ export type Database = {
           price_adjustment?: number | null
           product_id?: string
           sku?: string | null
+          smartstore_channel_product_no?: number | null
+          smartstore_option_id?: number | null
+          smartstore_origin_product_no?: number | null
           stock?: number
           updated_at?: string
           variant_name?: string
