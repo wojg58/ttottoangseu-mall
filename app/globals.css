@@ -1111,6 +1111,23 @@ button.cl-socialButtonsIconButton__custom_naver_auth {
   background-color: #03C75A !important;
   border-color: #03C75A !important;
   color: white !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: 40px !important;
+}
+
+/* 네이버 버튼 내부 아이콘/텍스트 스타일 - 중앙의 "N" 글자 */
+.cl-socialButtonsIconButton__custom_naver_auth .cl-socialButtonsProviderInitialIcon,
+.cl-socialButtonsIconButton__custom_naver_auth .cl-providerIcon,
+.cl-socialButtonsIconButton__custom_naver_auth .cl-internal-g5v6j2 {
+  color: white !important;
+  font-weight: bold !important;
+  font-size: 18px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 100% !important;
+  height: 100% !important;
 }
 
 /* 네이버 버튼이 비활성화되지 않도록 보장 */
