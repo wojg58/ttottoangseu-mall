@@ -52,6 +52,17 @@ export const metadata: Metadata = {
     "굿즈 쇼핑몰",
     "또또앙스",
   ],
+  icons: {
+    icon: [
+      { url: "/favicon.png", type: "image/png" },
+      { url: "/favicon.png", type: "image/png", sizes: "32x32" },
+      { url: "/favicon.png", type: "image/png", sizes: "16x16" },
+    ],
+    apple: [
+      { url: "/favicon.png", type: "image/png" },
+    ],
+    shortcut: "/favicon.png",
+  },
   openGraph: {
     title: "또또앙스 | 캐릭터 굿즈 전문 쇼핑몰",
     description:
