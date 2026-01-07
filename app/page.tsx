@@ -326,7 +326,7 @@ export default async function HomePage() {
                 >
                   <Sparkles className="w-4 h-4 text-shop-rose" />
                   <span className="text-sm md:text-lg text-black font-medium">
-                    귀여운 정품 캐릭터 키덜트 소품샵
+                    귀여운 캐릭터 키덜트 소품샵
                   </span>
                 </div>
                 <h2 className="text-2xl md:text-4xl lg:text-5xl font-bold text-black mb-4 leading-tight">
