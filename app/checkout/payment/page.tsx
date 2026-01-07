@@ -7,12 +7,12 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import PaymentWidget from "@/components/payment-widget";
 import logger from "@/lib/logger";
 
-export default function PaymentPage() {
+function PaymentContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isReady, setIsReady] = useState(false);
@@ -94,6 +94,23 @@ export default function PaymentPage() {
         onClose={handleClose}
       />
     </div>
+  );
+}
+
+export default function PaymentPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-gray-50">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#ff6b9d] mx-auto mb-4"></div>
+            <p className="text-base font-medium text-[#4a3f48]">결제 정보를 불러오는 중...</p>
+          </div>
+        </div>
+      }
+    >
+      <PaymentContent />
+    </Suspense>
   );
 }
 

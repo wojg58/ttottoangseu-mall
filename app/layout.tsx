@@ -52,7 +52,6 @@ export const metadata: Metadata = {
     "굿즈 쇼핑몰",
     "또또앙스",
   ],
-  viewport: "width=device-width, initial-scale=1.0",
   openGraph: {
     title: "또또앙스 | 캐릭터 굿즈 전문 쇼핑몰",
     description:
@@ -60,6 +59,11 @@ export const metadata: Metadata = {
     type: "website",
     locale: "ko_KR",
   },
+};
+
+export const viewport = {
+  width: "device-width",
+  initialScale: 1.0,
 };
 
 // Clerk localization 커스터마이징 - "사용자 이름"을 "아이디"로 변경, "계속"을 "로그인"으로 변경
