@@ -1130,6 +1130,12 @@ button.cl-socialButtonsIconButton__custom_naver_auth {
   height: 100% !important;
 }
 
+/* 네이버 버튼 내부 모든 요소에서 검정색 제거 */
+.cl-socialButtonsIconButton__custom_naver_auth * {
+  color: white !important;
+  border-color: transparent !important;
+}
+
 /* 네이버 버튼이 비활성화되지 않도록 보장 */
 .cl-socialButtonsIconButton__custom_naver_auth:disabled,
 button.cl-socialButtonsIconButton__custom_naver_auth:disabled {
@@ -1137,6 +1143,10 @@ button.cl-socialButtonsIconButton__custom_naver_auth:disabled {
   cursor: pointer !important;
   opacity: 1 !important;
   background-color: #03C75A !important;
+  color: white !important;
+}
+
+.cl-socialButtonsIconButton__custom_naver_auth:disabled * {
   color: white !important;
 }
 
