@@ -9,8 +9,7 @@ INSERT INTO categories (name, slug, description, sort_order, is_active) VALUES
 ('모프샌드💛', 'phone-strap', '사랑스럽고 귀여운 고양이', 3, true),
 ('유키오💚', 'keyring', '순수하고 말없이 곁에 있어주는 납작한 친구', 4, true),
 ('짱구💙', 'fashion', '장난꾸러기지만 가족과 친구를 누구보다 아끼는 다섯 살 아이', 5, true),
-('반다이🤎', 'bear', '다마고치, 배스킨라빈스 등 반다이 상품', 6, true),
-('가차,리멘트💜', 'stationery', '다양한 캡슐토이와 리멘트', 7, true)
+('라부부🤎', 'bear', '귀엽고 엉뚱한 몬스터', 6, true)
 ON CONFLICT DO NOTHING;
 
 -- 2. 상품 데이터 (카테고리 ID 참조)
@@ -136,20 +135,7 @@ SELECT
 FROM categories c WHERE c.slug = 'bear'
 ON CONFLICT DO NOTHING;
 
-INSERT INTO products (category_id, name, slug, price, discount_price, description, status, stock, is_featured, is_new)
-SELECT 
-  c.id,
-  '캐릭터 스티커팩 100장 모음',
-  'character-sticker-pack-100',
-  3500,
-  2800,
-  '다양한 캐릭터 스티커 100장이 담긴 스티커팩입니다. 다이어리, 노트북, 휴대폰 꾸미기에 활용하세요.',
-  'active',
-  200,
-  false,
-  true
-FROM categories c WHERE c.slug = 'stationery'
-ON CONFLICT DO NOTHING;
+-- "가챠,리멘트" 카테고리 삭제로 인해 해당 카테고리 상품 제거됨
 
 INSERT INTO products (category_id, name, slug, price, discount_price, description, status, stock, is_featured, is_new)
 SELECT 
@@ -207,10 +193,7 @@ SELECT p.id, 'https://placehold.co/600x600/ffefd5/333333?text=Pooh+Keyring', tru
 FROM products p WHERE p.slug = 'winnie-the-pooh-mini-keyring'
 ON CONFLICT DO NOTHING;
 
-INSERT INTO product_images (product_id, image_url, is_primary, sort_order, alt_text)
-SELECT p.id, 'https://placehold.co/600x600/e6e6fa/333333?text=Sticker+Pack', true, 1, p.name
-FROM products p WHERE p.slug = 'character-sticker-pack-100'
-ON CONFLICT DO NOTHING;
+-- "가챠,리멘트" 카테고리 삭제로 인해 해당 상품 이미지 제거됨
 
 INSERT INTO product_images (product_id, image_url, is_primary, sort_order, alt_text)
 SELECT p.id, 'https://placehold.co/600x600/ffc0cb/333333?text=Jibbitz+Set', true, 1, p.name
