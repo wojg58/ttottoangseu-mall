@@ -385,13 +385,16 @@ export default function ProductForm({
         // 수정
         // 상품 이미지 갤러리 데이터 준비
         // sort_order를 현재 인덱스로 설정하여 순서 보장
-        const imagesData = productImages.map((img, index) => ({
-          id: img.id, // 기존 이미지의 경우 id가 있음
-          image_url: img.image_url,
-          is_primary: img.is_primary,
-          sort_order: index, // 현재 순서를 sort_order로 설정
-          alt_text: img.alt_text || data.name,
-        }));
+        // deletedImageIds에 포함된 이미지는 제외 (이미 UI에서 제거됨)
+        const imagesData = productImages
+          .filter((img) => !deletedImageIds.includes(img.id || "")) // 삭제 대상 이미지 제외
+          .map((img, index) => ({
+            id: img.id, // 기존 이미지의 경우 id가 있음
+            image_url: img.image_url,
+            is_primary: img.is_primary,
+            sort_order: index, // 현재 순서를 sort_order로 설정
+            alt_text: img.alt_text || data.name,
+          }));
 
         console.group("[ProductForm] 수정 시 이미지 처리");
         console.log("[ProductForm] 수정 시 이미지 데이터:", imagesData);
@@ -427,12 +430,9 @@ export default function ProductForm({
           // 성공 시 삭제된 이미지 ID 목록 초기화
           setDeletedImageIds([]);
           alert(result.message);
-          // 페이지 새로고침하여 삭제된 이미지가 UI에서 제거되도록 함
-          router.refresh();
-          // 잠시 후 리다이렉트 (새로고침 후 리다이렉트)
-          setTimeout(() => {
-            router.push(getReturnUrl());
-          }, 100);
+          // 삭제된 이미지가 UI에서 즉시 제거되도록 강제 새로고침
+          // router.refresh()만으로는 부족할 수 있으므로 window.location.reload() 사용
+          window.location.href = `/admin/products/${product.id}/edit${returnPage || returnSearch ? `?${new URLSearchParams({ ...(returnPage && { page: returnPage }), ...(returnSearch && { search: returnSearch }) }).toString()}` : ''}`;
         } else {
           alert(result.message);
         }

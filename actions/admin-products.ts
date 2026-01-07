@@ -391,9 +391,12 @@ export async function updateProduct(
       if (input.deletedImageIds && input.deletedImageIds.length > 0) {
         // 명시적으로 삭제할 이미지 ID 사용
         console.log("[updateProduct] 명시적 삭제 모드: 삭제할 이미지 ID 목록 사용");
+        console.log("[updateProduct] 전달된 deletedImageIds:", input.deletedImageIds);
+        console.log("[updateProduct] 기존 이미지 목록:", existingImages?.map(img => ({ id: img.id, url: img.image_url })));
         imagesToDelete = existingImages?.filter((img) => 
           input.deletedImageIds!.includes(img.id)
         ) || [];
+        console.log("[updateProduct] 필터링된 삭제 대상:", imagesToDelete.map(img => ({ id: img.id, url: img.image_url })));
       } else {
         // 기존 로직: 기존에 있지만 전달되지 않은 이미지
         console.log("[updateProduct] 자동 삭제 모드: 전달되지 않은 이미지 삭제");
