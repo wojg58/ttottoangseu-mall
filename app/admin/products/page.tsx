@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { isAdmin, getAdminProducts } from "@/actions/admin";
 import BulkDeleteProductsButton from "@/components/bulk-delete-products-button";
+import BulkRestoreProductsButton from "@/components/bulk-restore-products-button";
 import ProductSearch from "@/components/admin/product-search";
 import ProductListWithSelection from "@/components/admin/product-list-with-selection";
 
@@ -75,6 +76,7 @@ export default async function AdminProductsPage({
                 상품 등록
               </button>
             </Link>
+            <BulkRestoreProductsButton />
             {total > 0 && <BulkDeleteProductsButton />}
           </div>
         </div>
