@@ -369,7 +369,7 @@ async function buildMapping() {
   // 테스트용: 특정 상품명만 처리
   const TEST_PRODUCT_NAME =
     "산리오 헬로키티 마이멜로디 쿠로미 포차코 시나모롤 아코디언 가죽 카드지갑 반지갑";
-  const TEST_MODE = true; // true: 테스트 모드 (특정 상품만), false: 전체 처리
+  const TEST_MODE = false; // true: 테스트 모드 (특정 상품만), false: 전체 처리
 
   console.log("🚀 스마트스토어 옵션 매핑 빌드 시작");
   if (TEST_MODE) {
@@ -1096,9 +1096,7 @@ async function buildMapping() {
       (p) => p.status === "active" && p.smartstore_product_id,
     );
 
-    console.log(
-      `[INFO] 재고 동기화 대상: ${activeProducts.length}개 상품\n`,
-    );
+    console.log(`[INFO] 재고 동기화 대상: ${activeProducts.length}개 상품\n`);
 
     for (let i = 0; i < activeProducts.length; i++) {
       const product = activeProducts[i];
@@ -1250,12 +1248,16 @@ async function buildMapping() {
               } else {
                 syncedCount++;
                 console.log(
-                  `[INFO]   ✅ ${variant.variant_value || "옵션"}: ${variant.stock} → ${option.stockQuantity}`,
+                  `[INFO]   ✅ ${variant.variant_value || "옵션"}: ${
+                    variant.stock
+                  } → ${option.stockQuantity}`,
                 );
               }
             } else {
               console.warn(
-                `[WARN]   매핑된 variant 없음: ${option.optionName1}${option.optionName2 ? `/${option.optionName2}` : ""}`,
+                `[WARN]   매핑된 variant 없음: ${option.optionName1}${
+                  option.optionName2 ? `/${option.optionName2}` : ""
+                }`,
               );
             }
           }
@@ -1284,9 +1286,7 @@ async function buildMapping() {
             stockSyncResult.stockSyncFailed++;
           } else {
             stockSyncResult.productStockSynced++;
-            console.log(
-              `[INFO]   ✅ 기본 재고: ${newStock}개`,
-            );
+            console.log(`[INFO]   ✅ 기본 재고: ${newStock}개`);
           }
 
           // 기본 variant 재고도 업데이트
@@ -1319,9 +1319,15 @@ async function buildMapping() {
     console.log("\n" + "=".repeat(60));
     console.log("📊 재고 동기화 결과");
     console.log("=".repeat(60));
-    console.log(`✅ 옵션 재고 동기화: ${stockSyncResult.variantStockSynced}개 상품`);
-    console.log(`✅ 기본 재고 동기화: ${stockSyncResult.productStockSynced}개 상품`);
-    console.log(`❌ 재고 동기화 실패: ${stockSyncResult.stockSyncFailed}개 상품`);
+    console.log(
+      `✅ 옵션 재고 동기화: ${stockSyncResult.variantStockSynced}개 상품`,
+    );
+    console.log(
+      `✅ 기본 재고 동기화: ${stockSyncResult.productStockSynced}개 상품`,
+    );
+    console.log(
+      `❌ 재고 동기화 실패: ${stockSyncResult.stockSyncFailed}개 상품`,
+    );
 
     // 6. 결과 요약
     console.log("\n" + "=".repeat(60));
