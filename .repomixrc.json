@@ -1,0 +1,26 @@
+{
+  "includePatterns": [
+    "lib/supabase/**/*",
+    "supabase/**/*",
+    "database.types.ts",
+    "actions/**/*",
+    "app/api/**/*",
+    "hooks/use-sync-user.ts",
+    "components/providers/sync-user-provider.tsx",
+    "AGENTS.md",
+    "CLAUDE.md",
+    ".cursor/rules/supabase/**/*",
+    "package.json",
+    "tsconfig.json"
+  ],
+  "ignorePatterns": [
+    "node_modules/**",
+    ".next/**",
+    ".git/**",
+    "tmp/**",
+    "*.log",
+    "repomix-output.xml"
+  ],
+  "outputFile": "repomix-output.xml"
+}
+
