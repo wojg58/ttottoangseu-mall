@@ -61,7 +61,7 @@ function PaymentContent() {
     logger.info("[PaymentPage] ✅ 파라미터 검증 완료");
     setIsReady(true);
     logger.groupEnd();
-  }, [orderId, amount, orderName, customerName, customerEmail, paymentMethod, router]);
+  }, [orderId, amount, orderName, customerName, customerEmail, paymentMethod, depositorName, useEscrow, router]);
 
   // 결제창 닫기 핸들러
   const handleClose = () => {

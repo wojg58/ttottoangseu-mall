@@ -1884,8 +1884,6 @@ export default function SignInContent() {
                 redirectUrl="/"
                 // Clerk의 기본 리다이렉트 동작 완전히 비활성화
                 unsafeMetadata={{}}
-                // 로그인 성공 후 자동 리다이렉트 비활성화 (수동으로 처리)
-                afterSignInFallbackRedirectUrl="/"
                 appearance={{
                   elements: {
                     rootBox: "mx-auto",

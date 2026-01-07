@@ -15,7 +15,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import {
   PaymentWidgetInstance,
   loadPaymentWidget,
@@ -27,7 +26,6 @@ import logger from "@/lib/logger";
 type PaymentMethod = "CARD" | "TRANSFER";
 
 export default function OrderPage() {
-  const router = useRouter();
   const paymentWidgetRef = useRef<PaymentWidgetInstance | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
