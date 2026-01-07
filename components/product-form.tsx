@@ -433,11 +433,8 @@ export default function ProductForm({
           // 성공 시 삭제된 이미지 ID 목록 초기화
           setDeletedImageIds([]);
           alert(result.message);
-          // 삭제된 이미지가 UI에서 즉시 제거되도록 강제 새로고침
-          // router.refresh()만으로는 부족할 수 있으므로 window.location.href 사용
-          // 이미지 삭제 후 캐시를 무효화하기 위해 타임스탬프 추가
-          const timestamp = new Date().getTime();
-          window.location.href = `/admin/products/${product.id}${returnPage || returnSearch ? `?${new URLSearchParams({ ...(returnPage && { page: returnPage }), ...(returnSearch && { search: returnSearch }), _t: timestamp.toString() }).toString()}` : `?_t=${timestamp}`}`;
+          // 상품 목록 페이지로 이동
+          router.push("/admin/products");
         } else {
           alert(result.message);
         }
