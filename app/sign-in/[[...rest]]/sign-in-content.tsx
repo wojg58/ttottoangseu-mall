@@ -1142,23 +1142,21 @@ export default function SignInContent() {
                     await new Promise((resolve) => setTimeout(resolve, 1000));
 
                     console.log(
-                      "[SignInContent] 세션 활성화 완료, 리다이렉트 시작",
+                      "[SignInContent] 세션 활성화 완료, 홈으로 리다이렉트 시작",
                     );
-                    console.log("[SignInContent] 리다이렉트 URL:", redirectUrl);
+                    console.log("[SignInContent] 항상 홈(/)으로 이동");
 
-                    // 프로덕션 환경에서는 절대 경로로 리다이렉트
-                    const redirectPath = redirectUrl.startsWith("http")
-                      ? redirectUrl
-                      : `${window.location.origin}${redirectUrl}`;
+                    // 로그인 성공 시 항상 홈으로 이동
+                    const homePath = `${window.location.origin}/`;
 
                     console.log(
-                      "[SignInContent] 최종 리다이렉트 경로:",
-                      redirectPath,
+                      "[SignInContent] 최종 리다이렉트 경로 (홈):",
+                      homePath,
                     );
 
                     // window.location.href를 사용하여 전체 페이지 리로드로 세션 상태를 확실히 반영
                     // 이렇게 하면 구글 로그인과 동일하게 세션이 확실히 활성화됨
-                    window.location.href = redirectPath;
+                    window.location.href = homePath;
                   } catch (setActiveError: any) {
                     console.error(
                       "[SignInContent] setActive 실패:",
@@ -1184,10 +1182,10 @@ export default function SignInContent() {
 
                     alert(errorMessage);
 
-                    // 프로덕션에서는 리다이렉트를 시도하고, 실패하면 새로고침
+                    // 프로덕션에서는 홈으로 리다이렉트를 시도하고, 실패하면 새로고침
                     if (isProduction) {
                       try {
-                        window.location.href = redirectUrl;
+                        window.location.href = "/";
                         // 리다이렉트가 실패하면 새로고침
                         setTimeout(() => {
                           window.location.reload();
@@ -1196,7 +1194,7 @@ export default function SignInContent() {
                         window.location.reload();
                       }
                     } else {
-                      window.location.reload();
+                      window.location.href = "/";
                     }
                     return;
                   }
@@ -1213,11 +1211,11 @@ export default function SignInContent() {
                     !!clerk?.setActive,
                   );
 
-                  // createdSessionId가 없으면 페이지 새로고침으로 세션 상태 확인
+                  // createdSessionId가 없으면 홈으로 이동
                   console.log(
-                    "[SignInContent] 페이지 새로고침으로 세션 상태 확인",
+                    "[SignInContent] 홈으로 리다이렉트",
                   );
-                  window.location.href = redirectUrl;
+                  window.location.href = "/";
                 }
               } else {
                 console.warn(
@@ -1786,19 +1784,19 @@ export default function SignInContent() {
   // }, []);
 
 
-  // 로그인 성공 후 리다이렉트 처리
+  // 로그인 성공 후 홈으로 리다이렉트 처리
   useEffect(() => {
     if (isLoaded && isSignedIn) {
       console.group("[SignInContent] 로그인 성공 감지");
-      console.log("리다이렉트 URL로 이동:", redirectUrl);
+      console.log("홈(/)으로 이동");
       console.log("시간:", new Date().toISOString());
       console.log("isSignedIn:", isSignedIn);
       console.log("isLoaded:", isLoaded);
       console.groupEnd();
 
-      // 리다이렉트 실행 (약간의 딜레이를 두어 사용자 동기화가 완료될 시간을 줌)
+      // 항상 홈으로 리다이렉트 (약간의 딜레이를 두어 사용자 동기화가 완료될 시간을 줌)
       setTimeout(() => {
-        router.push(redirectUrl);
+        router.push("/");
       }, 1000);
     } else if (isLoaded && !isSignedIn) {
       // 로그인 페이지에 있는데 isSignedIn이 false인 경우 로그만 출력
@@ -1806,7 +1804,7 @@ export default function SignInContent() {
         "[SignInContent] isLoaded는 true이지만 isSignedIn이 false입니다.",
       );
     }
-  }, [isLoaded, isSignedIn, redirectUrl, router]);
+  }, [isLoaded, isSignedIn, router]);
 
   // 이미 로그인된 사용자는 홈으로 리다이렉트
   return (
@@ -1849,10 +1847,10 @@ export default function SignInContent() {
                 routing="path"
                 path="/sign-in"
                 signUpUrl="/sign-up"
-                afterSignInUrl={redirectUrl}
-                fallbackRedirectUrl={redirectUrl}
-                forceRedirectUrl={redirectUrl}
-                redirectUrl={redirectUrl}
+                afterSignInUrl="/"
+                fallbackRedirectUrl="/"
+                forceRedirectUrl="/"
+                redirectUrl="/"
                 appearance={{
                   elements: {
                     rootBox: "mx-auto",
