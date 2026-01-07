@@ -1086,6 +1086,25 @@ button.cl-socialButtonsIconButton__custom_kakao {
   z-index: 10 !important;
   background-color: #FEE500 !important;
   border-color: #FEE500 !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: 40px !important;
+}
+
+/* 카카오 버튼 내부 텍스트 스타일 - "kakao" 검정색 글자 */
+.cl-socialButtonsIconButton__custom_kakao .cl-socialButtonsProviderInitialIcon,
+.cl-socialButtonsIconButton__custom_kakao .cl-providerIcon,
+.cl-socialButtonsIconButton__custom_kakao .cl-internal-g5v6j2 {
+  color: black !important;
+  font-weight: normal !important;
+  font-size: 16px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 100% !important;
+  height: 100% !important;
+  background-color: transparent !important;
+  text-transform: lowercase !important;
 }
 
 /* 카카오 버튼이 비활성화되지 않도록 보장 */

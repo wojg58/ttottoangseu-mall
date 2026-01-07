@@ -125,6 +125,40 @@ export default function SignInContent() {
         `;
       });
 
+      // 카카오 버튼의 "K" 글자를 "kakao"로 변경
+      const updateKakaoButtonText = () => {
+        const kakaoButton = document.querySelector(
+          ".cl-socialButtonsIconButton__custom_kakao",
+        ) as HTMLElement;
+        if (kakaoButton) {
+          const kakaoTextElement = kakaoButton.querySelector(
+            ".cl-internal-g5v6j2",
+          ) as HTMLElement;
+          if (kakaoTextElement && kakaoTextElement.textContent !== "kakao") {
+            kakaoTextElement.textContent = "kakao";
+            console.log("[SignInContent] 카카오 버튼 텍스트를 'kakao'로 변경");
+          }
+        }
+      };
+
+      updateKakaoButtonText();
+
+      // 카카오 버튼 텍스트가 변경되어도 "kakao"로 유지
+      const kakaoButtonObserver = new MutationObserver(() => {
+        updateKakaoButtonText();
+      });
+
+      const kakaoButton = document.querySelector(
+        ".cl-socialButtonsIconButton__custom_kakao",
+      );
+      if (kakaoButton) {
+        kakaoButtonObserver.observe(kakaoButton, {
+          childList: true,
+          subtree: true,
+          characterData: true,
+        });
+      }
+
       // "최근 사용" 배지 숨기기
       const badges = document.querySelectorAll(
         ".cl-lastAuthenticationStrategyBadge",
