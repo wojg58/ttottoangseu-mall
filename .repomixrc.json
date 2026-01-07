@@ -1,5 +1,5 @@
 {
-  "includePatterns": [
+  "include": [
     "lib/supabase/**/*",
     "supabase/**/*",
     "database.types.ts",
@@ -13,7 +13,7 @@
     "package.json",
     "tsconfig.json"
   ],
-  "ignorePatterns": [
+  "ignore": [
     "node_modules/**",
     ".next/**",
     ".git/**",
@@ -21,6 +21,6 @@
     "*.log",
     "repomix-output.xml"
   ],
-  "outputFile": "repomix-output.xml"
+  "output": "repomix-output.xml"
 }
 
