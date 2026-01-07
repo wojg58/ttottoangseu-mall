@@ -289,8 +289,12 @@ export default function ProductDetailOptions({
           console.groupEnd();
           return;
         } else {
-          // 실패한 경우 에러로 처리
-          throw new Error(result.message || "바로 구매에 실패했습니다.");
+          // 실패한 경우에도 체크아웃 페이지로 이동 (장바구니 추가 실패해도 주문 진행 가능)
+          console.warn("[ProductDetailOptions] ⚠️ 장바구니 추가 실패했지만 체크아웃 페이지로 이동:", result.message);
+          console.log("[ProductDetailOptions] ✅ 체크아웃 페이지로 이동 (장바구니 상태 확인 필요)");
+          router.push("/checkout");
+          console.groupEnd();
+          return;
         }
       } catch (error: any) {
         // 실제 에러인 경우에만 로그 및 알림 표시
