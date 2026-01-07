@@ -472,22 +472,28 @@ export async function updateProduct(
 
         // 데이터베이스에서 이미지 레코드 삭제 (Storage 삭제 실패해도 DB는 삭제)
         try {
-          const { error: deleteImageError } = await supabase
+          console.log(`[updateProduct] 데이터베이스에서 이미지 삭제 시도: ${deleteIds.length}개`);
+          console.log(`[updateProduct] 삭제할 이미지 ID 목록:`, deleteIds);
+          
+          const { data: deleteResult, error: deleteImageError } = await supabase
             .from("product_images")
             .delete()
-            .in("id", deleteIds);
+            .in("id", deleteIds)
+            .select(); // 삭제된 레코드 반환
 
           if (deleteImageError) {
             console.error("[updateProduct] 데이터베이스 이미지 삭제 에러:", deleteImageError);
+            console.error("[updateProduct] 에러 상세:", JSON.stringify(deleteImageError, null, 2));
             // DB 삭제 실패는 치명적이므로 에러를 throw하지 않고 로그만 남김
             // (이미지 삭제 실패가 전체 수정을 막지 않도록)
           } else {
             console.log(`[updateProduct] 데이터베이스에서 이미지 ${deleteIds.length}개 삭제 완료`);
+            console.log(`[updateProduct] 삭제된 레코드:`, deleteResult);
             
             // 삭제 후 확인: 실제로 삭제되었는지 검증
             const { data: remainingImages, error: verifyError } = await supabase
               .from("product_images")
-              .select("id")
+              .select("id, image_url, is_primary")
               .eq("product_id", input.id);
             
             if (verifyError) {
@@ -495,6 +501,7 @@ export async function updateProduct(
             } else {
               console.log(`[updateProduct] 삭제 후 남은 이미지 수: ${remainingImages?.length || 0}개`);
               console.log(`[updateProduct] 삭제 후 남은 이미지 ID 목록:`, remainingImages?.map(img => img.id) || []);
+              console.log(`[updateProduct] 삭제 후 남은 이미지 정보:`, remainingImages);
             }
           }
         } catch (error) {
@@ -503,6 +510,10 @@ export async function updateProduct(
         }
         
         console.groupEnd();
+      } else {
+        console.log("[updateProduct] 삭제할 이미지가 없습니다.");
+      } else {
+        console.log("[updateProduct] 삭제할 이미지가 없습니다.");
       }
 
       // 대표 이미지로 설정하는 경우, 기존 대표 이미지 해제

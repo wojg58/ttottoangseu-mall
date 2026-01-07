@@ -422,14 +422,16 @@ export default function ProductForm({
           variants: variantsData.length > 0 ? variantsData : undefined, // 옵션 데이터 추가
         });
         
-        // 성공 시 삭제된 이미지 ID 목록 초기화
         if (result.success) {
+          // 성공 시 삭제된 이미지 ID 목록 초기화
           setDeletedImageIds([]);
-        }
-
-        if (result.success) {
           alert(result.message);
-          router.push(getReturnUrl());
+          // 페이지 새로고침하여 삭제된 이미지가 UI에서 제거되도록 함
+          router.refresh();
+          // 잠시 후 리다이렉트 (새로고침 후 리다이렉트)
+          setTimeout(() => {
+            router.push(getReturnUrl());
+          }, 100);
         } else {
           alert(result.message);
         }
