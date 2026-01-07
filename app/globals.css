@@ -1087,3 +1087,32 @@ iframe[src*="channel.io"] {
   opacity: 0 !important;
   pointer-events: none !important;
 }
+
+/* Toss Payments 결제 팝업 오버레이 배경 제거 */
+/* Toss Payments SDK가 생성하는 모달 오버레이의 검정색 배경 제거 */
+[id*="tosspayments"],
+[class*="tosspayments"],
+[class*="TossPayments"],
+div[style*="background"][style*="rgba(0, 0, 0"],
+div[style*="background"][style*="rgb(0, 0, 0"],
+div[style*="background-color: rgba(0, 0, 0"],
+div[style*="background-color: rgb(0, 0, 0"],
+div[style*="background-color:#000"],
+div[style*="background-color: #000"] {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+/* Toss Payments 모달 오버레이 배경 제거 (더 구체적인 선택자) */
+body > div[style*="position: fixed"][style*="inset: 0"],
+body > div[style*="position:fixed"][style*="inset:0"],
+body > div[style*="z-index"][style*="background"] {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+/* Toss Payments iframe 컨테이너 배경 제거 */
+iframe[src*="tosspayments"],
+iframe[src*="toss.im"] {
+  background: transparent !important;
+}

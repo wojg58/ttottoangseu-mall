@@ -245,8 +245,8 @@ export default function PaymentWidget({
   // 에러가 발생한 경우 에러 메시지 표시
   if (error) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-        <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4">
+      <div className="fixed inset-0 z-50 flex items-center justify-center">
+        <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4 shadow-lg">
           <div className="text-center">
             <div className="text-red-500 text-4xl mb-4">⚠️</div>
             <p className="text-base font-medium text-[#4a3f48] mb-2">결제 오류</p>
@@ -263,10 +263,10 @@ export default function PaymentWidget({
     );
   }
 
-  // 결제창이 열리는 동안 로딩 표시
+  // 결제창이 열리는 동안 로딩 표시 (배경 없이)
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
+      <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4 shadow-lg pointer-events-auto">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#ff6b9d] mx-auto mb-4"></div>
           <p className="text-base font-medium text-[#4a3f48] mb-2">결제창을 불러오는 중...</p>
