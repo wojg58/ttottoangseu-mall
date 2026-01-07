@@ -1128,12 +1128,20 @@ button.cl-socialButtonsIconButton__custom_naver_auth {
   justify-content: center !important;
   width: 100% !important;
   height: 100% !important;
+  background-color: transparent !important;
 }
 
-/* 네이버 버튼 내부 모든 요소에서 검정색 제거 */
+/* 네이버 버튼 내부 모든 요소에서 검정색 제거 및 초록색 배경 적용 */
 .cl-socialButtonsIconButton__custom_naver_auth * {
   color: white !important;
   border-color: transparent !important;
+  background-color: transparent !important;
+}
+
+/* "N" 글자 span 요소의 배경색을 초록색으로 (검정색 제거) */
+.cl-socialButtonsIconButton__custom_naver_auth .cl-internal-g5v6j2 {
+  background-color: #03C75A !important;
+  background: #03C75A !important;
 }
 
 /* 네이버 버튼이 비활성화되지 않도록 보장 */
