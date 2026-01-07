@@ -11,8 +11,7 @@
 -- 3. "키링,지비츠" 또는 "키링/지비츠" → "유키오"
 -- 4. "패션잡화" → "짱구"
 -- 5. "곰돌이" → "반다이"
--- 6. "스마일" → "가차,리멘트"
--- 7. "산리오" 설명 업데이트
+-- 6. "산리오" 설명 업데이트
 -- ============================================================================
 
 -- ----------------------------------------------------------------------------
@@ -58,14 +57,6 @@ SET
   description = '다마고치, 배스킨라빈스 등 반다이 상품',
   updated_at = now()
 WHERE name = '곰돌이' OR slug = 'bear';
-
--- 1-6. "스마일" → "가차,리멘트" (이름 및 설명 업데이트)
-UPDATE categories 
-SET 
-  name = '가차,리멘트',
-  description = '다양한 캡슐토이와 리멘트',
-  updated_at = now()
-WHERE name = '스마일' OR slug = 'stationery';
 
 -- ----------------------------------------------------------------------------
 -- 2. 카테고리 설명만 업데이트 (이름은 변경하지 않음)
@@ -132,15 +123,6 @@ WHERE slug = 'bear'
   AND name = '반다이'
   AND (description IS NULL OR description != '다마고치, 배스킨라빈스 등 반다이 상품');
 
--- 3-6. 가차,리멘트 카테고리 설명 업데이트 (이미 이름이 변경된 경우)
-UPDATE categories 
-SET 
-  description = '다양한 캡슐토이와 리멘트',
-  updated_at = now()
-WHERE slug = 'stationery' 
-  AND name = '가차,리멘트'
-  AND (description IS NULL OR description != '다양한 캡슐토이와 리멘트');
-
 -- ----------------------------------------------------------------------------
 -- 4. 변경 확인 쿼리
 -- ----------------------------------------------------------------------------
@@ -153,8 +135,8 @@ SELECT
   updated_at
 FROM categories
 WHERE 
-  name IN ('치이카와', '모프샌드', '유키오', '짱구', '반다이', '가차,리멘트', '산리오')
-  OR slug IN ('sanrio', 'character', 'phone-strap', 'keyring', 'fashion', 'bear', 'stationery')
+  name IN ('치이카와', '모프샌드', '유키오', '짱구', '반다이', '산리오')
+  OR slug IN ('sanrio', 'character', 'phone-strap', 'keyring', 'fashion', 'bear')
 ORDER BY 
   COALESCE(sort_order, 0),
   name;
