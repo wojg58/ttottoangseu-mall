@@ -367,7 +367,8 @@ async function getAllSmartstoreProducts() {
 // 메인 실행 함수
 async function buildMapping() {
   // 테스트용: 특정 상품명만 처리
-  const TEST_PRODUCT_NAME = "산리오 헬로키티 마이멜로디 쿠로미 포차코 시나모롤 아코디언 가죽 카드지갑 반지갑";
+  const TEST_PRODUCT_NAME =
+    "산리오 헬로키티 마이멜로디 쿠로미 포차코 시나모롤 아코디언 가죽 카드지갑 반지갑";
   const TEST_MODE = true; // true: 테스트 모드 (특정 상품만), false: 전체 처리
 
   console.log("🚀 스마트스토어 옵션 매핑 빌드 시작");
@@ -421,20 +422,23 @@ async function buildMapping() {
       // 테스트 모드: 특정 상품명만 필터링
       let filteredProducts = products;
       if (TEST_MODE) {
-        filteredProducts = products.filter((p) =>
-          p.name.includes(TEST_PRODUCT_NAME) ||
-          TEST_PRODUCT_NAME.includes(p.name),
+        filteredProducts = products.filter(
+          (p) =>
+            p.name.includes(TEST_PRODUCT_NAME) ||
+            TEST_PRODUCT_NAME.includes(p.name),
         );
         console.log(
-          `[TEST MODE] 페이지 ${page + 1}: ${products.length}개 중 ${filteredProducts.length}개 매칭`,
+          `[TEST MODE] 페이지 ${page + 1}: ${products.length}개 중 ${
+            filteredProducts.length
+          }개 매칭`,
         );
       }
 
       allOurProducts.push(...filteredProducts);
       console.log(
-        `[INFO] 페이지 ${page + 1}: ${filteredProducts.length}개 상품 조회 (누적: ${
-          allOurProducts.length
-        }개)`,
+        `[INFO] 페이지 ${page + 1}: ${
+          filteredProducts.length
+        }개 상품 조회 (누적: ${allOurProducts.length}개)`,
       );
 
       if (products.length < pageSize) {
@@ -569,22 +573,8 @@ async function buildMapping() {
         // 나중에 재고 동기화 시 다른 API로 확인하거나, 매핑된 데이터로 역추적 가능
         const originProductNo = null; // 매핑 작업에서는 사용하지 않음 (재고 수정 시 필요)
 
-        // 0. 상품 설명(description) 업데이트
-        if (originProduct?.detailContent) {
-          console.log(`[INFO] 상품 설명 업데이트 중...`);
-          const { error: descUpdateError } = await supabase
-            .from("products")
-            .update({ description: originProduct.detailContent })
-            .eq("id", product.id);
-
-          if (descUpdateError) {
-            console.warn(
-              `[WARN] 상품 설명 업데이트 실패: ${descUpdateError.message}`,
-            );
-          } else {
-            console.log(`[INFO]   ✅ 상품 설명 업데이트 완료`);
-          }
-        }
+        // 0. 상품 설명(description) 업데이트 제거됨
+        // (네이버 스마트스토어 상세페이지 HTML 연동하지 않음)
 
         // 1. 상품 이미지 추가/업데이트
         console.log(`[INFO] 이미지 추가/업데이트 시작...`);
@@ -603,82 +593,14 @@ async function buildMapping() {
           console.log(`[INFO]   대표 이미지: ${representativeUrl}`);
         }
 
-        // 1-2. 추가 이미지 (800×800 압축 후 업로드)
-        if (originProduct?.images?.optionalImages) {
-          console.log(
-            `[INFO]   추가 이미지 ${originProduct.images.optionalImages.length}개 처리 중...`,
-          );
-          for (
-            let index = 0;
-            index < originProduct.images.optionalImages.length;
-            index++
-          ) {
-            const img = originProduct.images.optionalImages[index];
-            if (img.url) {
-              const result = await downloadCompressAndUploadImage(
-                img.url,
-                product.id,
-                "additional",
-              );
-              if (result.success) {
-                images.push({
-                  image_url: result.url,
-                  is_primary: false,
-                  sort_order: index + 1,
-                  alt_text: `${product.name} - 이미지 ${index + 1}`,
-                });
-              } else {
-                console.warn(
-                  `[WARN]   추가 이미지 처리 실패 (원본 URL 사용): ${result.error}`,
-                );
-                // 실패 시 원본 URL 사용
-                images.push({
-                  image_url: img.url,
-                  is_primary: false,
-                  sort_order: index + 1,
-                  alt_text: `${product.name} - 이미지 ${index + 1}`,
-                });
-              }
-            }
-            // API 레이트 리밋 방지
-            await delay(200);
-          }
-        }
+        // 1-2. 추가 이미지 처리 제거됨
+        // (상품 이미지 갤러리에서는 대표 이미지 URL만 사용)
 
-        // 1-3. 옵션 이미지 (800×800 압축 후 업로드)
-        if (originProduct?.standardOptionAttributes) {
-          console.log(
-            `[INFO]   옵션 이미지 처리 중... (${originProduct.standardOptionAttributes.length}개 옵션)`,
-          );
-          for (const optionAttr of originProduct.standardOptionAttributes) {
-            if (optionAttr.imageUrls && optionAttr.imageUrls.length > 0) {
-              for (let i = 0; i < optionAttr.imageUrls.length; i++) {
-                const imageUrl = optionAttr.imageUrls[i];
-                const result = await downloadCompressAndUploadImage(
-                  imageUrl,
-                  product.id,
-                  "option",
-                );
-                if (result.success) {
-                  images.push({
-                    image_url: result.url,
-                    is_primary: false,
-                    sort_order: images.length,
-                    alt_text: `${product.name} - 옵션 ${optionAttr.attributeValueName || "이미지"} ${i + 1}`,
-                  });
-                } else {
-                  console.warn(
-                    `[WARN]   옵션 이미지 처리 실패: ${result.error}`,
-                  );
-                }
-                await delay(200);
-              }
-            }
-          }
-        }
+        // 1-3. 옵션 이미지 처리 제거됨
+        // (상품 이미지 갤러리에서는 대표 이미지 URL만 사용)
 
         // 1-4. 상세 설명 이미지 처리 제거됨
-        // (상품 이미지 갤러리에서는 대표 이미지와 URL만 사용)
+        // (상품 이미지 갤러리에서는 대표 이미지 URL만 사용)
 
         // 1-5. DB에 저장
         if (images.length > 0) {
@@ -995,7 +917,7 @@ async function buildMapping() {
               slug: finalSlug,
               price: originProduct.salePrice || 0,
               discount_price: null, // 할인가는 나중에 필요시 추가
-              description: originProduct.detailContent || null,
+              description: null, // 네이버 스마트스토어 상세페이지 HTML 연동하지 않음
               status: "active",
               stock: originProduct.stockQuantity || 0,
               is_featured: false,
@@ -1033,80 +955,14 @@ async function buildMapping() {
             console.log(`[INFO]   대표 이미지: ${representativeUrl}`);
           }
 
-          // 1-2. 추가 이미지 (800×800 압축 후 업로드)
-          if (originProduct.images?.optionalImages) {
-            console.log(
-              `[INFO]   추가 이미지 ${originProduct.images.optionalImages.length}개 처리 중...`,
-            );
-            for (
-              let index = 0;
-              index < originProduct.images.optionalImages.length;
-              index++
-            ) {
-              const img = originProduct.images.optionalImages[index];
-              if (img.url) {
-                const result = await downloadCompressAndUploadImage(
-                  img.url,
-                  newProduct.id,
-                  "additional",
-                );
-                if (result.success) {
-                  images.push({
-                    image_url: result.url,
-                    is_primary: false,
-                    sort_order: index + 1,
-                    alt_text: `${smartstoreProduct.name} - 이미지 ${index + 1}`,
-                  });
-                } else {
-                  console.warn(
-                    `[WARN]   추가 이미지 처리 실패 (원본 URL 사용): ${result.error}`,
-                  );
-                  images.push({
-                    image_url: img.url,
-                    is_primary: false,
-                    sort_order: index + 1,
-                    alt_text: `${smartstoreProduct.name} - 이미지 ${index + 1}`,
-                  });
-                }
-              }
-              await delay(200);
-            }
-          }
+          // 1-2. 추가 이미지 처리 제거됨
+          // (상품 이미지 갤러리에서는 대표 이미지 URL만 사용)
 
-          // 1-3. 옵션 이미지 (800×800 압축 후 업로드)
-          if (originProduct?.standardOptionAttributes) {
-            console.log(
-              `[INFO]   옵션 이미지 처리 중... (${originProduct.standardOptionAttributes.length}개 옵션)`,
-            );
-            for (const optionAttr of originProduct.standardOptionAttributes) {
-              if (optionAttr.imageUrls && optionAttr.imageUrls.length > 0) {
-                for (let i = 0; i < optionAttr.imageUrls.length; i++) {
-                  const imageUrl = optionAttr.imageUrls[i];
-                  const result = await downloadCompressAndUploadImage(
-                    imageUrl,
-                    newProduct.id,
-                    "option",
-                  );
-                  if (result.success) {
-                    images.push({
-                      image_url: result.url,
-                      is_primary: false,
-                      sort_order: images.length,
-                      alt_text: `${smartstoreProduct.name} - 옵션 ${optionAttr.attributeValueName || "이미지"} ${i + 1}`,
-                    });
-                  } else {
-                    console.warn(
-                      `[WARN]   옵션 이미지 처리 실패: ${result.error}`,
-                    );
-                  }
-                  await delay(200);
-                }
-              }
-            }
-          }
+          // 1-3. 옵션 이미지 처리 제거됨
+          // (상품 이미지 갤러리에서는 대표 이미지 URL만 사용)
 
           // 1-4. 상세 설명 이미지 처리 제거됨
-          // (상품 이미지 갤러리에서는 대표 이미지와 URL만 사용)
+          // (상품 이미지 갤러리에서는 대표 이미지 URL만 사용)
 
           if (images.length > 0) {
             const imageData = images.map((img) => ({
@@ -1122,7 +978,7 @@ async function buildMapping() {
               console.warn(`[WARN] 이미지 추가 실패: ${imageError.message}`);
             } else {
               console.log(
-                `[INFO]   ✅ 이미지 ${images.length}개 추가 완료 (대표: 1개, 추가: ${originProduct.images?.optionalImages?.length || 0}개, 옵션: ${originProduct?.standardOptionAttributes?.filter((o) => o.imageUrls?.length > 0).length || 0}개)`,
+                `[INFO]   ✅ 이미지 ${images.length}개 추가 완료 (대표 이미지만)`,
               );
             }
           }
