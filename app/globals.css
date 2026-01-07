@@ -1073,23 +1073,30 @@ button[aria-label*="구글"] {
   flex: 1 !important;
 }
 
-/* 카카오 로그인 버튼 - 클릭 가능하도록 보장 */
+/* 카카오 로그인 버튼 - 노란색 배경 및 클릭 가능하도록 보장 */
+.cl-socialButtonsIconButton__custom_kakao,
 button[style*="background-color: rgb(254, 229, 0)"],
-button[style*="background-color: #FEE500"] {
-  display: block !important;
+button[style*="background-color: #FEE500"],
+button.cl-socialButtonsIconButton__custom_kakao {
+  display: flex !important;
   visibility: visible !important;
   opacity: 1 !important;
   pointer-events: auto !important;
   cursor: pointer !important;
   z-index: 10 !important;
+  background-color: #FEE500 !important;
+  border-color: #FEE500 !important;
 }
 
 /* 카카오 버튼이 비활성화되지 않도록 보장 */
+.cl-socialButtonsIconButton__custom_kakao:disabled,
 button[style*="background-color: rgb(254, 229, 0)"]:disabled,
-button[style*="background-color: #FEE500"]:disabled {
+button[style*="background-color: #FEE500"]:disabled,
+button.cl-socialButtonsIconButton__custom_kakao:disabled {
   pointer-events: auto !important;
   cursor: pointer !important;
   opacity: 1 !important;
+  background-color: #FEE500 !important;
 }
 
 /* 기존 상담챗봇 런처 버튼 숨기기 */
