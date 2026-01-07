@@ -258,24 +258,27 @@ export default function ProductForm({
   // product prop이 변경될 때 이미지 상태 업데이트
   useEffect(() => {
     if (product?.images) {
-      const updatedImages = product.images.map((img) => ({
-        id: img.id,
-        image_url: img.image_url,
-        is_primary: img.is_primary,
-        sort_order: img.sort_order,
-        alt_text: img.alt_text,
-      }));
+      // ⚠️ 중요: 삭제된 이미지 ID 목록에 포함된 이미지는 제외
+      const updatedImages = product.images
+        .filter((img) => !deletedImageIds.includes(img.id || "")) // 삭제된 이미지 제외
+        .map((img) => ({
+          id: img.id,
+          image_url: img.image_url,
+          is_primary: img.is_primary,
+          sort_order: img.sort_order,
+          alt_text: img.alt_text,
+        }));
       console.log("[ProductForm] product prop 변경으로 이미지 상태 업데이트:", updatedImages.length, "개");
       console.log("[ProductForm] 업데이트된 이미지 ID 목록:", updatedImages.map(img => img.id).filter(Boolean));
+      console.log("[ProductForm] 삭제된 이미지 ID 목록 (제외됨):", deletedImageIds);
       setProductImages(updatedImages);
-      // 삭제된 이미지 ID 목록도 초기화 (새로운 상품 로드 시)
-      setDeletedImageIds([]);
+      // ⚠️ 중요: 삭제된 이미지 ID 목록은 초기화하지 않음 (페이지 새로고침 전까지 유지)
     } else if (product && !product.images) {
       console.log("[ProductForm] product prop 변경으로 이미지 상태 초기화");
       setProductImages([]);
       setDeletedImageIds([]);
     }
-  }, [product?.id, product?.images?.length, product?.images]); // product.images도 의존성에 추가하여 변경 감지
+  }, [product?.id, product?.images?.length, product?.images, deletedImageIds]); // ⚠️ deletedImageIds를 의존성에 추가
 
   // 옵션별 재고 합산하여 총 재고 자동 계산
   useEffect(() => {

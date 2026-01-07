@@ -474,12 +474,17 @@ export async function updateProduct(
         console.log(`[updateProduct] Storage 삭제 결과: 성공 ${storageDeleteSuccessCount}개, 실패 ${storageDeleteFailCount}개`);
 
         // 데이터베이스에서 이미지 레코드 삭제 (Storage 삭제 실패해도 DB는 삭제)
+        // ⚠️ 중요: RLS 정책을 우회하기 위해 Service Role 클라이언트 사용
         try {
           console.log(`[updateProduct] 데이터베이스에서 이미지 삭제 시도: ${deleteIds.length}개`);
           console.log(`[updateProduct] 삭제할 이미지 ID 목록:`, deleteIds);
           
+          // Service Role 클라이언트 가져오기 (RLS 우회)
+          const { getServiceRoleClient } = await import("@/lib/supabase/service-role");
+          const serviceRoleSupabase = getServiceRoleClient();
+          
           // 삭제 전에 실제로 존재하는 이미지 ID만 필터링
-          const { data: existingImageIds, error: checkError } = await supabase
+          const { data: existingImageIds, error: checkError } = await serviceRoleSupabase
             .from("product_images")
             .select("id")
             .eq("product_id", input.id)
@@ -496,7 +501,8 @@ export async function updateProduct(
             }
             
             if (validDeleteIds.length > 0) {
-              const { data: deleteResult, error: deleteImageError } = await supabase
+              console.log(`[updateProduct] Service Role 클라이언트로 이미지 삭제 실행: ${validDeleteIds.length}개`);
+              const { data: deleteResult, error: deleteImageError } = await serviceRoleSupabase
                 .from("product_images")
                 .delete()
                 .in("id", validDeleteIds)
@@ -511,7 +517,7 @@ export async function updateProduct(
                 console.log(`[updateProduct] 삭제된 레코드:`, deleteResult);
                 
                 // 삭제 후 확인: 실제로 삭제되었는지 검증
-                const { data: remainingImages, error: verifyError } = await supabase
+                const { data: remainingImages, error: verifyError } = await serviceRoleSupabase
                   .from("product_images")
                   .select("id, image_url, is_primary")
                   .eq("product_id", input.id);
@@ -522,6 +528,11 @@ export async function updateProduct(
                   console.log(`[updateProduct] 삭제 후 남은 이미지 수: ${remainingImages?.length || 0}개`);
                   console.log(`[updateProduct] 삭제 후 남은 이미지 ID 목록:`, remainingImages?.map(img => img.id) || []);
                   console.log(`[updateProduct] 삭제 후 남은 이미지 정보:`, remainingImages);
+                  
+                  // 삭제가 제대로 되지 않았다면 경고
+                  if (remainingImages && remainingImages.length > 1) {
+                    console.warn(`[updateProduct] ⚠️ 경고: 삭제 후에도 ${remainingImages.length}개의 이미지가 남아있습니다.`);
+                  }
                 }
               }
             } else {
