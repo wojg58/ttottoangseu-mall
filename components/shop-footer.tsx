@@ -101,7 +101,7 @@ export default function ShopFooter() {
       <div className="bg-[#FF5088] text-white py-3 md:py-4">
         <div className="shop-container">
           <p className="text-center text-xs md:text-[15px] text-white">
-            © 2024 또또앙스. All rights reserved.
+            © 2023 또또앙스. All rights reserved.
           </p>
         </div>
       </div>
