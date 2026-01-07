@@ -1116,3 +1116,23 @@ iframe[src*="tosspayments"],
 iframe[src*="toss.im"] {
   background: transparent !important;
 }
+
+/* 결제 게이트웨이 모든 요소에 검정색 테두리 표시 */
+[class*="payment-gateway-cache-"],
+main.payment-gateway-cache-1tpret2,
+main.payment-gateway-cache-1tpret2 *,
+section[class*="payment-gateway-cache-"],
+section[class*="payment-gateway-cache-"] *,
+div[class*="payment-gateway-cache-"],
+form[class*="payment-gateway-cache-"],
+button[class*="payment-gateway-cache-"],
+input[class*="payment-gateway-cache-"],
+select[class*="payment-gateway-cache-"],
+label[class*="payment-gateway-cache-"],
+span[class*="payment-gateway-cache-"],
+p[class*="payment-gateway-cache-"],
+h1[class*="payment-gateway-cache-"],
+img[class*="payment-gateway-cache-"] {
+  border: 1px solid #000000 !important;
+  box-sizing: border-box !important;
+}
