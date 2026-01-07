@@ -392,7 +392,12 @@ export async function updateProduct(
       if (imagesToDelete.length > 0) {
         const deleteIds = imagesToDelete.map((img) => img.id);
         
+        console.group(`[updateProduct] ${deleteIds.length}개 이미지 삭제 시작`);
+        
         // Storage에서 파일 삭제
+        let storageDeleteSuccessCount = 0;
+        let storageDeleteFailCount = 0;
+        
         for (const imageToDelete of imagesToDelete) {
           if (imageToDelete.image_url) {
             console.log(`[updateProduct] 삭제 대상 이미지 URL: ${imageToDelete.image_url}`);
@@ -403,17 +408,26 @@ export async function updateProduct(
             console.log(`[updateProduct] 추출된 정보:`, { filePath, bucketName });
             
             if (filePath && bucketName) {
-              console.log(`[updateProduct] Storage 파일 삭제 시도: ${bucketName}/${filePath}`);
-              const { data, error: storageError } = await supabase.storage
-                .from(bucketName)
-                .remove([filePath]);
+              try {
+                console.log(`[updateProduct] Storage 파일 삭제 시도: ${bucketName}/${filePath}`);
+                const { data, error: storageError } = await supabase.storage
+                  .from(bucketName)
+                  .remove([filePath]);
 
-              if (storageError) {
-                console.error(`[updateProduct] Storage 파일 삭제 실패 (${bucketName}/${filePath}):`, storageError);
-                console.error(`[updateProduct] 에러 상세:`, JSON.stringify(storageError, null, 2));
-              } else {
-                console.log(`[updateProduct] Storage 파일 삭제 성공: ${bucketName}/${filePath}`);
-                console.log(`[updateProduct] 삭제 결과:`, data);
+                if (storageError) {
+                  console.error(`[updateProduct] Storage 파일 삭제 실패 (${bucketName}/${filePath}):`, storageError);
+                  console.error(`[updateProduct] 에러 상세:`, JSON.stringify(storageError, null, 2));
+                  storageDeleteFailCount++;
+                  // Storage 삭제 실패해도 계속 진행 (이미 삭제된 파일일 수 있음)
+                } else {
+                  console.log(`[updateProduct] Storage 파일 삭제 성공: ${bucketName}/${filePath}`);
+                  console.log(`[updateProduct] 삭제 결과:`, data);
+                  storageDeleteSuccessCount++;
+                }
+              } catch (error) {
+                console.error(`[updateProduct] Storage 파일 삭제 중 예외 발생:`, error);
+                storageDeleteFailCount++;
+                // 예외 발생해도 계속 진행
               }
             } else {
               // 외부 URL인 경우 (네이버 스마트스토어 등) - Storage에 없으므로 삭제할 필요 없음
@@ -421,37 +435,50 @@ export async function updateProduct(
                   imageToDelete.image_url.includes("http://") || 
                   imageToDelete.image_url.includes("https://")) {
                 console.log(`[updateProduct] 외부 URL이므로 Storage 삭제 건너뜀: ${imageToDelete.image_url}`);
+                storageDeleteSuccessCount++; // 외부 URL은 성공으로 간주
               } else {
                 console.warn(`[updateProduct] 파일 경로 또는 버킷 추출 실패: ${imageToDelete.image_url}`);
+                storageDeleteFailCount++;
               }
             }
           }
         }
 
-        // 데이터베이스에서 이미지 레코드 삭제
-        const { error: deleteImageError } = await supabase
-          .from("product_images")
-          .delete()
-          .in("id", deleteIds);
+        console.log(`[updateProduct] Storage 삭제 결과: 성공 ${storageDeleteSuccessCount}개, 실패 ${storageDeleteFailCount}개`);
 
-        if (deleteImageError) {
-          console.error("[updateProduct] 이미지 삭제 에러:", deleteImageError);
-        } else {
-          console.log(`[updateProduct] 기존 이미지 ${deleteIds.length}개 삭제 완료`);
-          
-          // 삭제 후 확인: 실제로 삭제되었는지 검증
-          const { data: remainingImages, error: verifyError } = await supabase
+        // 데이터베이스에서 이미지 레코드 삭제 (Storage 삭제 실패해도 DB는 삭제)
+        try {
+          const { error: deleteImageError } = await supabase
             .from("product_images")
-            .select("id")
-            .eq("product_id", input.id);
-          
-          if (verifyError) {
-            console.error("[updateProduct] 삭제 후 검증 에러:", verifyError);
+            .delete()
+            .in("id", deleteIds);
+
+          if (deleteImageError) {
+            console.error("[updateProduct] 데이터베이스 이미지 삭제 에러:", deleteImageError);
+            // DB 삭제 실패는 치명적이므로 에러를 throw하지 않고 로그만 남김
+            // (이미지 삭제 실패가 전체 수정을 막지 않도록)
           } else {
-            console.log(`[updateProduct] 삭제 후 남은 이미지 수: ${remainingImages?.length || 0}개`);
-            console.log(`[updateProduct] 삭제 후 남은 이미지 ID 목록:`, remainingImages?.map(img => img.id) || []);
+            console.log(`[updateProduct] 데이터베이스에서 이미지 ${deleteIds.length}개 삭제 완료`);
+            
+            // 삭제 후 확인: 실제로 삭제되었는지 검증
+            const { data: remainingImages, error: verifyError } = await supabase
+              .from("product_images")
+              .select("id")
+              .eq("product_id", input.id);
+            
+            if (verifyError) {
+              console.error("[updateProduct] 삭제 후 검증 에러:", verifyError);
+            } else {
+              console.log(`[updateProduct] 삭제 후 남은 이미지 수: ${remainingImages?.length || 0}개`);
+              console.log(`[updateProduct] 삭제 후 남은 이미지 ID 목록:`, remainingImages?.map(img => img.id) || []);
+            }
           }
+        } catch (error) {
+          console.error("[updateProduct] 데이터베이스 이미지 삭제 중 예외 발생:", error);
+          // 예외 발생해도 계속 진행 (이미지 삭제 실패가 전체 수정을 막지 않도록)
         }
+        
+        console.groupEnd();
       }
 
       // 대표 이미지로 설정하는 경우, 기존 대표 이미지 해제

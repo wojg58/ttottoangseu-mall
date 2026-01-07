@@ -125,6 +125,9 @@ export default function ProductForm({
   );
   const [isUploadingGalleryImage, setIsUploadingGalleryImage] = useState(false);
   const galleryImageInputRef = useRef<HTMLInputElement>(null);
+  
+  // 삭제된 이미지 추적 (대표 이미지 제외하고 모두 삭제 시 사용)
+  const [deletedImageIds, setDeletedImageIds] = useState<string[]>([]);
 
   // 상품 옵션 상태
   const [productVariants, setProductVariants] = useState<
@@ -264,9 +267,12 @@ export default function ProductForm({
       }));
       console.log("[ProductForm] product prop 변경으로 이미지 상태 업데이트:", updatedImages.length, "개");
       setProductImages(updatedImages);
+      // 삭제된 이미지 ID 목록도 초기화 (새로운 상품 로드 시)
+      setDeletedImageIds([]);
     } else if (product && !product.images) {
       console.log("[ProductForm] product prop 변경으로 이미지 상태 초기화");
       setProductImages([]);
+      setDeletedImageIds([]);
     }
   }, [product?.id, product?.images?.length]); // product.id와 images.length를 의존성으로 사용
 
@@ -386,10 +392,13 @@ export default function ProductForm({
           alt_text: img.alt_text || data.name,
         }));
 
+        console.group("[ProductForm] 수정 시 이미지 처리");
         console.log("[ProductForm] 수정 시 이미지 데이터:", imagesData);
         console.log("[ProductForm] 이미지 ID 목록:", imagesData.map(img => img.id).filter(Boolean));
         console.log("[ProductForm] 현재 productImages 상태:", productImages.map(img => ({ id: img.id, is_primary: img.is_primary })));
+        console.log("[ProductForm] 삭제된 이미지 ID 목록:", deletedImageIds);
         console.log("[ProductForm] 수정 시 옵션 데이터:", productVariants);
+        console.groupEnd();
 
         // 옵션 데이터 준비 (빈 값 필터링)
         const variantsData = productVariants
@@ -1685,15 +1694,31 @@ export default function ProductForm({
                       onClick={() => {
                         const primaryImage = productImages.find((img) => img.is_primary);
                         if (primaryImage) {
-                          console.log("[ProductForm] 대표 이미지 제외하고 모두 삭제");
+                          console.group("[ProductForm] 대표 이미지 제외하고 모두 삭제");
                           console.log("[ProductForm] 대표 이미지 정보:", {
                             id: primaryImage.id,
                             image_url: primaryImage.image_url,
                             is_primary: primaryImage.is_primary
                           });
                           console.log("[ProductForm] 삭제 전 이미지 수:", productImages.length);
+                          
+                          // 삭제할 이미지 ID 수집 (대표 이미지가 아닌 것들 중 id가 있는 것들)
+                          const imagesToDelete = productImages.filter(
+                            (img) => !img.is_primary && img.id
+                          );
+                          const deletedIds = imagesToDelete.map((img) => img.id!);
+                          
+                          console.log("[ProductForm] 삭제 대상 이미지 수:", imagesToDelete.length);
+                          console.log("[ProductForm] 삭제 대상 이미지 ID 목록:", deletedIds);
+                          console.log("[ProductForm] 삭제 대상 이미지 URL 목록:", imagesToDelete.map(img => img.image_url));
+                          
+                          // 삭제된 이미지 ID 저장 (폼 제출 시 사용)
+                          setDeletedImageIds((prev) => [...prev, ...deletedIds]);
+                          
+                          // 상태 업데이트 (대표 이미지만 남김)
                           setProductImages([primaryImage]);
                           console.log("[ProductForm] 삭제 후 이미지 수: 1 (대표 이미지만)");
+                          console.groupEnd();
                         } else {
                           console.warn("[ProductForm] 대표 이미지를 찾을 수 없습니다!");
                         }
@@ -1733,6 +1758,12 @@ export default function ProductForm({
                     <button
                       type="button"
                       onClick={() => {
+                        // 삭제할 이미지가 기존 이미지인 경우 (id가 있는 경우) 삭제 목록에 추가
+                        if (img.id) {
+                          console.log("[ProductForm] 기존 이미지 삭제:", { id: img.id, image_url: img.image_url });
+                          setDeletedImageIds((prev) => [...prev, img.id!]);
+                        }
+                        
                         setProductImages((prev) => {
                           const newImages = prev.filter((_, i) => i !== index);
                           // 첫 번째 이미지가 삭제되면 다음 이미지를 대표 이미지로 설정
