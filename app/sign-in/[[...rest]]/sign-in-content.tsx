@@ -168,8 +168,19 @@ export default function SignInContent() {
         }
       });
 
-      // 버튼 순서 변경 실행
+      // 버튼 순서 변경 실행 (여러 번 시도하여 확실히 적용)
       reorderSocialButtons();
+      
+      // DOM이 완전히 로드된 후 다시 한 번 실행
+      setTimeout(() => {
+        reorderSocialButtons();
+        updateNaverButtonText();
+      }, 100);
+      
+      setTimeout(() => {
+        reorderSocialButtons();
+        updateNaverButtonText();
+      }, 500);
 
       // 소셜 버튼들도 flex로 설정 (모든 버튼 동일한 높이)
       const socialButtonsBlockButton = document.querySelectorAll(
@@ -267,45 +278,69 @@ export default function SignInContent() {
 
         if (naverButton) {
           // 아이콘 텍스트 숨기기 (중복 제거)
-          const naverIconElement = naverButton.querySelector(
+          const naverIconElements = naverButton.querySelectorAll(
             ".cl-internal-g5v6j2",
-          ) as HTMLElement;
-          if (naverIconElement) {
-            naverIconElement.style.cssText = `display: none !important;`;
-          }
+          );
+          naverIconElements.forEach((element) => {
+            (element as HTMLElement).style.cssText = `display: none !important;`;
+          });
 
-          // 버튼 텍스트만 "NAVER"로 변경
+          // 버튼 텍스트를 "NAVER"로 강제 변경
           const naverButtonText = naverButton.querySelector(
             ".cl-socialButtonsBlockButtonText__custom_naver_auth, .cl-socialButtonsBlockButtonText",
           ) as HTMLElement;
-          if (naverButtonText && naverButtonText.textContent !== "NAVER") {
+          if (naverButtonText) {
             naverButtonText.textContent = "NAVER";
+            naverButtonText.style.cssText = `
+              color: white !important;
+              font-weight: bold !important;
+              font-size: 15px !important;
+              display: flex !important;
+              align-items: center !important;
+              justify-content: center !important;
+              width: 100% !important;
+              height: 100% !important;
+              text-align: center !important;
+              text-transform: uppercase !important;
+              letter-spacing: 0.5px !important;
+              margin: 0 !important;
+              padding: 0 !important;
+              line-height: 1 !important;
+            `;
             console.log("[SignInContent] 네이버 버튼 텍스트를 'NAVER'로 변경");
           }
         }
       };
-
-      updateNaverButtonText();
 
       // 네이버 버튼 텍스트가 변경되어도 "NAVER"로 유지
       const naverButtonObserver = new MutationObserver(() => {
         updateNaverButtonText();
       });
 
-      const naverButton =
-        document.querySelector(
-          ".cl-socialButtonsIconButton__custom_naver_auth",
-        ) ||
-        document.querySelector(
-          ".cl-socialButtonsBlockButton__custom_naver_auth",
-        );
-      if (naverButton) {
-        naverButtonObserver.observe(naverButton, {
-          childList: true,
-          subtree: true,
-          characterData: true,
-        });
-      }
+      // 초기 실행 및 지속적인 모니터링
+      updateNaverButtonText();
+      
+      // 네이버 버튼이 나타날 때까지 대기 후 Observer 설정
+      const setupNaverButtonObserver = () => {
+        const naverButton =
+          document.querySelector(
+            ".cl-socialButtonsIconButton__custom_naver_auth",
+          ) ||
+          document.querySelector(
+            ".cl-socialButtonsBlockButton__custom_naver_auth",
+          );
+        if (naverButton) {
+          naverButtonObserver.observe(naverButton, {
+            childList: true,
+            subtree: true,
+            characterData: true,
+          });
+        } else {
+          // 버튼이 아직 없으면 잠시 후 다시 시도
+          setTimeout(setupNaverButtonObserver, 100);
+        }
+      };
+      setupNaverButtonObserver();
 
       // "최근 사용" 배지 숨기기
       const badges = document.querySelectorAll(
