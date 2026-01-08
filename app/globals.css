@@ -1179,14 +1179,19 @@ button.cl-socialButtonsBlockButton__custom_naver_auth {
   .cl-socialButtonsBlockButtonText {
   color: white !important;
   font-weight: bold !important;
-  font-size: 18px !important;
+  font-size: 15px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
   width: 100% !important;
+  height: 100% !important;
+  text-align: center !important;
   text-transform: uppercase !important;
   letter-spacing: 0.5px !important;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  line-height: 1 !important;
 }
 
 /* 네이버 버튼 내부 모든 요소에서 검정색 제거 (배경색은 버튼 자체의 초록색 유지) */
