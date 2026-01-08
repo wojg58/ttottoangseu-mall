@@ -157,6 +157,58 @@ export default function SignInContent() {
         });
       }
 
+      // 네이버 버튼의 "N" 로고는 유지하고 버튼 텍스트만 변경
+      const updateNaverButtonText = () => {
+        const naverButton = document.querySelector(
+          ".cl-socialButtonsBlockButton__custom_naver_auth",
+        ) as HTMLElement;
+        if (naverButton) {
+          // 아이콘 텍스트는 "N"으로 유지 (이미지처럼 왼쪽에 N 로고)
+          const naverIconElement = naverButton.querySelector(
+            ".cl-internal-g5v6j2",
+          ) as HTMLElement;
+          if (naverIconElement && naverIconElement.textContent !== "N") {
+            naverIconElement.textContent = "N";
+            console.log(
+              "[SignInContent] 네이버 버튼 아이콘 텍스트를 'N'으로 설정",
+            );
+          }
+
+          // 버튼 텍스트 ("Naver_auth로 계속하기" → "네이버로 로그인")
+          const naverButtonText = naverButton.querySelector(
+            ".cl-socialButtonsBlockButtonText__custom_naver_auth",
+          ) as HTMLElement;
+          if (
+            naverButtonText &&
+            (naverButtonText.textContent?.includes("Naver_auth") ||
+              naverButtonText.textContent !== "네이버로 로그인")
+          ) {
+            naverButtonText.textContent = "네이버로 로그인";
+            console.log(
+              "[SignInContent] 네이버 버튼 텍스트를 '네이버로 로그인'으로 변경",
+            );
+          }
+        }
+      };
+
+      updateNaverButtonText();
+
+      // 네이버 버튼 텍스트가 변경되어도 "네이버"로 유지
+      const naverButtonObserver = new MutationObserver(() => {
+        updateNaverButtonText();
+      });
+
+      const naverButton = document.querySelector(
+        ".cl-socialButtonsBlockButton__custom_naver_auth",
+      );
+      if (naverButton) {
+        naverButtonObserver.observe(naverButton, {
+          childList: true,
+          subtree: true,
+          characterData: true,
+        });
+      }
+
       // "최근 사용" 배지 숨기기
       const badges = document.querySelectorAll(
         ".cl-lastAuthenticationStrategyBadge",
@@ -829,7 +881,10 @@ export default function SignInContent() {
         url.includes("/sign-in/create") ||
         url.includes("/sign-in/verify")
       ) {
-        console.log("[SignInContent] replaceState 차단 (중간 페이지 방지):", url);
+        console.log(
+          "[SignInContent] replaceState 차단 (중간 페이지 방지):",
+          url,
+        );
         // 중간 페이지로 이동하려는 시도를 홈으로 리다이렉트
         if (window.location.pathname === "/sign-in") {
           window.location.replace("/");
@@ -874,12 +929,12 @@ export default function SignInContent() {
         e.preventDefault();
         e.stopPropagation();
         e.stopImmediatePropagation();
-        
+
         // 추가로 모든 이벤트 전파 차단
         if (e.cancelable) {
           e.preventDefault();
         }
-        
+
         // Clerk의 기본 폼 제출 동작 완전히 차단
         const form = e.target as HTMLFormElement;
         if (form) {
@@ -913,8 +968,13 @@ export default function SignInContent() {
           // 이메일 형식 검증
           const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
           if (emailValue && !emailRegex.test(emailValue)) {
-            console.error("[SignInContent] 이메일 형식이 올바르지 않음:", emailValue);
-            alert("올바른 이메일 주소 형식을 입력해주세요.\n예: example@email.com");
+            console.error(
+              "[SignInContent] 이메일 형식이 올바르지 않음:",
+              emailValue,
+            );
+            alert(
+              "올바른 이메일 주소 형식을 입력해주세요.\n예: example@email.com",
+            );
             return;
           }
 
@@ -946,7 +1006,10 @@ export default function SignInContent() {
             });
 
           console.log("[SignInContent] 최종 검증된 이메일:", emailValue);
-          console.log("[SignInContent] 이메일 정제 후 길이:", emailValue.length);
+          console.log(
+            "[SignInContent] 이메일 정제 후 길이:",
+            emailValue.length,
+          );
 
           if (emailValue && passwordValue) {
             try {
@@ -1023,7 +1086,10 @@ export default function SignInContent() {
               // 이메일과 비밀번호를 함께 전달하여 로그인 시도
               console.log("[SignInContent] SignIn.create 호출 중...");
               console.log("[SignInContent] 전달할 identifier:", emailValue);
-              console.log("[SignInContent] 전달할 password:", passwordValue ? "***" : "(없음)");
+              console.log(
+                "[SignInContent] 전달할 password:",
+                passwordValue ? "***" : "(없음)",
+              );
               console.log(
                 "[SignInContent] identifier 타입:",
                 typeof emailValue,
@@ -1048,7 +1114,9 @@ export default function SignInContent() {
                   "[SignInContent] 최종 검증 실패 - 이메일 형식이 올바르지 않음:",
                   emailValue,
                 );
-                alert("올바른 이메일 주소 형식을 입력해주세요.\n예: example@email.com");
+                alert(
+                  "올바른 이메일 주소 형식을 입력해주세요.\n예: example@email.com",
+                );
                 return;
               }
 
@@ -1060,12 +1128,16 @@ export default function SignInContent() {
 
               try {
                 // 1단계: identifier만으로 signIn 생성
-                console.log("[SignInContent] 1단계: identifier만으로 SignIn.create 호출");
+                console.log(
+                  "[SignInContent] 1단계: identifier만으로 SignIn.create 호출",
+                );
                 console.log("[SignInContent] 전달할 identifier 값:", {
                   value: emailValue,
                   type: typeof emailValue,
                   length: emailValue.length,
-                  charCodes: Array.from(emailValue).map((char) => char.charCodeAt(0)),
+                  charCodes: Array.from(emailValue).map((char) =>
+                    char.charCodeAt(0),
+                  ),
                   json: JSON.stringify(emailValue),
                 });
 
@@ -1073,8 +1145,14 @@ export default function SignInContent() {
                   identifier: emailValue,
                 });
 
-                console.log("[SignInContent] SignIn.create 성공, 응답:", signInAttempt);
-                console.log("[SignInContent] SignIn 상태:", signInAttempt.status);
+                console.log(
+                  "[SignInContent] SignIn.create 성공, 응답:",
+                  signInAttempt,
+                );
+                console.log(
+                  "[SignInContent] SignIn 상태:",
+                  signInAttempt.status,
+                );
 
                 // 2단계: 비밀번호로 인증 시도
                 console.log("[SignInContent] 2단계: 비밀번호로 인증 시도");
@@ -1091,15 +1169,27 @@ export default function SignInContent() {
                   password: passwordValue,
                 });
 
-                console.log("[SignInContent] attemptFirstFactor 성공, 상태:", result.status);
+                console.log(
+                  "[SignInContent] attemptFirstFactor 성공, 상태:",
+                  result.status,
+                );
               } catch (error: any) {
                 // 에러 상세 로깅
-                console.error("[SignInContent] 로그인 과정에서 에러 발생:", error);
+                console.error(
+                  "[SignInContent] 로그인 과정에서 에러 발생:",
+                  error,
+                );
                 console.error("[SignInContent] 에러 타입:", typeof error);
                 console.error("[SignInContent] 에러 이름:", error?.name);
                 console.error("[SignInContent] 에러 메시지:", error?.message);
-                console.error("[SignInContent] 에러 코드:", error?.errors?.[0]?.code);
-                console.error("[SignInContent] 에러 전체:", JSON.stringify(error, null, 2));
+                console.error(
+                  "[SignInContent] 에러 코드:",
+                  error?.errors?.[0]?.code,
+                );
+                console.error(
+                  "[SignInContent] 에러 전체:",
+                  JSON.stringify(error, null, 2),
+                );
 
                 // 에러를 다시 throw하여 상위 catch 블록에서 처리
                 throw error;
@@ -1146,9 +1236,11 @@ export default function SignInContent() {
                         });
                         setActiveSuccess = true;
                         console.log("[SignInContent] setActive 완료");
-                        
+
                         // setActive 직후 즉시 홈으로 리다이렉트하여 중간 페이지 방지
-                        console.log("[SignInContent] setActive 직후 즉시 홈으로 리다이렉트");
+                        console.log(
+                          "[SignInContent] setActive 직후 즉시 홈으로 리다이렉트",
+                        );
                         window.location.replace("/");
                         return; // 즉시 함수 종료하여 추가 처리 방지
                       } catch (retryError: any) {
@@ -1243,9 +1335,7 @@ export default function SignInContent() {
                   );
 
                   // createdSessionId가 없으면 홈으로 이동
-                  console.log(
-                    "[SignInContent] 홈으로 리다이렉트",
-                  );
+                  console.log("[SignInContent] 홈으로 리다이렉트");
                   window.location.href = "/";
                 }
               } else {
@@ -1267,20 +1357,32 @@ export default function SignInContent() {
                   alert(errorMessage);
                 } else if (result.status === "needs_second_factor") {
                   // 2단계 인증이 필요한 경우 (새로운 클라이언트/기기에서 로그인 시)
-                  console.log("[SignInContent] 2단계 인증 필요, 자동 처리 시작");
-                  console.log("[SignInContent] supportedSecondFactors:", result.supportedSecondFactors);
-                  console.log("[SignInContent] clientTrustState:", result.clientTrustState);
-                  
+                  console.log(
+                    "[SignInContent] 2단계 인증 필요, 자동 처리 시작",
+                  );
+                  console.log(
+                    "[SignInContent] supportedSecondFactors:",
+                    result.supportedSecondFactors,
+                  );
+                  console.log(
+                    "[SignInContent] clientTrustState:",
+                    result.clientTrustState,
+                  );
+
                   try {
                     // 이메일 링크를 우선적으로 사용 (사용자가 링크를 클릭하면 자동으로 로그인됨)
-                    const emailLinkStrategy = result.supportedSecondFactors?.find(
-                      (factor: any) => factor.strategy === "email_link"
-                    );
-                    
+                    const emailLinkStrategy =
+                      result.supportedSecondFactors?.find(
+                        (factor: any) => factor.strategy === "email_link",
+                      );
+
                     if (emailLinkStrategy) {
                       console.log("[SignInContent] 이메일 링크 전송 시작");
-                      console.log("[SignInContent] 리다이렉트 URL:", redirectUrl);
-                      
+                      console.log(
+                        "[SignInContent] 리다이렉트 URL:",
+                        redirectUrl,
+                      );
+
                       // 이메일 링크 전송 (링크를 클릭하면 자동으로 로그인됨)
                       await signInAttempt.prepareSecondFactor({
                         strategy: "email_link",
@@ -1288,46 +1390,54 @@ export default function SignInContent() {
                           ? redirectUrl
                           : `${window.location.origin}${redirectUrl}`,
                       });
-                      
+
                       console.log("[SignInContent] 이메일 링크 전송 완료");
-                      
+
                       // 사용자에게 안내 메시지 표시
                       alert(
                         "보안을 위해 이메일 인증이 필요합니다.\n\n" +
-                        "이메일로 인증 링크를 보냈습니다.\n" +
-                        "이메일을 확인하고 링크를 클릭해주세요.\n\n" +
-                        "인증 링크를 클릭하면 자동으로 로그인됩니다."
+                          "이메일로 인증 링크를 보냈습니다.\n" +
+                          "이메일을 확인하고 링크를 클릭해주세요.\n\n" +
+                          "인증 링크를 클릭하면 자동으로 로그인됩니다.",
                       );
                       return;
                     }
-                    
+
                     // 이메일 링크가 없으면 이메일 코드 사용
-                    const emailCodeStrategy = result.supportedSecondFactors?.find(
-                      (factor: any) => factor.strategy === "email_code"
-                    );
-                    
+                    const emailCodeStrategy =
+                      result.supportedSecondFactors?.find(
+                        (factor: any) => factor.strategy === "email_code",
+                      );
+
                     if (emailCodeStrategy) {
                       console.log("[SignInContent] 이메일 코드 전송 시작");
                       // 2단계 인증 코드 전송
                       await signInAttempt.prepareSecondFactor({
                         strategy: "email_code",
                       });
-                      
+
                       console.log("[SignInContent] 이메일 코드 전송 완료");
-                      console.log("[SignInContent] 이메일 코드 입력 UI가 자동으로 표시됩니다");
+                      console.log(
+                        "[SignInContent] 이메일 코드 입력 UI가 자동으로 표시됩니다",
+                      );
                       // 이메일 코드 입력 UI가 자동으로 표시됨 (Clerk가 처리)
                       // 사용자가 코드를 입력하면 자동으로 인증 완료됨
                       return;
                     } else {
                       // 지원되는 2단계 인증 방법이 없는 경우
-                      console.warn("[SignInContent] 지원되는 2단계 인증 방법을 찾을 수 없음");
+                      console.warn(
+                        "[SignInContent] 지원되는 2단계 인증 방법을 찾을 수 없음",
+                      );
                       errorMessage =
                         "2단계 인증이 필요하지만 지원되는 방법을 찾을 수 없습니다.\n\n" +
                         "Clerk Dashboard에서 이메일 인증 설정을 확인해주세요.";
                       alert(errorMessage);
                     }
                   } catch (mfaError: any) {
-                    console.error("[SignInContent] 2단계 인증 처리 중 에러:", mfaError);
+                    console.error(
+                      "[SignInContent] 2단계 인증 처리 중 에러:",
+                      mfaError,
+                    );
                     console.error("[SignInContent] 에러 상세:", {
                       message: mfaError.message,
                       errors: mfaError.errors,
@@ -1336,7 +1446,9 @@ export default function SignInContent() {
                     errorMessage =
                       "2단계 인증 처리 중 오류가 발생했습니다.\n\n" +
                       "에러: " +
-                      (mfaError.errors?.[0]?.message || mfaError.message || "알 수 없는 오류") +
+                      (mfaError.errors?.[0]?.message ||
+                        mfaError.message ||
+                        "알 수 없는 오류") +
                       "\n\n다시 시도해주세요.";
                     alert(errorMessage);
                   }
@@ -1814,7 +1926,6 @@ export default function SignInContent() {
   //   };
   // }, []);
 
-
   // 로그인 성공 후 홈으로 리다이렉트 처리
   useEffect(() => {
     if (isLoaded && isSignedIn) {
@@ -1909,7 +2020,6 @@ export default function SignInContent() {
                   },
                 }}
               />
-
             </div>
 
             {/* 회원가입 링크 */}
