@@ -61,23 +61,24 @@ export default function SignInContent() {
         return;
       }
 
-      console.group("[SignInContent] 폼 필드 업데이트 - 세로 레이아웃");
+      console.group("[SignInContent] 폼 필드 업데이트 - 가로 레이아웃");
 
-      // 소셜 버튼 컨테이너를 세로 배치로 변경 (구글 버튼 하나로 꽉 채우기)
+      // 소셜 버튼 루트 컨테이너가 한 줄로 배치되도록 설정 (구글, 카카오, 네이버 3개 나란히)
       const socialButtonsRoot = document.querySelector(
         ".cl-socialButtonsRoot",
       ) as HTMLElement;
       if (socialButtonsRoot) {
         socialButtonsRoot.style.cssText = `
           display: flex !important;
-          flex-direction: column !important;
+          flex-direction: row !important;
           gap: 0.75rem !important;
           width: 100% !important;
+          flex-wrap: nowrap !important;
           margin-bottom: 18.9px !important;
         `;
       }
 
-      // 각 소셜 버튼 컨테이너도 flex로 설정
+      // 각 소셜 버튼 컨테이너도 flex로 설정 (한 줄에 배치)
       const socialButtons = document.querySelectorAll(
         ".cl-socialButtons",
       ) as NodeListOf<HTMLElement>;
@@ -89,8 +90,10 @@ export default function SignInContent() {
         if (hasAnySocialButton) {
           container.style.cssText = `
             display: flex !important;
-            width: 100% !important;
+            width: auto !important;
             min-width: 0 !important;
+            flex: 1 !important;
+            flex-shrink: 1 !important;
           `;
         } else {
           // 완전히 빈 컨테이너만 숨기기
@@ -179,7 +182,7 @@ export default function SignInContent() {
           (document.querySelector(
             ".cl-socialButtonsBlockButton__custom_naver_auth",
           ) as HTMLElement);
-        
+
         if (naverButton) {
           // 아이콘 텍스트를 "NAVER"로 변경
           const naverIconElement = naverButton.querySelector(
@@ -196,14 +199,9 @@ export default function SignInContent() {
           const naverButtonText = naverButton.querySelector(
             ".cl-socialButtonsBlockButtonText__custom_naver_auth, .cl-socialButtonsBlockButtonText",
           ) as HTMLElement;
-          if (
-            naverButtonText &&
-            naverButtonText.textContent !== "NAVER"
-          ) {
+          if (naverButtonText && naverButtonText.textContent !== "NAVER") {
             naverButtonText.textContent = "NAVER";
-            console.log(
-              "[SignInContent] 네이버 버튼 텍스트를 'NAVER'로 변경",
-            );
+            console.log("[SignInContent] 네이버 버튼 텍스트를 'NAVER'로 변경");
           }
         }
       };

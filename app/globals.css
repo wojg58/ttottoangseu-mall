@@ -1041,20 +1041,22 @@ button[type="submit"]:disabled {
   box-sizing: border-box !important;
 }
 
-/* 소셜 버튼 루트 컨테이너 - 가로 배치 */
+/* 소셜 버튼 루트 컨테이너 - 모든 버튼을 한 줄에 가로 배치 */
 .cl-socialButtonsRoot {
   display: flex !important;
   flex-direction: row !important;
   gap: 0.75rem !important;
   width: 100% !important;
+  flex-wrap: nowrap !important;
 }
 
 /* 소셜 버튼 컨테이너 - 각 버튼이 같은 행에 배치되도록 */
 .cl-socialButtons {
   display: flex !important;
   flex: 1 !important;
-  width: 100% !important;
+  width: auto !important;
   min-width: 0 !important;
+  flex-shrink: 1 !important;
 }
 
 /* 소셜 버튼 블록 버튼 (Google 등) - 가로 배치 */
@@ -1155,10 +1157,12 @@ button.cl-socialButtonsBlockButton__custom_naver_auth {
 }
 
 /* 네이버 버튼 내부 텍스트 스타일 - "NAVER" 중앙 정렬 (이미지처럼) */
-.cl-socialButtonsIconButton__custom_naver_auth .cl-socialButtonsProviderInitialIcon,
+.cl-socialButtonsIconButton__custom_naver_auth
+  .cl-socialButtonsProviderInitialIcon,
 .cl-socialButtonsIconButton__custom_naver_auth .cl-providerIcon,
 .cl-socialButtonsIconButton__custom_naver_auth .cl-internal-g5v6j2,
-.cl-socialButtonsBlockButton__custom_naver_auth .cl-socialButtonsProviderInitialIcon,
+.cl-socialButtonsBlockButton__custom_naver_auth
+  .cl-socialButtonsProviderInitialIcon,
 .cl-socialButtonsBlockButton__custom_naver_auth .cl-providerIcon,
 .cl-socialButtonsBlockButton__custom_naver_auth .cl-internal-g5v6j2 {
   color: white !important;
@@ -1177,7 +1181,8 @@ button.cl-socialButtonsBlockButton__custom_naver_auth {
 
 /* 네이버 버튼 텍스트 스타일 - 중앙 정렬 */
 .cl-socialButtonsIconButton__custom_naver_auth .cl-socialButtonsBlockButtonText,
-.cl-socialButtonsBlockButton__custom_naver_auth .cl-socialButtonsBlockButtonText {
+.cl-socialButtonsBlockButton__custom_naver_auth
+  .cl-socialButtonsBlockButtonText {
   color: white !important;
   font-weight: bold !important;
   font-size: 18px !important;
