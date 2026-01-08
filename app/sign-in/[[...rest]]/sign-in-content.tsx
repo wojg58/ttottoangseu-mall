@@ -170,13 +170,13 @@ export default function SignInContent() {
 
       // 버튼 순서 변경 실행 (여러 번 시도하여 확실히 적용)
       reorderSocialButtons();
-      
+
       // DOM이 완전히 로드된 후 다시 한 번 실행
       setTimeout(() => {
         reorderSocialButtons();
         updateNaverButtonText();
       }, 100);
-      
+
       setTimeout(() => {
         reorderSocialButtons();
         updateNaverButtonText();
@@ -282,10 +282,12 @@ export default function SignInContent() {
             ".cl-internal-g5v6j2",
           );
           naverIconElements.forEach((element) => {
-            (element as HTMLElement).style.cssText = `display: none !important;`;
+            (
+              element as HTMLElement
+            ).style.cssText = `display: none !important;`;
           });
 
-          // 버튼 텍스트를 "NAVER"로 강제 변경
+          // 버튼 텍스트를 "NAVER"로 강제 변경 및 중앙 정렬
           const naverButtonText = naverButton.querySelector(
             ".cl-socialButtonsBlockButtonText__custom_naver_auth, .cl-socialButtonsBlockButtonText",
           ) as HTMLElement;
@@ -306,9 +308,21 @@ export default function SignInContent() {
               margin: 0 !important;
               padding: 0 !important;
               line-height: 1 !important;
+              position: absolute !important;
+              left: 50% !important;
+              top: 50% !important;
+              transform: translate(-50%, -50%) !important;
             `;
-            console.log("[SignInContent] 네이버 버튼 텍스트를 'NAVER'로 변경");
+            console.log("[SignInContent] 네이버 버튼 텍스트를 'NAVER'로 변경 및 중앙 정렬");
           }
+          
+          // 버튼 자체도 중앙 정렬 강화
+          naverButton.style.cssText += `
+            position: relative !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+          `;
         }
       };
 
@@ -319,7 +333,7 @@ export default function SignInContent() {
 
       // 초기 실행 및 지속적인 모니터링
       updateNaverButtonText();
-      
+
       // 네이버 버튼이 나타날 때까지 대기 후 Observer 설정
       const setupNaverButtonObserver = () => {
         const naverButton =
