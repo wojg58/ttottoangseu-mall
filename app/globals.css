@@ -1050,13 +1050,14 @@ button[type="submit"]:disabled {
   flex-wrap: nowrap !important;
 }
 
-/* 소셜 버튼 컨테이너 - 각 버튼이 같은 행에 배치되도록 */
+/* 소셜 버튼 컨테이너 - 각 버튼이 같은 행에 배치되도록, 동일한 크기 */
 .cl-socialButtons {
   display: flex !important;
-  flex: 1 !important;
-  width: auto !important;
+  flex: 1 1 0% !important;
+  width: 0 !important;
   min-width: 0 !important;
   flex-shrink: 1 !important;
+  flex-basis: 0 !important;
 }
 
 /* 소셜 버튼 블록 버튼 (Google 등) - 가로 배치 */

@@ -78,7 +78,71 @@ export default function SignInContent() {
         `;
       }
 
-      // 각 소셜 버튼 컨테이너도 flex로 설정 (한 줄에 배치)
+      // 소셜 버튼 순서 변경 및 개별 컨테이너로 분리 (구글, 카카오, 네이버 순서)
+      const reorderSocialButtons = () => {
+        const socialButtonsRoot = document.querySelector(
+          ".cl-socialButtonsRoot",
+        ) as HTMLElement;
+        if (!socialButtonsRoot) return;
+
+        // 각 버튼 찾기
+        const googleButton = socialButtonsRoot.querySelector(
+          ".cl-socialButtonsIconButton__google",
+        ) as HTMLElement;
+        const kakaoButton = socialButtonsRoot.querySelector(
+          ".cl-socialButtonsIconButton__custom_kakao",
+        ) as HTMLElement;
+        const naverButton = socialButtonsRoot.querySelector(
+          ".cl-socialButtonsBlockButton__custom_naver_auth, .cl-socialButtonsIconButton__custom_naver_auth",
+        ) as HTMLElement;
+
+        if (!googleButton || !kakaoButton || !naverButton) return;
+
+        // 기존 컨테이너 모두 제거
+        const existingContainers = Array.from(
+          socialButtonsRoot.querySelectorAll(".cl-socialButtons"),
+        );
+        existingContainers.forEach((container) => {
+          if (container.parentNode) {
+            container.parentNode.removeChild(container);
+          }
+        });
+
+        // 각 버튼을 개별 컨테이너로 감싸기
+        const createButtonContainer = (button: HTMLElement) => {
+          const container = document.createElement("div");
+          container.className = "cl-socialButtons";
+          container.style.cssText = `
+            display: flex !important;
+            width: 0 !important;
+            min-width: 0 !important;
+            flex: 1 1 0% !important;
+            flex-shrink: 1 !important;
+            flex-basis: 0 !important;
+          `;
+          // 버튼을 부모에서 제거하고 새 컨테이너에 추가
+          if (button.parentNode) {
+            button.parentNode.removeChild(button);
+          }
+          container.appendChild(button);
+          return container;
+        };
+
+        // 순서대로 컨테이너 생성 및 추가: 구글, 카카오, 네이버
+        const googleContainer = createButtonContainer(googleButton);
+        const kakaoContainer = createButtonContainer(kakaoButton);
+        const naverContainer = createButtonContainer(naverButton);
+
+        socialButtonsRoot.appendChild(googleContainer);
+        socialButtonsRoot.appendChild(kakaoContainer);
+        socialButtonsRoot.appendChild(naverContainer);
+
+        console.log(
+          "[SignInContent] 소셜 버튼 순서 변경 및 개별 컨테이너로 분리: 구글 → 카카오 → 네이버",
+        );
+      };
+
+      // 각 소셜 버튼 컨테이너도 flex로 설정 (한 줄에 배치, 동일한 크기)
       const socialButtons = document.querySelectorAll(
         ".cl-socialButtons",
       ) as NodeListOf<HTMLElement>;
@@ -90,10 +154,11 @@ export default function SignInContent() {
         if (hasAnySocialButton) {
           container.style.cssText = `
             display: flex !important;
-            width: auto !important;
+            width: 0 !important;
             min-width: 0 !important;
-            flex: 1 !important;
+            flex: 1 1 0% !important;
             flex-shrink: 1 !important;
+            flex-basis: 0 !important;
           `;
         } else {
           // 완전히 빈 컨테이너만 숨기기
@@ -102,6 +167,9 @@ export default function SignInContent() {
           `;
         }
       });
+
+      // 버튼 순서 변경 실행
+      reorderSocialButtons();
 
       // 소셜 버튼들도 flex로 설정 (모든 버튼 동일한 높이)
       const socialButtonsBlockButton = document.querySelectorAll(
