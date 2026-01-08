@@ -123,6 +123,18 @@ export default function SignInContent() {
         `;
       });
 
+      // 네이버 버튼도 IconButton처럼 동작하도록 스타일 적용
+      const naverButtons = document.querySelectorAll(
+        ".cl-socialButtonsBlockButton__custom_naver_auth, .cl-socialButtonsIconButton__custom_naver_auth",
+      ) as NodeListOf<HTMLElement>;
+      naverButtons.forEach((button) => {
+        button.style.cssText += `
+          width: 100% !important;
+          min-width: 0 !important;
+          flex: 1 !important;
+        `;
+      });
+
       // 카카오 버튼의 "K" 글자를 "kakao"로 변경
       const updateKakaoButtonText = () => {
         const kakaoButton = document.querySelector(
@@ -157,35 +169,40 @@ export default function SignInContent() {
         });
       }
 
-      // 네이버 버튼의 "N" 로고는 유지하고 버튼 텍스트만 변경
+      // 네이버 버튼 텍스트를 "NAVER"로 변경 (이미지처럼 중앙 정렬)
       const updateNaverButtonText = () => {
-        const naverButton = document.querySelector(
-          ".cl-socialButtonsBlockButton__custom_naver_auth",
-        ) as HTMLElement;
+        // IconButton과 BlockButton 모두 처리
+        const naverButton =
+          (document.querySelector(
+            ".cl-socialButtonsIconButton__custom_naver_auth",
+          ) as HTMLElement) ||
+          (document.querySelector(
+            ".cl-socialButtonsBlockButton__custom_naver_auth",
+          ) as HTMLElement);
+        
         if (naverButton) {
-          // 아이콘 텍스트는 "N"으로 유지 (이미지처럼 왼쪽에 N 로고)
+          // 아이콘 텍스트를 "NAVER"로 변경
           const naverIconElement = naverButton.querySelector(
             ".cl-internal-g5v6j2",
           ) as HTMLElement;
-          if (naverIconElement && naverIconElement.textContent !== "N") {
-            naverIconElement.textContent = "N";
+          if (naverIconElement && naverIconElement.textContent !== "NAVER") {
+            naverIconElement.textContent = "NAVER";
             console.log(
-              "[SignInContent] 네이버 버튼 아이콘 텍스트를 'N'으로 설정",
+              "[SignInContent] 네이버 버튼 아이콘 텍스트를 'NAVER'로 변경",
             );
           }
 
-          // 버튼 텍스트 ("Naver_auth로 계속하기" → "네이버로 로그인")
+          // 버튼 텍스트도 "NAVER"로 변경
           const naverButtonText = naverButton.querySelector(
-            ".cl-socialButtonsBlockButtonText__custom_naver_auth",
+            ".cl-socialButtonsBlockButtonText__custom_naver_auth, .cl-socialButtonsBlockButtonText",
           ) as HTMLElement;
           if (
             naverButtonText &&
-            (naverButtonText.textContent?.includes("Naver_auth") ||
-              naverButtonText.textContent !== "네이버로 로그인")
+            naverButtonText.textContent !== "NAVER"
           ) {
-            naverButtonText.textContent = "네이버로 로그인";
+            naverButtonText.textContent = "NAVER";
             console.log(
-              "[SignInContent] 네이버 버튼 텍스트를 '네이버로 로그인'으로 변경",
+              "[SignInContent] 네이버 버튼 텍스트를 'NAVER'로 변경",
             );
           }
         }
@@ -193,14 +210,18 @@ export default function SignInContent() {
 
       updateNaverButtonText();
 
-      // 네이버 버튼 텍스트가 변경되어도 "네이버"로 유지
+      // 네이버 버튼 텍스트가 변경되어도 "NAVER"로 유지
       const naverButtonObserver = new MutationObserver(() => {
         updateNaverButtonText();
       });
 
-      const naverButton = document.querySelector(
-        ".cl-socialButtonsBlockButton__custom_naver_auth",
-      );
+      const naverButton =
+        document.querySelector(
+          ".cl-socialButtonsIconButton__custom_naver_auth",
+        ) ||
+        document.querySelector(
+          ".cl-socialButtonsBlockButton__custom_naver_auth",
+        );
       if (naverButton) {
         naverButtonObserver.observe(naverButton, {
           childList: true,
