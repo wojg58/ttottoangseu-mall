@@ -14,50 +14,10 @@ config({ path: resolve(process.cwd(), ".env.local") });
 config({ path: resolve(process.cwd(), ".env") });
 
 import { getServiceRoleClient } from "@/lib/supabase/service-role";
-
-/**
- * Supabase Storage URL에서 파일 경로를 추출합니다.
- */
-function extractFilePathFromUrl(imageUrl: string): string | null {
-  try {
-    const url = new URL(imageUrl);
-    // /storage/v1/object/public/product-images/ 또는 /storage/v1/object/sign/product-images/ 경로에서 파일 경로 추출
-    const productImagesMatch = url.pathname.match(/\/storage\/v1\/object\/(?:public|sign)\/product-images\/(.+)$/);
-    if (productImagesMatch && productImagesMatch[1]) {
-      return productImagesMatch[1];
-    }
-    // 하위 호환성: uploads 버킷도 지원
-    const uploadsMatch = url.pathname.match(/\/storage\/v1\/object\/(?:public|sign)\/uploads\/(.+)$/);
-    if (uploadsMatch && uploadsMatch[1]) {
-      return uploadsMatch[1];
-    }
-    return null;
-  } catch (error) {
-    console.error("[extractFilePathFromUrl] URL 파싱 에러:", error);
-    return null;
-  }
-}
-
-/**
- * Supabase Storage URL에서 버킷 이름을 추출합니다.
- */
-function extractBucketFromUrl(imageUrl: string): string | null {
-  try {
-    const url = new URL(imageUrl);
-    // product-images 버킷 확인
-    if (url.pathname.includes("/product-images/")) {
-      return "product-images";
-    }
-    // uploads 버킷 확인 (하위 호환성)
-    if (url.pathname.includes("/uploads/")) {
-      return "uploads";
-    }
-    return null;
-  } catch (error) {
-    console.error("[extractBucketFromUrl] URL 파싱 에러:", error);
-    return null;
-  }
-}
+import {
+  extractFilePathFromUrl,
+  extractBucketFromUrl,
+} from "@/lib/utils/storage-url";
 
 async function checkImageUrls(productName?: string) {
   console.log("=".repeat(60));

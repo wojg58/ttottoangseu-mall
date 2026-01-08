@@ -14,24 +14,7 @@ config({ path: resolve(process.cwd(), ".env.local") });
 config({ path: resolve(process.cwd(), ".env") });
 
 import { getServiceRoleClient } from "@/lib/supabase/service-role";
-
-/**
- * Supabase Storage URL에서 파일 경로를 추출합니다.
- */
-function extractFilePathFromUrl(imageUrl: string): string | null {
-  try {
-    const url = new URL(imageUrl);
-    // /storage/v1/object/public/product-images/ 또는 /storage/v1/object/sign/product-images/ 경로에서 파일 경로 추출
-    const pathMatch = url.pathname.match(/\/storage\/v1\/object\/(?:public|sign)\/product-images\/(.+)$/);
-    if (pathMatch && pathMatch[1]) {
-      return pathMatch[1];
-    }
-    return null;
-  } catch (error) {
-    console.error("[extractFilePathFromUrl] URL 파싱 에러:", error);
-    return null;
-  }
-}
+import { extractFilePathFromUrl } from "@/lib/utils/storage-url";
 
 async function cleanupUnusedImages() {
   console.log("=".repeat(60));
