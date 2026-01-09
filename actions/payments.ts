@@ -174,10 +174,13 @@ export async function confirmPayment({
 
     // 6. 결제 정보 데이터베이스 저장
     console.log("[confirmPayment] 결제 정보 데이터베이스 저장 중...");
+    const { normalizePaymentMethod } = await import("@/lib/utils/payment-method");
+    const normalizedMethod = normalizePaymentMethod(paymentData.method);
+    
     const { error: paymentError } = await supabase.from("payments").insert({
       order_id: orderId,
       payment_key: paymentData.paymentKey,
-      method: paymentData.method.toLowerCase(), // 대문자 → 소문자 변환 (CARD → card)
+      method: normalizedMethod, // 한글/영어 → 영어 소문자 변환 (카드/CARD → card)
       amount: paymentData.totalAmount,
       status: paymentData.status.toLowerCase(), // 대문자 → 소문자 변환 (DONE → done)
       requested_at: paymentData.requestedAt,

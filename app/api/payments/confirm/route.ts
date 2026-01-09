@@ -202,12 +202,15 @@ export async function POST(request: NextRequest) {
     }
 
     // 결제 정보 업데이트
+    const { normalizePaymentMethod } = await import("@/lib/utils/payment-method");
+    const normalizedMethod = normalizePaymentMethod(tossPaymentData.method || "card");
+    
     const { error: updateError } = await supabase
       .from("payments")
       .update({
         payment_key: paymentKey,
         toss_payment_id: tossPaymentData.paymentKey || tossPaymentData.id,
-        method: tossPaymentData.method || "card",
+        method: normalizedMethod, // 한글/영어 → 영어 소문자 변환 (카드/CARD → card)
         status: "done",
         approved_at: new Date().toISOString(),
         receipt_url: tossPaymentData.receipt?.url || null,

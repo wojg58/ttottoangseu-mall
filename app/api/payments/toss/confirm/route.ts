@@ -30,6 +30,7 @@ import {
   sanitizeDatabaseError,
   logError,
 } from "@/lib/error-handler";
+import { normalizePaymentMethod } from "@/lib/utils/payment-method";
 
 interface TossPaymentResponse {
   paymentKey: string;
@@ -390,10 +391,14 @@ export async function POST(request: NextRequest) {
     const requestedAt = paymentData.requestedAt || new Date().toISOString();
     const approvedAt = paymentData.approvedAt || new Date().toISOString();
 
+    // 결제 수단 정규화 (한글 "카드" → 영어 "card" 변환)
+    const normalizedMethod = normalizePaymentMethod(paymentData.method);
+
     logger.info("결제 정보 저장 데이터:", {
       orderId,
       paymentKey: paymentData.paymentKey.substring(0, 10) + "...",
-      method: paymentData.method.toLowerCase(),
+      originalMethod: paymentData.method,
+      normalizedMethod,
       amount: paymentData.totalAmount,
       status: paymentData.status.toLowerCase(),
       requestedAt,
@@ -405,7 +410,7 @@ export async function POST(request: NextRequest) {
       .insert({
         order_id: orderId,
         payment_key: paymentData.paymentKey,
-        method: paymentData.method.toLowerCase(), // 대문자 → 소문자 변환 (CARD → card)
+        method: normalizedMethod, // 한글/영어 → 영어 소문자 변환 (카드/CARD → card)
         amount: paymentData.totalAmount,
         status: paymentData.status.toLowerCase(), // 대문자 → 소문자 변환 (DONE → done)
         requested_at: requestedAt,

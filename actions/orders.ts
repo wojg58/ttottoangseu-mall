@@ -705,15 +705,13 @@ export async function savePaymentInfo(
       return { success: false, message: "주문을 찾을 수 없습니다." };
     }
 
+    const { normalizePaymentMethod } = await import("@/lib/utils/payment-method");
+    const normalizedMethod = normalizePaymentMethod(paymentData.method);
+    
     const { error: paymentError } = await supabase.from("payments").insert({
       order_id: orderId,
       payment_key: paymentData.paymentKey,
-      method: paymentData.method as
-        | "card"
-        | "virtual_account"
-        | "transfer"
-        | "mobile"
-        | "etc",
+      method: normalizedMethod, // 한글/영어 → 영어 소문자 변환 (카드/CARD → card)
       status: "done",
       amount: paymentData.amount,
       approved_at: new Date().toISOString(),
