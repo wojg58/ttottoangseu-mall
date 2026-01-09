@@ -26,35 +26,39 @@ export default function DateDisplay({
 
   useEffect(() => {
     setMounted(true);
+    
+    // UTC 시간 문자열을 Date 객체로 변환
     const dateObj = typeof date === "string" ? new Date(date) : date;
 
+    // Intl.DateTimeFormat을 사용하여 한국 시간대로 명시적으로 변환
+    const koreaFormatter = new Intl.DateTimeFormat("ko-KR", {
+      timeZone: "Asia/Seoul",
+    });
+
     if (format === "datetime") {
-      setFormattedDate(
-        dateObj.toLocaleString("ko-KR", {
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-          hour: "2-digit",
-          minute: "2-digit",
-          timeZone: "Asia/Seoul",
-        }),
-      );
+      const formatter = new Intl.DateTimeFormat("ko-KR", {
+        timeZone: "Asia/Seoul",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+      setFormattedDate(formatter.format(dateObj));
     } else if (format === "short") {
-      setFormattedDate(
-        dateObj.toLocaleString("ko-KR", {
-          month: "short",
-          day: "numeric",
-          hour: "2-digit",
-          minute: "2-digit",
-          timeZone: "Asia/Seoul",
-        }),
-      );
+      const formatter = new Intl.DateTimeFormat("ko-KR", {
+        timeZone: "Asia/Seoul",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+      setFormattedDate(formatter.format(dateObj));
     } else {
-      setFormattedDate(
-        dateObj.toLocaleDateString("ko-KR", {
-          timeZone: "Asia/Seoul",
-        }),
-      );
+      const formatter = new Intl.DateTimeFormat("ko-KR", {
+        timeZone: "Asia/Seoul",
+      });
+      setFormattedDate(formatter.format(dateObj));
     }
   }, [date, format]);
 
