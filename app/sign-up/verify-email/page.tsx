@@ -11,6 +11,7 @@ import { useSignUp } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { saveMemberAdditionalInfo } from "@/actions/member-actions";
 import logger from "@/lib/logger";
 
 function VerifyEmailContent() {
@@ -51,6 +52,53 @@ function VerifyEmailContent() {
         }
 
         logger.debug("[VerifyEmail] 인증 완료");
+
+        // 세션 스토리지에서 회원 추가 정보 가져오기
+        if (typeof window !== "undefined") {
+          const pendingInfoStr = sessionStorage.getItem("pendingMemberInfo");
+          if (pendingInfoStr) {
+            try {
+              const pendingInfo = JSON.parse(pendingInfoStr);
+              logger.debug("[VerifyEmail] 회원 추가 정보 저장 시작");
+
+              // 생년월일 조합
+              let birth_date: string | undefined;
+              if (pendingInfo.birth_year && pendingInfo.birth_month && pendingInfo.birth_day) {
+                birth_date = `${pendingInfo.birth_year}-${pendingInfo.birth_month.padStart(
+                  2,
+                  "0"
+                )}-${pendingInfo.birth_day.padStart(2, "0")}`;
+              }
+
+              const saveResult = await saveMemberAdditionalInfo({
+                member_type: pendingInfo.member_type,
+                company_type: pendingInfo.company_type,
+                hint: pendingInfo.hint,
+                hint_answer: pendingInfo.hint_answer,
+                postcode: pendingInfo.postcode,
+                addr1: pendingInfo.addr1,
+                addr2: pendingInfo.addr2,
+                phone: pendingInfo.phone,
+                mobile: pendingInfo.mobile,
+                gender: pendingInfo.gender,
+                birth_date: birth_date,
+                is_solar_calendar: pendingInfo.is_solar_calendar ?? true,
+                is_sms: pendingInfo.is_sms ?? false,
+                is_news_mail: pendingInfo.is_news_mail ?? false,
+              });
+
+              if (saveResult.success) {
+                logger.debug("[VerifyEmail] 회원 추가 정보 저장 완료");
+                sessionStorage.removeItem("pendingMemberInfo");
+              } else {
+                logger.error("[VerifyEmail] 회원 추가 정보 저장 실패:", saveResult.error);
+              }
+            } catch (error) {
+              logger.error("[VerifyEmail] 회원 추가 정보 파싱 에러:", error);
+            }
+          }
+        }
+
         logger.groupEnd();
 
         // 회원가입 완료 페이지로 이동

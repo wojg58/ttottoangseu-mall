@@ -338,22 +338,10 @@ export default function JoinForm() {
 
       logger.debug("[JoinForm] 이메일 인증 코드 전송 완료");
 
-      // 3단계: Supabase에 추가 정보 저장 (세션 활성화 후)
-      if (result.createdSessionId) {
-        await setActive({ session: result.createdSessionId });
-
-        logger.debug("[JoinForm] 2단계: Supabase 추가 정보 저장");
-
-        // 생년월일 조합
-        let birth_date: string | undefined;
-        if (data.birth_year && data.birth_month && data.birth_day) {
-          birth_date = `${data.birth_year}-${data.birth_month.padStart(
-            2,
-            "0"
-          )}-${data.birth_day.padStart(2, "0")}`;
-        }
-
-        const saveResult = await saveMemberAdditionalInfo({
+      // 3단계: 폼 데이터를 세션 스토리지에 임시 저장 (이메일 인증 완료 후 저장하기 위해)
+      // 이메일 인증이 완료된 후에 추가 정보를 저장하도록 변경
+      if (typeof window !== "undefined") {
+        const formDataToSave = {
           member_type: data.member_type,
           company_type: data.company_type,
           hint: data.hint,
@@ -364,17 +352,15 @@ export default function JoinForm() {
           phone: data.phone,
           mobile: data.mobile,
           gender: data.gender,
-          birth_date: birth_date,
+          birth_year: data.birth_year,
+          birth_month: data.birth_month,
+          birth_day: data.birth_day,
           is_solar_calendar: data.is_solar_calendar,
           is_sms: data.is_sms,
           is_news_mail: data.is_news_mail,
-        });
-
-        if (!saveResult.success) {
-          logger.error("[JoinForm] 추가 정보 저장 실패:", saveResult.error);
-        } else {
-          logger.debug("[JoinForm] 추가 정보 저장 완료");
-        }
+        };
+        sessionStorage.setItem("pendingMemberInfo", JSON.stringify(formDataToSave));
+        logger.debug("[JoinForm] 폼 데이터를 세션 스토리지에 저장");
       }
 
       logger.debug("[JoinForm] 회원가입 완료");
