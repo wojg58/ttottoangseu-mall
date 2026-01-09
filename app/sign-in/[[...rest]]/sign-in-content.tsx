@@ -20,7 +20,7 @@ import {
 } from "@clerk/nextjs";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 export default function SignInContent() {
   const searchParams = useSearchParams();
@@ -935,8 +935,8 @@ export default function SignInContent() {
       });
     };
 
-    // 주기적으로 에러 메시지 확인 및 숨기기
-    const errorCheckInterval = setInterval(hideErrorAlerts, 500);
+    // 주기적으로 에러 메시지 확인 및 숨기기 (2초마다, 무한 루프 방지)
+    const errorCheckInterval = setInterval(hideErrorAlerts, 2000);
 
     return () => {
       clearTimeout(initialTimeout);
@@ -991,8 +991,8 @@ export default function SignInContent() {
       }
     };
 
-    // 더 빠른 주기로 URL 확인 (100ms)
-    const interval = setInterval(preventSecondPageRedirect, 100);
+    // URL 확인 (1초마다, 무한 루프 방지)
+    const interval = setInterval(preventSecondPageRedirect, 1000);
 
     // popstate 이벤트 리스너 (뒤로가기/앞으로가기)
     window.addEventListener("popstate", preventSecondPageRedirect);
@@ -1051,13 +1051,26 @@ export default function SignInContent() {
   }, [router]);
 
   // Clerk 폼 제출을 가로채서 바로 로그인 처리
+  // useRef를 사용하여 의존성 변경으로 인한 무한 루프 방지
+  const isInterceptedRef = useRef(false);
+  const cleanupFunctionsRef = useRef<(() => void)[]>([]);
+  
   useEffect(() => {
-    let isIntercepted = false; // 이미 가로채기 설정되었는지 확인하는 플래그
+    // 이미 가로채기 설정되었으면 실행하지 않음 (무한 루프 방지)
+    if (isInterceptedRef.current) {
+      return;
+    }
+    
+    // Clerk가 아직 초기화되지 않았으면 실행하지 않음
+    if (!isLoaded || !signInLoaded || !signIn || !clerk) {
+      return;
+    }
+    
     let cleanupFunctions: (() => void)[] = []; // cleanup 함수들을 저장
 
     const interceptClerkFormSubmit = () => {
       // 이미 설정되었으면 실행하지 않음 (중복 방지)
-      if (isIntercepted) return;
+      if (isInterceptedRef.current) return;
 
       const clerkForm = document.querySelector(
         "form.cl-form",
@@ -2027,7 +2040,7 @@ export default function SignInContent() {
         loginButton.addEventListener("click", handleButtonClick, true);
 
         // 가로채기 설정 완료 플래그
-        isIntercepted = true;
+        isInterceptedRef.current = true;
 
         // cleanup 함수들을 배열에 저장
         cleanupFunctions.push(() => {
@@ -2038,7 +2051,7 @@ export default function SignInContent() {
       } else {
         // 폼만 찾았지만 버튼은 없는 경우
         clerkForm.addEventListener("submit", handleFormSubmit, true);
-        isIntercepted = true;
+        isInterceptedRef.current = true;
 
         // cleanup 함수를 배열에 저장
         cleanupFunctions.push(() => {
@@ -2046,6 +2059,9 @@ export default function SignInContent() {
         });
       }
     };
+
+    // cleanup 함수들을 ref에 저장
+    cleanupFunctionsRef.current = cleanupFunctions;
 
     // 한 번만 실행 (setInterval 제거로 무한 루프 방지)
     const initialTimeout = setTimeout(interceptClerkFormSubmit, 500);
@@ -2056,11 +2072,11 @@ export default function SignInContent() {
       clearTimeout(initialTimeout);
       clearTimeout(secondTimeout);
       // 저장된 cleanup 함수들 모두 실행
-      cleanupFunctions.forEach((cleanup) => cleanup());
-      cleanupFunctions = [];
-      isIntercepted = false; // 플래그 리셋
+      cleanupFunctionsRef.current.forEach((cleanup) => cleanup());
+      cleanupFunctionsRef.current = [];
+      isInterceptedRef.current = false; // 플래그 리셋
     };
-  }, [clerk, signIn, signInLoaded, router, redirectUrl, isLoaded, isSignedIn]);
+  }, [isLoaded, signInLoaded]); // 의존성 배열 최소화 (불필요한 재실행 방지)
 
   // // Clerk가 자동으로 생성한 카카오 버튼 삭제
   // useEffect(() => {
