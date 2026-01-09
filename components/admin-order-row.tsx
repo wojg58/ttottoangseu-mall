@@ -8,7 +8,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { updateOrderStatus } from "@/actions/admin";
-import type { Order } from "@/types/database";
+import type { Order, OrderPaymentStatus } from "@/types/database";
 import { Button } from "@/components/ui/button";
 import DateDisplay from "@/components/date-display";
 
@@ -16,7 +16,7 @@ interface AdminOrderRowProps {
   order: Order;
 }
 
-const STATUS_OPTIONS: { value: Order["status"]; label: string }[] = [
+const PAYMENT_STATUS_OPTIONS: { value: OrderPaymentStatus; label: string }[] = [
   { value: "PENDING", label: "결제 대기" },
   { value: "PAID", label: "결제 완료" },
   { value: "CANCELED", label: "주문 취소" },
@@ -25,15 +25,21 @@ const STATUS_OPTIONS: { value: Order["status"]; label: string }[] = [
 
 export default function AdminOrderRow({ order }: AdminOrderRowProps) {
   const [isPending, startTransition] = useTransition();
-  const [currentStatus, setCurrentStatus] = useState(order.status);
+  const [currentPaymentStatus, setCurrentPaymentStatus] = useState(
+    order.payment_status,
+  );
 
-  const handleStatusChange = (newStatus: Order["status"]) => {
-    console.log("[AdminOrderRow] 상태 변경:", order.order_number, newStatus);
+  const handlePaymentStatusChange = (newStatus: OrderPaymentStatus) => {
+    console.log(
+      "[AdminOrderRow] 결제 상태 변경:",
+      order.order_number,
+      newStatus,
+    );
 
     startTransition(async () => {
       const result = await updateOrderStatus(order.id, newStatus);
       if (result.success) {
-        setCurrentStatus(newStatus);
+        setCurrentPaymentStatus(newStatus);
       } else {
         alert(result.message);
       }
@@ -57,22 +63,22 @@ export default function AdminOrderRow({ order }: AdminOrderRowProps) {
       </td>
       <td className="py-4 px-4">
         <select
-          value={currentStatus}
+          value={currentPaymentStatus}
           onChange={(e) =>
-            handleStatusChange(e.target.value as Order["status"])
+            handlePaymentStatusChange(e.target.value as OrderPaymentStatus)
           }
           disabled={isPending}
           className={`px-3 py-1.5 rounded-lg text-xs border-0 focus:ring-2 focus:ring-[#fad2e6] ${
-            currentStatus === "PAID"
+            currentPaymentStatus === "PAID"
               ? "bg-green-100 text-green-600"
-              : currentStatus === "CANCELED"
+              : currentPaymentStatus === "CANCELED"
               ? "bg-gray-100 text-gray-600"
-              : currentStatus === "REFUNDED"
+              : currentPaymentStatus === "REFUNDED"
               ? "bg-orange-100 text-orange-600"
               : "bg-[#ffeef5] text-[#ff6b9d]"
           } disabled:opacity-50`}
         >
-          {STATUS_OPTIONS.map((option) => (
+          {PAYMENT_STATUS_OPTIONS.map((option) => (
             <option key={option.value} value={option.value}>
               {option.label}
             </option>

@@ -59,17 +59,17 @@ export async function getDashboardStats(): Promise<DashboardStats | null> {
     .from("orders")
     .select("*", { count: "exact", head: true });
 
-  // 대기 중인 주문 수
+  // 대기 중인 주문 수 (payment_status 기준)
   const { count: pendingOrders } = await supabase
     .from("orders")
     .select("*", { count: "exact", head: true })
-    .in("status", ["PENDING", "PAID"]);
+    .in("payment_status", ["PENDING", "PAID"]);
 
-  // 총 매출
+  // 총 매출 (payment_status = PAID 기준)
   const { data: revenueData } = await supabase
     .from("orders")
     .select("total_amount")
-    .in("status", ["PAID"]);
+    .eq("payment_status", "PAID");
 
   const totalRevenue =
     revenueData?.reduce((sum, order) => sum + order.total_amount, 0) || 0;
@@ -101,11 +101,14 @@ export async function getDashboardStats(): Promise<DashboardStats | null> {
 
 // 모든 주문 조회
 export async function getAllOrders(
-  status?: string,
+  paymentStatus?: string,
+  fulfillmentStatus?: string,
   page: number = 1,
   pageSize: number = 20,
 ): Promise<{ orders: Order[]; total: number; totalPages: number }> {
   console.group("[getAllOrders] 전체 주문 조회");
+  console.log("paymentStatus:", paymentStatus || "(전체)");
+  console.log("fulfillmentStatus:", fulfillmentStatus || "(전체)");
 
   const isAdminUser = await isAdmin();
   if (!isAdminUser) {
@@ -118,8 +121,14 @@ export async function getAllOrders(
 
   let query = supabase.from("orders").select("*", { count: "exact" });
 
-  if (status) {
-    query = query.eq("status", status);
+  // payment_status 필터
+  if (paymentStatus) {
+    query = query.eq("payment_status", paymentStatus);
+  }
+
+  // fulfillment_status 필터
+  if (fulfillmentStatus) {
+    query = query.eq("fulfillment_status", fulfillmentStatus);
   }
 
   query = query.order("created_at", { ascending: false });
@@ -146,14 +155,18 @@ export async function getAllOrders(
   return { orders: (data as Order[]) || [], total, totalPages };
 }
 
-// 주문 상태 업데이트
+// 주문 상태 업데이트 (payment_status, fulfillment_status 분리)
 export async function updateOrderStatus(
   orderId: string,
-  status: Order["status"],
+  paymentStatus?: Order["payment_status"],
+  fulfillmentStatus?: Order["fulfillment_status"],
   trackingNumber?: string,
 ): Promise<{ success: boolean; message: string }> {
   console.group("[updateOrderStatus] 주문 상태 업데이트");
-  console.log("주문:", orderId, "상태:", status);
+  console.log("주문:", orderId);
+  console.log("paymentStatus:", paymentStatus || "(변경 없음)");
+  console.log("fulfillmentStatus:", fulfillmentStatus || "(변경 없음)");
+  console.log("trackingNumber:", trackingNumber || "(없음)");
 
   const isAdminUser = await isAdmin();
   if (!isAdminUser) {
@@ -165,15 +178,36 @@ export async function updateOrderStatus(
   const supabase = await createClient();
 
   const updateData: {
-    status: Order["status"];
+    payment_status?: Order["payment_status"];
+    fulfillment_status?: Order["fulfillment_status"];
     tracking_number?: string;
+    shipped_at?: string;
+    delivered_at?: string;
     updated_at: string;
   } = {
-    status,
     updated_at: new Date().toISOString(),
   };
 
-  if (trackingNumber) {
+  // payment_status 업데이트
+  if (paymentStatus) {
+    updateData.payment_status = paymentStatus;
+  }
+
+  // fulfillment_status 업데이트
+  if (fulfillmentStatus) {
+    updateData.fulfillment_status = fulfillmentStatus;
+
+    // 배송 상태에 따른 자동 처리
+    if (fulfillmentStatus === "SHIPPED" && trackingNumber) {
+      updateData.tracking_number = trackingNumber;
+      updateData.shipped_at = new Date().toISOString();
+    } else if (fulfillmentStatus === "DELIVERED") {
+      updateData.delivered_at = new Date().toISOString();
+    }
+  }
+
+  // trackingNumber만 별도로 업데이트하는 경우
+  if (trackingNumber && !updateData.tracking_number) {
     updateData.tracking_number = trackingNumber;
   }
 
