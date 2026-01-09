@@ -184,17 +184,85 @@ export async function POST(request: NextRequest) {
 
     logger.info("✅ 결제 금액 검증 완료");
 
-    // 8. 이미 결제 완료된 주문인지 확인
-    if (order.status === "paid") {
-      logger.warn("이미 결제 완료된 주문");
+    // 8. 주문 상태 검증 (pending 상태만 결제 가능)
+    if (order.status !== "pending") {
+      if (order.status === "paid") {
+        logger.warn("이미 결제 완료된 주문");
+        logger.groupEnd();
+        return NextResponse.json(
+          { success: true, message: "이미 결제가 완료된 주문입니다.", orderId: order.order_number },
+          { status: 200 }
+        );
+      } else {
+        logger.error("결제 불가능한 주문 상태:", { status: order.status });
+        logger.groupEnd();
+        return NextResponse.json(
+          { success: false, message: `결제할 수 없는 주문 상태입니다. (상태: ${order.status})` },
+          { status: 400 }
+        );
+      }
+    }
+
+    // 9. payment_key 중복 체크 (중복 결제 방지)
+    logger.info("payment_key 중복 체크 중...");
+    const { data: existingPayment, error: paymentCheckError } = await supabase
+      .from("payments")
+      .select("id, order_id, status, approved_at")
+      .eq("payment_key", paymentKey)
+      .maybeSingle();
+
+    if (paymentCheckError) {
+      logError(paymentCheckError, { api: "/api/payments/toss/confirm", step: "check_existing_payment" });
       logger.groupEnd();
       return NextResponse.json(
-        { success: true, message: "이미 결제가 완료된 주문입니다.", orderId: order.order_number },
-        { status: 200 }
+        { success: false, message: "결제 정보 확인 중 오류가 발생했습니다." },
+        { status: 500 }
       );
     }
 
-    // 9. 토스페이먼츠 승인 API 호출
+    if (existingPayment) {
+      // 같은 payment_key로 이미 결제가 처리된 경우
+      if (existingPayment.order_id === orderId) {
+        logger.warn("이미 처리된 payment_key (같은 주문):", {
+          paymentId: existingPayment.id,
+          status: existingPayment.status,
+        });
+        logger.groupEnd();
+        return NextResponse.json(
+          {
+            success: true,
+            message: "이미 처리된 결제입니다.",
+            orderId: order.order_number,
+          },
+          { status: 200 }
+        );
+      } else {
+        // 다른 주문에 사용된 payment_key (보안 위험)
+        logError(
+          new Error("Payment key already used for different order"),
+          {
+            api: "/api/payments/toss/confirm",
+            step: "duplicate_payment_key_check",
+            paymentKey: paymentKey.substring(0, 10) + "...",
+            existingOrderId: existingPayment.order_id,
+            requestOrderId: orderId,
+          }
+        );
+        logger.error("보안 경고: 다른 주문에 사용된 payment_key", {
+          existingOrderId: existingPayment.order_id,
+          requestOrderId: orderId,
+        });
+        logger.groupEnd();
+        return NextResponse.json(
+          { success: false, message: "이미 사용된 결제 키입니다." },
+          { status: 400 }
+        );
+      }
+    }
+
+    logger.info("✅ payment_key 중복 체크 완료 (새로운 결제)");
+
+    // 10. 토스페이먼츠 승인 API 호출
     logger.info("토스페이먼츠 승인 API 호출 중...");
     const secretKey =
       process.env.TOSS_SECRET_KEY || process.env.TOSS_PAYMENTS_SECRET_KEY;
@@ -245,20 +313,94 @@ export async function POST(request: NextRequest) {
       totalAmount: paymentData.totalAmount,
     });
 
-    // 10. 결제 정보 데이터베이스 저장
+    // 11. 토스페이먼츠 응답 상태 검증
+    if (paymentData.status !== "DONE") {
+      logger.error("토스페이먼츠 결제 상태가 DONE이 아님:", { status: paymentData.status });
+      logger.groupEnd();
+      return NextResponse.json(
+        {
+          success: false,
+          message: `결제 상태가 올바르지 않습니다. (상태: ${paymentData.status})`,
+        },
+        { status: 400 }
+      );
+    }
+
+    // 12. 결제 금액 재검증 (토스페이먼츠 응답과 비교)
+    if (paymentData.totalAmount !== amountNumber || paymentData.totalAmount !== order.total_amount) {
+      logError(
+        new Error("Payment amount mismatch with Toss response"),
+        {
+          api: "/api/payments/toss/confirm",
+          step: "amount_verification",
+          requestAmount: amountNumber,
+          orderAmount: order.total_amount,
+          tossAmount: paymentData.totalAmount,
+        }
+      );
+      logger.error("결제 금액 불일치 (토스페이먼츠 응답):", {
+        requestAmount: amountNumber,
+        orderAmount: order.total_amount,
+        tossAmount: paymentData.totalAmount,
+      });
+      logger.groupEnd();
+      return NextResponse.json(
+        { success: false, message: "결제 금액이 일치하지 않습니다." },
+        { status: 400 }
+      );
+    }
+
+    // 13. 결제 정보 데이터베이스 저장 (트랜잭션 처리)
     logger.info("결제 정보 데이터베이스 저장 중...");
-    const { error: paymentError } = await supabase.from("payments").insert({
-      order_id: orderId,
-      payment_key: paymentData.paymentKey,
-      payment_method: paymentData.method,
-      amount: paymentData.totalAmount,
-      status: paymentData.status,
-      requested_at: paymentData.requestedAt,
-      approved_at: paymentData.approvedAt,
-      payment_data: paymentData, // 전체 응답 데이터 저장 (JSONB)
-    });
+    
+    // payment_key 중복 재확인 (동시성 문제 방지)
+    const { data: duplicateCheck, error: duplicateCheckError } = await supabase
+      .from("payments")
+      .select("id")
+      .eq("payment_key", paymentData.paymentKey)
+      .maybeSingle();
+
+    if (duplicateCheckError) {
+      logError(duplicateCheckError, { api: "/api/payments/toss/confirm", step: "duplicate_check_before_insert" });
+      logger.groupEnd();
+      return NextResponse.json(
+        { success: false, message: "결제 정보 확인 중 오류가 발생했습니다." },
+        { status: 500 }
+      );
+    }
+
+    if (duplicateCheck) {
+      logger.warn("동시 요청으로 인한 중복 결제 시도 감지:", {
+        paymentId: duplicateCheck.id,
+      });
+      logger.groupEnd();
+      return NextResponse.json(
+        {
+          success: true,
+          message: "이미 처리된 결제입니다.",
+          orderId: order.order_number,
+        },
+        { status: 200 }
+      );
+    }
+
+    const { data: insertedPayment, error: paymentError } = await supabase
+      .from("payments")
+      .insert({
+        order_id: orderId,
+        payment_key: paymentData.paymentKey,
+        payment_method: paymentData.method,
+        amount: paymentData.totalAmount,
+        status: paymentData.status,
+        requested_at: paymentData.requestedAt,
+        approved_at: paymentData.approvedAt,
+        payment_data: paymentData, // 전체 응답 데이터 저장 (JSONB)
+      })
+      .select("id")
+      .single();
 
     if (paymentError) {
+      logError(paymentError, { api: "/api/payments/toss/confirm", step: "insert_payment" });
       logger.error("결제 정보 저장 실패:", paymentError);
       // 결제는 성공했지만 DB 저장 실패 (수동 처리 필요)
       logger.groupEnd();
@@ -274,9 +416,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    logger.info("✅ 결제 정보 저장 완료");
+    logger.info("✅ 결제 정보 저장 완료:", { paymentId: insertedPayment.id });
 
-    // 11. 주문 상태 업데이트 (PAID)
+    // 14. 주문 상태 업데이트 (PAID) - 원자성 보장
     logger.info("주문 상태 업데이트 중...");
     const { error: updateError } = await supabase
       .from("orders")
@@ -284,10 +426,19 @@ export async function POST(request: NextRequest) {
         status: "paid",
         updated_at: new Date().toISOString(),
       })
-      .eq("id", orderId);
+      .eq("id", orderId)
+      .eq("status", "pending"); // pending 상태인 경우에만 업데이트 (낙관적 잠금)
 
     if (updateError) {
+      logError(updateError, { api: "/api/payments/toss/confirm", step: "update_order_status" });
       logger.error("주문 상태 업데이트 실패:", updateError);
+      
+      // 주문 상태 업데이트 실패 시 결제 정보는 이미 저장됨
+      // 주문 상태를 수동으로 확인해야 함
+      logger.warn("⚠️ 결제는 완료되었으나 주문 상태 업데이트 실패. 수동 확인 필요:", {
+        paymentId: insertedPayment.id,
+        orderId: orderId,
+      });
     } else {
       logger.info("✅ 주문 상태 업데이트 완료 (PAID)");
     }
