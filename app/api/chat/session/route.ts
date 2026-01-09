@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { auth, clerkClient } from "@clerk/nextjs/server";
 import { getServiceRoleClient } from "@/lib/supabase/service-role";
+import {
+  sanitizeDatabaseError,
+  logError,
+} from "@/lib/error-handler";
 
 /**
  * @file app/api/chat/session/route.ts
@@ -36,9 +40,9 @@ export async function POST() {
       .maybeSingle();
 
     if (userFetchError) {
-      console.error("Failed to fetch user:", userFetchError);
+      logError(userFetchError, { api: "/api/chat/session", step: "fetch_user" });
       return NextResponse.json(
-        { error: "Failed to fetch user", details: userFetchError.message },
+        { error: sanitizeDatabaseError(userFetchError) },
         { status: 500 },
       );
     }
@@ -69,9 +73,9 @@ export async function POST() {
         .single();
 
       if (insertError) {
-        console.error("Failed to create user:", insertError);
+        logError(insertError, { api: "/api/chat/session", step: "create_user" });
         return NextResponse.json(
-          { error: "Failed to create user", details: insertError.message },
+          { error: sanitizeDatabaseError(insertError) },
           { status: 500 },
         );
       }
@@ -87,9 +91,9 @@ export async function POST() {
       .single();
 
     if (sessionError) {
-      console.error("Failed to create chat session:", sessionError);
+      logError(sessionError, { api: "/api/chat/session", step: "create_session" });
       return NextResponse.json(
-        { error: "Failed to create chat session", details: sessionError.message },
+        { error: sanitizeDatabaseError(sessionError) },
         { status: 500 },
       );
     }
@@ -97,8 +101,11 @@ export async function POST() {
     console.log("Created session:", session);
     return NextResponse.json({ sessionId: session.id });
   } catch (e) {
-    console.error("Unexpected error:", e);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    logError(e, { api: "/api/chat/session", step: "unexpected_error" });
+    return NextResponse.json(
+      { error: "서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요." },
+      { status: 500 },
+    );
   } finally {
     console.groupEnd();
   }

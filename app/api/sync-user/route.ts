@@ -3,6 +3,11 @@ import { NextResponse } from "next/server";
 import { getServiceRoleClient } from "@/lib/supabase/service-role";
 import * as Sentry from "@sentry/nextjs";
 import {
+  sanitizeDatabaseError,
+  sanitizeAuthError,
+  logError,
+} from "@/lib/error-handler";
+import {
   rateLimitMiddleware,
   rateLimitHeaders,
   RATE_LIMITS,
@@ -197,13 +202,10 @@ export async function POST(request: Request) {
         .maybeSingle();
 
     if (fetchErrorByClerkId) {
-      console.error("❌ 사용자 조회 에러:", fetchErrorByClerkId);
+      logError(fetchErrorByClerkId, { api: "/api/sync-user", step: "fetch_user_by_clerk_id" });
       console.groupEnd();
       return NextResponse.json(
-        {
-          error: "Failed to fetch user",
-          details: fetchErrorByClerkId.message,
-        },
+        { error: sanitizeDatabaseError(fetchErrorByClerkId) },
         { status: 500 },
       );
     }
@@ -263,10 +265,10 @@ export async function POST(request: Request) {
         .single();
 
       if (updateError) {
-        console.error("❌ 사용자 업데이트 에러:", updateError);
+        logError(updateError, { api: "/api/sync-user", step: "update_user" });
         console.groupEnd();
         return NextResponse.json(
-          { error: "Failed to update user", details: updateError.message },
+          { error: sanitizeDatabaseError(updateError) },
           { status: 500 },
         );
       }
@@ -281,10 +283,10 @@ export async function POST(request: Request) {
         .single();
 
       if (insertError) {
-        console.error("❌ 사용자 생성 에러:", insertError);
+        logError(insertError, { api: "/api/sync-user", step: "create_user" });
         console.groupEnd();
         return NextResponse.json(
-          { error: "Failed to create user", details: insertError.message },
+          { error: sanitizeDatabaseError(insertError) },
           { status: 500 },
         );
       }

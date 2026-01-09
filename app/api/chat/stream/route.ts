@@ -12,6 +12,10 @@ import {
   chatMessageSchema,
   validateSchema,
 } from "@/lib/validation";
+import {
+  sanitizeDatabaseError,
+  logError,
+} from "@/lib/error-handler";
 
 /**
  * @file app/api/chat/stream/route.ts
@@ -96,9 +100,9 @@ export async function POST(req: Request) {
       .maybeSingle();
 
     if (userFetchError) {
-      console.error("Failed to fetch user:", userFetchError);
+      logError(userFetchError, { api: "/api/chat/stream", step: "fetch_user" });
       return NextResponse.json(
-        { error: "Failed to fetch user", details: userFetchError.message },
+        { error: sanitizeDatabaseError(userFetchError) },
         { status: 500 },
       );
     }
@@ -120,9 +124,9 @@ export async function POST(req: Request) {
       .maybeSingle();
 
     if (sessionError) {
-      console.error("Failed to fetch session:", sessionError);
+      logError(sessionError, { api: "/api/chat/stream", step: "fetch_session" });
       return NextResponse.json(
-        { error: "Failed to fetch session", details: sessionError.message },
+        { error: sanitizeDatabaseError(sessionError) },
         { status: 500 },
       );
     }
@@ -141,9 +145,9 @@ export async function POST(req: Request) {
       .insert({ session_id: sessionId, role: "user", content: message });
 
     if (insertUserMsgError) {
-      console.error("Failed to insert user message:", insertUserMsgError);
+      logError(insertUserMsgError, { api: "/api/chat/stream", step: "insert_message" });
       return NextResponse.json(
-        { error: "Failed to insert message", details: insertUserMsgError.message },
+        { error: sanitizeDatabaseError(insertUserMsgError) },
         { status: 500 },
       );
     }
@@ -158,9 +162,9 @@ export async function POST(req: Request) {
       .limit(HISTORY_LIMIT);
 
     if (historyError) {
-      console.error("Failed to load history:", historyError);
+      logError(historyError, { api: "/api/chat/stream", step: "load_history" });
       return NextResponse.json(
-        { error: "Failed to load history", details: historyError.message },
+        { error: sanitizeDatabaseError(historyError) },
         { status: 500 },
       );
     }
@@ -247,8 +251,11 @@ export async function POST(req: Request) {
       },
     });
   } catch (e) {
-    console.error("Unexpected error:", e);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    logError(e, { api: "/api/chat/stream", step: "unexpected_error" });
+    return NextResponse.json(
+      { error: "서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요." },
+      { status: 500 },
+    );
   } finally {
     console.groupEnd();
   }

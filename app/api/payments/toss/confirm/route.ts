@@ -25,6 +25,11 @@ import {
   paymentConfirmSchema,
   validateSchema,
 } from "@/lib/validation";
+import {
+  sanitizeError,
+  sanitizeDatabaseError,
+  logError,
+} from "@/lib/error-handler";
 
 interface TossPaymentResponse {
   paymentKey: string;
@@ -299,15 +304,12 @@ export async function POST(request: NextRequest) {
       virtualAccount: paymentData.virtualAccount,
     });
   } catch (error) {
-    logger.error("결제 승인 중 예외 발생:", error);
+    logError(error, { api: "/api/payments/toss/confirm", step: "unexpected_error" });
     logger.groupEnd();
     return NextResponse.json(
       {
         success: false,
-        message:
-          error instanceof Error
-            ? error.message
-            : "결제 처리 중 오류가 발생했습니다.",
+        message: sanitizeError(error, "결제 처리 중 오류가 발생했습니다."),
       },
       { status: 500 }
     );

@@ -14,6 +14,10 @@ import {
   productQuerySchema,
   validateSchema,
 } from "@/lib/validation";
+import {
+  sanitizeError,
+  logError,
+} from "@/lib/error-handler";
 
 export async function GET(request: NextRequest) {
   // Rate Limiting 체크
@@ -63,9 +67,9 @@ export async function GET(request: NextRequest) {
       hasMore: result.page < result.totalPages,
     });
   } catch (error) {
-    console.error("[API] 상품 조회 에러:", error);
+    logError(error, { api: "/api/products", step: "get_products" });
     return NextResponse.json(
-      { error: "상품 조회에 실패했습니다." },
+      { error: sanitizeError(error, "상품 조회에 실패했습니다.") },
       { status: 500 },
     );
   }
