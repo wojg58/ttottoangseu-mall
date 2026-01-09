@@ -15,7 +15,7 @@
 
 "use client";
 
-import { SignedOut, SignedIn, SignOutButton } from "@clerk/nextjs";
+import { SignedOut, SignedIn, SignOutButton, useAuth } from "@clerk/nextjs";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -28,10 +28,11 @@ import {
   User,
   LogOut,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { useClerkSupabaseClient } from "@/lib/supabase/clerk-client";
 
 // 카테고리 데이터 (DB에서 가져올 예정이지만 일단 하드코딩)
 const CATEGORIES = [
@@ -50,7 +51,64 @@ export default function ShopHeader() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [cartItemCount, setCartItemCount] = useState(0);
   const router = useRouter();
+  const { isSignedIn, userId } = useAuth();
+  const supabase = useClerkSupabaseClient();
+
+  // 장바구니 아이템 수량 조회
+  useEffect(() => {
+    async function fetchCartItemCount() {
+      if (!isSignedIn || !userId) {
+        setCartItemCount(0);
+        return;
+      }
+
+      try {
+        // users 테이블에서 clerk_user_id로 user_id 조회
+        const { data: user } = await supabase
+          .from("users")
+          .select("id")
+          .eq("clerk_user_id", userId)
+          .single();
+
+        if (!user) {
+          setCartItemCount(0);
+          return;
+        }
+
+        // 장바구니 조회
+        const { data: cart } = await supabase
+          .from("carts")
+          .select("id")
+          .eq("user_id", user.id)
+          .single();
+
+        if (!cart) {
+          setCartItemCount(0);
+          return;
+        }
+
+        // 장바구니 아이템 개수 조회
+        const { count } = await supabase
+          .from("cart_items")
+          .select("*", { count: "exact", head: true })
+          .eq("cart_id", cart.id);
+
+        setCartItemCount(count ?? 0);
+      } catch (error) {
+        console.error("[ShopHeader] 장바구니 수량 조회 실패:", error);
+        setCartItemCount(0);
+      }
+    }
+
+    fetchCartItemCount();
+
+    // 장바구니 변경 감지를 위한 폴링 (5초마다)
+    const interval = setInterval(fetchCartItemCount, 5000);
+
+    return () => clearInterval(interval);
+  }, [isSignedIn, userId, supabase]);
 
   const handleSearch = (e?: React.FormEvent) => {
     if (e) {
@@ -188,9 +246,11 @@ export default function ShopHeader() {
                           >
                             <div className="relative">
                               <ShoppingCart className="w-5 h-5" />
-                              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
-                                0
-                              </span>
+                              {cartItemCount > 0 && (
+                                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                                  {cartItemCount > 99 ? "99+" : cartItemCount}
+                                </span>
+                              )}
                             </div>
                             장바구니
                           </Link>
@@ -298,9 +358,11 @@ export default function ShopHeader() {
                   >
                     <div className="relative">
                       <ShoppingCart className="w-5 h-5 md:w-6 md:h-6" />
-                      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
-                        0
-                      </span>
+                      {cartItemCount > 0 && (
+                        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                          {cartItemCount > 99 ? "99+" : cartItemCount}
+                        </span>
+                      )}
                     </div>
                     <span className="text-[10px] md:text-xs">장바구니</span>
                   </Link>
