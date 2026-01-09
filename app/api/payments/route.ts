@@ -19,15 +19,10 @@ import {
   rateLimitHeaders,
   RATE_LIMITS,
 } from "@/lib/rate-limit";
-
-// TossPayments API 호출을 위한 타입 정의
-interface TossPaymentRequest {
-  orderId: string;
-  orderNumber: string;
-  amount: number;
-  customerName: string;
-  customerEmail: string;
-}
+import {
+  paymentRequestSchema,
+  validateSchema,
+} from "@/lib/validation";
 
 export async function POST(request: NextRequest) {
   console.group("[POST /api/payments] 결제 요청");
@@ -63,29 +58,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const body: TossPaymentRequest = await request.json();
-    console.log("결제 요청 데이터:", body);
+    // 입력 검증
+    const body = await request.json();
+    const validationResult = validateSchema(paymentRequestSchema, body);
 
-    const { orderId, orderNumber, amount, customerName, customerEmail } = body;
-
-    // 입력값 검증
-    if (!orderId || !orderNumber || !amount || !customerName || !customerEmail) {
-      console.log("필수 입력값 누락");
+    if (!validationResult.success) {
+      console.warn("[Validation] 결제 요청 검증 실패:", validationResult.error);
       console.groupEnd();
       return NextResponse.json(
-        { success: false, message: "필수 입력값이 누락되었습니다." },
+        { success: false, message: validationResult.error },
         { status: 400 }
       );
     }
 
-    if (amount <= 0) {
-      console.log("잘못된 결제 금액");
-      console.groupEnd();
-      return NextResponse.json(
-        { success: false, message: "결제 금액이 올바르지 않습니다." },
-        { status: 400 }
-      );
-    }
+    const { orderId, orderNumber, amount, customerName, customerEmail } = validationResult.data;
+    console.log("결제 요청 데이터:", {
+      orderId,
+      orderNumber,
+      amount,
+      customerName,
+      customerEmail: customerEmail.substring(0, 3) + "***",
+    });
 
     // Supabase 서비스 롤 클라이언트 생성 (RLS 우회)
     const supabase = getServiceRoleClient();

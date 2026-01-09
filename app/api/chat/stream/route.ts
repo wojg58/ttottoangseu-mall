@@ -8,6 +8,10 @@ import {
   rateLimitHeaders,
   RATE_LIMITS,
 } from "@/lib/rate-limit";
+import {
+  chatMessageSchema,
+  validateSchema,
+} from "@/lib/validation";
 
 /**
  * @file app/api/chat/stream/route.ts
@@ -17,18 +21,14 @@ import {
  *
  * 서버 처리:
  * 1) Clerk auth()로 로그인 확인
- * 2) session 소유자 검증
- * 3) user 메시지 저장
- * 4) 최근 메시지 히스토리 로드 후 Gemini 스트리밍 호출
- * 5) 토큰을 SSE로 흘리고, 최종 assistant 메시지 저장
+ * 2) 입력 검증 (Zod 스키마)
+ * 3) session 소유자 검증
+ * 4) user 메시지 저장
+ * 5) 최근 메시지 히스토리 로드 후 Gemini 스트리밍 호출
+ * 6) 토큰을 SSE로 흘리고, 최종 assistant 메시지 저장
  */
 
 export const runtime = "nodejs";
-
-interface RequestBody {
-  sessionId: string;
-  message: string;
-}
 
 function sseEvent(event: string, data: unknown): string {
   return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
@@ -66,21 +66,24 @@ export async function POST(req: Request) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    const body = (await req.json()) as Partial<RequestBody>;
-    const sessionId = (body.sessionId ?? "").trim();
-    const message = (body.message ?? "").trim();
+    // 입력 검증
+    const body = await req.json();
+    const validationResult = validateSchema(chatMessageSchema, body);
+
+    if (!validationResult.success) {
+      console.warn("[Validation] 챗봇 메시지 검증 실패:", validationResult.error);
+      return NextResponse.json(
+        { error: validationResult.error },
+        { status: 400 },
+      );
+    }
+
+    const { sessionId, message } = validationResult.data;
 
     console.log("requestBody:", {
       sessionId,
       messageLength: message.length,
     });
-
-    if (!sessionId || !message) {
-      return NextResponse.json(
-        { error: "sessionId and message are required" },
-        { status: 400 },
-      );
-    }
 
     const supabase = getServiceRoleClient();
 

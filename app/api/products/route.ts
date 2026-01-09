@@ -10,6 +10,10 @@ import {
   rateLimitHeaders,
   RATE_LIMITS,
 } from "@/lib/rate-limit";
+import {
+  productQuerySchema,
+  validateSchema,
+} from "@/lib/validation";
 
 export async function GET(request: NextRequest) {
   // Rate Limiting 체크
@@ -30,9 +34,23 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    // 입력 검증
     const searchParams = request.nextUrl.searchParams;
-    const limit = parseInt(searchParams.get("limit") || "5", 10);
-    const skip = parseInt(searchParams.get("skip") || "0", 10);
+    const queryParams = {
+      limit: searchParams.get("limit") || "12",
+      skip: searchParams.get("skip") || "0",
+    };
+
+    const validationResult = validateSchema(productQuerySchema, queryParams);
+
+    if (!validationResult.success) {
+      return NextResponse.json(
+        { error: validationResult.error },
+        { status: 400 },
+      );
+    }
+
+    const { limit, skip } = validationResult.data;
 
     // 실제 페이지 계산 (skip을 고려)
     const actualPage = Math.floor(skip / limit) + 1;

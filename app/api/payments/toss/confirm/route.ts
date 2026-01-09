@@ -21,6 +21,10 @@ import {
   rateLimitHeaders,
   RATE_LIMITS,
 } from "@/lib/rate-limit";
+import {
+  paymentConfirmSchema,
+  validateSchema,
+} from "@/lib/validation";
 
 interface TossPaymentResponse {
   paymentKey: string;
@@ -96,35 +100,26 @@ export async function POST(request: NextRequest) {
 
     logger.info("✅ 사용자 인증 완료:", clerkUserId);
 
-    // 2. 요청 본문 파싱
+    // 2. 요청 본문 파싱 및 검증
     const body = await request.json();
-    const { paymentKey, orderId, amount } = body;
+    const validationResult = validateSchema(paymentConfirmSchema, body);
+
+    if (!validationResult.success) {
+      logger.error("[Validation] 결제 승인 요청 검증 실패:", validationResult.error);
+      logger.groupEnd();
+      return NextResponse.json(
+        { success: false, message: validationResult.error },
+        { status: 400 }
+      );
+    }
+
+    const { paymentKey, orderId, amount: amountNumber } = validationResult.data;
 
     logger.info("결제 승인 요청:", {
-      paymentKey: paymentKey ? paymentKey.substring(0, 10) + "..." : null,
+      paymentKey: paymentKey.substring(0, 10) + "...",
       orderId,
-      amount,
+      amount: amountNumber,
     });
-
-    // 3. 필수 파라미터 검증
-    if (!paymentKey || !orderId || !amount) {
-      logger.error("필수 파라미터 누락");
-      logger.groupEnd();
-      return NextResponse.json(
-        { success: false, message: "필수 파라미터가 누락되었습니다." },
-        { status: 400 }
-      );
-    }
-
-    const amountNumber = parseInt(amount, 10);
-    if (isNaN(amountNumber) || amountNumber <= 0) {
-      logger.error("잘못된 금액 형식:", amount);
-      logger.groupEnd();
-      return NextResponse.json(
-        { success: false, message: "잘못된 결제 금액입니다." },
-        { status: 400 }
-      );
-    }
 
     // 4. Supabase 서비스 롤 클라이언트 생성 (RLS 우회)
     const supabase = getServiceRoleClient();

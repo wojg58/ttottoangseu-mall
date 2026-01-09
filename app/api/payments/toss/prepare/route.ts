@@ -16,6 +16,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { getServiceRoleClient } from "@/lib/supabase/service-role";
 import logger from "@/lib/logger";
+import {
+  paymentPrepareSchema,
+  validateSchema,
+} from "@/lib/validation";
 
 // 주문번호 생성
 function generateOrderNumber(): string {
@@ -46,8 +50,18 @@ export async function POST(request: NextRequest) {
 
     // 2. 클라이언트에서 전달된 금액 (검증용, 신뢰하지 않음)
     const body = await request.json();
-    const clientAmount = body.amount as number | undefined;
+    const validationResult = validateSchema(paymentPrepareSchema, body);
 
+    if (!validationResult.success) {
+      logger.error("[Validation] 결제 준비 요청 검증 실패:", validationResult.error);
+      logger.groupEnd();
+      return NextResponse.json(
+        { success: false, message: validationResult.error },
+        { status: 400 }
+      );
+    }
+
+    const clientAmount = validationResult.data.amount;
     logger.info("클라이언트에서 전달된 금액:", clientAmount);
 
     // 3. Supabase 서비스 롤 클라이언트 생성 (RLS 우회)
