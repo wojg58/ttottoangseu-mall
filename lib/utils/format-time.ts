@@ -52,20 +52,17 @@ export function formatKoreaTime(
 export function formatKoreaTimeForLog(date: string | Date): string {
   const dateObj = typeof date === "string" ? new Date(date) : date;
   
-  const formatter = new Intl.DateTimeFormat("ko-KR", {
-    timeZone: "Asia/Seoul",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
-  });
-
-  const formatted = formatter.format(dateObj);
-  // "2026. 1. 9. 20:17:21" 형식을 "2026-01-09 20:17:21"로 변환
-  return formatted.replace(/\. /g, "-").replace(/\./g, "").replace(/-(\d)-/g, "-0$1-").replace(/-(\d)$/g, "-0$1") + " (KST)";
+  // UTC 시간을 한국 시간(KST, UTC+9)으로 변환
+  const koreaTime = new Date(dateObj.getTime() + 9 * 60 * 60 * 1000);
+  
+  const year = koreaTime.getUTCFullYear();
+  const month = String(koreaTime.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(koreaTime.getUTCDate()).padStart(2, "0");
+  const hour = String(koreaTime.getUTCHours()).padStart(2, "0");
+  const minute = String(koreaTime.getUTCMinutes()).padStart(2, "0");
+  const second = String(koreaTime.getUTCSeconds()).padStart(2, "0");
+  
+  return `${year}-${month}-${day} ${hour}:${minute}:${second} (KST)`;
 }
 
 /**
