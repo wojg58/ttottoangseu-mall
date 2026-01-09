@@ -386,6 +386,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // requested_at와 approved_at 값 확인 및 기본값 설정
+    const requestedAt = paymentData.requestedAt || new Date().toISOString();
+    const approvedAt = paymentData.approvedAt || new Date().toISOString();
+
+    logger.info("결제 정보 저장 데이터:", {
+      orderId,
+      paymentKey: paymentData.paymentKey.substring(0, 10) + "...",
+      method: paymentData.method.toLowerCase(),
+      amount: paymentData.totalAmount,
+      status: paymentData.status.toLowerCase(),
+      requestedAt,
+      approvedAt,
+    });
+
     const { data: insertedPayment, error: paymentError } = await supabase
       .from("payments")
       .insert({
@@ -394,16 +408,32 @@ export async function POST(request: NextRequest) {
         method: paymentData.method.toLowerCase(), // 대문자 → 소문자 변환 (CARD → card)
         amount: paymentData.totalAmount,
         status: paymentData.status.toLowerCase(), // 대문자 → 소문자 변환 (DONE → done)
-        requested_at: paymentData.requestedAt,
-        approved_at: paymentData.approvedAt,
+        requested_at: requestedAt,
+        approved_at: approvedAt,
         metadata: paymentData, // payment_data → metadata로 수정 (전체 응답 데이터 저장)
       })
       .select("id")
       .single();
 
     if (paymentError) {
+      // 상세한 에러 정보 로깅
+      logger.error("❌ 결제 정보 저장 실패 - 상세 에러:", {
+        errorCode: paymentError.code,
+        errorMessage: paymentError.message,
+        errorDetails: paymentError.details,
+        errorHint: paymentError.hint,
+        insertData: {
+          orderId,
+          paymentKey: paymentData.paymentKey.substring(0, 10) + "...",
+          method: paymentData.method.toLowerCase(),
+          amount: paymentData.totalAmount,
+          status: paymentData.status.toLowerCase(),
+          requestedAt,
+          approvedAt,
+        },
+      });
       logError(paymentError, { api: "/api/payments/toss/confirm", step: "insert_payment" });
-      logger.error("결제 정보 저장 실패:", paymentError);
+      
       // 결제는 성공했지만 DB 저장 실패 (수동 처리 필요)
       logger.groupEnd();
       return NextResponse.json(
