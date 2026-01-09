@@ -725,27 +725,6 @@ export default function JoinForm() {
                   </td>
                 </tr>
 
-                {/* 일반전화 (선택) */}
-                <tr className="border-b border-gray-200">
-                  <th className="bg-gray-50 px-4 py-3 text-left font-medium border-r border-gray-200">
-                    일반전화
-                  </th>
-                  <td className="px-4 py-3">
-                    <Input
-                      id="phone"
-                      type="text"
-                      placeholder="예: 02-1234-5678"
-                      {...register("phone")}
-                      className="w-full"
-                    />
-                    {errors.phone && (
-                      <p className="text-sm text-red-500 mt-1">
-                        {errors.phone.message}
-                      </p>
-                    )}
-                  </td>
-                </tr>
-
                 {/* 휴대전화 */}
                 <tr className="border-b border-gray-200">
                   <th className="bg-gray-50 px-4 py-3 text-left font-medium border-r border-gray-200">
