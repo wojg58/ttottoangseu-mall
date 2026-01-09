@@ -12,11 +12,11 @@
  *
  * @dependencies
  * - papaparse: CSV 파싱
- * - xlsx: 엑셀 파싱
+ * - exceljs: 엑셀 파싱 (xlsx 대체 - 보안 취약점 해결)
  */
 
 import Papa from "papaparse";
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 import type { Category } from "@/types/database";
 
 // CSV/엑셀 파일에서 읽어올 상품 데이터 타입 (스마트스토어 형식)
@@ -159,15 +159,78 @@ export async function parseExcelFile(
 
   try {
     const arrayBuffer = await file.arrayBuffer();
-    const workbook = XLSX.read(arrayBuffer, { type: "array" });
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(arrayBuffer);
 
     // 첫 번째 시트 사용
-    const firstSheetName = workbook.SheetNames[0];
-    const worksheet = workbook.Sheets[firstSheetName];
+    const worksheet = workbook.worksheets[0];
+    if (!worksheet) {
+      throw new Error("엑셀 파일에 시트가 없습니다.");
+    }
 
-    // JSON으로 변환
-    const jsonData = XLSX.utils.sheet_to_json<SmartStoreProductRow>(worksheet, {
-      defval: "", // 빈 셀은 빈 문자열로
+    // 헤더 행 읽기 (첫 번째 행)
+    const headerRow = worksheet.getRow(1);
+    const headers: string[] = [];
+    // 최대 열 수 확인
+    const maxColumn = worksheet.columnCount || headerRow.cellCount;
+    for (let colNumber = 1; colNumber <= maxColumn; colNumber++) {
+      const cell = headerRow.getCell(colNumber);
+      const headerValue = cell.value;
+      if (headerValue !== null && headerValue !== undefined) {
+        headers[colNumber - 1] = headerValue.toString().trim();
+      } else {
+        headers[colNumber - 1] = "";
+      }
+    }
+
+    // 데이터 행 읽기 (2번째 행부터)
+    const jsonData: SmartStoreProductRow[] = [];
+    worksheet.eachRow((row, rowNumber) => {
+      if (rowNumber === 1) return; // 헤더 행 스킵
+
+      const rowData: SmartStoreProductRow = {};
+      
+      // 각 열을 순회하며 데이터 읽기
+      for (let colNumber = 1; colNumber <= headers.length; colNumber++) {
+        const headerName = headers[colNumber - 1];
+        if (!headerName) continue; // 헤더가 없는 열은 스킵
+
+        const cell = row.getCell(colNumber);
+        const value = cell.value;
+
+        // ExcelJS의 셀 값 처리
+        let cellValue: string | number | undefined = undefined;
+        
+        if (value === null || value === undefined) {
+          cellValue = "";
+        } else if (typeof value === "number") {
+          cellValue = value;
+        } else if (typeof value === "boolean") {
+          cellValue = value ? "true" : "false";
+        } else if (typeof value === "object") {
+          // RichText 또는 수식 결과 처리
+          if ("text" in value && typeof value.text === "string") {
+            cellValue = value.text;
+          } else if ("result" in value) {
+            cellValue = value.result?.toString() || "";
+          } else if ("richText" in value) {
+            // RichText 배열인 경우
+            const richText = value.richText as Array<{ text: string }>;
+            cellValue = richText.map((rt) => rt.text).join("");
+          } else {
+            cellValue = value.toString();
+          }
+        } else {
+          cellValue = value.toString();
+        }
+
+        rowData[headerName as keyof SmartStoreProductRow] = cellValue as any;
+      }
+      
+      // 빈 행이 아닌 경우에만 추가
+      if (Object.keys(rowData).length > 0) {
+        jsonData.push(rowData);
+      }
     });
 
     console.log("엑셀 파싱 완료:", jsonData.length, "행");
