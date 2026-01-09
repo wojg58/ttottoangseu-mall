@@ -145,7 +145,7 @@ export default async function ProductDetailPage({
             </h1>
 
             {/* 리뷰 (리뷰가 있을 때만 표시) */}
-            {/* TODO: 실제 리뷰 데이터 연동 시 reviewCount와 averageRating 사용 */}
+            {/* NOTE: 리뷰 기능은 향후 구현 예정 */}
             {false && (
               <div className="flex items-center gap-2 mb-6">
                 <div className="flex items-center">

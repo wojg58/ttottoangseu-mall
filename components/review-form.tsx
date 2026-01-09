@@ -65,7 +65,7 @@ export default function ReviewForm({ productId, onSuccess }: ReviewFormProps) {
         onSuccess?.();
       } else {
         console.error("리뷰 작성 실패:", result.error);
-        // TODO: 에러 메시지 표시
+        alert(result.error || "리뷰 작성에 실패했습니다.");
       }
       console.groupEnd();
     });

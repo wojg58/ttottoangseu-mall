@@ -72,7 +72,7 @@ export default function InquiryForm({
         onSuccess?.();
       } else {
         console.error("문의 작성 실패:", result.error);
-        // TODO: 에러 메시지 표시
+        alert(result.error || "문의 작성에 실패했습니다.");
       }
       console.groupEnd();
     });

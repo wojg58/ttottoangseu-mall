@@ -47,7 +47,7 @@ function ProductCardComponent({ product, rank }: ProductCardProps) {
     e.preventDefault();
     e.stopPropagation();
     setIsLiked(!isLiked);
-    // TODO: 찜하기 기능 구현
+    // NOTE: 찜하기 기능은 향후 구현 예정 (현재는 클라이언트 상태만 관리)
   };
 
   const handleImageError = () => {
@@ -155,7 +155,7 @@ function ProductCardComponent({ product, rank }: ProductCardProps) {
         </div>
 
         {/* 리뷰 (리뷰가 있을 때만 표시) */}
-        {/* TODO: 실제 리뷰 데이터 연동 시 reviewCount와 averageRating 사용 */}
+        {/* NOTE: 리뷰 기능은 향후 구현 예정 */}
         {false && (
           <div className="flex items-center gap-1 mt-2 text-xs text-black">
             <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
