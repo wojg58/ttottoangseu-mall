@@ -200,7 +200,7 @@ export default function ShopHeader() {
                 />
                 {/* 모바일에서도 타이틀 표시 (작게) */}
                 <div>
-                  <h1 className="text-2xl sm:text-lg md:text-4xl lg:text-5xl font-bold drop-shadow-md brand-text-logo text-white whitespace-nowrap">
+                  <h1 className="text-2xl sm:text-lg md:text-4xl lg:text-[52px] font-bold drop-shadow-md brand-text-logo text-white whitespace-nowrap">
                     또또앙스
                   </h1>
                 </div>
