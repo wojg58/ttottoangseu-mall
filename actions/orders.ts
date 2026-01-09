@@ -228,7 +228,9 @@ export async function createOrder(input: CreateOrderInput): Promise<{
       .insert({
         user_id: userId,
         order_number: orderNumber,
-        status: "PENDING",
+        payment_status: "PENDING",
+        fulfillment_status: "UNFULFILLED",
+        status: "PENDING", // 하위 호환성
         total_amount: totalAmount,
         shipping_name: input.shippingName,
         shipping_phone: input.shippingPhone,
@@ -502,7 +504,9 @@ export async function createQuickOrder(
       .insert({
         user_id: userId,
         order_number: orderNumber,
-        status: "PENDING",
+        payment_status: "PENDING",
+        fulfillment_status: "UNFULFILLED",
+        status: "PENDING", // 하위 호환성
         total_amount: input.amount,
         shipping_name: input.customerName,
         shipping_phone: input.customerPhone,
@@ -643,7 +647,11 @@ export async function savePaymentInfo(
 
     await supabase
       .from("orders")
-      .update({ status: "PAID" })
+      .update({ 
+        payment_status: "PAID",
+        fulfillment_status: "UNFULFILLED",
+        status: "PAID" // 하위 호환성
+      })
       .eq("id", orderId);
 
     revalidatePath("/mypage/orders");
@@ -684,12 +692,16 @@ export async function cancelOrder(
       return { success: false, message: "주문을 찾을 수 없습니다." };
     }
 
-    if (order.status === "CANCELED" || order.status === "REFUNDED") {
+    const paymentStatus = order.payment_status || order.status;
+    const fulfillmentStatus = order.fulfillment_status;
+    
+    if (paymentStatus === "CANCELED" || paymentStatus === "REFUNDED") {
       logger.groupEnd();
       return { success: false, message: "이미 취소되거나 환불된 주문입니다." };
     }
 
-    if (order.status === "PAID") {
+    // 배송 중이거나 배송 완료된 주문은 취소 불가
+    if (fulfillmentStatus === "SHIPPED" || fulfillmentStatus === "DELIVERED") {
       logger.groupEnd();
       return {
         success: false,
@@ -799,7 +811,11 @@ export async function cancelOrder(
 
     const { error: updateError } = await supabase
       .from("orders")
-      .update({ status: "CANCELED" })
+      .update({ 
+        payment_status: "CANCELED",
+        fulfillment_status: "CANCELED",
+        status: "CANCELED" // 하위 호환성
+      })
       .eq("id", orderId);
 
     if (updateError) {

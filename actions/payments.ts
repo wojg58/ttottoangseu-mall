@@ -202,7 +202,9 @@ export async function confirmPayment({
     const { error: updateError } = await supabase
       .from("orders")
       .update({
-        status: "PAID", // 결제완료
+        payment_status: "PAID", // 결제완료
+        fulfillment_status: "UNFULFILLED",
+        status: "PAID", // 하위 호환성
         updated_at: new Date().toISOString(),
       })
       .eq("id", orderId);

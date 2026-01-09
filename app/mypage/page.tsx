@@ -182,19 +182,28 @@ export default async function MyPage() {
                         </span>
                         <span
                           className={`text-xs px-2 py-1 rounded-full ${
-                            order.status === "PAID"
+                            (order.fulfillment_status || order.status) === "DELIVERED"
                               ? "bg-green-100 text-green-600"
-                              : order.status === "CANCELED"
+                              : (order.fulfillment_status || order.status) === "SHIPPED"
+                              ? "bg-blue-100 text-blue-600"
+                              : (order.fulfillment_status || order.status) === "PREPARING"
+                              ? "bg-yellow-100 text-yellow-600"
+                              : (order.payment_status || order.status) === "CANCELED"
                               ? "bg-gray-100 text-gray-600"
-                              : order.status === "REFUNDED"
+                              : (order.payment_status || order.status) === "REFUNDED"
                               ? "bg-orange-100 text-orange-600"
+                              : (order.payment_status || order.status) === "PAID"
+                              ? "bg-[#fad2e6] text-[#ff6b9d]"
                               : "bg-[#fad2e6] text-[#ff6b9d]"
                           }`}
                         >
-                          {order.status === "PENDING" && "결제 대기"}
-                          {order.status === "PAID" && "결제 완료"}
-                          {order.status === "CANCELED" && "주문 취소"}
-                          {order.status === "REFUNDED" && "환불 완료"}
+                          {(order.fulfillment_status || order.status) === "DELIVERED" && "배송 완료"}
+                          {(order.fulfillment_status || order.status) === "SHIPPED" && "배송중"}
+                          {(order.fulfillment_status || order.status) === "PREPARING" && "상품 준비중"}
+                          {(order.payment_status || order.status) === "PENDING" && "결제 대기"}
+                          {(order.payment_status || order.status) === "PAID" && (order.fulfillment_status || "UNFULFILLED") === "UNFULFILLED" && "결제 완료"}
+                          {(order.payment_status || order.status) === "CANCELED" && "주문 취소"}
+                          {(order.payment_status || order.status) === "REFUNDED" && "환불 완료"}
                         </span>
                       </div>
                       <div className="flex items-center justify-between text-sm">

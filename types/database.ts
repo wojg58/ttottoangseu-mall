@@ -11,11 +11,25 @@
 // =============================================
 
 export type ProductStatus = "active" | "hidden" | "sold_out";
-export type OrderStatus =
+
+// 주문 결제 상태
+export type OrderPaymentStatus =
   | "PENDING"
   | "PAID"
   | "CANCELED"
   | "REFUNDED";
+
+// 주문 이행/배송 상태
+export type OrderFulfillmentStatus =
+  | "UNFULFILLED"
+  | "PREPARING"
+  | "SHIPPED"
+  | "DELIVERED"
+  | "CANCELED";
+
+// 하위 호환성을 위한 OrderStatus (deprecated)
+export type OrderStatus = OrderPaymentStatus;
+
 export type PaymentMethod =
   | "card"
   | "virtual_account"
@@ -176,7 +190,9 @@ export interface Order {
   id: string;
   user_id: string;
   order_number: string;
-  status: OrderStatus;
+  payment_status: OrderPaymentStatus;
+  fulfillment_status: OrderFulfillmentStatus;
+  status?: OrderStatus; // 하위 호환성 (deprecated, payment_status 사용 권장)
   total_amount: number;
   shipping_name: string;
   shipping_phone: string;

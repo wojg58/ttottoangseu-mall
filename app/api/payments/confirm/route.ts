@@ -230,7 +230,11 @@ export async function POST(request: NextRequest) {
     // 주문 상태 업데이트
     const { error: orderUpdateError } = await supabase
       .from("orders")
-      .update({ status: "PAID" })
+      .update({ 
+        payment_status: "PAID",
+        fulfillment_status: "UNFULFILLED",
+        status: "PAID" // 하위 호환성
+      })
       .eq("id", orderId);
 
     if (orderUpdateError) {

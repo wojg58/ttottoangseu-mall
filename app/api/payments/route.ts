@@ -116,7 +116,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (order.status !== "PENDING") {
+    const paymentStatus = order.payment_status || order.status;
+    if (paymentStatus !== "PENDING") {
       console.log("이미 처리된 주문");
       console.groupEnd();
       return NextResponse.json(

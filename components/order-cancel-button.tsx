@@ -31,7 +31,7 @@ export default function OrderCancelButton({
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
-  // 취소 가능한 상태 확인
+  // 취소 가능한 상태 확인 (결제 대기 또는 결제 완료 상태에서만 취소 가능, 배송 중/완료는 불가)
   const canCancel =
     orderStatus === "PENDING" || orderStatus === "PAID";
 

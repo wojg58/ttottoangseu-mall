@@ -302,7 +302,9 @@ export async function POST(request: NextRequest) {
       .insert({
         user_id: user.id,
         order_number: orderNumber,
-        status: "PENDING",
+        payment_status: "PENDING",
+        fulfillment_status: "UNFULFILLED",
+        status: "PENDING", // 하위 호환성
         total_amount: totalAmount,
         // 주문자 정보는 기본값으로 설정 (나중에 업데이트 가능)
         shipping_name: user.name || "미입력",

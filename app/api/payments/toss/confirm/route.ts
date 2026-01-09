@@ -166,7 +166,8 @@ export async function POST(request: NextRequest) {
     logger.info("✅ 주문 정보 조회 완료:", {
       orderNumber: order.order_number,
       totalAmount: order.total_amount,
-      status: order.status,
+      paymentStatus: order.payment_status || order.status,
+      fulfillmentStatus: order.fulfillment_status,
     });
 
     // 7. 결제 금액 검증
@@ -185,8 +186,9 @@ export async function POST(request: NextRequest) {
     logger.info("✅ 결제 금액 검증 완료");
 
     // 8. 주문 상태 검증 (PENDING 상태만 결제 가능)
-    if (order.status !== "PENDING") {
-      if (order.status === "PAID") {
+    const paymentStatus = order.payment_status || order.status;
+    if (paymentStatus !== "PENDING") {
+      if (paymentStatus === "PAID") {
         logger.warn("이미 결제 완료된 주문");
         logger.groupEnd();
         return NextResponse.json(
@@ -194,10 +196,10 @@ export async function POST(request: NextRequest) {
           { status: 200 }
         );
       } else {
-        logger.error("결제 불가능한 주문 상태:", { status: order.status });
+        logger.error("결제 불가능한 주문 상태:", { paymentStatus });
         logger.groupEnd();
         return NextResponse.json(
-          { success: false, message: `결제할 수 없는 주문 상태입니다. (상태: ${order.status})` },
+          { success: false, message: `결제할 수 없는 주문 상태입니다. (상태: ${paymentStatus})` },
           { status: 400 }
         );
       }
@@ -418,16 +420,18 @@ export async function POST(request: NextRequest) {
 
     logger.info("✅ 결제 정보 저장 완료:", { paymentId: insertedPayment.id });
 
-    // 14. 주문 상태 업데이트 (PAID) - 원자성 보장
+    // 14. 주문 상태 업데이트 (결제 성공: payment_status=PAID, fulfillment_status=UNFULFILLED) - 원자성 보장
     logger.info("주문 상태 업데이트 중...");
     const { error: updateError } = await supabase
       .from("orders")
       .update({
-        status: "PAID",
+        payment_status: "PAID",
+        fulfillment_status: "UNFULFILLED",
+        status: "PAID", // 하위 호환성
         updated_at: new Date().toISOString(),
       })
       .eq("id", orderId)
-      .eq("status", "PENDING"); // PENDING 상태인 경우에만 업데이트 (낙관적 잠금)
+      .or(`payment_status.eq.PENDING,status.eq.PENDING`); // PENDING 상태인 경우에만 업데이트 (낙관적 잠금)
 
     if (updateError) {
       logError(updateError, { api: "/api/payments/toss/confirm", step: "update_order_status" });
