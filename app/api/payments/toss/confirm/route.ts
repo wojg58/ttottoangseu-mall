@@ -471,13 +471,17 @@ export async function POST(request: NextRequest) {
 
     // 15. 주문 상태 업데이트 (결제 성공: payment_status=PAID, fulfillment_status=UNFULFILLED) - 원자성 보장
     logger.info("주문 상태 업데이트 중...");
+    // 결제 승인 시간을 paid_at에 저장 (approved_at 시간 사용)
+    const paidAt = approvedAt || new Date().toISOString();
+    
     const { error: updateError } = await supabase
       .from("orders")
       .update({
         payment_status: "PAID",
         fulfillment_status: "UNFULFILLED",
         status: "PAID", // 하위 호환성
-        updated_at: new Date().toISOString(),
+        paid_at: paidAt, // 결제 승인 시간 저장
+        updated_at: new Date().toISOString(), // 주문 정보 업데이트 시간
       })
       .eq("id", orderId)
       .or(`payment_status.eq.PENDING,status.eq.PENDING`); // PENDING 상태인 경우에만 업데이트 (낙관적 잠금)

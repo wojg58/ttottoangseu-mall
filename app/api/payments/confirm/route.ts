@@ -243,12 +243,28 @@ export async function POST(request: NextRequest) {
     }
 
     // 주문 상태 업데이트
+    // 결제 승인 시간을 paid_at에 저장 (tossPaymentData.approvedAt 또는 payments 테이블의 approved_at 사용)
+    // tossPaymentData에 approvedAt이 없으면 payments 테이블에서 조회
+    let paidAt: string;
+    if ((tossPaymentData as any).approvedAt) {
+      paidAt = (tossPaymentData as any).approvedAt;
+    } else {
+      // payments 테이블에서 approved_at 조회
+      const { data: paymentData } = await supabase
+        .from("payments")
+        .select("approved_at")
+        .eq("id", payment.id)
+        .single();
+      paidAt = paymentData?.approved_at || new Date().toISOString();
+    }
+    
     const { error: orderUpdateError } = await supabase
       .from("orders")
       .update({ 
         payment_status: "PAID",
         fulfillment_status: "UNFULFILLED",
-        status: "PAID" // 하위 호환성
+        status: "PAID", // 하위 호환성
+        paid_at: paidAt, // 결제 승인 시간 저장
       })
       .eq("id", orderId);
 

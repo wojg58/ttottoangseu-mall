@@ -214,13 +214,17 @@ export async function confirmPayment({
 
     // 8. 주문 상태 업데이트
     console.log("[confirmPayment] 주문 상태 업데이트 중...");
+    // 결제 승인 시간을 paid_at에 저장 (approved_at 시간 사용)
+    const paidAt = paymentData.approvedAt || new Date().toISOString();
+    
     const { error: updateError } = await supabase
       .from("orders")
       .update({
         payment_status: "PAID", // 결제완료
         fulfillment_status: "UNFULFILLED",
         status: "PAID", // 하위 호환성
-        updated_at: new Date().toISOString(),
+        paid_at: paidAt, // 결제 승인 시간 저장
+        updated_at: new Date().toISOString(), // 주문 정보 업데이트 시간
       })
       .eq("id", orderId);
 
