@@ -14,44 +14,21 @@
 import { isAdmin } from "./admin";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import type { Product, ProductImage } from "@/types/database";
+import type { Product } from "@/types/database";
+import type {
+  CreateProductInput,
+  UpdateProductInput,
+  ProductActionResult,
+} from "@/types/products";
 import { logger } from "@/lib/logger";
 import { updateProductImages } from "@/lib/utils/product-image-manager";
 import { updateProductVariants } from "@/lib/utils/product-variant-manager";
 import { updateProductCategories } from "@/lib/utils/product-category-manager";
 
-// 상품 생성 입력 타입
-export interface CreateProductInput {
-  category_id: string; // 기본 카테고리 (하위 호환성)
-  category_ids?: string[]; // 다중 카테고리
-  name: string;
-  slug: string;
-  price: number;
-  discount_price?: number | null;
-  description?: string | null;
-  status: "active" | "hidden" | "sold_out";
-  stock: number;
-  is_featured: boolean;
-  is_new: boolean;
-  images?: Array<{
-    image_url: string;
-    is_primary: boolean;
-    sort_order: number;
-    alt_text?: string | null;
-  }>;
-  variants?: Array<{
-    variant_name: string;
-    variant_value: string;
-    stock: number;
-    price_adjustment: number;
-    sku?: string | null;
-  }>;
-}
-
 // 상품 생성
 export async function createProduct(
   input: CreateProductInput,
-): Promise<{ success: boolean; message: string; productId?: string }> {
+): Promise<ProductActionResult> {
   logger.group("[createProduct] 상품 생성");
   logger.debug("입력:", input);
 
@@ -188,42 +165,10 @@ export async function createProduct(
   }
 }
 
-// 상품 수정 입력 타입
-export interface UpdateProductInput {
-  id: string;
-  category_id?: string; // 기본 카테고리 (하위 호환성)
-  category_ids?: string[]; // 다중 카테고리
-  name?: string;
-  slug?: string;
-  price?: number;
-  discount_price?: number | null;
-  description?: string | null;
-  status?: "active" | "hidden" | "sold_out";
-  stock?: number;
-  is_featured?: boolean;
-  is_new?: boolean;
-  images?: Array<{
-    id?: string; // 기존 이미지의 경우 id가 있음
-    image_url: string;
-    is_primary: boolean;
-    sort_order: number;
-    alt_text?: string | null;
-  }>;
-  deletedImageIds?: string[]; // 명시적으로 삭제할 이미지 ID 목록
-  variants?: Array<{
-    id?: string; // 기존 옵션의 경우 id가 있음
-    variant_name: string;
-    variant_value: string;
-    stock: number;
-    price_adjustment: number;
-    sku?: string | null;
-  }>;
-}
-
 // 상품 수정
 export async function updateProduct(
   input: UpdateProductInput,
-): Promise<{ success: boolean; message: string }> {
+): Promise<ProductActionResult> {
   logger.group("[updateProduct] 상품 수정");
   logger.debug("입력:", input);
 

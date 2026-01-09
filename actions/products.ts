@@ -20,18 +20,7 @@ import type {
   Category,
   PaginatedResponse,
 } from "@/types/database";
-
-// 상품 목록 필터 타입
-export interface ProductFilters {
-  categorySlug?: string;
-  featured?: boolean;
-  isNew?: boolean;
-  onSale?: boolean;
-  search?: string;
-  minPrice?: number;
-  maxPrice?: number;
-  sortBy?: "newest" | "price_asc" | "price_desc" | "name";
-}
+import type { ProductFilters } from "@/types/products";
 
 // 상품 목록 조회
 export async function getProducts(
