@@ -30,25 +30,31 @@ export default function DateDisplay({
 
     if (format === "datetime") {
       setFormattedDate(
-        dateObj.toLocaleDateString("ko-KR", {
+        dateObj.toLocaleString("ko-KR", {
           year: "numeric",
           month: "long",
           day: "numeric",
           hour: "2-digit",
           minute: "2-digit",
+          timeZone: "Asia/Seoul",
         }),
       );
     } else if (format === "short") {
       setFormattedDate(
-        dateObj.toLocaleDateString("ko-KR", {
+        dateObj.toLocaleString("ko-KR", {
           month: "short",
           day: "numeric",
           hour: "2-digit",
           minute: "2-digit",
+          timeZone: "Asia/Seoul",
         }),
       );
     } else {
-      setFormattedDate(dateObj.toLocaleDateString("ko-KR"));
+      setFormattedDate(
+        dateObj.toLocaleDateString("ko-KR", {
+          timeZone: "Asia/Seoul",
+        }),
+      );
     }
   }, [date, format]);
 
