@@ -100,3 +100,9 @@ COMMENT ON COLUMN orders.fulfillment_status IS '이행/배송 상태 (UNFULFILLE
 
 -- 9. 기존 status 컬럼은 나중에 삭제 (호환성을 위해 일단 유지)
 -- ALTER TABLE orders DROP COLUMN IF EXISTS status;
+
+-- 10. 기존 shipping_status 컬럼 관련 참고사항
+-- 기존 shipping_status 컬럼은 레거시로 남겨두되, 새로운 구조에서는 fulfillment_status를 사용합니다.
+-- shipping_status는 NULL 허용이며 소문자 값('pending', 'processing', 'shipped', 'in_transit', 'delivered')을 사용하지만,
+-- fulfillment_status는 NOT NULL이며 대문자 값(UNFULFILLED, PREPARING, SHIPPED, DELIVERED, CANCELED)을 사용합니다.
+-- 운영 편의성과 일관성을 위해 fulfillment_status를 우선 사용하세요.
