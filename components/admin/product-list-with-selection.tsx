@@ -12,8 +12,7 @@ import { Edit, ImageIcon } from "lucide-react";
 import type { ProductListItem } from "@/types/database";
 import DeleteProductButton from "@/components/delete-product-button";
 import NumberDisplay from "@/components/number-display";
-import BulkHideProductsButton from "@/components/bulk-hide-products-button";
-import BulkShowProductsButton from "@/components/bulk-show-products-button";
+import BulkActionButton from "@/components/bulk-action-button";
 
 interface ProductListWithSelectionProps {
   products: ProductListItem[];
@@ -102,14 +101,16 @@ export default function ProductListWithSelection({
           <div className="flex items-center gap-2">
             {/* 숨김 상태인 상품이 선택되면 판매중으로 변경 버튼 표시 */}
             {selectedProductsStatus.hasHidden && (
-              <BulkShowProductsButton
+              <BulkActionButton
+                action="show"
                 selectedProductIds={selectedProductsStatus.hiddenIds}
                 onSuccess={handleShowSuccess}
               />
             )}
             {/* 판매중 상태인 상품이 선택되면 숨김 처리 버튼 표시 */}
             {selectedProductsStatus.hasActive && (
-              <BulkHideProductsButton
+              <BulkActionButton
+                action="hide"
                 selectedProductIds={selectedProductsStatus.activeIds}
                 onSuccess={handleHideSuccess}
               />
