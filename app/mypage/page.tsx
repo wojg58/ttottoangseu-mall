@@ -82,18 +82,29 @@ export default async function MyPage() {
               )}
             </div>
             <div className="flex-1">
-              <h1 className="text-xl font-bold text-[#4a3f48] mb-2">
+              <h1 className="text-xl font-bold text-[#4a3f48] mb-3">
                 {user?.firstName || "회원"}님 안녕하세요! 👋
               </h1>
-              <div className="space-y-1 text-sm text-[#8b7d84]">
-                <p>이메일: {user?.emailAddresses[0]?.emailAddress || "-"}</p>
-                {memberInfo && (
-                  <>
-                    <p>성별: {genderText}</p>
-                    <p>생년월일: {birthDateText}</p>
-                    <p>휴대전화: {memberInfo.mobile || "-"}</p>
-                  </>
-                )}
+              <div className="space-y-1.5 text-sm text-[#8b7d84]">
+                <p>
+                  <span className="font-medium text-[#4a3f48]">회원이름:</span>{" "}
+                  {user?.firstName || "-"}
+                </p>
+                <p>
+                  <span className="font-medium text-[#4a3f48]">이메일주소:</span>{" "}
+                  {user?.emailAddresses[0]?.emailAddress || "-"}
+                </p>
+                <p>
+                  <span className="font-medium text-[#4a3f48]">성별:</span> {genderText}
+                </p>
+                <p>
+                  <span className="font-medium text-[#4a3f48]">생년월일:</span>{" "}
+                  {birthDateText}
+                </p>
+                <p>
+                  <span className="font-medium text-[#4a3f48]">휴대전화번호:</span>{" "}
+                  {memberInfo?.mobile || "-"}
+                </p>
               </div>
             </div>
           </div>
