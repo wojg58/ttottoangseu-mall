@@ -177,9 +177,9 @@ export async function confirmPayment({
     const { error: paymentError } = await supabase.from("payments").insert({
       order_id: orderId,
       payment_key: paymentData.paymentKey,
-      method: paymentData.method, // payment_method → method로 수정
+      method: paymentData.method.toLowerCase(), // 대문자 → 소문자 변환 (CARD → card)
       amount: paymentData.totalAmount,
-      status: paymentData.status,
+      status: paymentData.status.toLowerCase(), // 대문자 → 소문자 변환 (DONE → done)
       requested_at: paymentData.requestedAt,
       approved_at: paymentData.approvedAt,
       metadata: paymentData, // payment_data → metadata로 수정 (전체 응답 데이터 저장)
