@@ -208,7 +208,12 @@ export default async function MyPage() {
                       </div>
                       <div className="flex items-center justify-between text-sm">
                         <DateDisplay
-                          date={order.created_at}
+                          date={
+                            // 결제 완료된 주문은 paid_at 사용, 그 외는 created_at 사용
+                            (order.payment_status === "PAID" && order.paid_at)
+                              ? order.paid_at
+                              : order.created_at
+                          }
                           format="date"
                           className="text-[#8b7d84]"
                         />

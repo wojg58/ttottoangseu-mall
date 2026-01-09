@@ -203,6 +203,7 @@ export interface Order {
   tracking_number: string | null;
   shipped_at: string | null;
   delivered_at: string | null;
+  paid_at: string | null; // 결제 완료 일시
   created_at: string;
   updated_at: string;
 }

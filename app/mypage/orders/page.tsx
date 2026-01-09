@@ -54,7 +54,12 @@ export default async function OrdersPage() {
                       {order.order_number}
                     </span>
                     <DateDisplay
-                      date={order.created_at}
+                      date={
+                        // 결제 완료된 주문은 paid_at 사용, 그 외는 created_at 사용
+                        (order.payment_status === "PAID" && order.paid_at)
+                          ? order.paid_at
+                          : order.created_at
+                      }
                       format="datetime"
                       className="text-sm text-[#8b7d84]"
                     />
