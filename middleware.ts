@@ -30,12 +30,65 @@ const clerkMiddlewareHandler = hasClerkKeys
     })
   : undefined;
 
+// CORS 허용 도메인 설정
+const getAllowedOrigins = (): string[] => {
+  const origins = process.env.ALLOWED_ORIGINS;
+  if (!origins) {
+    // 기본값: 프로덕션 도메인
+    return ["https://ttottoangseu.co.kr"];
+  }
+  // 쉼표로 구분된 도메인 목록 파싱
+  return origins.split(",").map((origin) => origin.trim());
+};
+
+// Origin 검증 함수
+const isAllowedOrigin = (origin: string | null): boolean => {
+  if (!origin) return false;
+  const allowedOrigins = getAllowedOrigins();
+  return allowedOrigins.some((allowed) => {
+    // 정확한 매칭 또는 와일드카드 서브도메인 매칭
+    if (allowed === origin) return true;
+    if (allowed.startsWith("*.")) {
+      const domain = allowed.substring(2);
+      return origin.endsWith(`.${domain}`);
+    }
+    return false;
+  });
+};
+
+// CORS 헤더 생성
+const getCorsHeaders = (origin: string | null): HeadersInit => {
+  const headers: HeadersInit = {
+    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS, PATCH",
+    "Access-Control-Allow-Headers":
+      "Content-Type, Authorization, X-Requested-With, Accept, Origin",
+    "Access-Control-Max-Age": "86400", // 24시간
+    "Access-Control-Allow-Credentials": "true",
+  };
+
+  // 허용된 Origin인 경우에만 CORS 헤더 추가
+  if (origin && isAllowedOrigin(origin)) {
+    headers["Access-Control-Allow-Origin"] = origin;
+  }
+
+  return headers;
+};
+
 // 에러 핸들링이 포함된 미들웨어
 export default async function middleware(
   req: NextRequest,
   event: NextFetchEvent
 ) {
   try {
+    // OPTIONS 요청 처리 (CORS preflight)
+    if (req.method === "OPTIONS") {
+      const origin = req.headers.get("origin");
+      return new NextResponse(null, {
+        status: 200,
+        headers: getCorsHeaders(origin),
+      });
+    }
+
     let response: NextResponse;
 
     // 환경 변수가 없으면 경고만 출력하고 계속 진행
@@ -85,6 +138,15 @@ export default async function middleware(
     headers.set("X-XSS-Protection", "1; mode=block");
     headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
     headers.set("Permissions-Policy", "geolocation=(), microphone=(), camera=()");
+
+    // CORS 헤더 추가 (API 라우트에만)
+    const origin = req.headers.get("origin");
+    if (req.nextUrl.pathname.startsWith("/api")) {
+      const corsHeaders = getCorsHeaders(origin);
+      Object.entries(corsHeaders).forEach(([key, value]) => {
+        headers.set(key, value);
+      });
+    }
 
     // 응답에 헤더 적용
     return new NextResponse(response.body, {
