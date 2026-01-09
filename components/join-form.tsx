@@ -686,28 +686,7 @@ export default function JoinForm() {
                     )}
                   </td>
                 </tr>
-              </tbody>
-            </table>
-          </div>
-        </section>
 
-        <Separator />
-
-        {/* ===== 추가 정보 섹션 (선택) ===== */}
-        <section>
-          <div className="bg-gray-50 p-4 rounded-lg mb-4">
-            <h2 className="text-xl font-bold">
-              추가정보 <span className="text-sm font-normal">(선택)</span>
-            </h2>
-          </div>
-
-          <div className="border border-gray-200 rounded-lg overflow-hidden">
-            <table className="w-full border-collapse">
-              <colgroup>
-                <col style={{ width: "190px" }} />
-                <col style={{ width: "auto" }} />
-              </colgroup>
-              <tbody>
                 {/* 성별 */}
                 <tr className="border-b border-gray-200">
                   <th className="bg-gray-50 px-4 py-3 text-left font-medium border-r border-gray-200">
