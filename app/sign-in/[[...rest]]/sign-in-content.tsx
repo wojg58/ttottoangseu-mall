@@ -1160,48 +1160,85 @@ export default function SignInContent() {
 
           if (emailValue && passwordValue) {
             try {
-              // Clerk가 초기화될 때까지 대기 (최대 10초)
-              let attempts = 0;
-              const maxAttempts = 100; // 10초 (100ms * 100)
-
               console.log("[SignInContent] Clerk 초기화 대기 시작");
 
-              // Clerk가 완전히 초기화될 때까지 대기 (useSignIn 훅 사용)
-              while (attempts < maxAttempts) {
-                // 현재 상태 확인
-                const currentIsLoaded = isLoaded;
-                const currentSignInLoaded = signInLoaded;
-                const hasSignIn = signIn !== null && signIn !== undefined;
-                const hasSetActive =
-                  clerk && typeof clerk.setActive === "function";
+              // Clerk가 초기화될 때까지 대기 (Promise 기반, 최대 5초)
+              const waitForClerkInit = (): Promise<boolean> => {
+                return new Promise((resolve) => {
+                  const maxWaitTime = 5000; // 5초
+                  const checkInterval = 100; // 100ms마다 확인
+                  const startTime = Date.now();
+                  let intervalId: NodeJS.Timeout | null = null;
 
-                if (
-                  currentIsLoaded &&
-                  currentSignInLoaded &&
-                  hasSignIn &&
-                  hasSetActive
-                ) {
-                  console.log("[SignInContent] Clerk 초기화 확인 완료");
-                  break;
-                }
+                  const checkInit = () => {
+                    // 매번 최신 상태를 확인 (클로저 문제 해결)
+                    const currentIsLoaded = isLoaded;
+                    const currentSignInLoaded = signInLoaded;
+                    const hasSignIn = signIn !== null && signIn !== undefined;
+                    const hasSetActive =
+                      clerk && typeof clerk.setActive === "function";
 
-                await new Promise((resolve) => setTimeout(resolve, 100));
-                attempts++;
+                    const elapsed = Date.now() - startTime;
 
-                // 주기적으로 상태 확인
-                if (attempts % 10 === 0) {
-                  console.log(
-                    `[SignInContent] 초기화 대기 중... (${attempts * 100}ms)`,
-                  );
-                  console.log(`  - isLoaded: ${isLoaded}`);
-                  console.log(`  - signInLoaded: ${signInLoaded}`);
-                  console.log(`  - signIn: ${!!signIn}`);
-                  console.log(`  - setActive: ${hasSetActive}`);
-                }
-              }
+                    // 초기화 완료 확인
+                    if (
+                      currentIsLoaded &&
+                      currentSignInLoaded &&
+                      hasSignIn &&
+                      hasSetActive
+                    ) {
+                      if (intervalId) {
+                        clearInterval(intervalId);
+                      }
+                      console.log("[SignInContent] Clerk 초기화 확인 완료");
+                      resolve(true);
+                      return;
+                    }
+
+                    // 타임아웃 체크
+                    if (elapsed >= maxWaitTime) {
+                      if (intervalId) {
+                        clearInterval(intervalId);
+                      }
+                      console.warn(
+                        `[SignInContent] Clerk 초기화 타임아웃 (${elapsed}ms)`,
+                      );
+                      console.warn(
+                        `  - isLoaded: ${currentIsLoaded}`,
+                        `signInLoaded: ${currentSignInLoaded}`,
+                        `signIn: ${hasSignIn}`,
+                        `setActive: ${hasSetActive}`,
+                      );
+                      resolve(false);
+                      return;
+                    }
+
+                    // 주기적으로 상태 로그 출력
+                    if (elapsed > 0 && elapsed % 1000 === 0) {
+                      console.log(
+                        `[SignInContent] 초기화 대기 중... (${elapsed}ms)`,
+                      );
+                    }
+                  };
+
+                  // 즉시 한 번 확인
+                  checkInit();
+
+                  // 주기적으로 확인
+                  intervalId = setInterval(checkInit, checkInterval);
+                });
+              };
+
+              const isInitialized = await waitForClerkInit();
 
               // 최종 확인
-              if (!isLoaded || !signInLoaded || !signIn || !clerk?.setActive) {
+              if (
+                !isInitialized ||
+                !isLoaded ||
+                !signInLoaded ||
+                !signIn ||
+                !clerk?.setActive
+              ) {
                 console.error(
                   "[SignInContent] Clerk가 초기화되지 않음 (타임아웃)",
                 );
@@ -1218,7 +1255,7 @@ export default function SignInContent() {
 
                 // 페이지 새로고침 제안
                 const shouldReload = confirm(
-                  "Clerk가 아직 초기화되지 않았습니다. 페이지를 새로고침하시겠습니까?",
+                  "로그인 시스템을 준비하는 중입니다. 페이지를 새로고침하시겠습니까?",
                 );
                 if (shouldReload) {
                   window.location.reload();

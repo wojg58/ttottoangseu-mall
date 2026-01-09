@@ -278,7 +278,9 @@ export function AuthSessionSync() {
       // 전역 변수로 리다이렉션 제어 가능하게 설정
       (window as any).stopRedirect = false;
       
-      setTimeout(() => {
+      let timeoutId2: NodeJS.Timeout | null = null;
+      
+      const timeoutId1 = setTimeout(() => {
         // 사용자가 리다이렉션을 중지한 경우 확인
         if ((window as any).stopRedirect) {
           console.log("⏸️ 사용자가 리다이렉션을 중지했습니다.");
@@ -388,7 +390,7 @@ export function AuthSessionSync() {
         
         // Network 탭 확인을 위한 추가 대기 (선택적)
         // 사용자가 확인할 시간을 더 주기 위해 2초 더 대기
-        setTimeout(() => {
+        timeoutId2 = setTimeout(() => {
           // 전체 페이지 새로고침으로 세션 상태를 확실히 반영
           window.location.href = cleanUrl || "/";
         }, 2000);
@@ -396,7 +398,10 @@ export function AuthSessionSync() {
       
       hasCheckedRef.current = true;
       console.groupEnd();
-      return;
+      return () => {
+        if (timeoutId1) clearTimeout(timeoutId1);
+        if (timeoutId2) clearTimeout(timeoutId2);
+      };
     }
 
     // 일반 페이지 로드 시 세션 상태 확인
