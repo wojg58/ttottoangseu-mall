@@ -35,15 +35,15 @@
 -- ============================================================================
 
 -- 1. payment_status 컬럼 추가
-ALTER TABLE orders
+ALTER TABLE public.orders
 ADD COLUMN IF NOT EXISTS payment_status VARCHAR(20);
 
 -- 2. fulfillment_status 컬럼 추가
-ALTER TABLE orders
+ALTER TABLE public.orders
 ADD COLUMN IF NOT EXISTS fulfillment_status VARCHAR(20);
 
 -- 3. 기존 status 값을 두 컬럼으로 분리하여 업데이트
-UPDATE orders
+UPDATE public.orders
 SET 
   payment_status = CASE
     WHEN status = 'pending' THEN 'PENDING'
@@ -64,39 +64,39 @@ SET
   END;
 
 -- 4. NOT NULL 제약조건 추가
-ALTER TABLE orders
+ALTER TABLE public.orders
 ALTER COLUMN payment_status SET NOT NULL,
 ALTER COLUMN fulfillment_status SET NOT NULL;
 
 -- 5. 기본값 설정
-ALTER TABLE orders
+ALTER TABLE public.orders
 ALTER COLUMN payment_status SET DEFAULT 'PENDING',
 ALTER COLUMN fulfillment_status SET DEFAULT 'UNFULFILLED';
 
 -- 6. CHECK 제약조건 추가
-ALTER TABLE orders
+ALTER TABLE public.orders
 DROP CONSTRAINT IF EXISTS chk_orders_status,
 DROP CONSTRAINT IF EXISTS chk_orders_payment_status,
 DROP CONSTRAINT IF EXISTS chk_orders_fulfillment_status;
 
-ALTER TABLE orders
+ALTER TABLE public.orders
 ADD CONSTRAINT chk_orders_payment_status CHECK (
   payment_status IN ('PENDING', 'PAID', 'CANCELED', 'REFUNDED')
 );
 
-ALTER TABLE orders
+ALTER TABLE public.orders
 ADD CONSTRAINT chk_orders_fulfillment_status CHECK (
   fulfillment_status IN ('UNFULFILLED', 'PREPARING', 'SHIPPED', 'DELIVERED', 'CANCELED')
 );
 
 -- 7. 인덱스 재생성 (기존 status 인덱스 대신)
-DROP INDEX IF EXISTS idx_orders_status;
-CREATE INDEX IF NOT EXISTS idx_orders_payment_status ON orders(payment_status);
-CREATE INDEX IF NOT EXISTS idx_orders_fulfillment_status ON orders(fulfillment_status);
+DROP INDEX IF EXISTS public.idx_orders_status;
+CREATE INDEX IF NOT EXISTS idx_orders_payment_status ON public.orders(payment_status);
+CREATE INDEX IF NOT EXISTS idx_orders_fulfillment_status ON public.orders(fulfillment_status);
 
 -- 8. 주석 업데이트
-COMMENT ON COLUMN orders.payment_status IS '결제 상태 (PENDING: 결제 대기/생성됨, PAID: 결제 성공, CANCELED: 주문 취소, REFUNDED: 환불 완료)';
-COMMENT ON COLUMN orders.fulfillment_status IS '이행/배송 상태 (UNFULFILLED: 미처리, PREPARING: 상품 준비, SHIPPED: 배송중, DELIVERED: 배송완료, CANCELED: 주문 취소 시 동기화 가능)';
+COMMENT ON COLUMN public.orders.payment_status IS '결제 상태 (PENDING: 결제 대기/생성됨, PAID: 결제 성공, CANCELED: 주문 취소, REFUNDED: 환불 완료)';
+COMMENT ON COLUMN public.orders.fulfillment_status IS '이행/배송 상태 (UNFULFILLED: 미처리, PREPARING: 상품 준비, SHIPPED: 배송중, DELIVERED: 배송완료, CANCELED: 주문 취소 시 동기화 가능)';
 
 -- 9. 기존 status 컬럼은 나중에 삭제 (호환성을 위해 일단 유지)
 -- ALTER TABLE orders DROP COLUMN IF EXISTS status;
