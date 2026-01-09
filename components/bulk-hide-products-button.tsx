@@ -10,6 +10,7 @@ import { EyeOff } from "lucide-react";
 import { bulkHideProducts } from "@/actions/bulk-hide-products";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { logger } from "@/lib/logger";
 
 interface BulkHideProductsButtonProps {
   selectedProductIds: string[];
@@ -38,23 +39,23 @@ export default function BulkHideProductsButton({
     }
 
     startTransition(async () => {
-      console.group("[BulkHideProductsButton] 일괄 숨김 처리 시작");
-      console.log("선택한 상품 ID:", selectedProductIds);
+      logger.group("[BulkHideProductsButton] 일괄 숨김 처리 시작");
+      logger.debug("선택한 상품 ID:", selectedProductIds);
 
       const result = await bulkHideProducts(selectedProductIds);
 
       if (result.success) {
-        console.log("일괄 숨김 처리 성공:", result.message);
+        logger.info("일괄 숨김 처리 성공:", result.message);
         alert(result.message);
         if (onSuccess) {
           onSuccess();
         }
         router.refresh();
       } else {
-        console.error("일괄 숨김 처리 실패:", result.message);
+        logger.error("일괄 숨김 처리 실패:", result.message);
         alert(`숨김 처리 실패: ${result.message}`);
       }
-      console.groupEnd();
+      logger.groupEnd();
     });
   };
 

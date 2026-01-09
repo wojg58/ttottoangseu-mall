@@ -10,6 +10,7 @@ import { Eye } from "lucide-react";
 import { bulkShowProducts } from "@/actions/bulk-show-products";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { logger } from "@/lib/logger";
 
 interface BulkShowProductsButtonProps {
   selectedProductIds: string[];
@@ -38,23 +39,23 @@ export default function BulkShowProductsButton({
     }
 
     startTransition(async () => {
-      console.group("[BulkShowProductsButton] 일괄 판매중 변경 시작");
-      console.log("선택한 상품 ID:", selectedProductIds);
+      logger.group("[BulkShowProductsButton] 일괄 판매중 변경 시작");
+      logger.debug("선택한 상품 ID:", selectedProductIds);
 
       const result = await bulkShowProducts(selectedProductIds);
 
       if (result.success) {
-        console.log("일괄 판매중 변경 성공:", result.message);
+        logger.info("일괄 판매중 변경 성공:", result.message);
         alert(result.message);
         if (onSuccess) {
           onSuccess();
         }
         router.refresh();
       } else {
-        console.error("일괄 판매중 변경 실패:", result.message);
+        logger.error("일괄 판매중 변경 실패:", result.message);
         alert(`판매중 변경 실패: ${result.message}`);
       }
-      console.groupEnd();
+      logger.groupEnd();
     });
   };
 
