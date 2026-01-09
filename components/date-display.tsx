@@ -28,12 +28,25 @@ export default function DateDisplay({
     setMounted(true);
     
     // UTC 시간 문자열을 Date 객체로 변환
-    const dateObj = typeof date === "string" ? new Date(date) : date;
+    // Supabase에서 오는 형식: "2026-01-09 11:22:19+00" 또는 "2026-01-09T11:22:19Z"
+    let dateObj: Date;
+    if (typeof date === "string") {
+      // 공백이 있는 형식 처리 (Supabase 형식: "2026-01-09 11:22:19+00")
+      const normalizedDate = date.replace(" ", "T").replace("+00", "Z");
+      dateObj = new Date(normalizedDate);
+    } else {
+      dateObj = date;
+    }
 
-    // Intl.DateTimeFormat을 사용하여 한국 시간대로 명시적으로 변환
-    const koreaFormatter = new Intl.DateTimeFormat("ko-KR", {
-      timeZone: "Asia/Seoul",
-    });
+    // 개발 환경에서 디버깅 로그
+    if (process.env.NODE_ENV === "development" && format === "datetime") {
+      console.log("[DateDisplay] 시간 변환:", {
+        원본: date,
+        Date객체: dateObj.toISOString(),
+        UTC시간: dateObj.toUTCString(),
+        로컬시간: dateObj.toString(),
+      });
+    }
 
     if (format === "datetime") {
       const formatter = new Intl.DateTimeFormat("ko-KR", {
@@ -44,7 +57,13 @@ export default function DateDisplay({
         hour: "2-digit",
         minute: "2-digit",
       });
-      setFormattedDate(formatter.format(dateObj));
+      const formatted = formatter.format(dateObj);
+      setFormattedDate(formatted);
+      
+      // 개발 환경에서 변환 결과 확인
+      if (process.env.NODE_ENV === "development") {
+        console.log("[DateDisplay] 한국 시간 변환 결과:", formatted);
+      }
     } else if (format === "short") {
       const formatter = new Intl.DateTimeFormat("ko-KR", {
         timeZone: "Asia/Seoul",
