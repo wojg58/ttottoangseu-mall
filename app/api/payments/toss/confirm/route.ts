@@ -420,7 +420,21 @@ export async function POST(request: NextRequest) {
 
     logger.info("✅ 결제 정보 저장 완료:", { paymentId: insertedPayment.id });
 
-    // 14. 주문 상태 업데이트 (결제 성공: payment_status=PAID, fulfillment_status=UNFULFILLED) - 원자성 보장
+    // 14. 재고 차감 (결제 성공 시점에만 수행)
+    logger.info("재고 차감 시작...");
+    const { deductOrderStock } = await import("@/actions/orders");
+    const stockResult = await deductOrderStock(orderId, supabase);
+    
+    if (!stockResult.success) {
+      logError(new Error(stockResult.message || "재고 차감 실패"), { api: "/api/payments/toss/confirm", step: "deduct_stock" });
+      logger.error("⚠️ 재고 차감 실패:", stockResult.message);
+      // 재고 차감 실패 시에도 결제는 완료되었으므로 경고만 로그
+      // 수동으로 재고를 확인하고 차감해야 함
+    } else {
+      logger.info("✅ 재고 차감 완료");
+    }
+
+    // 15. 주문 상태 업데이트 (결제 성공: payment_status=PAID, fulfillment_status=UNFULFILLED) - 원자성 보장
     logger.info("주문 상태 업데이트 중...");
     const { error: updateError } = await supabase
       .from("orders")

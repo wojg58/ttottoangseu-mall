@@ -227,6 +227,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // 재고 차감 (결제 성공 시점에만 수행)
+    console.log("[POST /api/payments/confirm] 재고 차감 시작...");
+    const { deductOrderStock } = await import("@/actions/orders");
+    const stockResult = await deductOrderStock(orderId, supabase);
+    
+    if (!stockResult.success) {
+      console.error("⚠️ 재고 차감 실패:", stockResult.message);
+      // 재고 차감 실패 시에도 결제는 완료되었으므로 경고만 로그
+    } else {
+      console.log("✅ 재고 차감 완료");
+    }
+
     // 주문 상태 업데이트
     const { error: orderUpdateError } = await supabase
       .from("orders")

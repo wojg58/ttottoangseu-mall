@@ -36,6 +36,141 @@ function generateOrderNumber(): string {
   return `ORD-${year}${month}${day}-${random}`;
 }
 
+/**
+ * 주문의 재고 차감 (결제 성공 시에만 호출)
+ * @param orderId 주문 ID
+ * @param supabase Supabase 클라이언트
+ */
+export async function deductOrderStock(
+  orderId: string,
+  supabase: ReturnType<typeof createClient>,
+): Promise<{ success: boolean; message?: string }> {
+  logger.group(`[deductOrderStock] 주문 재고 차감 시작: Order ID ${orderId}`);
+
+  try {
+    // 주문 아이템 조회
+    const { data: orderItems, error: itemsError } = await supabase
+      .from("order_items")
+      .select(`
+        quantity,
+        variant_id,
+        product_id,
+        product:products!fk_order_items_product_id(id, stock),
+        variant:product_variants!fk_order_items_variant_id(id, stock, product_id)
+      `)
+      .eq("order_id", orderId);
+
+    if (itemsError || !orderItems || orderItems.length === 0) {
+      logger.error("주문 아이템 조회 실패:", itemsError);
+      logger.groupEnd();
+      return { success: false, message: "주문 아이템을 찾을 수 없습니다." };
+    }
+
+    logger.info(`주문 아이템 ${orderItems.length}개 조회 완료`);
+
+    // 재고 차감 (옵션이 있으면 옵션만, 없으면 상품만)
+    // 옵션이 있는 상품의 경우 총 재고 업데이트를 위해 추적
+    const productsToUpdateStock = new Set<string>();
+
+    for (const item of orderItems) {
+      const product = item.product as { id: string; stock: number } | null;
+      const variant = item.variant as { id: string; stock: number; product_id: string } | null;
+
+      if (!product) {
+        logger.warn(`상품을 찾을 수 없음: Product ID ${item.product_id}`);
+        continue;
+      }
+
+      if (variant) {
+        // 옵션이 있는 경우: 옵션 재고만 차감
+        if (variant.stock < item.quantity) {
+          logger.error(`재고 부족: Variant ID ${variant.id}, 현재 재고: ${variant.stock}, 요청 수량: ${item.quantity}`);
+          logger.groupEnd();
+          return { success: false, message: `재고가 부족합니다. (옵션 ID: ${variant.id})` };
+        }
+
+        const { error: variantError } = await supabase
+          .from("product_variants")
+          .update({ stock: variant.stock - item.quantity })
+          .eq("id", variant.id);
+
+        if (variantError) {
+          logger.error(`옵션 재고 차감 실패: Variant ID ${variant.id}`, variantError);
+          logger.groupEnd();
+          return { success: false, message: "재고 차감에 실패했습니다." };
+        }
+
+        logger.info(`✅ 옵션 재고 차감: Variant ID ${variant.id}, 기존 ${variant.stock} -> ${variant.stock - item.quantity}`);
+        
+        // 옵션이 있는 상품은 총 재고도 업데이트 필요
+        productsToUpdateStock.add(product.id);
+      } else {
+        // 옵션이 없는 경우: 상품 재고만 차감
+        if (product.stock < item.quantity) {
+          logger.error(`재고 부족: Product ID ${product.id}, 현재 재고: ${product.stock}, 요청 수량: ${item.quantity}`);
+          logger.groupEnd();
+          return { success: false, message: `재고가 부족합니다. (상품 ID: ${product.id})` };
+        }
+
+        const { error: productError } = await supabase
+          .from("products")
+          .update({ stock: product.stock - item.quantity })
+          .eq("id", product.id);
+
+        if (productError) {
+          logger.error(`상품 재고 차감 실패: Product ID ${product.id}`, productError);
+          logger.groupEnd();
+          return { success: false, message: "재고 차감에 실패했습니다." };
+        }
+
+        logger.info(`✅ 상품 재고 차감: Product ID ${product.id}, 기존 ${product.stock} -> ${product.stock - item.quantity}`);
+      }
+    }
+
+    // 옵션이 있는 상품의 총 재고 업데이트 (모든 옵션 재고 합산)
+    if (productsToUpdateStock.size > 0) {
+      logger.info(`옵션이 있는 상품 ${productsToUpdateStock.size}개의 총 재고 업데이트 시작`);
+      
+      for (const productId of productsToUpdateStock) {
+        // 해당 상품의 모든 옵션 재고 합산
+        const { data: variants, error: variantsError } = await supabase
+          .from("product_variants")
+          .select("stock")
+          .eq("product_id", productId)
+          .is("deleted_at", null);
+
+        if (variantsError) {
+          logger.error(`옵션 재고 조회 실패 (Product ID: ${productId}):`, variantsError);
+          continue;
+        }
+
+        if (variants && variants.length > 0) {
+          const totalStock = variants.reduce((sum, v) => sum + (v.stock || 0), 0);
+          
+          const { error: updateError } = await supabase
+            .from("products")
+            .update({ stock: totalStock })
+            .eq("id", productId);
+
+          if (updateError) {
+            logger.error(`총 재고 업데이트 실패 (Product ID: ${productId}):`, updateError);
+          } else {
+            logger.info(`✅ 총 재고 업데이트 완료: Product ID ${productId} -> ${totalStock}개`);
+          }
+        }
+      }
+    }
+
+    logger.info("✅ 주문 재고 차감 완료");
+    logger.groupEnd();
+    return { success: true };
+  } catch (error) {
+    logger.error("재고 차감 예외:", error);
+    logger.groupEnd();
+    return { success: false, message: "재고 차감 중 오류가 발생했습니다." };
+  }
+}
+
 // 주문 생성 입력 타입
 export interface CreateOrderInput {
   ordererName: string;
@@ -265,69 +400,13 @@ export async function createOrder(input: CreateOrderInput): Promise<{
       return { success: false, message: "주문 생성에 실패했습니다." };
     }
 
-    // 재고 차감 (옵션이 있으면 옵션만, 없으면 상품만)
-    // 옵션이 있는 상품의 경우 총 재고 업데이트를 위해 추적
-    const productsToUpdateStock = new Set<string>();
+    // ⚠️ 재고 차감은 결제 성공 시점에만 수행됩니다 (deductOrderStock 함수 호출)
+    // 주문 생성 시점에서는 재고를 차감하지 않습니다.
+    logger.info("[createOrder] 주문 생성 완료 - 재고 차감은 결제 성공 시점에 수행됩니다");
 
-    for (const item of cartItems) {
-      const product = item.product as { id: string; stock: number };
-      const variant = item.variant as { id: string; stock: number } | null;
-
-      if (variant) {
-        // 옵션이 있는 경우: 옵션 재고만 차감
-        await supabase
-          .from("product_variants")
-          .update({ stock: variant.stock - item.quantity })
-          .eq("id", variant.id);
-        logger.info(`[createOrder] 옵션 재고 차감: Variant ID ${variant.id}, 기존 ${variant.stock} -> ${variant.stock - item.quantity}`);
-        
-        // 옵션이 있는 상품은 총 재고도 업데이트 필요
-        productsToUpdateStock.add(product.id);
-      } else {
-        // 옵션이 없는 경우: 상품 재고만 차감
-        await supabase
-          .from("products")
-          .update({ stock: product.stock - item.quantity })
-          .eq("id", product.id);
-        logger.info(`[createOrder] 상품 재고 차감: Product ID ${product.id}, 기존 ${product.stock} -> ${product.stock - item.quantity}`);
-      }
-    }
-
-    // 옵션이 있는 상품의 총 재고 업데이트 (모든 옵션 재고 합산)
-    if (productsToUpdateStock.size > 0) {
-      logger.info(`[createOrder] 옵션이 있는 상품 ${productsToUpdateStock.size}개의 총 재고 업데이트 시작`);
-      
-      for (const productId of productsToUpdateStock) {
-        // 해당 상품의 모든 옵션 재고 합산
-        const { data: variants, error: variantsError } = await supabase
-          .from("product_variants")
-          .select("stock")
-          .eq("product_id", productId)
-          .is("deleted_at", null);
-
-        if (variantsError) {
-          logger.error(`[createOrder] 옵션 재고 조회 실패 (Product ID: ${productId}):`, variantsError);
-          continue;
-        }
-
-        if (variants && variants.length > 0) {
-          const totalStock = variants.reduce((sum, v) => sum + (v.stock || 0), 0);
-          
-          const { error: updateError } = await supabase
-            .from("products")
-            .update({ stock: totalStock })
-            .eq("id", productId);
-
-          if (updateError) {
-            logger.error(`[createOrder] 총 재고 업데이트 실패 (Product ID: ${productId}):`, updateError);
-          } else {
-            logger.info(`[createOrder] 총 재고 업데이트 완료: Product ID ${productId} -> ${totalStock}개`);
-          }
-        }
-      }
-    }
-
-    // 네이버 동기화 큐 적재 (옵션 단위, 재고 차감 후)
+    // 네이버 동기화 큐 적재 (옵션 단위, 주문 생성 후)
+    // ⚠️ 주의: 재고 차감은 결제 성공 시점에 수행되므로, 여기서는 현재 재고 기준으로 적재됩니다.
+    // 정확한 재고 동기화를 위해서는 결제 성공 후 재고 차감 후에 동기화 큐를 다시 적재해야 합니다.
     logger.info("[createOrder] 네이버 동기화 큐 적재 시작 (옵션 단위)");
     try {
       const { data: orderItems, error: orderItemsError } = await supabase

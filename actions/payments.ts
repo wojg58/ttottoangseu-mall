@@ -197,7 +197,19 @@ export async function confirmPayment({
 
     console.log("[confirmPayment] ✅ 결제 정보 저장 완료");
 
-    // 7. 주문 상태 업데이트
+    // 7. 재고 차감 (결제 성공 시점에만 수행)
+    console.log("[confirmPayment] 재고 차감 시작...");
+    const { deductOrderStock } = await import("@/actions/orders");
+    const stockResult = await deductOrderStock(orderId, supabase);
+    
+    if (!stockResult.success) {
+      console.error("[confirmPayment] ❌ 재고 차감 실패:", stockResult.message);
+      // 재고 차감 실패 시에도 결제는 완료되었으므로 경고만 로그
+    } else {
+      console.log("[confirmPayment] ✅ 재고 차감 완료");
+    }
+
+    // 8. 주문 상태 업데이트
     console.log("[confirmPayment] 주문 상태 업데이트 중...");
     const { error: updateError } = await supabase
       .from("orders")
