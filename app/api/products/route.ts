@@ -5,8 +5,30 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getProducts } from "@/actions/products";
+import {
+  rateLimitMiddleware,
+  rateLimitHeaders,
+  RATE_LIMITS,
+} from "@/lib/rate-limit";
 
 export async function GET(request: NextRequest) {
+  // Rate Limiting 체크
+  const rateLimitResult = await rateLimitMiddleware(
+    request,
+    RATE_LIMITS.PRODUCTS.limit,
+    RATE_LIMITS.PRODUCTS.window,
+  );
+
+  if (!rateLimitResult?.success) {
+    return NextResponse.json(
+      { error: "요청이 너무 많습니다. 잠시 후 다시 시도해주세요." },
+      {
+        status: 429,
+        headers: rateLimitHeaders(rateLimitResult),
+      },
+    );
+  }
+
   try {
     const searchParams = request.nextUrl.searchParams;
     const limit = parseInt(searchParams.get("limit") || "5", 10);

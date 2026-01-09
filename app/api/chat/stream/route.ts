@@ -3,6 +3,11 @@ import { auth } from "@clerk/nextjs/server";
 import { getServiceRoleClient } from "@/lib/supabase/service-role";
 import { streamGeminiText, type ChatMessageForModel } from "@/lib/gemini/server";
 import { SYSTEM_PROMPT } from "@/lib/gemini/system-prompt";
+import {
+  rateLimitMiddleware,
+  rateLimitHeaders,
+  RATE_LIMITS,
+} from "@/lib/rate-limit";
 
 /**
  * @file app/api/chat/stream/route.ts
@@ -31,6 +36,24 @@ function sseEvent(event: string, data: unknown): string {
 
 export async function POST(req: Request) {
   console.group("[ChatStreamAPI] POST /api/chat/stream");
+
+  // Rate Limiting 체크
+  const rateLimitResult = await rateLimitMiddleware(
+    req,
+    RATE_LIMITS.CHAT.limit,
+    RATE_LIMITS.CHAT.window,
+  );
+
+  if (!rateLimitResult?.success) {
+    console.warn("[RateLimit] 챗봇 API 요청 제한 초과");
+    return NextResponse.json(
+      { error: "요청이 너무 많습니다. 잠시 후 다시 시도해주세요." },
+      {
+        status: 429,
+        headers: rateLimitHeaders(rateLimitResult),
+      },
+    );
+  }
 
   const encoder = new TextEncoder();
 

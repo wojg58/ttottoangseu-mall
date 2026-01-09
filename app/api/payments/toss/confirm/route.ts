@@ -16,6 +16,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { getServiceRoleClient } from "@/lib/supabase/service-role";
 import logger from "@/lib/logger";
+import {
+  rateLimitMiddleware,
+  rateLimitHeaders,
+  RATE_LIMITS,
+} from "@/lib/rate-limit";
 
 interface TossPaymentResponse {
   paymentKey: string;
@@ -57,6 +62,25 @@ interface TossPaymentResponse {
 
 export async function POST(request: NextRequest) {
   logger.group("[POST /api/payments/toss/confirm] 결제 승인 시작");
+
+  // Rate Limiting 체크
+  const rateLimitResult = await rateLimitMiddleware(
+    request,
+    RATE_LIMITS.PAYMENT.limit,
+    RATE_LIMITS.PAYMENT.window,
+  );
+
+  if (!rateLimitResult?.success) {
+    logger.warn("[RateLimit] 결제 API 요청 제한 초과");
+    logger.groupEnd();
+    return NextResponse.json(
+      { success: false, message: "요청이 너무 많습니다. 잠시 후 다시 시도해주세요." },
+      {
+        status: 429,
+        headers: rateLimitHeaders(rateLimitResult),
+      },
+    );
+  }
 
   try {
     // 1. 인증 확인

@@ -2,6 +2,11 @@ import { auth, clerkClient } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { getServiceRoleClient } from "@/lib/supabase/service-role";
 import * as Sentry from "@sentry/nextjs";
+import {
+  rateLimitMiddleware,
+  rateLimitHeaders,
+  RATE_LIMITS,
+} from "@/lib/rate-limit";
 
 /**
  * Clerk 사용자를 Supabase users 테이블에 동기화하는 API
@@ -12,6 +17,25 @@ import * as Sentry from "@sentry/nextjs";
 export async function POST(request: Request) {
   try {
     console.group("🔐 API: 사용자 동기화 요청");
+
+    // Rate Limiting 체크
+    const rateLimitResult = await rateLimitMiddleware(
+      request,
+      RATE_LIMITS.SYNC_USER.limit,
+      RATE_LIMITS.SYNC_USER.window,
+    );
+
+    if (!rateLimitResult?.success) {
+      console.warn("[RateLimit] 사용자 동기화 API 요청 제한 초과");
+      console.groupEnd();
+      return NextResponse.json(
+        { error: "요청이 너무 많습니다. 잠시 후 다시 시도해주세요." },
+        {
+          status: 429,
+          headers: rateLimitHeaders(rateLimitResult),
+        },
+      );
+    }
 
     // Clerk 인증 확인
     const authResult = await auth();
