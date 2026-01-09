@@ -19,7 +19,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { saveMemberAdditionalInfo } from "@/actions/member-actions";
 import logger from "@/lib/logger";
 import type { Gender } from "@/types/member";
 
@@ -89,7 +88,7 @@ type JoinFormData = z.infer<typeof joinSchema>;
 
 export default function JoinForm() {
   const router = useRouter();
-  const { signUp, setActive } = useSignUp();
+  const { signUp } = useSignUp();
   const [isLoading, setIsLoading] = useState(false);
   const [agreeAll, setAgreeAll] = useState(false);
   const [isPostcodeReady, setIsPostcodeReady] = useState(false);

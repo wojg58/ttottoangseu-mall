@@ -1066,7 +1066,7 @@ export default function SignInContent() {
       return;
     }
     
-    let cleanupFunctions: (() => void)[] = []; // cleanup 함수들을 저장
+    const cleanupFunctions: (() => void)[] = []; // cleanup 함수들을 저장
 
     const interceptClerkFormSubmit = () => {
       // 이미 설정되었으면 실행하지 않음 (중복 방지)
@@ -2076,7 +2076,10 @@ export default function SignInContent() {
       cleanupFunctionsRef.current = [];
       isInterceptedRef.current = false; // 플래그 리셋
     };
-  }, [isLoaded, signInLoaded]); // 의존성 배열 최소화 (불필요한 재실행 방지)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // clerk, signIn, redirectUrl은 초기화 후 변경되지 않으며,
+    // isInterceptedRef로 무한 루프를 방지하므로 의존성 배열에서 제외
+  }, [isLoaded, signInLoaded]);
 
   // // Clerk가 자동으로 생성한 카카오 버튼 삭제
   // useEffect(() => {

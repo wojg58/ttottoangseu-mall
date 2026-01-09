@@ -52,7 +52,7 @@ export default async function MyPage() {
       if (memberInfo.is_solar_calendar === false) {
         birthDateText += " (음력)";
       }
-    } catch (error) {
+    } catch {
       birthDateText = memberInfo.birth_date;
     }
   }
