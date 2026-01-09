@@ -197,7 +197,7 @@ export default async function OrderDetailPage({
 
             {/* 주문 취소 버튼 */}
             <div className="bg-white rounded-xl shadow-sm p-6">
-              <OrderCancelButton orderId={order.id} orderStatus={order.status} />
+              <OrderCancelButton orderId={order.id} orderStatus={order.payment_status || order.status || "PENDING"} />
             </div>
           </div>
         </div>
