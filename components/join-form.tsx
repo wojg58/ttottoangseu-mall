@@ -584,6 +584,89 @@ export default function JoinForm() {
                   </td>
                 </tr>
 
+                {/* 성별 */}
+                <tr className="border-b border-gray-200">
+                  <th className="bg-gray-50 px-4 py-3 text-left font-medium border-r border-gray-200">
+                    <span className="flex items-center gap-2">
+                      <span className="text-red-500">*</span>
+                      성별
+                    </span>
+                  </th>
+                  <td className="px-4 py-3">
+                    <RadioGroup
+                      value={watch("gender") || ""}
+                      onValueChange={(value) => setValue("gender", value as Gender)}
+                      className="flex gap-4"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="M" id="gender-male" />
+                        <Label htmlFor="gender-male" className="cursor-pointer">
+                          남자
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="F" id="gender-female" />
+                        <Label htmlFor="gender-female" className="cursor-pointer">
+                          여자
+                        </Label>
+                      </div>
+                    </RadioGroup>
+                  </td>
+                </tr>
+
+                {/* 생년월일 */}
+                <tr className="border-b border-gray-200">
+                  <th className="bg-gray-50 px-4 py-3 text-left font-medium border-r border-gray-200">
+                    <span className="flex items-center gap-2">
+                      <span className="text-red-500">*</span>
+                      생년월일
+                    </span>
+                  </th>
+                  <td className="px-4 py-3">
+                    <div className="flex gap-2 items-center flex-wrap">
+                      <Input
+                        placeholder="년 (예: 1990)"
+                        {...register("birth_year")}
+                        maxLength={4}
+                        className="w-32"
+                      />
+                      <span>년</span>
+                      <Input
+                        placeholder="월 (예: 01)"
+                        {...register("birth_month")}
+                        maxLength={2}
+                        className="w-24"
+                      />
+                      <span>월</span>
+                      <Input
+                        placeholder="일 (예: 01)"
+                        {...register("birth_day")}
+                        maxLength={2}
+                        className="w-24"
+                      />
+                      <span>일</span>
+                    </div>
+                    <div className="flex gap-4 mt-2">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          checked={watch("is_solar_calendar") === true}
+                          onChange={() => setValue("is_solar_calendar", true)}
+                        />
+                        <span>양력</span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          checked={watch("is_solar_calendar") === false}
+                          onChange={() => setValue("is_solar_calendar", false)}
+                        />
+                        <span>음력</span>
+                      </label>
+                    </div>
+                  </td>
+                </tr>
+
                 {/* 주소 */}
                 <tr className="border-b border-gray-200">
                   <th className="bg-gray-50 px-4 py-3 text-left font-medium border-r border-gray-200">
@@ -684,83 +767,6 @@ export default function JoinForm() {
                         {errors.mobile.message}
                       </p>
                     )}
-                  </td>
-                </tr>
-
-                {/* 성별 */}
-                <tr className="border-b border-gray-200">
-                  <th className="bg-gray-50 px-4 py-3 text-left font-medium border-r border-gray-200">
-                    성별
-                  </th>
-                  <td className="px-4 py-3">
-                    <RadioGroup
-                      value={watch("gender") || ""}
-                      onValueChange={(value) => setValue("gender", value as Gender)}
-                      className="flex gap-4"
-                    >
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="M" id="gender-male" />
-                        <Label htmlFor="gender-male" className="cursor-pointer">
-                          남자
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="F" id="gender-female" />
-                        <Label htmlFor="gender-female" className="cursor-pointer">
-                          여자
-                        </Label>
-                      </div>
-                    </RadioGroup>
-                  </td>
-                </tr>
-
-                {/* 생년월일 */}
-                <tr className="border-b border-gray-200">
-                  <th className="bg-gray-50 px-4 py-3 text-left font-medium border-r border-gray-200">
-                    생년월일
-                  </th>
-                  <td className="px-4 py-3">
-                    <div className="flex gap-2 items-center flex-wrap">
-                      <Input
-                        placeholder="년 (예: 1990)"
-                        {...register("birth_year")}
-                        maxLength={4}
-                        className="w-32"
-                      />
-                      <span>년</span>
-                      <Input
-                        placeholder="월 (예: 01)"
-                        {...register("birth_month")}
-                        maxLength={2}
-                        className="w-24"
-                      />
-                      <span>월</span>
-                      <Input
-                        placeholder="일 (예: 01)"
-                        {...register("birth_day")}
-                        maxLength={2}
-                        className="w-24"
-                      />
-                      <span>일</span>
-                    </div>
-                    <div className="flex gap-4 mt-2">
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="radio"
-                          checked={watch("is_solar_calendar") === true}
-                          onChange={() => setValue("is_solar_calendar", true)}
-                        />
-                        <span>양력</span>
-                      </label>
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="radio"
-                          checked={watch("is_solar_calendar") === false}
-                          onChange={() => setValue("is_solar_calendar", false)}
-                        />
-                        <span>음력</span>
-                      </label>
-                    </div>
                   </td>
                 </tr>
               </tbody>
