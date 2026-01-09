@@ -241,14 +241,25 @@ cp .env.example .env
 **6-5. 토스페이먼츠 환경 변수 설정**
 
 1. [토스페이먼츠 개발자센터](https://developers.tosspayments.com/)에 접속하여 로그인
-2. **API 키** 메뉴에서 다음 값들을 복사하여 `.env` 파일에 입력:
+2. **API 키** 메뉴에서 다음 키들을 복사하여 `.env` 파일에 입력:
+   
+   **토스페이먼츠 개발자센터에서 확인할 수 있는 키:**
+   - **결제위젯 연동키**: Client Key와 Secret Key가 있음
+   - **API 개별 연동키**: Client Key와 Secret Key가 있음
+   
+   **사용 방법:**
    ```env
    # 토스페이먼츠 결제 연동 키
-   NEXT_PUBLIC_TOSS_PAYMENTS_CLIENT_KEY="<Client Key>"
-   TOSS_PAYMENTS_SECRET_KEY="<Secret Key>"
+   # 결제위젯 연동키의 Client Key를 사용 (클라이언트에서 결제위젯을 띄울 때 사용)
+   NEXT_PUBLIC_TOSS_PAYMENTS_CLIENT_KEY="결제위젯 연동키의 Client Key"
+   
+   # API 개별 연동키의 Secret Key를 사용 (서버에서 결제 승인 API 호출 시 사용)
+   TOSS_PAYMENTS_SECRET_KEY="API 개별 연동키의 Secret Key"
    ```
    
-   > **⚠️ 주의**: 
+   > **⚠️ 중요**: 
+   > - **결제위젯 연동키의 Client Key** → `NEXT_PUBLIC_TOSS_PAYMENTS_CLIENT_KEY`에 입력
+   > - **API 개별 연동키의 Secret Key** → `TOSS_PAYMENTS_SECRET_KEY`에 입력
    > - 테스트 환경: 개발자센터에서 발급받은 테스트 키 사용
    > - 프로덕션 환경: 전자결제 계약 완료 후 발급받은 라이브 키 사용
    > - `TOSS_PAYMENTS_SECRET_KEY`는 서버 사이드에서만 사용되므로 절대 공개하지 마세요!
