@@ -5,6 +5,11 @@ import {
   sanitizeDatabaseError,
   logError,
 } from "@/lib/error-handler";
+import {
+  rateLimitMiddleware,
+  rateLimitHeaders,
+  RATE_LIMITS,
+} from "@/lib/rate-limit";
 
 /**
  * @file app/api/chat/session/route.ts
@@ -18,8 +23,28 @@ import {
 
 export const runtime = "nodejs";
 
-export async function POST() {
+export async function POST(request: Request) {
   console.group("[ChatSessionAPI] POST /api/chat/session");
+  
+  // Rate Limiting 체크
+  const rateLimitResult = await rateLimitMiddleware(
+    request,
+    RATE_LIMITS.SYNC_USER.limit, // 세션 생성도 사용자 동기화와 동일한 제한
+    RATE_LIMITS.SYNC_USER.window,
+  );
+
+  if (!rateLimitResult?.success) {
+    console.warn("[RateLimit] 챗봇 세션 생성 API 요청 제한 초과");
+    console.groupEnd();
+    return NextResponse.json(
+      { error: "요청이 너무 많습니다. 잠시 후 다시 시도해주세요." },
+      {
+        status: 429,
+        headers: rateLimitHeaders(rateLimitResult),
+      },
+    );
+  }
+
   try {
     const { userId } = await auth();
     console.log("auth:", { userId });
@@ -83,7 +108,25 @@ export async function POST() {
       userRow = insertedUser as { id: string };
     }
 
-    // 3) chat session 생성
+    // 3) 최근 활성 세션 확인 (중복 생성 방지)
+    // 최근 1분 이내에 생성된 세션이 있으면 재사용
+    const oneMinuteAgo = new Date(Date.now() - 60 * 1000).toISOString();
+    const { data: recentSession } = await supabase
+      .from("chat_sessions")
+      .select("id")
+      .eq("user_id", userRow.id)
+      .is("deleted_at", null)
+      .gte("created_at", oneMinuteAgo)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (recentSession) {
+      console.log("최근 생성된 세션 재사용:", recentSession.id);
+      return NextResponse.json({ sessionId: recentSession.id });
+    }
+
+    // 4) 새 chat session 생성
     const { data: session, error: sessionError } = await supabase
       .from("chat_sessions")
       .insert({ user_id: userRow.id })

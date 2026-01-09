@@ -115,10 +115,10 @@ export async function POST(req: Request) {
       );
     }
 
-    // 2) session 소유자 검증
+    // 2) session 소유자 검증 (created_at 포함하여 만료 확인 가능하도록)
     const { data: session, error: sessionError } = await supabase
       .from("chat_sessions")
-      .select("id,user_id")
+      .select("id,user_id,created_at")
       .eq("id", sessionId)
       .is("deleted_at", null)
       .maybeSingle();
@@ -131,12 +131,45 @@ export async function POST(req: Request) {
       );
     }
 
-    if (!session || session.user_id !== userRow.id) {
+    if (!session) {
+      console.warn("Session not found:", sessionId);
+      return NextResponse.json(
+        { error: "세션을 찾을 수 없습니다." },
+        { status: 404 }
+      );
+    }
+
+    // 세션 소유자 검증 (보안 강화)
+    if (session.user_id !== userRow.id) {
+      logError(
+        new Error("Session owner mismatch"),
+        {
+          api: "/api/chat/stream",
+          step: "session_owner_verification",
+          sessionId,
+          sessionUserId: session.user_id,
+          requestUserId: userRow.id,
+        }
+      );
       console.warn("Forbidden: session owner mismatch", {
-        sessionUserId: session?.user_id,
+        sessionUserId: session.user_id,
         userId: userRow.id,
       });
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      return NextResponse.json(
+        { error: "세션에 접근할 권한이 없습니다." },
+        { status: 403 }
+      );
+    }
+
+    // 세션 만료 확인 (선택사항: 24시간 이상 된 세션은 만료 처리)
+    const sessionAge = Date.now() - new Date(session.created_at || 0).getTime();
+    const maxSessionAge = 24 * 60 * 60 * 1000; // 24시간
+    if (sessionAge > maxSessionAge) {
+      console.warn("Session expired:", { sessionId, age: sessionAge });
+      return NextResponse.json(
+        { error: "세션이 만료되었습니다. 새 세션을 생성해주세요." },
+        { status: 410 } // 410 Gone
+      );
     }
 
     // 3) user 메시지 저장
