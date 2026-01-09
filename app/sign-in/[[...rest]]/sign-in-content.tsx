@@ -250,8 +250,15 @@ export default function SignInContent() {
       updateKakaoButtonText();
 
       // 카카오 버튼 텍스트가 변경되어도 "kakao"로 유지
+      let lastKakaoUpdateTime = 0;
+      const KAKAO_THROTTLE_MS = 1000; // 1초마다 최대 1회만 업데이트
+      
       const kakaoButtonObserver = new MutationObserver(() => {
-        updateKakaoButtonText();
+        const now = Date.now();
+        if (now - lastKakaoUpdateTime > KAKAO_THROTTLE_MS) {
+          lastKakaoUpdateTime = now;
+          updateKakaoButtonText();
+        }
       });
 
       const kakaoButton = document.querySelector(
@@ -260,8 +267,8 @@ export default function SignInContent() {
       if (kakaoButton) {
         kakaoButtonObserver.observe(kakaoButton, {
           childList: true,
-          subtree: true,
-          characterData: true,
+          subtree: false, // true에서 false로 변경 - 직접 자식만 관찰 (성능 개선)
+          characterData: false, // false로 변경 - 텍스트 변경 무시 (성능 개선)
         });
       }
 
@@ -327,8 +334,17 @@ export default function SignInContent() {
       };
 
       // 네이버 버튼 텍스트가 변경되어도 "NAVER"로 유지
+      let lastNaverUpdateTime = 0;
+      const NAVER_THROTTLE_MS = 1000; // 1초마다 최대 1회만 업데이트
+      let naverObserverSetupAttempts = 0;
+      const MAX_NAVER_SETUP_ATTEMPTS = 10; // 최대 10번만 시도
+      
       const naverButtonObserver = new MutationObserver(() => {
-        updateNaverButtonText();
+        const now = Date.now();
+        if (now - lastNaverUpdateTime > NAVER_THROTTLE_MS) {
+          lastNaverUpdateTime = now;
+          updateNaverButtonText();
+        }
       });
 
       // 초기 실행 및 지속적인 모니터링
@@ -336,6 +352,13 @@ export default function SignInContent() {
 
       // 네이버 버튼이 나타날 때까지 대기 후 Observer 설정
       const setupNaverButtonObserver = () => {
+        // 최대 시도 횟수 제한
+        if (naverObserverSetupAttempts >= MAX_NAVER_SETUP_ATTEMPTS) {
+          console.warn("[SignInContent] 네이버 버튼 Observer 설정 최대 시도 횟수 도달");
+          return;
+        }
+        naverObserverSetupAttempts++;
+        
         const naverButton =
           document.querySelector(
             ".cl-socialButtonsIconButton__custom_naver_auth",
@@ -346,12 +369,12 @@ export default function SignInContent() {
         if (naverButton) {
           naverButtonObserver.observe(naverButton, {
             childList: true,
-            subtree: true,
-            characterData: true,
+            subtree: false, // true에서 false로 변경 - 직접 자식만 관찰 (성능 개선)
+            characterData: false, // false로 변경 - 텍스트 변경 무시 (성능 개선)
           });
         } else {
-          // 버튼이 아직 없으면 잠시 후 다시 시도
-          setTimeout(setupNaverButtonObserver, 100);
+          // 버튼이 아직 없으면 잠시 후 다시 시도 (간격 증가)
+          setTimeout(setupNaverButtonObserver, 500); // 100ms에서 500ms로 증가
         }
       };
       setupNaverButtonObserver();
@@ -437,11 +460,17 @@ export default function SignInContent() {
           }
 
           // 라벨이 동적으로 변경되어도 "이메일 주소"로 유지
+          let lastLabelUpdateTime = 0;
+          const LABEL_THROTTLE_MS = 1000; // 1초마다 최대 1회만 업데이트
+          
           labelObserver = new MutationObserver(() => {
+            const now = Date.now();
             if (
+              now - lastLabelUpdateTime > LABEL_THROTTLE_MS &&
               identifierLabel &&
               identifierLabel.textContent !== "이메일 주소"
             ) {
+              lastLabelUpdateTime = now;
               identifierLabel.textContent = "이메일 주소";
               console.log(
                 "[SignInContent] 라벨 텍스트를 '이메일 주소'로 재변경",
@@ -451,8 +480,8 @@ export default function SignInContent() {
 
           labelObserver.observe(identifierLabel, {
             childList: true,
-            subtree: true,
-            characterData: true,
+            subtree: false, // true에서 false로 변경 - 직접 자식만 관찰 (성능 개선)
+            characterData: false, // false로 변경 - 텍스트 변경 무시 (성능 개선)
           });
         }
 
@@ -843,14 +872,22 @@ export default function SignInContent() {
         if (buttonObserver) {
           buttonObserver.disconnect();
         }
+        
+        let lastButtonObserverUpdateTime = 0;
+        const BUTTON_OBSERVER_THROTTLE_MS = 1000; // 1초마다 최대 1회만 업데이트
+        
         buttonObserver = new MutationObserver(() => {
-          updateButtonText();
+          const now = Date.now();
+          if (now - lastButtonObserverUpdateTime > BUTTON_OBSERVER_THROTTLE_MS) {
+            lastButtonObserverUpdateTime = now;
+            updateButtonText();
+          }
         });
 
         buttonObserver.observe(loginButton, {
           childList: true,
-          subtree: true,
-          characterData: true,
+          subtree: false, // true에서 false로 변경 - 직접 자식만 관찰 (성능 개선)
+          characterData: false, // false로 변경 - 텍스트 변경 무시 (성능 개선)
         });
 
         // 로그인 버튼 클릭 이벤트 로깅
@@ -881,13 +918,15 @@ export default function SignInContent() {
 
     // MutationObserver는 더 구체적으로 타겟팅하고, throttle 적용
     let lastUpdateTime = 0;
-    const THROTTLE_MS = 2000; // 2초마다 최대 1회만 업데이트
+    const THROTTLE_MS = 3000; // 3초마다 최대 1회만 업데이트 (간격 증가)
 
     const observer = new MutationObserver(() => {
       const now = Date.now();
+      // 추가 체크: 최대 업데이트 횟수 확인
       if (
         now - lastUpdateTime > THROTTLE_MS &&
-        (!isEmailFieldApplied || !isPasswordFieldApplied)
+        (!isEmailFieldApplied || !isPasswordFieldApplied) &&
+        updateCount < MAX_UPDATES
       ) {
         lastUpdateTime = now;
         updateForm();
@@ -899,8 +938,9 @@ export default function SignInContent() {
     if (formContainer) {
       observer.observe(formContainer, {
         childList: true,
-        subtree: true,
+        subtree: false, // true에서 false로 변경 - 직접 자식만 관찰 (성능 개선)
         attributes: false, // 속성 변경은 무시
+        characterData: false, // 텍스트 변경 무시 (성능 개선)
       });
     }
 
@@ -935,8 +975,8 @@ export default function SignInContent() {
       });
     };
 
-    // 주기적으로 에러 메시지 확인 및 숨기기 (2초마다, 무한 루프 방지)
-    const errorCheckInterval = setInterval(hideErrorAlerts, 2000);
+    // 주기적으로 에러 메시지 확인 및 숨기기 (5초마다, 무한 루프 방지 및 성능 개선)
+    const errorCheckInterval = setInterval(hideErrorAlerts, 5000);
 
     return () => {
       clearTimeout(initialTimeout);
@@ -970,7 +1010,14 @@ export default function SignInContent() {
 
   // 두 번째 입력 페이지로 이동하는 것을 완전히 방지
   useEffect(() => {
+    let isRedirecting = false; // 리다이렉트 중 플래그 (무한 루프 방지)
+
     const preventSecondPageRedirect = () => {
+      // 이미 리다이렉트 중이면 실행하지 않음 (무한 루프 방지)
+      if (isRedirecting) {
+        return;
+      }
+
       const currentPath = window.location.pathname;
 
       // /sign-in/create, /sign-up, 또는 다른 두 번째 입력 페이지로 이동하는 것을 감지
@@ -979,20 +1026,21 @@ export default function SignInContent() {
         currentPath === "/sign-up" ||
         currentPath.includes("/sign-up/")
       ) {
-        console.group(
+        console.log(
           "[SignInContent] 중간 페이지로 이동 감지, 즉시 홈으로 리다이렉트",
         );
         console.log("현재 경로:", currentPath);
-        console.log("시간:", new Date().toISOString());
-        console.groupEnd();
+
+        // 리다이렉트 플래그 설정
+        isRedirecting = true;
 
         // 로그인 중간 페이지로 이동하려는 시도를 즉시 홈으로 리다이렉트
         window.location.replace("/");
       }
     };
 
-    // URL 확인 (1초마다, 무한 루프 방지)
-    const interval = setInterval(preventSecondPageRedirect, 1000);
+    // setInterval 제거 - 무한 루프 방지 (이벤트 리스너만 사용)
+    // const interval = setInterval(preventSecondPageRedirect, 1000); // 제거
 
     // popstate 이벤트 리스너 (뒤로가기/앞으로가기)
     window.addEventListener("popstate", preventSecondPageRedirect);
@@ -1011,13 +1059,15 @@ export default function SignInContent() {
       ) {
         console.log("[SignInContent] pushState 차단 (중간 페이지 방지):", url);
         // 중간 페이지로 이동하려는 시도를 홈으로 리다이렉트
-        if (window.location.pathname === "/sign-in") {
+        if (window.location.pathname === "/sign-in" && !isRedirecting) {
+          isRedirecting = true;
           window.location.replace("/");
         }
         return; // 두 번째 페이지로의 pushState 차단
       }
       originalPushState.apply(history, args);
-      setTimeout(preventSecondPageRedirect, 0);
+      // setTimeout 제거 - 무한 루프 방지
+      // setTimeout(preventSecondPageRedirect, 0); // 제거
     };
 
     history.replaceState = function (...args) {
@@ -1033,17 +1083,19 @@ export default function SignInContent() {
           url,
         );
         // 중간 페이지로 이동하려는 시도를 홈으로 리다이렉트
-        if (window.location.pathname === "/sign-in") {
+        if (window.location.pathname === "/sign-in" && !isRedirecting) {
+          isRedirecting = true;
           window.location.replace("/");
         }
         return; // 두 번째 페이지로의 replaceState 차단
       }
       originalReplaceState.apply(history, args);
-      setTimeout(preventSecondPageRedirect, 0);
+      // setTimeout 제거 - 무한 루프 방지
+      // setTimeout(preventSecondPageRedirect, 0); // 제거
     };
 
     return () => {
-      clearInterval(interval);
+      // clearInterval(interval); // 제거
       window.removeEventListener("popstate", preventSecondPageRedirect);
       history.pushState = originalPushState;
       history.replaceState = originalReplaceState;
@@ -2009,17 +2061,22 @@ export default function SignInContent() {
         updateButtonText();
 
         // MutationObserver로 버튼 내용이 변경될 때마다 다시 적용
+        let lastButtonUpdateTime = 0;
+        const BUTTON_THROTTLE_MS = 1000; // 1초마다 최대 1회만 업데이트
+        
         const buttonObserver = new MutationObserver(() => {
-          // isUpdating 플래그로 무한 루프 방지
-          if (!isUpdating) {
+          // isUpdating 플래그와 throttle로 무한 루프 방지
+          const now = Date.now();
+          if (!isUpdating && now - lastButtonUpdateTime > BUTTON_THROTTLE_MS) {
+            lastButtonUpdateTime = now;
             updateButtonText();
           }
         });
 
         buttonObserver.observe(loginButton, {
           childList: true,
-          subtree: true,
-          characterData: true,
+          subtree: false, // true에서 false로 변경 - 직접 자식만 관찰 (성능 개선)
+          characterData: false, // false로 변경 - 텍스트 변경 무시 (성능 개선)
         });
 
         // 버튼 클릭 이벤트도 가로채기 (폼 제출과 동일한 처리)
@@ -2076,9 +2133,9 @@ export default function SignInContent() {
       cleanupFunctionsRef.current = [];
       isInterceptedRef.current = false; // 플래그 리셋
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     // clerk, signIn, redirectUrl은 초기화 후 변경되지 않으며,
     // isInterceptedRef로 무한 루프를 방지하므로 의존성 배열에서 제외
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoaded, signInLoaded]);
 
   // // Clerk가 자동으로 생성한 카카오 버튼 삭제
