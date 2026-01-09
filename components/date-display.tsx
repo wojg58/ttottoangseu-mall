@@ -4,11 +4,14 @@
  * 
  * 서버와 클라이언트에서 날짜 포맷팅이 다를 수 있어 hydration 오류가 발생할 수 있습니다.
  * 이 컴포넌트는 클라이언트에서만 날짜를 포맷팅하여 문제를 해결합니다.
+ * 
+ * Supabase는 UTC 기준으로 시간을 저장하므로, 화면 표시 시에만 KST로 변환합니다.
  */
 
 "use client";
 
 import { useEffect, useState } from "react";
+import { formatKoreaTime } from "@/lib/utils/format-time";
 
 interface DateDisplayProps {
   date: string | Date;
@@ -27,57 +30,16 @@ export default function DateDisplay({
   useEffect(() => {
     setMounted(true);
     
-    // UTC 시간 문자열을 Date 객체로 변환
-    // Supabase에서 오는 형식: "2026-01-09 11:22:19+00" 또는 "2026-01-09T11:22:19Z"
-    let dateObj: Date;
-    if (typeof date === "string") {
-      // 공백이 있는 형식 처리 (Supabase 형식: "2026-01-09 11:22:19+00")
-      const normalizedDate = date.replace(" ", "T").replace("+00", "Z");
-      dateObj = new Date(normalizedDate);
-    } else {
-      dateObj = date;
-    }
-
+    // UTC 시간을 KST로 변환하여 포맷팅
+    const formatted = formatKoreaTime(date, format);
+    setFormattedDate(formatted);
+    
     // 개발 환경에서 디버깅 로그
     if (process.env.NODE_ENV === "development" && format === "datetime") {
       console.log("[DateDisplay] 시간 변환:", {
-        원본: date,
-        Date객체: dateObj.toISOString(),
-        UTC시간: dateObj.toUTCString(),
-        로컬시간: dateObj.toString(),
+        원본_UTC: date,
+        변환된_KST: formatted,
       });
-    }
-
-    if (format === "datetime") {
-      const formatter = new Intl.DateTimeFormat("ko-KR", {
-        timeZone: "Asia/Seoul",
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-      const formatted = formatter.format(dateObj);
-      setFormattedDate(formatted);
-      
-      // 개발 환경에서 변환 결과 확인
-      if (process.env.NODE_ENV === "development") {
-        console.log("[DateDisplay] 한국 시간 변환 결과:", formatted);
-      }
-    } else if (format === "short") {
-      const formatter = new Intl.DateTimeFormat("ko-KR", {
-        timeZone: "Asia/Seoul",
-        month: "short",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-      setFormattedDate(formatter.format(dateObj));
-    } else {
-      const formatter = new Intl.DateTimeFormat("ko-KR", {
-        timeZone: "Asia/Seoul",
-      });
-      setFormattedDate(formatter.format(dateObj));
     }
   }, [date, format]);
 

@@ -140,8 +140,13 @@ export default async function OrderDetailPage({
                 <div className="flex justify-between">
                   <span className="text-[#8b7d84]">주문일시</span>
                   <DateDisplay
-                    date={order.created_at}
-                    format="date"
+                    date={
+                      // 결제 완료된 주문은 paid_at 사용, 그 외는 created_at 사용
+                      (order.payment_status === "PAID" && order.paid_at)
+                        ? order.paid_at
+                        : order.created_at
+                    }
+                    format="datetime"
                     className="text-[#4a3f48]"
                   />
                 </div>
