@@ -317,7 +317,14 @@ export async function POST(request: Request) {
       }
     }
 
-    console.log("✅ Supabase 동기화 완료:", result);
+    // 시간 필드를 한국 시간으로 변환하여 로그에 표시
+    const { formatKoreaTimeForLog } = await import("@/lib/utils/format-time");
+    console.log("✅ Supabase 동기화 완료:", {
+      ...result,
+      created_at: formatKoreaTimeForLog(result.created_at),
+      updated_at: formatKoreaTimeForLog(result.updated_at),
+      deleted_at: result.deleted_at ? formatKoreaTimeForLog(result.deleted_at) : null,
+    });
     console.groupEnd();
 
     return NextResponse.json({
