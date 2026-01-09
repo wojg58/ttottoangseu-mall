@@ -12,9 +12,20 @@
 
 import { getServiceRoleClient } from "@/lib/supabase/service-role";
 import { compressImage } from "@/lib/utils/compress-image";
+import { fileTypeFromBuffer } from "file-type";
 
 const PRODUCT_IMAGES_BUCKET = "product-images";
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
+
+// 허용된 이미지 MIME 타입
+const ALLOWED_IMAGE_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+  "image/bmp",
+  "image/tiff",
+] as const;
 
 export interface UploadImageOptions {
   /** 고정 너비 (px, 지정 시 정확히 이 크기로 리사이즈) */
@@ -69,6 +80,29 @@ export async function uploadImageFile(
     const originalSize = arrayBuffer.byteLength;
     console.log(`원본 이미지 크기: ${(originalSize / 1024).toFixed(2)} KB`);
 
+    // 매직 넘버 검증 (파일 내용 기반 검증)
+    console.log("파일 내용 검증 중 (매직 넘버 체크)...");
+    const fileType = await fileTypeFromBuffer(Buffer.from(arrayBuffer));
+    
+    if (!fileType) {
+      throw new Error("파일 형식을 확인할 수 없습니다. 이미지 파일인지 확인해주세요.");
+    }
+
+    if (!fileType.mime.startsWith("image/")) {
+      throw new Error(`이미지 파일이 아닙니다. 감지된 형식: ${fileType.mime}`);
+    }
+
+    if (!ALLOWED_IMAGE_TYPES.includes(fileType.mime as any)) {
+      throw new Error(`지원하지 않는 이미지 형식입니다: ${fileType.mime}`);
+    }
+
+    console.log(`✅ 파일 내용 검증 완료: ${fileType.mime} (${fileType.ext})`);
+
+    // 파일명 보안 강화 (특수 문자 제거, 길이 제한)
+    const sanitizedBaseName = file.name
+      .replace(/[^a-zA-Z0-9.-]/g, "_")
+      .substring(0, 100); // 최대 100자
+
     // 이미지 압축
     console.log("이미지 압축 시작...");
     const compressedResult = await compressImage(Buffer.from(arrayBuffer), {
@@ -87,10 +121,10 @@ export async function uploadImageFile(
       `압축 완료: ${(compressedResult.size / 1024).toFixed(2)} KB (압축률: ${compressedResult.compressionRatio.toFixed(2)}%)`,
     );
 
-    // 파일명 생성 (WebP로 변환)
-    const fileName = `product-${Date.now()}-${Math.random()
-      .toString(36)
-      .substring(7)}.webp`;
+    // 파일명 생성 (WebP로 변환, 안전한 파일명 사용)
+    const timestamp = Date.now();
+    const randomStr = Math.random().toString(36).substring(2, 9);
+    const fileName = `product-${timestamp}-${randomStr}.webp`;
     const filePath = `products/${fileName}`;
 
     // Supabase Storage에 업로드 (압축된 이미지)
