@@ -37,6 +37,12 @@ export async function saveMemberAdditionalInfo(
     }
 
     logger.debug("[saveMemberAdditionalInfo] Clerk User ID:", userId);
+    logger.debug("[saveMemberAdditionalInfo] 저장할 데이터:", {
+      gender: data.gender,
+      birth_date: data.birth_date,
+      mobile: data.mobile,
+      member_type: data.member_type,
+    });
 
     const supabase = await createClient();
 
@@ -47,37 +53,50 @@ export async function saveMemberAdditionalInfo(
     }
 
     // 데이터 저장
-    const { error } = await supabase.from("member_additional_info").upsert(
-      {
-        clerk_id: userId,
-        member_type: data.member_type,
-        company_type: data.company_type,
-        hint: data.hint,
-        hint_answer: data.hint_answer,
-        postcode: data.postcode,
-        addr1: data.addr1,
-        addr2: data.addr2,
-        phone: data.phone,
-        mobile: data.mobile,
-        gender: data.gender,
-        birth_date: birth_date,
-        is_solar_calendar: data.is_solar_calendar ?? true,
-        is_sms: data.is_sms,
-        is_news_mail: data.is_news_mail,
-        updated_at: new Date().toISOString(),
-      },
-      {
-        onConflict: "clerk_id",
-      }
-    );
+    const { data: insertedData, error } = await supabase
+      .from("member_additional_info")
+      .upsert(
+        {
+          clerk_id: userId,
+          member_type: data.member_type,
+          company_type: data.company_type,
+          hint: data.hint,
+          hint_answer: data.hint_answer,
+          postcode: data.postcode,
+          addr1: data.addr1,
+          addr2: data.addr2,
+          phone: data.phone,
+          mobile: data.mobile,
+          gender: data.gender,
+          birth_date: birth_date,
+          is_solar_calendar: data.is_solar_calendar ?? true,
+          is_sms: data.is_sms,
+          is_news_mail: data.is_news_mail,
+          updated_at: new Date().toISOString(),
+        },
+        {
+          onConflict: "clerk_id",
+        }
+      )
+      .select();
 
     if (error) {
       logger.error("[saveMemberAdditionalInfo] DB 저장 에러:", error);
+      logger.error("[saveMemberAdditionalInfo] 에러 상세:", {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+      });
       logger.groupEnd();
       return { success: false, error: "정보 저장에 실패했습니다." };
     }
 
-    logger.debug("[saveMemberAdditionalInfo] 저장 완료");
+    logger.debug("[saveMemberAdditionalInfo] 저장 완료:", {
+      gender: insertedData?.[0]?.gender,
+      birth_date: insertedData?.[0]?.birth_date,
+      mobile: insertedData?.[0]?.mobile,
+    });
     logger.groupEnd();
     return { success: true };
   } catch (error) {
@@ -108,6 +127,8 @@ export async function getMemberAdditionalInfo(): Promise<{
 
     const supabase = await createClient();
 
+    logger.debug("[getMemberAdditionalInfo] Clerk User ID:", userId);
+
     const { data, error } = await supabase
       .from("member_additional_info")
       .select("*")
@@ -115,12 +136,21 @@ export async function getMemberAdditionalInfo(): Promise<{
       .single();
 
     if (error) {
-      logger.warn("[getMemberAdditionalInfo] 데이터 없음 또는 에러:", error);
+      // PGRST116은 데이터가 없을 때 발생하는 에러
+      if (error.code === "PGRST116") {
+        logger.warn("[getMemberAdditionalInfo] 데이터 없음 (회원 추가 정보가 아직 저장되지 않음)");
+      } else {
+        logger.error("[getMemberAdditionalInfo] 조회 에러:", error);
+      }
       logger.groupEnd();
       return { success: false, error: "정보를 불러올 수 없습니다." };
     }
 
-    logger.debug("[getMemberAdditionalInfo] 조회 완료");
+    logger.debug("[getMemberAdditionalInfo] 조회 완료:", {
+      gender: data?.gender,
+      birth_date: data?.birth_date,
+      mobile: data?.mobile,
+    });
     logger.groupEnd();
     return { success: true, data: data as MemberAdditionalInfo };
   } catch (error) {

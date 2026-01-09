@@ -49,6 +49,10 @@ function VerifyEmailContent() {
         // 세션 활성화
         if (result.createdSessionId) {
           await setActive({ session: result.createdSessionId });
+          logger.debug("[VerifyEmail] 세션 활성화 완료");
+          
+          // 세션이 완전히 활성화될 때까지 약간의 지연
+          await new Promise(resolve => setTimeout(resolve, 500));
         }
 
         logger.debug("[VerifyEmail] 인증 완료");
@@ -56,10 +60,12 @@ function VerifyEmailContent() {
         // 세션 스토리지에서 회원 추가 정보 가져오기
         if (typeof window !== "undefined") {
           const pendingInfoStr = sessionStorage.getItem("pendingMemberInfo");
+          logger.debug("[VerifyEmail] 세션 스토리지에서 데이터 확인:", pendingInfoStr ? "있음" : "없음");
+          
           if (pendingInfoStr) {
             try {
               const pendingInfo = JSON.parse(pendingInfoStr);
-              logger.debug("[VerifyEmail] 회원 추가 정보 저장 시작");
+              logger.debug("[VerifyEmail] 회원 추가 정보 저장 시작", pendingInfo);
 
               // 생년월일 조합
               let birth_date: string | undefined;
@@ -68,9 +74,10 @@ function VerifyEmailContent() {
                   2,
                   "0"
                 )}-${pendingInfo.birth_day.padStart(2, "0")}`;
+                logger.debug("[VerifyEmail] 생년월일 조합:", birth_date);
               }
 
-              const saveResult = await saveMemberAdditionalInfo({
+              const saveData = {
                 member_type: pendingInfo.member_type,
                 company_type: pendingInfo.company_type,
                 hint: pendingInfo.hint,
@@ -85,17 +92,42 @@ function VerifyEmailContent() {
                 is_solar_calendar: pendingInfo.is_solar_calendar ?? true,
                 is_sms: pendingInfo.is_sms ?? false,
                 is_news_mail: pendingInfo.is_news_mail ?? false,
-              });
+              };
 
-              if (saveResult.success) {
-                logger.debug("[VerifyEmail] 회원 추가 정보 저장 완료");
-                sessionStorage.removeItem("pendingMemberInfo");
-              } else {
-                logger.error("[VerifyEmail] 회원 추가 정보 저장 실패:", saveResult.error);
+              logger.debug("[VerifyEmail] 저장할 데이터:", saveData);
+
+              // 최대 3번 재시도
+              let saveResult;
+              let retryCount = 0;
+              const maxRetries = 3;
+
+              while (retryCount < maxRetries) {
+                saveResult = await saveMemberAdditionalInfo(saveData);
+                
+                if (saveResult.success) {
+                  logger.debug("[VerifyEmail] 회원 추가 정보 저장 완료");
+                  sessionStorage.removeItem("pendingMemberInfo");
+                  break;
+                } else {
+                  retryCount++;
+                  logger.warn(`[VerifyEmail] 회원 추가 정보 저장 실패 (시도 ${retryCount}/${maxRetries}):`, saveResult.error);
+                  
+                  if (retryCount < maxRetries) {
+                    // 재시도 전 대기
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                  }
+                }
+              }
+
+              if (!saveResult.success) {
+                logger.error("[VerifyEmail] 회원 추가 정보 저장 최종 실패:", saveResult.error);
+                // 실패해도 계속 진행 (나중에 설정에서 입력 가능)
               }
             } catch (error) {
               logger.error("[VerifyEmail] 회원 추가 정보 파싱 에러:", error);
             }
+          } else {
+            logger.warn("[VerifyEmail] 세션 스토리지에 회원 추가 정보가 없습니다");
           }
         }
 

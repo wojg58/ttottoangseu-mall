@@ -34,6 +34,11 @@ export default async function MyPage() {
 
   // 회원 추가 정보
   const memberInfo = memberInfoResult.success ? memberInfoResult.data : null;
+  
+  // 디버깅: 조회 실패 시 로그 출력 (개발 환경)
+  if (!memberInfoResult.success && process.env.NODE_ENV === "development") {
+    console.log("[MyPage] 회원 추가 정보 조회 실패:", memberInfoResult.error);
+  }
 
   // 성별 표시 텍스트
   const genderText = memberInfo?.gender === "M" ? "남자" : memberInfo?.gender === "F" ? "여자" : "-";
