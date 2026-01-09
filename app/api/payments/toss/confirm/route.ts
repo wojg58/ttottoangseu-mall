@@ -184,9 +184,9 @@ export async function POST(request: NextRequest) {
 
     logger.info("✅ 결제 금액 검증 완료");
 
-    // 8. 주문 상태 검증 (pending 상태만 결제 가능)
-    if (order.status !== "pending") {
-      if (order.status === "paid") {
+    // 8. 주문 상태 검증 (PENDING 상태만 결제 가능)
+    if (order.status !== "PENDING") {
+      if (order.status === "PAID") {
         logger.warn("이미 결제 완료된 주문");
         logger.groupEnd();
         return NextResponse.json(
@@ -423,11 +423,11 @@ export async function POST(request: NextRequest) {
     const { error: updateError } = await supabase
       .from("orders")
       .update({
-        status: "paid",
+        status: "PAID",
         updated_at: new Date().toISOString(),
       })
       .eq("id", orderId)
-      .eq("status", "pending"); // pending 상태인 경우에만 업데이트 (낙관적 잠금)
+      .eq("status", "PENDING"); // PENDING 상태인 경우에만 업데이트 (낙관적 잠금)
 
     if (updateError) {
       logError(updateError, { api: "/api/payments/toss/confirm", step: "update_order_status" });

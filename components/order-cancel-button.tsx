@@ -33,7 +33,7 @@ export default function OrderCancelButton({
 
   // 취소 가능한 상태 확인
   const canCancel =
-    orderStatus === "pending" || orderStatus === "confirmed";
+    orderStatus === "PENDING" || orderStatus === "PAID";
 
   if (!canCancel) {
     return null;

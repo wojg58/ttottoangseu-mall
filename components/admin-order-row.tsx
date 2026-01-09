@@ -17,12 +17,10 @@ interface AdminOrderRowProps {
 }
 
 const STATUS_OPTIONS: { value: Order["status"]; label: string }[] = [
-  { value: "pending", label: "결제 대기" },
-  { value: "confirmed", label: "결제 완료" },
-  { value: "preparing", label: "상품 준비중" },
-  { value: "shipped", label: "배송중" },
-  { value: "delivered", label: "배송 완료" },
-  { value: "cancelled", label: "주문 취소" },
+  { value: "PENDING", label: "결제 대기" },
+  { value: "PAID", label: "결제 완료" },
+  { value: "CANCELED", label: "주문 취소" },
+  { value: "REFUNDED", label: "환불 완료" },
 ];
 
 export default function AdminOrderRow({ order }: AdminOrderRowProps) {
@@ -65,12 +63,12 @@ export default function AdminOrderRow({ order }: AdminOrderRowProps) {
           }
           disabled={isPending}
           className={`px-3 py-1.5 rounded-lg text-xs border-0 focus:ring-2 focus:ring-[#fad2e6] ${
-            currentStatus === "delivered"
+            currentStatus === "PAID"
               ? "bg-green-100 text-green-600"
-              : currentStatus === "shipped"
-              ? "bg-blue-100 text-blue-600"
-              : currentStatus === "cancelled"
+              : currentStatus === "CANCELED"
               ? "bg-gray-100 text-gray-600"
+              : currentStatus === "REFUNDED"
+              ? "bg-orange-100 text-orange-600"
               : "bg-[#ffeef5] text-[#ff6b9d]"
           } disabled:opacity-50`}
         >

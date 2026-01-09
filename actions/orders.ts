@@ -228,7 +228,7 @@ export async function createOrder(input: CreateOrderInput): Promise<{
       .insert({
         user_id: userId,
         order_number: orderNumber,
-        status: "pending",
+        status: "PENDING",
         total_amount: totalAmount,
         shipping_name: input.shippingName,
         shipping_phone: input.shippingPhone,
@@ -502,7 +502,7 @@ export async function createQuickOrder(
       .insert({
         user_id: userId,
         order_number: orderNumber,
-        status: "pending",
+        status: "PENDING",
         total_amount: input.amount,
         shipping_name: input.customerName,
         shipping_phone: input.customerPhone,
@@ -643,7 +643,7 @@ export async function savePaymentInfo(
 
     await supabase
       .from("orders")
-      .update({ status: "confirmed" })
+      .update({ status: "PAID" })
       .eq("id", orderId);
 
     revalidatePath("/mypage/orders");
@@ -684,12 +684,12 @@ export async function cancelOrder(
       return { success: false, message: "주문을 찾을 수 없습니다." };
     }
 
-    if (order.status === "cancelled") {
+    if (order.status === "CANCELED" || order.status === "REFUNDED") {
       logger.groupEnd();
-      return { success: false, message: "이미 취소된 주문입니다." };
+      return { success: false, message: "이미 취소되거나 환불된 주문입니다." };
     }
 
-    if (order.status === "shipped" || order.status === "delivered") {
+    if (order.status === "PAID") {
       logger.groupEnd();
       return {
         success: false,
@@ -799,7 +799,7 @@ export async function cancelOrder(
 
     const { error: updateError } = await supabase
       .from("orders")
-      .update({ status: "cancelled" })
+      .update({ status: "CANCELED" })
       .eq("id", orderId);
 
     if (updateError) {

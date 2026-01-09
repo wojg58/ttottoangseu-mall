@@ -63,13 +63,13 @@ export async function getDashboardStats(): Promise<DashboardStats | null> {
   const { count: pendingOrders } = await supabase
     .from("orders")
     .select("*", { count: "exact", head: true })
-    .in("status", ["pending", "confirmed", "preparing"]);
+    .in("status", ["PENDING", "PAID"]);
 
   // 총 매출
   const { data: revenueData } = await supabase
     .from("orders")
     .select("total_amount")
-    .in("status", ["confirmed", "preparing", "shipped", "delivered"]);
+    .in("status", ["PAID"]);
 
   const totalRevenue =
     revenueData?.reduce((sum, order) => sum + order.total_amount, 0) || 0;

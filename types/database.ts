@@ -12,12 +12,10 @@
 
 export type ProductStatus = "active" | "hidden" | "sold_out";
 export type OrderStatus =
-  | "pending"
-  | "confirmed"
-  | "preparing"
-  | "shipped"
-  | "delivered"
-  | "cancelled";
+  | "PENDING"
+  | "PAID"
+  | "CANCELED"
+  | "REFUNDED";
 export type PaymentMethod =
   | "card"
   | "virtual_account"

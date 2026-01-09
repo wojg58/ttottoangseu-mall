@@ -184,21 +184,19 @@ export default async function AdminDashboardPage() {
                           <td className="py-3 px-2">
                             <span
                               className={`px-2 py-1 rounded-full text-xs ${
-                                order.status === "delivered"
+                                order.status === "PAID"
                                   ? "bg-green-100 text-green-600"
-                                  : order.status === "shipped"
-                                  ? "bg-blue-100 text-blue-600"
-                                  : order.status === "cancelled"
+                                  : order.status === "CANCELED"
                                   ? "bg-gray-100 text-gray-600"
+                                  : order.status === "REFUNDED"
+                                  ? "bg-orange-100 text-orange-600"
                                   : "bg-[#ffeef5] text-[#ff6b9d]"
                               }`}
                             >
-                              {order.status === "pending" && "결제 대기"}
-                              {order.status === "confirmed" && "결제 완료"}
-                              {order.status === "preparing" && "준비중"}
-                              {order.status === "shipped" && "배송중"}
-                              {order.status === "delivered" && "배송 완료"}
-                              {order.status === "cancelled" && "취소"}
+                              {order.status === "PENDING" && "결제 대기"}
+                              {order.status === "PAID" && "결제 완료"}
+                              {order.status === "CANCELED" && "주문 취소"}
+                              {order.status === "REFUNDED" && "환불 완료"}
                             </span>
                           </td>
                           <td className="py-3 px-2 text-[#8b7d84]">

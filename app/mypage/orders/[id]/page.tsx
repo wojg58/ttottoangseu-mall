@@ -60,21 +60,19 @@ export default async function OrderDetailPage({
           <h1 className="text-2xl font-bold text-[#4a3f48]">주문 상세</h1>
           <span
             className={`px-4 py-2 rounded-full text-sm font-medium ${
-              order.status === "delivered"
+              order.status === "PAID"
                 ? "bg-green-100 text-green-600"
-                : order.status === "shipped"
-                ? "bg-blue-100 text-blue-600"
-                : order.status === "cancelled"
+                : order.status === "CANCELED"
                 ? "bg-gray-100 text-gray-600"
+                : order.status === "REFUNDED"
+                ? "bg-orange-100 text-orange-600"
                 : "bg-[#ffeef5] text-[#ff6b9d]"
             }`}
           >
-            {order.status === "pending" && "결제 대기"}
-            {order.status === "confirmed" && "결제 완료"}
-            {order.status === "preparing" && "상품 준비중"}
-            {order.status === "shipped" && "배송중"}
-            {order.status === "delivered" && "배송 완료"}
-            {order.status === "cancelled" && "주문 취소"}
+            {order.status === "PENDING" && "결제 대기"}
+            {order.status === "PAID" && "결제 완료"}
+            {order.status === "CANCELED" && "주문 취소"}
+            {order.status === "REFUNDED" && "환불 완료"}
           </span>
         </div>
 

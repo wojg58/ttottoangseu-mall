@@ -230,7 +230,7 @@ export async function POST(request: NextRequest) {
     // 주문 상태 업데이트
     const { error: orderUpdateError } = await supabase
       .from("orders")
-      .update({ status: "confirmed" })
+      .update({ status: "PAID" })
       .eq("id", orderId);
 
     if (orderUpdateError) {

@@ -12,36 +12,43 @@
 ## 주요 함수 분석
 
 ### 1. `getNaverToken()` (42-91줄)
+
 - **책임**: 네이버 API 토큰 발급 및 캐싱
 - **의존성**: bcrypt, 환경 변수
 - **모듈화 대상**: ✅
 
 ### 2. `fetchWithRetry()` (94-128줄)
+
 - **책임**: API 호출 래퍼 (401 재시도, 429 exponential backoff)
 - **의존성**: `getNaverToken()`
 - **모듈화 대상**: ✅
 
 ### 3. `getChannelProduct()` (129-161줄)
+
 - **책임**: 특정 상품 정보 가져오기
 - **의존성**: `fetchWithRetry()`
 - **모듈화 대상**: ✅
 
 ### 4. `extractOptionStocks()` (162-186줄)
+
 - **책임**: 옵션 재고 정보 추출
 - **의존성**: 없음 (순수 함수)
 - **모듈화 대상**: ✅
 
 ### 5. `downloadCompressAndUploadImage()` (190-260줄)
+
 - **책임**: 이미지 다운로드, 압축, 업로드
 - **의존성**: sharp, Supabase Storage
 - **모듈화 대상**: ✅
 
 ### 6. `getAllSmartstoreProducts()` (261-367줄)
+
 - **책임**: 모든 스마트스토어 상품 가져오기
 - **의존성**: `fetchWithRetry()`
 - **모듈화 대상**: ✅
 
 ### 7. `buildMapping()` (368-1404줄)
+
 - **책임**: 메인 로직 (옵션 매핑, 이미지 처리, 재고 동기화)
 - **의존성**: 위의 모든 함수들
 - **모듈화 대상**: ✅ (기능별로 분리)
@@ -65,6 +72,7 @@ scripts/
 ### 모듈별 책임
 
 #### 1. `smartstore/token-manager.js`
+
 ```javascript
 // 네이버 API 토큰 관리
 export async function getNaverToken()
@@ -72,6 +80,7 @@ export function clearTokenCache()
 ```
 
 #### 2. `smartstore/api-client.js`
+
 ```javascript
 // API 호출 래퍼
 export async function fetchWithRetry(url, options, retried, retryCount)
@@ -79,6 +88,7 @@ export async function getChannelProduct(channelProductNo)
 ```
 
 #### 3. `smartstore/product-fetcher.js`
+
 ```javascript
 // 상품 데이터 가져오기
 export async function getAllSmartstoreProducts()
@@ -86,6 +96,7 @@ export async function getProductDetails(channelProductNo)
 ```
 
 #### 4. `smartstore/option-mapper.js`
+
 ```javascript
 // 옵션 매핑 로직
 export function extractOptionStocks(channelProductData)
@@ -93,6 +104,7 @@ export async function mapProductOptions(product, channelProductData)
 ```
 
 #### 5. `smartstore/image-processor.js`
+
 ```javascript
 // 이미지 처리
 export async function downloadCompressAndUploadImage(imageUrl, productId)
@@ -100,6 +112,7 @@ export async function processProductImages(product, images)
 ```
 
 #### 6. `smartstore/stock-sync.js`
+
 ```javascript
 // 재고 동기화
 export async function syncProductStock(productId, stockData)
@@ -110,15 +123,15 @@ export async function syncAllProductStocks(products)
 
 ```javascript
 // 메인 로직만 남김 (200줄 이하)
-const { getAllSmartstoreProducts } = require('./smartstore/product-fetcher');
-const { mapProductOptions } = require('./smartstore/option-mapper');
-const { processProductImages } = require('./smartstore/image-processor');
-const { syncProductStock } = require('./smartstore/stock-sync');
+const { getAllSmartstoreProducts } = require("./smartstore/product-fetcher");
+const { mapProductOptions } = require("./smartstore/option-mapper");
+const { processProductImages } = require("./smartstore/image-processor");
+const { syncProductStock } = require("./smartstore/stock-sync");
 
 async function buildMapping() {
   // 1. 상품 가져오기
   const products = await getAllSmartstoreProducts();
-  
+
   // 2. 각 상품 처리
   for (const product of products) {
     await mapProductOptions(product);
@@ -153,4 +166,3 @@ async function buildMapping() {
 
 **작성일**: 2025-01-XX  
 **상태**: 계획 완료, 실행 대기
-
