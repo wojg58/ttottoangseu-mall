@@ -10,6 +10,7 @@
 -- 사용 방법:
 -- - Supabase 대시보드 → SQL Editor에서 필요한 섹션만 실행
 -- - 전체 실행 시 순서대로 실행됩니다
+-- - 복사 붙여넣기 후 원하는 섹션만 선택하여 실행 가능
 -- ============================================================================
 
 -- ============================================================================
@@ -127,6 +128,20 @@ LEFT JOIN public.payments p ON p.order_id = o.id AND p.status = 'done'
 WHERE o.payment_status = 'PAID'
 ORDER BY o.paid_at DESC NULLS LAST
 LIMIT 20;
+
+-- 3.4. 전체 주문의 paid_at과 approved_at 비교 (LIMIT 없음)
+SELECT 
+    o.order_number,
+    o.paid_at as order_paid_at,
+    p.approved_at as payment_approved_at,
+    CASE 
+        WHEN o.paid_at = p.approved_at THEN '✅ 일치'
+        ELSE '❌ 불일치'
+    END as match_status
+FROM public.orders o
+LEFT JOIN public.payments p ON p.order_id = o.id AND p.status = 'done'
+WHERE o.payment_status = 'PAID'
+ORDER BY o.paid_at DESC NULLS LAST;
 
 -- ============================================================================
 -- 섹션 4: 한국 시간(KST)으로 시간 확인
@@ -250,4 +265,3 @@ WHERE o.payment_status = 'PAID'
 GROUP BY DATE((o.paid_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Seoul'))
 ORDER BY payment_date_kst DESC
 LIMIT 7;
-
