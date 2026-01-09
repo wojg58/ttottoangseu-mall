@@ -391,12 +391,12 @@ export async function POST(request: NextRequest) {
       .insert({
         order_id: orderId,
         payment_key: paymentData.paymentKey,
-        payment_method: paymentData.method,
+        method: paymentData.method, // payment_method → method로 수정
         amount: paymentData.totalAmount,
         status: paymentData.status,
         requested_at: paymentData.requestedAt,
         approved_at: paymentData.approvedAt,
-        payment_data: paymentData, // 전체 응답 데이터 저장 (JSONB)
+        metadata: paymentData, // payment_data → metadata로 수정 (전체 응답 데이터 저장)
       })
       .select("id")
       .single();
