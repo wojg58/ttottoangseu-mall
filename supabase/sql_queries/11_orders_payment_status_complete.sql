@@ -219,10 +219,14 @@ WHERE o.id = 'YOUR_ORDER_ID';
 -- 섹션 5: 빠른 확인용 쿼리 (주문 ID 직접 입력)
 -- ============================================================================
 -- 아래 쿼리들은 주문 ID를 직접 입력하여 빠르게 확인할 수 있습니다
+-- ⚠️ 주의: 이 섹션은 기본적으로 주석 처리되어 있습니다.
+-- 사용하려면 주석을 해제하고 'YOUR_ORDER_ID_HERE'를 실제 주문 ID로 변경하세요.
 -- ============================================================================
 
 -- 5.1. 주문 상태 확인 (주문 ID 직접 입력)
+-- 사용법: 아래 주석을 해제하고 'YOUR_ORDER_ID_HERE'를 실제 주문 ID로 변경
 -- 예시: '9c6fb7dd-e9cf-4073-b172-f5a7cbadd420'
+/*
 SELECT 
   id,
   order_number,
@@ -234,9 +238,12 @@ SELECT
   updated_at
 FROM public.orders
 WHERE id = 'YOUR_ORDER_ID_HERE';
+*/
 
 -- 5.2. 결제 정보 확인 (주문 ID 직접 입력)
+-- 사용법: 아래 주석을 해제하고 'YOUR_ORDER_ID_HERE'를 실제 주문 ID로 변경
 -- 예시: '9c6fb7dd-e9cf-4073-b172-f5a7cbadd420'
+/*
 SELECT 
   id,
   order_id,
@@ -249,9 +256,12 @@ SELECT
   created_at
 FROM public.payments
 WHERE order_id = 'YOUR_ORDER_ID_HERE';
+*/
 
 -- 5.3. 주문과 결제 정보 통합 확인 (주문 ID 직접 입력)
+-- 사용법: 아래 주석을 해제하고 'YOUR_ORDER_ID_HERE'를 실제 주문 ID로 변경
 -- 예시: '9c6fb7dd-e9cf-4073-b172-f5a7cbadd420'
+/*
 SELECT 
     o.order_number,
     o.payment_status,
@@ -266,4 +276,5 @@ SELECT
 FROM public.orders o
 LEFT JOIN public.payments p ON p.order_id = o.id AND p.status = 'done'
 WHERE o.id = 'YOUR_ORDER_ID_HERE';
+*/
 
