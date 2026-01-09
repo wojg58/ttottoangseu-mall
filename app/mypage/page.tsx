@@ -15,6 +15,7 @@ import {
   Home,
 } from "lucide-react";
 import { getOrders } from "@/actions/orders";
+import { getMemberAdditionalInfo } from "@/actions/member-actions";
 import DateDisplay from "@/components/date-display";
 import NumberDisplay from "@/components/number-display";
 
@@ -26,9 +27,30 @@ export default async function MyPage() {
 
   const user = await currentUser();
   const orders = await getOrders();
+  const memberInfoResult = await getMemberAdditionalInfo();
 
   // 최근 주문 3개만
   const recentOrders = orders.slice(0, 3);
+
+  // 회원 추가 정보
+  const memberInfo = memberInfoResult.success ? memberInfoResult.data : null;
+
+  // 성별 표시 텍스트
+  const genderText = memberInfo?.gender === "M" ? "남자" : memberInfo?.gender === "F" ? "여자" : "-";
+
+  // 생년월일 포맷팅 (YYYY-MM-DD -> YYYY년 MM월 DD일)
+  let birthDateText = "-";
+  if (memberInfo?.birth_date) {
+    try {
+      const [year, month, day] = memberInfo.birth_date.split("-");
+      birthDateText = `${year}년 ${parseInt(month)}월 ${parseInt(day)}일`;
+      if (memberInfo.is_solar_calendar === false) {
+        birthDateText += " (음력)";
+      }
+    } catch (error) {
+      birthDateText = memberInfo.birth_date;
+    }
+  }
 
   return (
     <main className="py-8">
@@ -59,13 +81,20 @@ export default async function MyPage() {
                 <User className="w-8 h-8 text-[#ff6b9d]" />
               )}
             </div>
-            <div>
-              <h1 className="text-xl font-bold text-[#4a3f48]">
+            <div className="flex-1">
+              <h1 className="text-xl font-bold text-[#4a3f48] mb-2">
                 {user?.firstName || "회원"}님 안녕하세요! 👋
               </h1>
-              <p className="text-sm text-[#8b7d84]">
-                {user?.emailAddresses[0]?.emailAddress}
-              </p>
+              <div className="space-y-1 text-sm text-[#8b7d84]">
+                <p>이메일: {user?.emailAddresses[0]?.emailAddress || "-"}</p>
+                {memberInfo && (
+                  <>
+                    <p>성별: {genderText}</p>
+                    <p>생년월일: {birthDateText}</p>
+                    <p>휴대전화: {memberInfo.mobile || "-"}</p>
+                  </>
+                )}
+              </div>
             </div>
           </div>
         </div>
