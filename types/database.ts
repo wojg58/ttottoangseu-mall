@@ -194,6 +194,11 @@ export interface Order {
   fulfillment_status: OrderFulfillmentStatus;
   status?: OrderStatus; // 하위 호환성 (deprecated, payment_status 사용 권장)
   total_amount: number;
+  // 주문자 정보
+  orderer_name: string | null;
+  orderer_phone: string | null;
+  orderer_email: string | null;
+  // 배송 정보
   shipping_name: string;
   shipping_phone: string;
   shipping_address: string;

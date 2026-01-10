@@ -603,6 +603,17 @@ export default function CheckoutForm({
       try {
         // 4. 토스페이먼츠 결제 준비 API 호출 (주문 생성 + 결제 준비)
         logger.group("[CheckoutForm] 토스페이먼츠 결제 준비 API 호출");
+        logger.info("[CheckoutForm] 전달할 배송 정보:", {
+          ordererName: formData.ordererName,
+          ordererPhone: formData.ordererPhone,
+          ordererEmail: formData.ordererEmail,
+          shippingName: formData.shippingName,
+          shippingPhone: formData.shippingPhone,
+          shippingAddress: formData.shippingAddress,
+          shippingZipCode: formData.shippingZipCode,
+          shippingMemo: formData.shippingMemo,
+        });
+        
         const prepareResponse = await fetch("/api/payments/toss/prepare", {
           method: "POST",
           headers: {
@@ -610,8 +621,16 @@ export default function CheckoutForm({
           },
           body: JSON.stringify({
             amount: displayTotal,
-            // 배송 정보는 나중에 주문 업데이트로 처리하거나, prepare API에서 받도록 수정 필요
-            // 일단 기본 동작 확인을 위해 amount만 전달
+            // 주문자 정보
+            ordererName: formData.ordererName,
+            ordererPhone: formData.ordererPhone,
+            ordererEmail: formData.ordererEmail,
+            // 배송 정보
+            shippingName: formData.shippingName,
+            shippingPhone: formData.shippingPhone,
+            shippingAddress: formData.shippingAddress,
+            shippingZipCode: formData.shippingZipCode,
+            shippingMemo: formData.shippingMemo || undefined,
           }),
         });
 

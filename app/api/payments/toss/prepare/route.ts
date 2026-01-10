@@ -62,7 +62,30 @@ export async function POST(request: NextRequest) {
     }
 
     const clientAmount = validationResult.data.amount;
+    const {
+      ordererName,
+      ordererPhone,
+      ordererEmail,
+      shippingName,
+      shippingPhone,
+      shippingAddress,
+      shippingZipCode,
+      shippingMemo,
+    } = validationResult.data;
+    
     logger.info("클라이언트에서 전달된 금액:", clientAmount);
+    logger.info("주문자 정보:", {
+      name: ordererName,
+      phone: ordererPhone,
+      email: ordererEmail,
+    });
+    logger.info("배송 정보:", {
+      name: shippingName,
+      phone: shippingPhone,
+      address: shippingAddress,
+      zipCode: shippingZipCode,
+      memo: shippingMemo,
+    });
 
     // 3. Supabase 서비스 롤 클라이언트 생성 (RLS 우회)
     const supabase = getServiceRoleClient();
@@ -306,11 +329,16 @@ export async function POST(request: NextRequest) {
         fulfillment_status: "UNFULFILLED",
         status: "PENDING", // 하위 호환성
         total_amount: totalAmount,
-        // 주문자 정보는 기본값으로 설정 (나중에 업데이트 가능)
-        shipping_name: user.name || "미입력",
-        shipping_phone: "",
-        shipping_address: "",
-        shipping_zip_code: "",
+        // 주문자 정보
+        orderer_name: ordererName,
+        orderer_phone: ordererPhone,
+        orderer_email: ordererEmail,
+        // 배송 정보
+        shipping_name: shippingName,
+        shipping_phone: shippingPhone,
+        shipping_address: shippingAddress,
+        shipping_zip_code: shippingZipCode,
+        shipping_memo: shippingMemo || null,
       })
       .select("id")
       .single();

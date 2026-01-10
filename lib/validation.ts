@@ -118,6 +118,54 @@ export const paymentPrepareSchema = z.object({
     .max(100000000, "결제 금액은 최대 100,000,000원까지 가능합니다.")
     .optional()
     .describe("클라이언트에서 전달된 금액 (검증용, 서버에서 재계산)"),
+  // 주문자 정보
+  ordererName: z
+    .string()
+    .min(2, "주문자 이름을 입력해주세요.")
+    .max(100, "주문자 이름은 100자를 초과할 수 없습니다.")
+    .trim()
+    .describe("주문자 이름"),
+  ordererPhone: z
+    .string()
+    .min(10, "연락처를 입력해주세요.")
+    .max(20, "연락처는 20자를 초과할 수 없습니다.")
+    .regex(/^[0-9-]+$/, "올바른 연락처 형식을 입력해주세요.")
+    .describe("주문자 연락처"),
+  ordererEmail: z
+    .string()
+    .email("올바른 이메일 형식을 입력해주세요.")
+    .max(255, "이메일은 255자를 초과할 수 없습니다.")
+    .describe("주문자 이메일"),
+  // 배송 정보
+  shippingName: z
+    .string()
+    .min(2, "수령인 이름을 입력해주세요.")
+    .max(100, "수령인 이름은 100자를 초과할 수 없습니다.")
+    .trim()
+    .describe("수령인 이름"),
+  shippingPhone: z
+    .string()
+    .min(10, "연락처를 입력해주세요.")
+    .max(20, "연락처는 20자를 초과할 수 없습니다.")
+    .regex(/^[0-9-]+$/, "올바른 연락처 형식을 입력해주세요.")
+    .describe("수령인 연락처"),
+  shippingAddress: z
+    .string()
+    .min(5, "배송지 주소를 입력해주세요.")
+    .max(500, "배송지 주소는 500자를 초과할 수 없습니다.")
+    .trim()
+    .describe("배송지 주소"),
+  shippingZipCode: z
+    .string()
+    .min(5, "우편번호를 입력해주세요.")
+    .max(10, "우편번호는 10자를 초과할 수 없습니다.")
+    .trim()
+    .describe("우편번호"),
+  shippingMemo: z
+    .string()
+    .max(500, "배송 메모는 500자를 초과할 수 없습니다.")
+    .optional()
+    .describe("배송 메모 (선택사항)"),
 });
 
 export type PaymentPrepareInput = z.infer<typeof paymentPrepareSchema>;

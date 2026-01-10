@@ -8,11 +8,14 @@ import { redirect } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { isAdmin, getAllOrders } from "@/actions/admin";
 import AdminOrderRow from "@/components/admin-order-row";
+import AdminOrderDateFilter from "@/components/admin-order-date-filter";
 
 interface AdminOrdersPageProps {
   searchParams: Promise<{
     status?: string;
     page?: string;
+    startDate?: string;
+    endDate?: string;
   }>;
 }
 
@@ -28,8 +31,17 @@ export default async function AdminOrdersPage({
   const params = await searchParams;
   const status = params.status;
   const page = parseInt(params.page || "1", 10);
+  const startDate = params.startDate;
+  const endDate = params.endDate;
 
-  const { orders, total, totalPages } = await getAllOrders(status, page);
+  const { orders, total, totalPages } = await getAllOrders(
+    status,
+    undefined,
+    page,
+    20,
+    startDate,
+    endDate,
+  );
 
   const statusFilters = [
     { value: "", label: "전체" },
@@ -54,6 +66,9 @@ export default async function AdminOrdersPage({
           <h1 className="text-2xl font-bold text-[#4a3f48]">주문 관리</h1>
           <span className="text-sm text-[#8b7d84]">총 {total}건</span>
         </div>
+
+        {/* 날짜 필터 */}
+        <AdminOrderDateFilter />
 
         {/* 상태 필터 */}
         <div className="flex flex-wrap gap-2 mb-6">
@@ -127,6 +142,8 @@ export default async function AdminOrdersPage({
                   key={pageNum}
                   href={`/admin/orders?${new URLSearchParams({
                     ...(status ? { status } : {}),
+                    ...(startDate ? { startDate } : {}),
+                    ...(endDate ? { endDate } : {}),
                     page: pageNum.toString(),
                   }).toString()}`}
                   className={`w-10 h-10 rounded-full flex items-center justify-center text-sm transition-colors ${

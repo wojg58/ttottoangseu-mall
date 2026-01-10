@@ -374,6 +374,9 @@ export type Database = {
           delivered_at: string | null
           id: string
           order_number: string
+          orderer_email: string | null
+          orderer_name: string | null
+          orderer_phone: string | null
           shipped_at: string | null
           shipping_address: string
           shipping_memo: string | null
@@ -393,6 +396,9 @@ export type Database = {
           delivered_at?: string | null
           id?: string
           order_number: string
+          orderer_email?: string | null
+          orderer_name?: string | null
+          orderer_phone?: string | null
           shipped_at?: string | null
           shipping_address: string
           shipping_memo?: string | null
@@ -412,6 +418,9 @@ export type Database = {
           delivered_at?: string | null
           id?: string
           order_number?: string
+          orderer_email?: string | null
+          orderer_name?: string | null
+          orderer_phone?: string | null
           shipped_at?: string | null
           shipping_address?: string
           shipping_memo?: string | null
