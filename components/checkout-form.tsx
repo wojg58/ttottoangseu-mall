@@ -187,6 +187,7 @@ const checkoutSchema = z.object({
     .regex(/^[0-9-]+$/, "올바른 연락처 형식을 입력해주세요."),
   shippingZipCode: z.string().min(5, "우편번호를 입력해주세요."),
   shippingAddress: z.string().min(5, "배송지 주소를 입력해주세요."),
+  shippingAddressDetail: z.string().optional(),
   shippingMemo: z.string().optional(),
 
   // 결제 수단 (토스페이먼츠 사용)
@@ -460,6 +461,7 @@ export default function CheckoutForm({
       shippingPhone: "",
       shippingZipCode: "",
       shippingAddress: "",
+      shippingAddressDetail: "",
       shippingMemo: "",
       paymentMethod: "TOSS_PAYMENTS",
     },
@@ -488,6 +490,7 @@ export default function CheckoutForm({
       form.setValue("shippingPhone", "");
       form.setValue("shippingZipCode", "");
       form.setValue("shippingAddress", "");
+      form.setValue("shippingAddressDetail", "");
       form.setValue("shippingMemo", "");
     }
   }, [useMemberInfo, isLoaded, user, form]);
@@ -588,10 +591,17 @@ export default function CheckoutForm({
       phone: formData.ordererPhone,
       email: formData.ordererEmail,
     });
+    // 기본 주소와 상세 주소를 합쳐서 최종 배송지 주소 생성
+    const fullShippingAddress = formData.shippingAddressDetail
+      ? `${formData.shippingAddress} ${formData.shippingAddressDetail}`.trim()
+      : formData.shippingAddress;
+
     logger.info("배송 정보:", {
       name: formData.shippingName,
       phone: formData.shippingPhone,
       address: formData.shippingAddress,
+      addressDetail: formData.shippingAddressDetail,
+      fullAddress: fullShippingAddress,
       zipCode: formData.shippingZipCode,
     });
     logger.info("선택된 쿠폰:", selectedCoupon);
@@ -603,6 +613,11 @@ export default function CheckoutForm({
       try {
         // 4. 토스페이먼츠 결제 준비 API 호출 (주문 생성 + 결제 준비)
         logger.group("[CheckoutForm] 토스페이먼츠 결제 준비 API 호출");
+        // 기본 주소와 상세 주소를 합쳐서 최종 배송지 주소 생성
+        const fullShippingAddress = formData.shippingAddressDetail
+          ? `${formData.shippingAddress} ${formData.shippingAddressDetail}`.trim()
+          : formData.shippingAddress;
+
         logger.info("[CheckoutForm] 전달할 배송 정보:", {
           ordererName: formData.ordererName,
           ordererPhone: formData.ordererPhone,
@@ -610,6 +625,8 @@ export default function CheckoutForm({
           shippingName: formData.shippingName,
           shippingPhone: formData.shippingPhone,
           shippingAddress: formData.shippingAddress,
+          shippingAddressDetail: formData.shippingAddressDetail,
+          fullShippingAddress: fullShippingAddress,
           shippingZipCode: formData.shippingZipCode,
           shippingMemo: formData.shippingMemo,
         });
@@ -628,7 +645,7 @@ export default function CheckoutForm({
             // 배송 정보
             shippingName: formData.shippingName,
             shippingPhone: formData.shippingPhone,
-            shippingAddress: formData.shippingAddress,
+            shippingAddress: fullShippingAddress,
             shippingZipCode: formData.shippingZipCode,
             shippingMemo: formData.shippingMemo || undefined,
           }),
@@ -1000,7 +1017,28 @@ export default function CheckoutForm({
                         </FormLabel>
                         <FormControl>
                           <Input
-                            placeholder="상세 주소를 입력해주세요"
+                            placeholder="기본 주소"
+                            readOnly
+                            className="border-[#f5d5e3] focus:border-[#fad2e6] focus:ring-[#fad2e6] bg-gray-50"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="shippingAddressDetail"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-[#4a3f48]">
+                          상세 주소
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="동/호수 등을 입력해주세요 (선택)"
                             className="border-[#f5d5e3] focus:border-[#fad2e6] focus:ring-[#fad2e6]"
                             {...field}
                           />
