@@ -29,7 +29,7 @@ import {
   LogOut,
 } from "lucide-react";
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useClerkSupabaseClient } from "@/lib/supabase/clerk-client";
@@ -53,6 +53,7 @@ export default function ShopHeader() {
   const [searchQuery, setSearchQuery] = useState("");
   const [cartItemCount, setCartItemCount] = useState(0);
   const router = useRouter();
+  const pathname = usePathname();
   const { isSignedIn, userId } = useAuth();
   const supabase = useClerkSupabaseClient();
 
@@ -65,6 +66,7 @@ export default function ShopHeader() {
       }
 
       try {
+        console.log("[ShopHeader] 장바구니 개수 조회 시작");
         // users 테이블에서 clerk_user_id로 user_id 조회
         const { data: user } = await supabase
           .from("users")
@@ -95,7 +97,9 @@ export default function ShopHeader() {
           .select("*", { count: "exact", head: true })
           .eq("cart_id", cart.id);
 
-        setCartItemCount(count ?? 0);
+        const newCount = count ?? 0;
+        console.log("[ShopHeader] 장바구니 개수:", newCount);
+        setCartItemCount(newCount);
       } catch (error) {
         console.error("[ShopHeader] 장바구니 수량 조회 실패:", error);
         setCartItemCount(0);
@@ -108,7 +112,7 @@ export default function ShopHeader() {
     const interval = setInterval(fetchCartItemCount, 5000);
 
     return () => clearInterval(interval);
-  }, [isSignedIn, userId, supabase]);
+  }, [isSignedIn, userId, supabase, pathname]); // pathname을 의존성에 추가하여 경로 변경 시 즉시 조회
 
   const handleSearch = (e?: React.FormEvent) => {
     if (e) {
