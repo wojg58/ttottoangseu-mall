@@ -385,7 +385,21 @@ export async function POST(request: NextRequest) {
 
     logger.info(`✅ 주문 아이템 생성 완료: ${orderItemsData.length}개`);
 
-    // 11. 주문명 생성 (상품명들 조합)
+    // 11. 장바구니 비우기 (주문 생성 및 주문 아이템 생성이 성공한 후)
+    logger.info("[POST /api/payments/toss/prepare] 장바구니 비우기 시작");
+    const { error: cartClearError } = await supabase
+      .from("cart_items")
+      .delete()
+      .eq("cart_id", cart.id);
+
+    if (cartClearError) {
+      logger.error("⚠️ 장바구니 비우기 실패 (주문은 성공):", cartClearError);
+      // 장바구니 비우기 실패해도 주문은 성공했으므로 경고만 로그
+    } else {
+      logger.info("✅ 장바구니 비우기 완료");
+    }
+
+    // 12. 주문명 생성 (상품명들 조합)
     const productNames = orderItems
       .slice(0, 3)
       .map((item) => item.product_name)
@@ -397,7 +411,7 @@ export async function POST(request: NextRequest) {
 
     logger.info("주문명:", orderName);
 
-    // 12. 응답 반환
+    // 13. 응답 반환
     const response = {
       success: true,
       orderId: order.id,
