@@ -18,6 +18,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2 } from "lucide-react";
 import logger from "@/lib/logger";
+import CartUpdateTrigger from "@/components/cart-update-trigger";
 
 function OrderSuccessContent() {
   const searchParams = useSearchParams();
@@ -107,6 +108,12 @@ function OrderSuccessContent() {
           method: data.method,
           virtualAccount: data.virtualAccount,
         });
+
+        // 결제 성공 시 장바구니 갱신 이벤트 발생
+        if (data.success) {
+          console.log("[OrderSuccessPage] 결제 성공 - 장바구니 갱신 이벤트 발생");
+          window.dispatchEvent(new CustomEvent("cart:update"));
+        }
       } catch (error) {
         logger.error("confirm API 호출 에러:", error);
         setResult({
@@ -197,37 +204,41 @@ function OrderSuccessContent() {
   }
 
   return (
-    <div className="flex items-center justify-center min-h-screen">
-      <div className="text-center max-w-md mx-auto p-8">
-        <div className="text-green-600 mb-4">
-          <CheckCircle2 className="w-16 h-16 mx-auto" />
-        </div>
-        <h1 className="text-2xl font-bold text-[#4a3f48] mb-4">
-          결제가 완료되었습니다
-        </h1>
-        <p className="text-[#8b7d84] mb-2">{result.message}</p>
-        {result.orderId && (
-          <p className="text-sm text-[#8b7d84] mb-8">
-            주문번호: {result.orderId}
-          </p>
-        )}
-        <div className="space-y-2">
-          <Button
-            onClick={() => router.push("/mypage/orders")}
-            className="w-full bg-[#ff6b9d] hover:bg-[#ff5088] text-white"
-          >
-            주문 내역 보기
-          </Button>
-          <Button
-            onClick={() => router.push("/")}
-            variant="outline"
-            className="w-full border-[#f5d5e3] text-[#4a3f48] hover:bg-[#fef8fb]"
-          >
-            홈으로 가기
-          </Button>
+    <>
+      {/* 결제 성공 시 장바구니 개수 즉시 갱신 */}
+      {result.success && <CartUpdateTrigger />}
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center max-w-md mx-auto p-8">
+          <div className="text-green-600 mb-4">
+            <CheckCircle2 className="w-16 h-16 mx-auto" />
+          </div>
+          <h1 className="text-2xl font-bold text-[#4a3f48] mb-4">
+            결제가 완료되었습니다
+          </h1>
+          <p className="text-[#8b7d84] mb-2">{result.message}</p>
+          {result.orderId && (
+            <p className="text-sm text-[#8b7d84] mb-8">
+              주문번호: {result.orderId}
+            </p>
+          )}
+          <div className="space-y-2">
+            <Button
+              onClick={() => router.push("/mypage/orders")}
+              className="w-full bg-[#ff6b9d] hover:bg-[#ff5088] text-white"
+            >
+              주문 내역 보기
+            </Button>
+            <Button
+              onClick={() => router.push("/")}
+              variant="outline"
+              className="w-full border-[#f5d5e3] text-[#4a3f48] hover:bg-[#fef8fb]"
+            >
+              홈으로 가기
+            </Button>
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
 
