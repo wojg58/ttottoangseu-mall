@@ -85,6 +85,13 @@ async function sendEmailWithResend(
       subject,
     });
 
+    logger.info("[sendEmailWithResend] Resend API 호출 시작:", {
+      from: fromEmail,
+      to: toArray,
+      subject,
+      apiKeyPrefix: apiKey.substring(0, 10) + "...",
+    });
+
     const response = await resend.emails.send({
       from: fromEmail,
       to: toArray,
@@ -98,19 +105,38 @@ async function sendEmailWithResend(
       hasError: !!response.error,
       data: response.data,
       error: response.error,
+      errorType: response.error?.constructor?.name,
+      errorMessage: response.error?.message,
+      errorStatus: (response.error as any)?.status,
+      fullError: response.error ? JSON.stringify(response.error, Object.getOwnPropertyNames(response.error), 2) : null,
     });
 
     if (response.error) {
-      logger.error("[이메일] Resend 발송 실패:", {
+      const errorStatus = (response.error as any)?.status;
+      const errorMessage = response.error.message || JSON.stringify(response.error);
+      
+      logger.error("[이메일] Resend 발송 실패 (403 Forbidden 가능성):", {
         error: response.error,
-        message: response.error.message,
+        message: errorMessage,
         name: response.error.name,
-        fullError: JSON.stringify(response.error, null, 2),
+        status: errorStatus,
+        statusCode: errorStatus || "unknown",
+        fullError: JSON.stringify(response.error, Object.getOwnPropertyNames(response.error), 2),
+        troubleshooting: {
+          apiKeyConfigured: !!apiKey,
+          fromEmail: fromEmail,
+          possibleCauses: [
+            "API 키 권한 부족 (Sending access 필요)",
+            "발신자 이메일 주소가 Resend에 등록되지 않음",
+            "API 키가 만료되었거나 잘못됨",
+            "발신자 이메일 주소 형식 오류",
+          ],
+        },
       });
       logger.groupEnd();
       return {
         success: false,
-        error: `이메일 발송 실패: ${response.error.message || JSON.stringify(response.error)}`,
+        error: `이메일 발송 실패 (${errorStatus || "Unknown"}): ${errorMessage}`,
       };
     }
 
