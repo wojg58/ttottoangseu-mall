@@ -325,6 +325,30 @@ export async function confirmPayment({
       // 큐 적재 실패해도 결제는 성공했으므로 계속 진행
     }
 
+    // 9. 관리자 알림 발송 (이메일/알림톡)
+    console.log("[confirmPayment] 관리자 알림 발송 시작...");
+    try {
+      const { notifyAdminOnOrderPaid } = await import("@/lib/notifications/notifyAdminOnOrderPaid");
+      const notificationResult = await notifyAdminOnOrderPaid({
+        orderId: order.id,
+        orderNo: order.order_number,
+        amount: order.total_amount,
+        createdAtUtc: order.created_at,
+      });
+
+      if (notificationResult.success) {
+        console.log("[confirmPayment] ✅ 관리자 알림 발송 완료:", {
+          alimtalkSent: notificationResult.alimtalkSent,
+          emailSent: notificationResult.emailSent,
+        });
+      } else {
+        console.warn("[confirmPayment] ⚠️ 관리자 알림 발송 실패 (결제는 성공):", notificationResult.errors);
+      }
+    } catch (e) {
+      console.error("[confirmPayment] ❌ 관리자 알림 발송 예외 (결제는 성공):", e);
+      // 알림 발송 실패해도 결제는 성공했으므로 계속 진행
+    }
+
     console.log("[confirmPayment] 🎉 결제 승인 프로세스 완료!");
     
     return {

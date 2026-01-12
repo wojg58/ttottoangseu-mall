@@ -273,12 +273,38 @@ export async function POST(request: NextRequest) {
       // 결제는 성공했으므로 경고만 로그
     }
 
-    // 주문번호 조회
+    // 주문번호 및 주문 정보 조회
     const { data: orderData } = await supabase
       .from("orders")
-      .select("order_number")
+      .select("order_number, total_amount, created_at")
       .eq("id", orderId)
       .single();
+
+    // 관리자 알림 발송 (이메일/알림톡)
+    console.log("[POST /api/payments/confirm] 관리자 알림 발송 시작...");
+    try {
+      const { notifyAdminOnOrderPaid } = await import("@/lib/notifications/notifyAdminOnOrderPaid");
+      if (orderData) {
+        const notificationResult = await notifyAdminOnOrderPaid({
+          orderId: orderId,
+          orderNo: orderData.order_number,
+          amount: orderData.total_amount,
+          createdAtUtc: orderData.created_at,
+        });
+
+        if (notificationResult.success) {
+          console.log("[POST /api/payments/confirm] ✅ 관리자 알림 발송 완료:", {
+            alimtalkSent: notificationResult.alimtalkSent,
+            emailSent: notificationResult.emailSent,
+          });
+        } else {
+          console.warn("[POST /api/payments/confirm] ⚠️ 관리자 알림 발송 실패 (결제는 성공):", notificationResult.errors);
+        }
+      }
+    } catch (e) {
+      console.error("[POST /api/payments/confirm] ❌ 관리자 알림 발송 예외 (결제는 성공):", e);
+      // 알림 발송 실패해도 결제는 성공했으므로 계속 진행
+    }
 
     console.log("결제 승인 처리 완료");
     console.groupEnd();
