@@ -167,6 +167,17 @@
 - [x] 배송 정보 입력 (운송장 번호, 배송 상태) - `actions/admin.ts`
 - [x] 주문 통계 (대시보드 메인) - `app/admin/page.tsx` (`getDashboardStats()`)
 
+### 관리자 알림 기능
+
+- [x] DB 마이그레이션: orders 테이블에 admin_alimtalk_sent_at, admin_email_sent_at 컬럼 추가
+- [x] 알림용 KST 변환 함수 구현 (`lib/notifications/formatTime.ts`)
+- [x] 솔라피 알림톡 발송 함수 구현 (`lib/notifications/sendAdminAlimtalkSolapi.ts`)
+- [x] 이메일 발송 함수 구현 (`lib/notifications/sendAdminEmail.ts`, Resend 우선)
+- [x] 통합 알림 함수 구현 (`lib/notifications/notifyAdminOnOrderPaid.ts`)
+- [x] TossPayments 웹훅에 알림 트리거 연결 (DONE 처리 후)
+- [x] 환경변수 설정 (.env.example 업데이트)
+- [ ] Solapi 템플릿 검수 통과 후 ADMIN_ALIMTALK_ENABLED=true로 전환 & 실주문 테스트
+
 ### n8n 자동화
 
 - [ ] n8n 워크플로우 설정
@@ -236,6 +247,7 @@
 
 ### 콘텐츠 및 마케팅
 
+- [x] 카카오 친구추가 버튼 배치(주문완료/푸터) - `components/kakao-channel-button.tsx`
 - [ ] 브랜드 스토리 블로그 섹션
 - [ ] 커뮤니티 기능 (팬아트, 이벤트)
 - [ ] 이메일 마케팅 연동

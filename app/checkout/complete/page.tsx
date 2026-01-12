@@ -10,6 +10,7 @@ import { redirect } from "next/navigation";
 import { getOrderById } from "@/actions/orders";
 import { Button } from "@/components/ui/button";
 import CartUpdateTrigger from "@/components/cart-update-trigger";
+import KakaoChannelButton from "@/components/kakao-channel-button";
 
 interface CompletePageProps {
   searchParams: Promise<{
@@ -86,6 +87,17 @@ export default async function CompletePage({
                 </span>
               </div>
             </div>
+          </div>
+
+          {/* 카카오톡 채널 안내 */}
+          <div className="mb-8">
+            <KakaoChannelButton
+              variant="default"
+              fullWidth
+              locationTag="주문완료페이지"
+              description="배송 안내/공지 소식을 카카오톡으로 받아보세요."
+              buttonText="카카오톡 채널 추가"
+            />
           </div>
 
           {/* 버튼들 */}

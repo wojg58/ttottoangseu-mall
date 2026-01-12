@@ -5,6 +5,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import KakaoChannelButton from "@/components/kakao-channel-button";
 
 export default function ShopFooter() {
   return (
@@ -93,6 +94,17 @@ export default function ShopFooter() {
               <p>카카오뱅크<br />3333-28-2841708</p>
               <p>예금주 : 우수정</p>
             </div>
+          </div>
+
+          {/* 카카오톡 채널 */}
+          <div className="flex flex-col">
+            <h4 className="font-bold mb-3 md:mb-4 text-black text-sm md:text-base">소식 받기</h4>
+            <KakaoChannelButton
+              variant="sm"
+              fullWidth
+              locationTag="Footer"
+              buttonText="카카오톡 채널 추가"
+            />
           </div>
         </div>
       </div>
