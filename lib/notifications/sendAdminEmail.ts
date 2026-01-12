@@ -40,12 +40,14 @@ async function sendEmailWithResend(
     fromEmail: process.env.EMAIL_FROM || process.env.RESEND_FROM_EMAIL,
     hasApiKey: !!process.env.RESEND_API_KEY,
   });
-  
+
   const apiKey = process.env.RESEND_API_KEY;
   const fromEmail = process.env.EMAIL_FROM || process.env.RESEND_FROM_EMAIL;
 
   if (!apiKey) {
-    logger.error("[sendEmailWithResend] ❌ RESEND_API_KEY가 설정되지 않았습니다.");
+    logger.error(
+      "[sendEmailWithResend] ❌ RESEND_API_KEY가 설정되지 않았습니다.",
+    );
     logger.groupEnd();
     return {
       success: false,
@@ -54,14 +56,16 @@ async function sendEmailWithResend(
   }
 
   if (!fromEmail) {
-    logger.error("[sendEmailWithResend] ❌ EMAIL_FROM 또는 RESEND_FROM_EMAIL이 설정되지 않았습니다.");
+    logger.error(
+      "[sendEmailWithResend] ❌ EMAIL_FROM 또는 RESEND_FROM_EMAIL이 설정되지 않았습니다.",
+    );
     logger.groupEnd();
     return {
       success: false,
       error: "EMAIL_FROM 또는 RESEND_FROM_EMAIL이 설정되지 않았습니다.",
     };
   }
-  
+
   logger.info("[sendEmailWithResend] ✅ 환경 변수 확인 완료");
 
   try {
@@ -69,7 +73,7 @@ async function sendEmailWithResend(
     // Resend SDK 동적 import (필요 시에만 로드)
     const { Resend } = await import("resend");
     logger.info("[sendEmailWithResend] ✅ Resend SDK import 완료");
-    
+
     const resend = new Resend(apiKey);
     logger.info("[sendEmailWithResend] Resend 클라이언트 생성 완료");
 
@@ -81,7 +85,7 @@ async function sendEmailWithResend(
       subject,
     });
 
-    const { data, error } = await resend.emails.send({
+    const response = await resend.emails.send({
       from: fromEmail,
       to: toArray,
       subject: subject,
@@ -89,25 +93,47 @@ async function sendEmailWithResend(
       text: textBody,
     });
 
-    if (error) {
-      logger.error("[이메일] Resend 발송 실패:", error);
+    logger.info("[sendEmailWithResend] Resend API 응답:", {
+      hasData: !!response.data,
+      hasError: !!response.error,
+      data: response.data,
+      error: response.error,
+    });
+
+    if (response.error) {
+      logger.error("[이메일] Resend 발송 실패:", {
+        error: response.error,
+        message: response.error.message,
+        name: response.error.name,
+        fullError: JSON.stringify(response.error, null, 2),
+      });
       logger.groupEnd();
       return {
         success: false,
-        error: `이메일 발송 실패: ${error.message || JSON.stringify(error)}`,
+        error: `이메일 발송 실패: ${response.error.message || JSON.stringify(response.error)}`,
+      };
+    }
+
+    if (!response.data) {
+      logger.error("[이메일] Resend 응답에 data가 없습니다:", response);
+      logger.groupEnd();
+      return {
+        success: false,
+        error: "이메일 발송 실패: Resend 응답에 데이터가 없습니다.",
       };
     }
 
     logger.info("[이메일] Resend 발송 성공:", {
       to: toArray,
-      messageId: data?.id,
+      messageId: response.data.id,
+      from: fromEmail,
     });
     logger.groupEnd();
 
     return {
       success: true,
       message: "이메일 발송 성공 (Resend)",
-      messageId: data?.id,
+      messageId: response.data.id,
     };
   } catch (error) {
     logger.error("[이메일] Resend 발송 예외:", error);
@@ -214,7 +240,7 @@ export async function sendAdminEmail(
 ): Promise<EmailSendResult> {
   logger.group("[sendAdminEmail] 이메일 발송 시작");
   logger.info("[sendAdminEmail] 주문 정보:", { orderNo, amount, orderDateKst });
-  
+
   // 환경변수 확인
   const enabled = process.env.ADMIN_EMAIL_ENABLED === "true";
   logger.info("[sendAdminEmail] 환경 변수 확인:", {
@@ -226,7 +252,7 @@ export async function sendAdminEmail(
     RESEND_FROM_EMAIL: process.env.RESEND_FROM_EMAIL,
     EMAIL_FROM: process.env.EMAIL_FROM,
   });
-  
+
   if (!enabled) {
     logger.info("[이메일] ADMIN_EMAIL_ENABLED=false, 발송 스킵");
     logger.groupEnd();
@@ -305,7 +331,12 @@ export async function sendAdminEmail(
   let result: EmailSendResult;
   if (emailProvider === "resend") {
     logger.info("[sendAdminEmail] Resend로 이메일 발송 시작");
-    result = await sendEmailWithResend(adminEmails, subject, htmlBody, textBody);
+    result = await sendEmailWithResend(
+      adminEmails,
+      subject,
+      htmlBody,
+      textBody,
+    );
   } else if (emailProvider === "smtp") {
     logger.info("[sendAdminEmail] SMTP로 이메일 발송 시작");
     result = await sendEmailWithSMTP(adminEmails, subject, htmlBody, textBody);
@@ -318,7 +349,7 @@ export async function sendAdminEmail(
       error: `지원하지 않는 이메일 프로바이더: ${emailProvider}`,
     };
   }
-  
+
   logger.info("[sendAdminEmail] 이메일 발송 결과:", result);
   logger.groupEnd();
   return result;
