@@ -111,7 +111,17 @@ export default function ShopHeader() {
     // 장바구니 변경 감지를 위한 폴링 (5초마다)
     const interval = setInterval(fetchCartItemCount, 5000);
 
-    return () => clearInterval(interval);
+    // 커스텀 이벤트 리스너: 주문 완료 시 장바구니 개수 즉시 갱신
+    const handleCartUpdate = () => {
+      console.log("[ShopHeader] 주문 완료 이벤트 감지 - 장바구니 개수 갱신");
+      fetchCartItemCount();
+    };
+    window.addEventListener("cart:update", handleCartUpdate);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("cart:update", handleCartUpdate);
+    };
   }, [isSignedIn, userId, supabase, pathname]); // pathname을 의존성에 추가하여 경로 변경 시 즉시 조회
 
   const handleSearch = (e?: React.FormEvent) => {

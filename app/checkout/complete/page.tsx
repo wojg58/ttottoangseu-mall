@@ -9,6 +9,7 @@ import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { getOrderById } from "@/actions/orders";
 import { Button } from "@/components/ui/button";
+import CartUpdateTrigger from "@/components/cart-update-trigger";
 
 interface CompletePageProps {
   searchParams: Promise<{
@@ -39,6 +40,8 @@ export default async function CompletePage({
 
   return (
     <main className="py-16">
+      {/* 주문 완료 시 장바구니 개수 즉시 갱신 */}
+      <CartUpdateTrigger />
       <div className="shop-container max-w-2xl">
         <div className="bg-white rounded-2xl shadow-sm p-8 text-center">
           {/* 성공 아이콘 */}
