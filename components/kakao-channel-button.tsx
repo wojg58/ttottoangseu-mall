@@ -18,6 +18,7 @@
 
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -74,7 +75,9 @@ function getKakaoChannelUrl(): string | null {
     return url;
   }
 
-  console.warn("[KakaoChannelButton] ⚠️ 카카오 채널 URL/ID가 설정되지 않았습니다.");
+  console.warn(
+    "[KakaoChannelButton] ⚠️ 카카오 채널 URL/ID가 설정되지 않았습니다.",
+  );
   return null;
 }
 
@@ -85,12 +88,22 @@ export default function KakaoChannelButton({
   description,
   buttonText = "카카오톡 채널 추가",
 }: KakaoChannelButtonProps) {
-  const channelUrl = getKakaoChannelUrl();
+  // 클라이언트에서만 환경 변수를 읽어 Hydration 에러 방지
+  const [channelUrl, setChannelUrl] = useState<string | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+    const url = getKakaoChannelUrl();
+    setChannelUrl(url);
+  }, []);
 
   // 채널 URL이 없으면 버튼을 렌더링하지 않음
-  if (!channelUrl) {
-    if (locationTag) {
-      console.warn(`[KakaoChannelButton] ${locationTag}: 채널 URL이 설정되지 않아 버튼을 표시하지 않습니다.`);
+  if (!isMounted || !channelUrl) {
+    if (isMounted && locationTag) {
+      console.warn(
+        `[KakaoChannelButton] ${locationTag}: 채널 URL이 설정되지 않아 버튼을 표시하지 않습니다.`,
+      );
     }
     return null;
   }
@@ -104,7 +117,11 @@ export default function KakaoChannelButton({
 
   // 클릭 핸들러 (로깅)
   const handleClick = () => {
-    console.group(`[KakaoChannelButton] 카카오톡 채널 버튼 클릭${locationTag ? ` (${locationTag})` : ""}`);
+    console.group(
+      `[KakaoChannelButton] 카카오톡 채널 버튼 클릭${
+        locationTag ? ` (${locationTag})` : ""
+      }`,
+    );
     console.log("채널 URL:", channelUrl);
     console.log("새 탭으로 열기");
     console.groupEnd();
@@ -140,4 +157,3 @@ export default function KakaoChannelButton({
     </div>
   );
 }
-
