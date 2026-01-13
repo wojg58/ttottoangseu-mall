@@ -319,17 +319,6 @@ export default async function HomePage() {
             <div className="flex flex-col gap-8 mb-12 md:flex-row md:items-center md:gap-8 md:mb-16">
               {/* 텍스트 영역 - 모바일에서 먼저 표시 */}
               <div className="text-center md:text-left md:flex-1 order-1 md:order-none w-full">
-                <div
-                  className="inline-flex items-center gap-2 rounded-full px-3 py-2 mb-4"
-                  style={{
-                    backgroundColor: "white",
-                  }}
-                >
-                  <Sparkles className="w-4 h-4 text-shop-rose" />
-                  <span className="text-sm md:text-lg text-black font-medium">
-                    귀여운 캐릭터 키덜트 소품샵
-                  </span>
-                </div>
                 <h2 className="text-2xl md:text-4xl lg:text-5xl font-bold text-black mb-4 leading-tight">
                   두근거리는 설렘을{" "}
                   <span className="text-shop-rose">선물하세요</span> 💕
