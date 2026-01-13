@@ -33,7 +33,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useClerkSupabaseClient } from "@/lib/supabase/clerk-client";
-import KakaoChannelButton from "@/components/kakao-channel-button";
+import { MessageCircle } from "lucide-react";
 
 // 카테고리 데이터 (DB에서 가져올 예정이지만 일단 하드코딩)
 const CATEGORIES = [
@@ -53,10 +53,27 @@ export default function ShopHeader() {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [cartItemCount, setCartItemCount] = useState(0);
+  const [kakaoChannelUrl, setKakaoChannelUrl] = useState<string | null>(null);
   const router = useRouter();
   const pathname = usePathname();
   const { isSignedIn, userId } = useAuth();
   const supabase = useClerkSupabaseClient();
+
+  // 카카오톡 채널 URL 가져오기
+  useEffect(() => {
+    const channelUrl = process.env.NEXT_PUBLIC_KAKAO_CHANNEL_URL;
+    const channelId = process.env.NEXT_PUBLIC_KAKAO_CHANNEL_ID;
+
+    if (channelUrl) {
+      setKakaoChannelUrl(channelUrl);
+    } else if (channelId) {
+      if (channelId.startsWith("http")) {
+        setKakaoChannelUrl(channelId);
+      } else {
+        setKakaoChannelUrl(`https://pf.kakao.com/_${channelId}`);
+      }
+    }
+  }, []);
 
   // 장바구니 아이템 수량 조회
   useEffect(() => {
@@ -146,22 +163,6 @@ export default function ShopHeader() {
   return (
     <>
       <header className="sticky top-0 z-50 w-full">
-        {/* 카카오톡 친구 추가 배너 */}
-        <div className="bg-white border-b border-gray-200">
-          <div className="shop-container">
-            <div className="flex items-center h-[30px] gap-2">
-              <KakaoChannelButton
-                variant="sm"
-                locationTag="HeaderBanner"
-                buttonText="카카오톡"
-              />
-              <span className="text-black text-xs font-medium">
-                카카오톡 친구 추가시 1,000원 할인 쿠폰
-              </span>
-            </div>
-          </div>
-        </div>
-
         {/* 메인 헤더 - 핑크 배경 (대비율 개선: 더 진한 핑크 사용) */}
         <div className="bg-[#FF5088]">
           <div className="shop-container h-[70px] sm:h-[90px] md:h-[120px] flex items-center">
@@ -205,6 +206,22 @@ export default function ShopHeader() {
                     priority
                   />
                 </a>
+
+                {/* 카카오톡 채널 */}
+                {kakaoChannelUrl && (
+                  <a
+                    href={kakaoChannelUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center w-6 h-6 sm:w-8 sm:h-8 md:w-9 md:h-9 hover:opacity-80 transition-opacity text-white"
+                    aria-label="카카오톡 채널 추가"
+                    onClick={() => {
+                      console.log("[ShopHeader] 카카오톡 채널 버튼 클릭:", kakaoChannelUrl);
+                    }}
+                  >
+                    <MessageCircle className="w-6 h-6 sm:w-8 sm:h-8 md:w-9 md:h-9" />
+                  </a>
+                )}
               </div>
 
               {/* 로고 영역 - 중앙 배치 (모바일에서도 타이틀 표시) */}
