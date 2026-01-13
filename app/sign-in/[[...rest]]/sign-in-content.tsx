@@ -21,6 +21,7 @@ import {
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useEffect, useRef } from "react";
+import logger from "@/lib/logger-client";
 
 export default function SignInContent() {
   const searchParams = useSearchParams();
@@ -1167,11 +1168,12 @@ export default function SignInContent() {
           const passwordValue = passwordInput.value;
 
           console.log("[SignInContent] 입력값 확인:");
-          console.log("  - 이메일 입력 필드:", identifierInput);
-          console.log("  - 이메일 값 (raw):", identifierInput.value);
-          console.log("  - 이메일 값 (trimmed):", emailValue);
-          console.log("  - 이메일 값 길이:", emailValue.length);
-          console.log("  - 비밀번호 입력됨:", passwordValue ? "예" : "아니오");
+          logger.debug("[SignInContent] 이메일 입력 필드 확인", {
+            hasInput: !!identifierInput,
+            hasValue: !!identifierInput?.value,
+            valueLength: emailValue.length,
+            hasPassword: !!passwordValue,
+          });
           console.log(
             "  - 비밀번호 값 길이:",
             passwordValue ? passwordValue.length : 0,
@@ -1217,7 +1219,10 @@ export default function SignInContent() {
               return char;
             });
 
-          console.log("[SignInContent] 최종 검증된 이메일:", emailValue);
+          logger.debug("[SignInContent] 최종 검증된 이메일 확인", {
+            hasEmail: !!emailValue,
+            emailLength: emailValue.length,
+          });
           console.log(
             "[SignInContent] 이메일 정제 후 길이:",
             emailValue.length,
@@ -1328,33 +1333,17 @@ export default function SignInContent() {
                 return;
               }
 
-              console.log(
+              logger.debug(
                 "[SignInContent] Clerk 초기화 확인 완료, 로그인 시작",
               );
 
               // 이메일과 비밀번호를 함께 전달하여 로그인 시도
-              console.log("[SignInContent] SignIn.create 호출 중...");
-              console.log("[SignInContent] 전달할 identifier:", emailValue);
-              console.log(
-                "[SignInContent] 전달할 password:",
-                passwordValue ? "***" : "(없음)",
-              );
-              console.log(
-                "[SignInContent] identifier 타입:",
-                typeof emailValue,
-              );
-              console.log(
-                "[SignInContent] identifier 길이:",
-                emailValue.length,
-              );
-              console.log(
-                "[SignInContent] identifier 문자 코드:",
-                Array.from(emailValue).map((char) => char.charCodeAt(0)),
-              );
-              console.log(
-                "[SignInContent] identifier JSON:",
-                JSON.stringify(emailValue),
-              );
+              logger.debug("[SignInContent] SignIn.create 호출 중", {
+                hasIdentifier: !!emailValue,
+                identifierType: typeof emailValue,
+                identifierLength: emailValue.length,
+                hasPassword: !!passwordValue,
+              });
 
               // 최종 검증: 이메일 형식 재확인
               const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -1380,33 +1369,23 @@ export default function SignInContent() {
                 console.log(
                   "[SignInContent] 1단계: identifier만으로 SignIn.create 호출",
                 );
-                console.log("[SignInContent] 전달할 identifier 값:", {
-                  value: emailValue,
+                logger.debug("[SignInContent] identifier 값 확인", {
+                  hasValue: !!emailValue,
                   type: typeof emailValue,
                   length: emailValue.length,
-                  charCodes: Array.from(emailValue).map((char) =>
-                    char.charCodeAt(0),
-                  ),
-                  json: JSON.stringify(emailValue),
                 });
 
                 signInAttempt = await signIn.create({
                   identifier: emailValue,
                 });
 
-                console.log(
-                  "[SignInContent] SignIn.create 성공, 응답:",
-                  signInAttempt,
-                );
-                console.log(
-                  "[SignInContent] SignIn 상태:",
-                  signInAttempt.status,
-                );
+                logger.debug("[SignInContent] SignIn.create 성공", {
+                  status: signInAttempt.status,
+                });
 
                 // 2단계: 비밀번호로 인증 시도
-                console.log("[SignInContent] 2단계: 비밀번호로 인증 시도");
-                console.log("[SignInContent] attemptFirstFactor 호출 중...");
-                console.log("[SignInContent] 현재 환경:", {
+                logger.debug("[SignInContent] 2단계: 비밀번호로 인증 시도");
+                logger.debug("[SignInContent] attemptFirstFactor 호출 중", {
                   isProduction: window.location.hostname !== "localhost",
                   hostname: window.location.hostname,
                   protocol: window.location.protocol,

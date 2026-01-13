@@ -38,7 +38,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import logger from "@/lib/logger";
+import logger from "@/lib/logger-client";
 
 // 주문 상품 아이템 컴포넌트 (Hooks 규칙 준수를 위해 분리)
 interface CheckoutCartItemProps {
@@ -56,16 +56,20 @@ function CheckoutCartItem({ item, isPending }: CheckoutCartItemProps) {
       return;
     }
 
-    console.log("[CheckoutCartItem] 상품 제거:", item.id);
+    logger.debug("[CheckoutCartItem] 상품 제거 시작", {
+      itemId: item.id,
+    });
 
     startTransition(async () => {
       const result = await removeFromCart(item.id);
       if (result.success) {
-        console.log("[CheckoutCartItem] 상품 제거 성공:", result.message);
+        logger.debug("[CheckoutCartItem] 상품 제거 성공");
         // 페이지 새로고침하여 장바구니 상태 반영
         router.refresh();
       } else {
-        console.error("[CheckoutCartItem] 상품 제거 실패:", result.message);
+        logger.error("[CheckoutCartItem] 상품 제거 실패", {
+          message: result.message,
+        });
         alert(result.message);
       }
     });
@@ -75,22 +79,22 @@ function CheckoutCartItem({ item, isPending }: CheckoutCartItemProps) {
     if (newQuantity < 1) return;
     if (newQuantity === item.quantity) return;
 
-    console.log(
-      "[CheckoutCartItem] 수량 변경:",
-      item.id,
-      item.quantity,
-      "->",
+    logger.debug("[CheckoutCartItem] 수량 변경", {
+      itemId: item.id,
+      oldQuantity: item.quantity,
       newQuantity,
-    );
+    });
 
     setIsUpdating(true);
     startTransition(async () => {
       const result = await updateCartItemQuantity(item.id, newQuantity);
       if (result.success) {
-        console.log("[CheckoutCartItem] 수량 변경 성공:", result.message);
+        logger.debug("[CheckoutCartItem] 수량 변경 성공");
         router.refresh();
       } else {
-        console.error("[CheckoutCartItem] 수량 변경 실패:", result.message);
+        logger.error("[CheckoutCartItem] 수량 변경 실패", {
+          message: result.message,
+        });
         alert(result.message);
       }
       setIsUpdating(false);
@@ -276,20 +280,23 @@ export default function CheckoutForm({
   // 주소 검색 함수
   const handleAddressSearch = () => {
     if (!window.daum) {
-      console.error("[CheckoutForm] Daum Postcode API가 로드되지 않았습니다");
+      logger.error("[CheckoutForm] Daum Postcode API가 로드되지 않음");
       alert("주소 검색 서비스를 불러오는 중입니다. 잠시 후 다시 시도해주세요.");
       return;
     }
 
-    console.log("[CheckoutForm] 주소 검색 팝업 열기");
+    logger.debug("[CheckoutForm] 주소 검색 팝업 열기");
 
     new window.daum.Postcode({
       oncomplete: function (data) {
-        console.group("[CheckoutForm] 주소 선택 완료");
-        console.log("우편번호:", data.zonecode);
-        console.log("주소:", data.address);
-        console.log("주소 타입:", data.addressType);
-        console.groupEnd();
+        logger.group("[CheckoutForm] 주소 선택 완료");
+        // 주소 정보는 민감 정보이므로 로깅하지 않음
+        logger.debug("[CheckoutForm] 주소 선택 완료", {
+          hasZonecode: !!data.zonecode,
+          hasAddress: !!data.address,
+          addressType: data.addressType,
+        });
+        logger.groupEnd();
 
         // 우편번호와 주소를 폼에 자동 입력
         form.setValue("shippingZipCode", data.zonecode);
@@ -307,17 +314,18 @@ export default function CheckoutForm({
   useEffect(() => {
     const urlOrderId = searchParams.get("orderId");
     if (urlOrderId && !orderNumber) {
-      console.log(
-        "[CheckoutForm] URL에서 orderId 발견, 주문 정보 로드:",
-        urlOrderId,
-      );
+      logger.debug("[CheckoutForm] URL에서 orderId 발견, 주문 정보 로드", {
+        hasOrderId: !!urlOrderId,
+      });
       getOrderById(urlOrderId)
         .then((order) => {
           if (order) {
-            console.group("[CheckoutForm] 주문 정보 로드 완료");
-            console.log("주문번호:", order.order_number);
-            console.log("주문 금액:", order.total_amount);
-            console.log("주문 아이템 수:", order.items.length);
+            logger.group("[CheckoutForm] 주문 정보 로드 완료");
+            logger.debug("[CheckoutForm] 주문 정보", {
+              hasOrderNumber: !!order.order_number,
+              totalAmount: order.total_amount,
+              itemsCount: order.items.length,
+            });
             console.groupEnd();
 
             setOrderNumber(order.order_number);
@@ -389,9 +397,11 @@ export default function CheckoutForm({
   // 쿠폰 목록 가져오기
   useEffect(() => {
     if (isLoaded && user) {
-      console.group("[CheckoutForm] 쿠폰 목록 조회 시작");
-      console.log("사용자 ID:", user.id);
-      console.log("사용자 로드 상태:", isLoaded);
+      logger.group("[CheckoutForm] 쿠폰 목록 조회 시작");
+      logger.debug("[CheckoutForm] 사용자 확인 완료", {
+        hasUser: !!user,
+        isLoaded,
+      });
 
       getAvailableCoupons()
         .then((couponList) => {
@@ -426,7 +436,7 @@ export default function CheckoutForm({
           console.groupEnd();
         });
     } else {
-      console.log("[CheckoutForm] 쿠폰 조회 스킵 - 로그인 필요", {
+      logger.debug("[CheckoutForm] 쿠폰 조회 스킵 - 로그인 필요", {
         isLoaded,
         hasUser: !!user,
       });
@@ -474,7 +484,7 @@ export default function CheckoutForm({
       const ordererName = form.getValues("ordererName");
       const ordererPhone = form.getValues("ordererPhone");
 
-      console.log("[CheckoutForm] 회원 정보로 배송 정보 자동 채우기", {
+      logger.debug("[CheckoutForm] 회원 정보로 배송 정보 자동 채우기", {
         ordererName,
         ordererPhone,
       });
@@ -490,7 +500,7 @@ export default function CheckoutForm({
       getMemberAdditionalInfo()
         .then((result) => {
           if (result.success && result.data) {
-            console.log("[CheckoutForm] 회원 주소 정보 로드 완료", {
+            logger.debug("[CheckoutForm] 회원 주소 정보 로드 완료", {
               postcode: result.data.postcode,
               addr1: result.data.addr1,
               addr2: result.data.addr2,
@@ -620,27 +630,19 @@ export default function CheckoutForm({
     }
 
     const formData = form.getValues();
-    logger.info("주문자 정보:", {
-      name: formData.ordererName,
-      phone: formData.ordererPhone,
-      email: formData.ordererEmail,
-    });
     // 기본 주소와 상세 주소를 합쳐서 최종 배송지 주소 생성
     const fullShippingAddress = formData.shippingAddressDetail
       ? `${formData.shippingAddress} ${formData.shippingAddressDetail}`.trim()
       : formData.shippingAddress;
 
-    logger.info("배송 정보:", {
-      name: formData.shippingName,
-      phone: formData.shippingPhone,
-      address: formData.shippingAddress,
-      addressDetail: formData.shippingAddressDetail,
-      fullAddress: fullShippingAddress,
-      zipCode: formData.shippingZipCode,
+    // 민감 정보는 로깅하지 않음 (주문자 정보, 배송 정보)
+    logger.debug("[CheckoutForm] 결제 정보 확인", {
+      hasOrdererInfo: !!(formData.ordererName && formData.ordererPhone && formData.ordererEmail),
+      hasShippingInfo: !!(formData.shippingName && formData.shippingPhone && formData.shippingAddress),
+      hasCoupon: !!selectedCoupon,
+      totalAmount: displayTotal,
+      paymentMethod: selectedPaymentMethod,
     });
-    logger.info("선택된 쿠폰:", selectedCoupon);
-    logger.info("최종 결제 금액:", displayTotal);
-    logger.info("결제 수단:", selectedPaymentMethod);
     logger.groupEnd();
 
     startTransition(async () => {
@@ -652,17 +654,11 @@ export default function CheckoutForm({
           ? `${formData.shippingAddress} ${formData.shippingAddressDetail}`.trim()
           : formData.shippingAddress;
 
-        logger.info("[CheckoutForm] 전달할 배송 정보:", {
-          ordererName: formData.ordererName,
-          ordererPhone: formData.ordererPhone,
-          ordererEmail: formData.ordererEmail,
-          shippingName: formData.shippingName,
-          shippingPhone: formData.shippingPhone,
-          shippingAddress: formData.shippingAddress,
-          shippingAddressDetail: formData.shippingAddressDetail,
-          fullShippingAddress: fullShippingAddress,
-          shippingZipCode: formData.shippingZipCode,
-          shippingMemo: formData.shippingMemo,
+        // 민감 정보는 로깅하지 않음 (배송 정보)
+        logger.debug("[CheckoutForm] 결제 준비 API 호출 시작", {
+          hasOrdererInfo: !!(formData.ordererName && formData.ordererPhone && formData.ordererEmail),
+          hasShippingInfo: !!(formData.shippingName && formData.shippingPhone && formData.shippingAddress),
+          hasShippingMemo: !!formData.shippingMemo,
         });
         
         const prepareResponse = await fetch("/api/payments/toss/prepare", {

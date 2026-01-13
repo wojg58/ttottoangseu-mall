@@ -15,7 +15,7 @@
 
 import { useEffect, useState } from "react";
 import { loadTossPayments } from "@tosspayments/tosspayments-sdk";
-import logger from "@/lib/logger";
+import logger from "@/lib/logger-client";
 
 interface PaymentWidgetProps {
   orderId: string;
@@ -62,12 +62,12 @@ export default function PaymentWidget({
     }
 
     logger.group("[PaymentWidget] 결제창 초기화 시작");
-    logger.info("주문 정보:", {
-      orderId,
-      orderName,
+    logger.debug("[PaymentWidget] 주문 정보 확인", {
+      hasOrderId: !!orderId,
+      hasOrderName: !!orderName,
       amount: amount.toLocaleString("ko-KR") + "원",
-      customerName,
-      customerEmail,
+      hasCustomerName: !!customerName,
+      hasCustomerEmail: !!customerEmail,
       paymentMethod,
     });
 
@@ -84,19 +84,12 @@ export default function PaymentWidget({
         // 필수 값 검증 (Payment 인스턴스 생성 전에 먼저 확인)
         if (!orderId || !amount || !customerName || !customerEmail || !paymentMethod) {
           const errorMsg = "결제 정보가 불완전합니다. 페이지를 새로고침해주세요.";
-          logger.error("[PaymentWidget] ❌ 필수 입력값 누락:", {
-            orderId: !!orderId,
-            amount: !!amount,
-            customerName: !!customerName,
-            customerEmail: !!customerEmail,
-            paymentMethod: !!paymentMethod,
-            actualValues: {
-              orderId,
-              amount,
-              customerName,
-              customerEmail,
-              paymentMethod,
-            }
+          logger.error("[PaymentWidget] 필수 입력값 누락", {
+            hasOrderId: !!orderId,
+            hasAmount: !!amount,
+            hasCustomerName: !!customerName,
+            hasCustomerEmail: !!customerEmail,
+            hasPaymentMethod: !!paymentMethod,
           });
           setError(errorMsg);
           alert(errorMsg);
@@ -105,8 +98,9 @@ export default function PaymentWidget({
           return;
         }
 
-        logger.info("[PaymentWidget] 필수 값 검증 완료");
-        logger.info("[PaymentWidget] customerKey (이메일):", customerEmail);
+        logger.debug("[PaymentWidget] 필수 값 검증 완료", {
+          hasCustomerEmail: !!customerEmail,
+        });
 
         // Payment 인스턴스 생성 (customerKey는 이메일 사용)
         const payment = tossPayments.payment({ customerKey: customerEmail });
@@ -138,11 +132,11 @@ export default function PaymentWidget({
           failUrl: failUrl,
         };
 
-        logger.info("[PaymentWidget] 결제 요청 객체 생성 완료:", {
+        logger.debug("[PaymentWidget] 결제 요청 객체 생성 완료", {
           method: paymentRequest.method,
           amount: paymentRequest.amount,
-          orderId: paymentRequest.orderId,
-          orderName: paymentRequest.orderName,
+          hasOrderId: !!paymentRequest.orderId,
+          hasOrderName: !!paymentRequest.orderName,
         });
 
         // 결제수단별 추가 설정
@@ -165,30 +159,31 @@ export default function PaymentWidget({
           // 입금자명이 있으면 customerName에 설정 (실시간 계좌이체에서 입금자명으로 사용)
           if (depositorName && depositorName.trim()) {
             paymentRequest.customerName = depositorName.trim();
-            logger.info("[PaymentWidget] 입금자명 설정:", depositorName.trim());
+            logger.debug("[PaymentWidget] 입금자명 설정 완료", {
+              hasDepositorName: !!depositorName,
+            });
           }
-          logger.info("[PaymentWidget] 실시간 계좌이체 결제 모드");
-          logger.info("[PaymentWidget] 에스크로 사용 여부:", useEscrow);
-          logger.info("[PaymentWidget] transfer 객체:", paymentRequest.transfer);
-          logger.info("[PaymentWidget] customerName:", paymentRequest.customerName);
+          logger.debug("[PaymentWidget] 실시간 계좌이체 결제 모드", {
+            useEscrow,
+            hasTransfer: !!paymentRequest.transfer,
+            hasCustomerName: !!paymentRequest.customerName,
+          });
           logger.info("[PaymentWidget] 계좌이체 팝업창이 오버레이로 표시됩니다");
           logger.info("[PaymentWidget] 은행 선택 → 계좌번호 입력 → 인증 화면이 순서대로 표시됩니다");
         }
 
-        logger.info("[PaymentWidget] 결제창 호출:", {
+        logger.debug("[PaymentWidget] 결제창 호출 준비", {
           method: paymentRequest.method,
-          orderId: paymentRequest.orderId,
-          orderName: paymentRequest.orderName,
+          hasOrderId: !!paymentRequest.orderId,
+          hasOrderName: !!paymentRequest.orderName,
           amount: paymentRequest.amount,
-          transfer: paymentRequest.transfer,
-          customerName: paymentRequest.customerName,
+          hasTransfer: !!paymentRequest.transfer,
         });
 
         // 결제창 호출 - 자동으로 오버레이 모달이 표시됨
         // CARD 모드: 카드사 선택 화면 → 약관 동의 → 카드 정보 입력 화면
         // TRANSFER 모드: 은행 선택 화면 → 계좌번호 입력 → 인증 화면
-        logger.info("[PaymentWidget] payment.requestPayment() 호출 시작");
-        logger.info("[PaymentWidget] 최종 결제 요청 객체:", JSON.stringify(paymentRequest, null, 2));
+        logger.debug("[PaymentWidget] payment.requestPayment() 호출 시작");
         
         try {
           await payment.requestPayment(paymentRequest);

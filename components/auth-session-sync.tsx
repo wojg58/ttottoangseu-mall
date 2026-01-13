@@ -4,6 +4,7 @@ import { useAuth, useUser } from "@clerk/nextjs";
 import { useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import * as Sentry from "@sentry/nextjs";
+import logger from "@/lib/logger-client";
 
 /**
  * OAuth 콜백 후 Clerk 세션 동기화를 위한 컴포넌트
@@ -47,17 +48,20 @@ export function AuthSessionSync() {
         },
       });
       
-      console.group("[AuthSessionSync] OAuth 콜백 감지 - 세션 생성 검증 시작");
-      console.log("현재 URL:", currentUrl);
-      console.log("시간:", timestamp);
+      logger.group("[AuthSessionSync] OAuth 콜백 감지 - 세션 생성 검증 시작");
+      logger.debug("[AuthSessionSync] OAuth 콜백 URL 감지", {
+        hasClerkRedirectUrl: searchParams.has("__clerk_redirect_url"),
+        hasClerkStatus: searchParams.has("__clerk_status"),
+      });
       
       // 검증 문서 6차 진단: 세션 생성 여부 확인
-      console.log("=== 세션 생성 검증 ===");
-      console.log("isSignedIn:", isSignedIn);
-      console.log("userId:", userId);
-      console.log("sessionId:", sessionId);
-      console.log("userLoaded:", userLoaded);
-      console.log("user 존재:", !!user);
+      logger.debug("[AuthSessionSync] 세션 생성 검증", {
+        isSignedIn,
+        hasUserId: !!userId,
+        hasSessionId: !!sessionId,
+        userLoaded,
+        hasUser: !!user,
+      });
       
       let userInfo = null;
       let externalAccounts: any[] = [];
@@ -65,19 +69,7 @@ export function AuthSessionSync() {
       let tokenLength = 0;
       
       if (user) {
-        userInfo = {
-          id: user.id,
-          email: user.emailAddresses[0]?.emailAddress || "없음",
-          name: user.fullName || user.username || "없음",
-          externalAccounts: user.externalAccounts?.length || 0,
-          externalAccountDetails: user.externalAccounts?.map(acc => ({
-            provider: acc.provider,
-            providerUserId: acc.providerUserId,
-            verified: acc.verification?.status,
-          })) || [],
-        };
-        console.log("👤 Clerk 사용자 정보:", userInfo);
-        
+        // 민감 정보는 로깅하지 않음 (마스킹된 정보만 필요 시 사용)
         externalAccounts = user.externalAccounts?.map((acc) => ({
           provider: acc.provider,
           providerUserId: acc.providerUserId,
@@ -86,23 +78,23 @@ export function AuthSessionSync() {
         
         // External Account가 없는 경우 경고
         if (!user.externalAccounts || user.externalAccounts.length === 0) {
-          console.error("❌ [중요] External Account가 없습니다!");
-          console.error("   → 'The External Account was not found' 에러의 원인일 수 있습니다.");
-          console.error("   → Clerk가 Proxy 서버의 응답을 받았지만 외부 계정을 연결하지 못했습니다.");
-          console.error("   → 가능한 원인:");
-          console.error("      1. Clerk Dashboard의 Attribute Mapping 설정 문제");
-          console.error("      2. Proxy 서버 응답의 sub 값이 Clerk가 기대하는 형식과 다름");
-          console.error("      3. 네이버에서 제공한 사용자 ID가 이미 다른 Clerk 사용자와 연결됨");
+          logger.error("[AuthSessionSync] External Account가 없습니다");
+          logger.debug("[AuthSessionSync] 가능한 원인: Clerk Dashboard 설정 또는 Proxy 서버 응답 문제");
         } else {
-          console.log("✅ External Account 연결됨:", user.externalAccounts.map(acc => acc.provider));
+          logger.debug("[AuthSessionSync] External Account 연결됨", {
+            providers: user.externalAccounts.map(acc => acc.provider),
+            count: user.externalAccounts.length,
+          });
         }
       }
       
       // URL 파라미터 확인
       const clerkStatus = searchParams.get("__clerk_status");
       const clerkRedirectUrl = searchParams.get("__clerk_redirect_url");
-      console.log("__clerk_status:", clerkStatus);
-      console.log("__clerk_redirect_url:", clerkRedirectUrl);
+      logger.debug("[AuthSessionSync] Clerk 파라미터", {
+        hasStatus: !!clerkStatus,
+        hasRedirectUrl: !!clerkRedirectUrl,
+      });
       
       // 검증 판정
       const verificationResult = {
@@ -113,11 +105,11 @@ export function AuthSessionSync() {
       
       if (!isSignedIn || !userId || !sessionId) {
         verificationResult.error = "세션이 생성되지 않았습니다";
-        console.error("❌ [검증 실패] 세션이 생성되지 않았습니다!");
-        console.error("   - isSignedIn:", isSignedIn);
-        console.error("   - userId:", userId);
-        console.error("   - sessionId:", sessionId);
-        console.error("   → '추가 정보 입력 필요' 또는 '사용자 생성 실패' 상태일 수 있습니다.");
+        logger.error("[AuthSessionSync] 세션 생성 실패", {
+          isSignedIn,
+          hasUserId: !!userId,
+          hasSessionId: !!sessionId,
+        });
         
         // Sentry에 세션 생성 실패 이벤트 전송
         Sentry.captureMessage("OAuth 세션 생성 실패", {
@@ -131,26 +123,26 @@ export function AuthSessionSync() {
               url: currentUrl,
               timestamp,
               isSignedIn,
-              userId: userId || null,
-              sessionId: sessionId || null,
+              hasUserId: !!userId,
+              hasSessionId: !!sessionId,
               userLoaded,
               hasUser: !!user,
-              clerkStatus,
-              clerkRedirectUrl,
+              hasClerkStatus: !!clerkStatus,
+              hasClerkRedirectUrl: !!clerkRedirectUrl,
             },
             verification: verificationResult,
           },
           extra: {
-            userInfo,
-            externalAccounts,
+            externalAccountsCount: externalAccounts.length,
             hasToken,
-            tokenLength,
           },
         });
       } else if (user && (!user.externalAccounts || user.externalAccounts.length === 0)) {
         verificationResult.warnings.push("External Account가 연결되지 않았습니다");
-        console.error("❌ [중요] 세션은 생성되었지만 External Account가 연결되지 않았습니다!");
-        console.error("   → 'The External Account was not found' 에러의 원인입니다.");
+        logger.warn("[AuthSessionSync] External Account 연결 실패", {
+          hasSession: true,
+          externalAccountsCount: 0,
+        });
         
         // Sentry에 External Account 연결 실패 이벤트 전송
         Sentry.captureMessage("OAuth External Account 연결 실패", {
@@ -164,22 +156,23 @@ export function AuthSessionSync() {
             oauth_callback: {
               url: currentUrl,
               timestamp,
-              userId,
-              sessionId,
+              hasUserId: !!userId,
+              hasSessionId: !!sessionId,
               hasUser: !!user,
             },
             verification: verificationResult,
           },
           extra: {
-            userInfo,
-            externalAccounts,
+            externalAccountsCount: externalAccounts.length,
           },
         });
       } else {
         verificationResult.success = true;
-        console.log("✅ [검증 성공] 세션이 정상적으로 생성되었습니다!");
-        console.log("   - userId:", userId);
-        console.log("   - sessionId:", sessionId);
+        logger.debug("[AuthSessionSync] 세션 생성 성공", {
+          hasUserId: !!userId,
+          hasSessionId: !!sessionId,
+          hasExternalAccounts: user?.externalAccounts?.length > 0,
+        });
         
         // Sentry에 성공 이벤트 전송 (디버깅용)
         Sentry.addBreadcrumb({
@@ -187,8 +180,8 @@ export function AuthSessionSync() {
           message: "OAuth 세션 생성 성공",
           level: "info",
           data: {
-            userId,
-            sessionId,
+            hasUserId: !!userId,
+            hasSessionId: !!sessionId,
             hasExternalAccounts: user?.externalAccounts?.length > 0,
           },
         });
@@ -197,16 +190,15 @@ export function AuthSessionSync() {
       // 세션 토큰 확인 후 서버로 로그 전송
       const sendLogToServer = async () => {
         try {
-          // 세션 토큰 확인
+          // 세션 토큰 확인 (민감 정보이므로 로깅하지 않음)
           const token = await getToken();
           hasToken = !!token;
           tokenLength = token?.length || 0;
-          console.log("세션 토큰 존재:", hasToken);
-          if (token) {
-            console.log("세션 토큰 길이:", tokenLength);
-          }
+          logger.debug("[AuthSessionSync] 세션 토큰 확인 완료", {
+            hasToken,
+          });
         } catch (err) {
-          console.error("세션 토큰 가져오기 실패:", err);
+          logger.error("[AuthSessionSync] 세션 토큰 가져오기 실패", err);
         }
         
         // 서버로 로그 전송
@@ -227,8 +219,7 @@ export function AuthSessionSync() {
           verificationResult,
         };
         
-        console.log("📤 서버로 로그 전송 중...");
-        console.log("전송할 데이터:", JSON.stringify(logPayload, null, 2));
+        logger.debug("[AuthSessionSync] 서버로 로그 전송 중");
         
         try {
           const res = await fetch("/api/log-oauth-callback", {
@@ -239,14 +230,18 @@ export function AuthSessionSync() {
           
           if (res.ok) {
             const result = await res.json();
-            console.log("✅ 서버 로그 저장 완료:", result.message);
-            console.log("   → 서버 터미널을 확인하세요!");
+            logger.debug("[AuthSessionSync] 서버 로그 저장 완료", {
+              message: result.message,
+            });
           } else {
             const errorText = await res.text();
-            console.error("❌ 서버 로그 저장 실패:", res.status, errorText);
+            logger.error("[AuthSessionSync] 서버 로그 저장 실패", {
+              status: res.status,
+              error: errorText,
+            });
           }
         } catch (err) {
-          console.error("❌ 서버 로그 전송 실패:", err);
+          logger.error("[AuthSessionSync] 서버 로그 전송 실패", err);
         }
       };
       
@@ -269,11 +264,9 @@ export function AuthSessionSync() {
       const waitTime = (!isSignedIn || !userId || !sessionId) ? 10000 : 8000;
       
       // 로그를 더 오래 볼 수 있도록 경고 표시
-      console.warn("⚠️ Network 탭에서 실패한 요청을 확인하세요!");
-      console.warn("   - Network 탭에서 'Preserve log' 옵션을 활성화하세요");
-      console.warn("   - 실패한 요청(빨간색)을 확인하세요");
-      console.warn(`   - ${waitTime / 1000}초 후 페이지가 새로고침됩니다.`);
-      console.warn("   - 콘솔에서 'window.stopRedirect = true'를 입력하면 리다이렉션을 중지할 수 있습니다.");
+      logger.debug("[AuthSessionSync] Network 탭 확인 안내", {
+        waitTimeSeconds: waitTime / 1000,
+      });
       
       // 전역 변수로 리다이렉션 제어 가능하게 설정
       (window as any).stopRedirect = false;
@@ -283,16 +276,15 @@ export function AuthSessionSync() {
       const timeoutId1 = setTimeout(() => {
         // 사용자가 리다이렉션을 중지한 경우 확인
         if ((window as any).stopRedirect) {
-          console.log("⏸️ 사용자가 리다이렉션을 중지했습니다.");
-          console.log("   계속하려면 콘솔에서 'window.stopRedirect = false'를 입력한 후");
-          console.log("   'window.location.reload()'를 실행하세요.");
+          logger.debug("[AuthSessionSync] 리다이렉션 중지됨");
           return;
         }
         // 재검증
-        console.log("[AuthSessionSync] 대기 후 재검증");
-        console.log("isSignedIn:", isSignedIn);
-        console.log("userId:", userId);
-        console.log("sessionId:", sessionId);
+        logger.debug("[AuthSessionSync] 대기 후 재검증", {
+          isSignedIn,
+          hasUserId: !!userId,
+          hasSessionId: !!sessionId,
+        });
         
         // 최종 검증 결과를 localStorage에 저장
         const finalLog = {
@@ -313,13 +305,12 @@ export function AuthSessionSync() {
         localStorage.setItem("oauth_callback_logs", JSON.stringify(existingLogs));
         
         if (!isSignedIn || !userId || !sessionId) {
-          console.error("❌ [최종 검증 실패] 세션이 여전히 생성되지 않았습니다!");
-          console.error("   → Clerk Dashboard의 Attribute Mapping을 확인하세요:");
-          console.error("      - User ID / Subject → sub");
-          console.error("      - Email → email");
-          console.error("   → Proxy 서버 로그에서 응답 데이터 확인:");
-          console.error("      - sub 값이 올바른지");
-          console.error("      - email 값이 올바른지");
+          logger.error("[AuthSessionSync] 최종 검증 실패", {
+            isSignedIn,
+            hasUserId: !!userId,
+            hasSessionId: !!sessionId,
+          });
+          logger.debug("[AuthSessionSync] 해결 방법: Clerk Dashboard 설정 확인 필요");
           
           // Sentry에 최종 검증 실패 이벤트 전송
           Sentry.captureMessage("OAuth 세션 생성 최종 검증 실패", {
@@ -335,24 +326,24 @@ export function AuthSessionSync() {
                 timestamp,
                 finalCheck: {
                   isSignedIn,
-                  userId: userId || null,
-                  sessionId: sessionId || null,
+                  hasUserId: !!userId,
+                  hasSessionId: !!sessionId,
                   userLoaded,
                   hasUser: !!user,
                 },
               },
             },
             extra: {
-              userInfo,
-              externalAccounts,
-              clerkStatus,
-              clerkRedirectUrl,
+              externalAccountsCount: externalAccounts.length,
+              hasClerkStatus: !!clerkStatus,
+              hasClerkRedirectUrl: !!clerkRedirectUrl,
             },
           });
         } else if (user && (!user.externalAccounts || user.externalAccounts.length === 0)) {
-          console.error("❌ [중요] 세션은 생성되었지만 External Account가 연결되지 않았습니다!");
-          console.error("   → 'The External Account was not found' 에러의 원인입니다.");
-          console.error("   → Proxy 서버 응답의 sub 값이 Clerk가 기대하는 형식과 일치하지 않을 수 있습니다.");
+          logger.warn("[AuthSessionSync] External Account 연결 실패 (최종 검증)", {
+            hasSession: true,
+            externalAccountsCount: 0,
+          });
           
           // Sentry에 최종 검증 경고 이벤트 전송
           Sentry.captureMessage("OAuth External Account 연결 최종 검증 실패", {
@@ -369,24 +360,23 @@ export function AuthSessionSync() {
                 timestamp,
                 finalCheck: {
                   isSignedIn,
-                  userId,
-                  sessionId,
+                  hasUserId: !!userId,
+                  hasSessionId: !!sessionId,
                   hasUser: !!user,
                 },
               },
             },
             extra: {
-              userInfo,
-              externalAccounts,
+              externalAccountsCount: externalAccounts.length,
             },
           });
         } else {
-          console.log("✅ [최종 검증 성공] 세션과 External Account가 모두 정상입니다!");
+          logger.debug("[AuthSessionSync] 최종 검증 성공");
         }
         
-        console.log("[AuthSessionSync] 세션 동기화를 위해 페이지 새로고침");
-        console.log("리다이렉트 URL:", cleanUrl || "/");
-        console.log("⚠️ Network 탭에서 실패한 요청을 확인했는지 확인하세요!");
+        logger.debug("[AuthSessionSync] 세션 동기화를 위해 페이지 새로고침", {
+          redirectUrl: cleanUrl || "/",
+        });
         
         // Network 탭 확인을 위한 추가 대기 (선택적)
         // 사용자가 확인할 시간을 더 주기 위해 2초 더 대기
@@ -397,7 +387,7 @@ export function AuthSessionSync() {
       }, waitTime);
       
       hasCheckedRef.current = true;
-      console.groupEnd();
+      logger.groupEnd();
       return () => {
         if (timeoutId1) clearTimeout(timeoutId1);
         if (timeoutId2) clearTimeout(timeoutId2);
