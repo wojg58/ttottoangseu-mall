@@ -17,6 +17,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Home } from "lucide-react";
 import QuickPaymentForm from "@/components/quick-payment-form";
+import { logger } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
@@ -26,8 +27,6 @@ export default async function QuickPaymentPage() {
   if (!userId) {
     redirect("/sign-in?redirect_url=/payments/quick");
   }
-
-  console.log("[QuickPaymentPage] 렌더링");
 
   return (
     <main className="py-8">

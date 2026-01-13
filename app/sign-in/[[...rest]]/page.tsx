@@ -11,9 +11,10 @@
 
 import { Suspense } from "react";
 import SignInContent from "./sign-in-content";
+import logger from "@/lib/logger-client";
 
 export default function SignInPage() {
-  console.log("[SignInPage] 로그인 페이지 렌더링");
+  logger.debug("[SignInPage] 로그인 페이지 렌더링");
 
   return (
     <Suspense fallback={

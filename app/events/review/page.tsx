@@ -9,9 +9,10 @@
 
 import Link from "next/link";
 import { ArrowLeft, Star } from "lucide-react";
+import { logger } from "@/lib/logger";
 
 export default function ReviewEventPage() {
-  console.log("[ReviewEventPage] 리뷰 이벤트 페이지 렌더링");
+  logger.debug("[ReviewEventPage] 리뷰 이벤트 페이지 렌더링");
 
   return (
     <main className="min-h-screen bg-[#fff9f7] py-12">

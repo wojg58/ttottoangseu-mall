@@ -11,9 +11,10 @@
 
 import { Suspense } from "react";
 import SignUpContent from "./sign-up-content";
+import logger from "@/lib/logger-client";
 
 export default function SignUpPage() {
-  console.log("[SignUpPage] 회원가입 페이지 렌더링");
+  logger.debug("[SignUpPage] 회원가입 페이지 렌더링");
 
   return (
     <Suspense fallback={

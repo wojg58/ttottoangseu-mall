@@ -111,7 +111,7 @@ function OrderSuccessContent() {
 
         // 결제 성공 시 장바구니 갱신 이벤트 발생
         if (data.success) {
-          console.log("[OrderSuccessPage] 결제 성공 - 장바구니 갱신 이벤트 발생");
+          logger.debug("[OrderSuccessPage] 결제 성공 - 장바구니 갱신 이벤트 발생");
           window.dispatchEvent(new CustomEvent("cart:update"));
         }
       } catch (error) {

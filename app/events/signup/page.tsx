@@ -9,9 +9,10 @@
 
 import Link from "next/link";
 import { ArrowLeft, Gift } from "lucide-react";
+import { logger } from "@/lib/logger";
 
 export default function SignupEventPage() {
-  console.log("[SignupEventPage] 신규가입 쿠폰 이벤트 페이지 렌더링");
+  logger.debug("[SignupEventPage] 신규가입 쿠폰 이벤트 페이지 렌더링");
 
   return (
     <main className="min-h-screen bg-[#fff9f7] py-12">

@@ -18,6 +18,7 @@ import { getOrders } from "@/actions/orders";
 import { getMemberAdditionalInfo } from "@/actions/member-actions";
 import DateDisplay from "@/components/date-display";
 import NumberDisplay from "@/components/number-display";
+import { logger } from "@/lib/logger";
 
 export default async function MyPage() {
   const { userId } = await auth();
@@ -35,9 +36,11 @@ export default async function MyPage() {
   // 회원 추가 정보
   const memberInfo = memberInfoResult.success ? memberInfoResult.data : null;
   
-  // 디버깅: 조회 실패 시 로그 출력 (개발 환경)
-  if (!memberInfoResult.success && process.env.NODE_ENV === "development") {
-    console.log("[MyPage] 회원 추가 정보 조회 실패:", memberInfoResult.error);
+  // 디버깅: 조회 실패 시 로그 출력
+  if (!memberInfoResult.success) {
+    logger.warn("[MyPage] 회원 추가 정보 조회 실패", {
+      error: memberInfoResult.error,
+    });
   }
 
   // 성별 표시 텍스트

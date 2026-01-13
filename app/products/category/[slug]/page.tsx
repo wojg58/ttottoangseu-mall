@@ -12,6 +12,7 @@ import {
 } from "@/actions/products";
 import ProductCard from "@/components/product-card";
 import ProductSortSelect from "@/components/product-sort-select";
+import { logger } from "@/lib/logger";
 
 interface CategoryPageProps {
   params: Promise<{
@@ -29,8 +30,6 @@ export default async function CategoryPage({
 }: CategoryPageProps) {
   const { slug } = await params;
   const search = await searchParams;
-
-  console.log("[CategoryPage] 렌더링, slug:", slug);
 
   // 카테고리 정보 조회
   const category = await getCategoryBySlug(slug);

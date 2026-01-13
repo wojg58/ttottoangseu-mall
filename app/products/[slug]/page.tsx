@@ -25,6 +25,7 @@ import { getProductBySlug } from "@/actions/products";
 import ProductImageGallery from "@/components/product-image-gallery";
 import ProductDetailOptions from "@/components/product-detail-options";
 import ProductDetailTabs from "@/components/product-detail-tabs";
+import { logger } from "@/lib/logger";
 
 interface ProductDetailPageProps {
   params: Promise<{
@@ -36,8 +37,6 @@ export default async function ProductDetailPage({
   params,
 }: ProductDetailPageProps) {
   const { slug } = await params;
-
-  console.log("[ProductDetailPage] 렌더링, slug:", slug);
 
   // 상품 정보 조회
   const product = await getProductBySlug(slug);
@@ -75,14 +74,6 @@ export default async function ProductDetailPage({
   // 상세 이미지 (대표 이미지 제외한 모든 이미지)
   const detailImages = sortedImages.filter(
     (img) => img.id !== primaryImage?.id
-  );
-
-  console.log(
-    "[ProductDetailPage] 이미지 정렬 완료:",
-    sortedImages.length,
-    "개 (대표 이미지:",
-    primaryImage?.image_url || "없음",
-    ")",
   );
 
   return (

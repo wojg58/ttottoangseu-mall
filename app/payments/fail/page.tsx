@@ -8,6 +8,7 @@
 import Link from "next/link";
 import { XCircle, Home, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { logger } from "@/lib/logger";
 
 interface SearchParams {
   message?: string;
@@ -25,10 +26,10 @@ export default async function PaymentFailPage({
   const message = params.message || "결제에 실패했습니다.";
   const code = params.code;
 
-  console.group("[PaymentFailPage] 결제 실패 페이지");
-  console.log("에러 메시지:", message);
-  console.log("에러 코드:", code);
-  console.groupEnd();
+  logger.warn("[PaymentFailPage] 결제 실패", {
+    message,
+    code,
+  });
 
   return (
     <main className="min-h-screen flex items-center justify-center bg-[#ffeef5] py-12 px-4">
