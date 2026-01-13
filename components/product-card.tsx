@@ -17,6 +17,7 @@ import { Heart, Star } from "lucide-react";
 import { useState, useMemo, memo } from "react";
 import type { ProductListItem } from "@/types/database";
 import { formatPrice } from "@/lib/utils";
+import logger from "@/lib/logger-client";
 
 interface ProductCardProps {
   product: ProductListItem;
@@ -51,10 +52,7 @@ function ProductCardComponent({ product, rank }: ProductCardProps) {
   };
 
   const handleImageError = () => {
-    console.warn(
-      "[ProductCard] 이미지 로딩 실패:",
-      product.primary_image?.image_url,
-    );
+    logger.warn("[ProductCard] 이미지 로딩 실패");
     setImageError(true);
   };
 
@@ -71,12 +69,6 @@ function ProductCardComponent({ product, rank }: ProductCardProps) {
             className="product-image"
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
             onError={handleImageError}
-            onLoadingComplete={() => {
-              console.log(
-                "[ProductCard] 이미지 로딩 완료:",
-                product.primary_image?.image_url,
-              );
-            }}
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center">

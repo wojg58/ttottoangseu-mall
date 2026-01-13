@@ -24,6 +24,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { addToCart, buyNowAndRedirect } from "@/actions/cart";
+import logger from "@/lib/logger-client";
 
 interface AddToCartButtonProps {
   productId: string;
@@ -48,61 +49,41 @@ export default function AddToCartButton({
   const { isLoaded, userId, isSignedIn } = useAuth();
   const router = useRouter();
 
-  console.log("[AddToCartButton] 렌더링:", {
-    productId,
-    productName,
-    isSoldOut,
-  });
-
   const handleQuantityChange = (delta: number) => {
     const newQuantity = quantity + delta;
     if (newQuantity >= 1 && newQuantity <= stock) {
       setQuantity(newQuantity);
-      console.log("[AddToCartButton] 수량 변경:", newQuantity);
     }
   };
 
   const handleAddToCart = async () => {
-    console.log("[AddToCartButton] 장바구니 담기 버튼 클릭:", {
-      isLoaded,
-      userId,
-      isSignedIn,
-      productId,
-      quantity,
-      variantId,
-    });
-
     // Clerk 인증 상태가 아직 로드되지 않았으면 대기
     if (!isLoaded) {
-      console.log("[AddToCartButton] Clerk 인증 상태 로딩 중...");
+      logger.debug("[AddToCartButton] Clerk 인증 상태 로딩 중");
       return;
     }
 
     // 인증 상태가 로드되었는데 userId가 없으면 로그인 필요
     if (!userId) {
-      console.log("[AddToCartButton] 로그인 필요");
+      logger.debug("[AddToCartButton] 로그인 필요");
       const currentUrl = window.location.pathname + window.location.search;
       router.push("/sign-in?redirect_url=" + encodeURIComponent(currentUrl));
       return;
     }
 
-    console.log("[AddToCartButton] 장바구니 담기 시작:", {
-      productId,
-      quantity,
-      variantId,
-    });
-
     startTransition(async () => {
       const result = await addToCart(productId, quantity, variantId);
       if (result.success) {
-        console.log("[AddToCartButton] 장바구니 담기 성공");
+        logger.debug("[AddToCartButton] 장바구니 담기 성공");
         setShowSuccessModal(true);
       } else {
-        console.error("[AddToCartButton] 장바구니 담기 실패:", result.message);
+        logger.error("[AddToCartButton] 장바구니 담기 실패", {
+          message: result.message,
+        });
 
         // 서버에서 반환한 로그인 관련 에러인 경우 (실제 세션 만료)
         if (result.message.includes("로그인이 필요")) {
-          console.error("❌ 서버에서 로그인 필요 응답 - 실제 세션 만료");
+          logger.warn("[AddToCartButton] 세션 만료");
           alert("로그인 세션이 만료되었습니다. 다시 로그인해주세요.");
           router.push("/sign-in?redirect_url=" + window.location.pathname);
           return;
@@ -114,62 +95,36 @@ export default function AddToCartButton({
   };
 
   const handleBuyNow = async () => {
-    console.group("🛒 [바로 구매하기] 시작");
-    console.log("[AddToCartButton] 1단계: 바로 구매 버튼 클릭");
-    console.log("상태:", {
-      isLoaded,
-      userId,
-      isSignedIn,
-      productId,
-      quantity,
-      variantId,
-      timestamp: new Date().toISOString(),
-    });
-
     // Clerk 인증 상태가 아직 로드되지 않았으면 대기
     if (!isLoaded) {
-      console.warn("[AddToCartButton] ⚠️ Clerk 인증 상태 로딩 중...");
-      console.groupEnd();
+      logger.warn("[AddToCartButton] Clerk 인증 상태 로딩 중");
       return;
     }
 
     // 인증 상태가 로드되었는데 userId가 없으면 로그인 필요
     if (!userId) {
-      console.warn("[AddToCartButton] ⚠️ 로그인 필요 - 로그인 페이지로 이동");
+      logger.warn("[AddToCartButton] 로그인 필요");
       const currentUrl = window.location.pathname + window.location.search;
       router.push("/sign-in?redirect_url=" + encodeURIComponent(currentUrl));
-      console.groupEnd();
       return;
     }
 
-    console.log(
-      "[AddToCartButton] 2단계: 인증 확인 완료 - Server Action 호출 시작",
-    );
-    console.log("요청 데이터:", {
-      productId,
-      quantity,
-      variantId,
-    });
-
     startTransition(async () => {
       try {
-        console.log("[AddToCartButton] 3단계: buyNowAndRedirect() 호출");
         const result = await buyNowAndRedirect(productId, quantity, variantId);
-        console.log("[AddToCartButton] Server Action 결과:", result);
         
         if (result.success) {
-          console.log("[AddToCartButton] ✅ 4단계: 성공 - 장바구니 반영 대기 후 체크아웃 페이지로 이동");
+          logger.debug("[AddToCartButton] 바로 구매 성공");
           // 장바구니 DB 반영을 위해 잠시 대기 (바로구매 플래그 포함)
           await new Promise((resolve) => setTimeout(resolve, 800));
-          console.log("[AddToCartButton] 대기 완료 - 체크아웃 페이지로 이동");
           // 바로구매 플래그를 쿼리 파라미터로 전달
           router.push("/checkout?buyNow=true");
-          console.groupEnd();
           return;
         } else {
-          console.warn("[AddToCartButton] ⚠️ 장바구니 추가 실패:", result.message);
+          logger.warn("[AddToCartButton] 장바구니 추가 실패", {
+            message: result.message,
+          });
           alert(result.message || "장바구니 추가에 실패했습니다.");
-          console.groupEnd();
           return;
         }
       } catch (error: any) {
@@ -186,44 +141,20 @@ export default function AddToCartButton({
         }
 
         // 실제 에러인 경우에만 로그 및 알림 표시
-        console.error("[AddToCartButton] ❌ 4단계: 바로 구매 실패");
-        console.error("에러 타입:", typeof error);
-        console.error("에러 객체:", error);
-        console.error("에러 메시지:", error?.message);
-        console.error("에러 코드:", error?.code);
-        console.error("에러 digest:", error?.digest);
-        console.error("에러 stack:", error?.stack);
-        console.error(
-          "전체 에러 (JSON):",
-          JSON.stringify(error, Object.getOwnPropertyNames(error), 2),
-        );
-
-        // 에러 상세를 객체로도 출력 (개발자 도구에서 펼쳐볼 수 있도록)
-        const errorDetails = {
-          message: error?.message,
-          code: error?.code,
-          digest: error?.digest,
-          stack: error?.stack,
-          name: error?.name,
-          cause: error?.cause,
-          fullError: error,
-        };
-        console.error("에러 상세 객체:", errorDetails);
+        logger.error("[AddToCartButton] 바로 구매 실패", error);
 
         const errorMessage =
           error instanceof Error ? error.message : "주문에 실패했습니다.";
 
         // 서버에서 반환한 로그인 관련 에러인 경우 (실제 세션 만료)
         if (errorMessage.includes("로그인이 필요")) {
-          console.error("❌ 서버에서 로그인 필요 응답 - 실제 세션 만료");
+          logger.warn("[AddToCartButton] 세션 만료");
           alert("로그인 세션이 만료되었습니다. 다시 로그인해주세요.");
           router.push("/sign-in?redirect_url=" + window.location.pathname);
-          console.groupEnd();
           return;
         }
 
         alert(errorMessage);
-        console.groupEnd();
       }
     });
   };
