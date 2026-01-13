@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validationResult = validateSchema(paymentRequestSchema, body);
 
-    if (!validationResult.success) {
+    if (validationResult.success === false) {
       console.warn("[Validation] 결제 요청 검증 실패:", validationResult.error);
       console.groupEnd();
       return NextResponse.json(

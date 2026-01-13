@@ -110,7 +110,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validationResult = validateSchema(paymentConfirmSchema, body);
 
-    if (!validationResult.success) {
+    if (validationResult.success === false) {
       logger.error("[Validation] 결제 승인 요청 검증 실패:", validationResult.error);
       logger.groupEnd();
       return NextResponse.json(

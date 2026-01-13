@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
 
     const validationResult = validateSchema(productQuerySchema, queryParams);
 
-    if (!validationResult.success) {
+    if (validationResult.success === false) {
       return NextResponse.json(
         { error: validationResult.error },
         { status: 400 },
