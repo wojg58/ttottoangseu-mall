@@ -84,9 +84,9 @@ export default function SignInContent() {
         ) as HTMLElement;
         if (!socialButtonsRoot) return;
 
-        // 각 버튼 찾기
+        // 각 버튼 찾기 (구글은 BlockButton 또는 IconButton 모두 가능)
         const googleButton = socialButtonsRoot.querySelector(
-          ".cl-socialButtonsIconButton__google",
+          ".cl-socialButtonsBlockButton__google, .cl-socialButtonsIconButton__google",
         ) as HTMLElement;
         const kakaoButton = socialButtonsRoot.querySelector(
           ".cl-socialButtonsIconButton__custom_kakao",
@@ -169,9 +169,9 @@ export default function SignInContent() {
         const hasNaverButton = container.querySelector(
           ".cl-socialButtonsBlockButton__custom_naver_auth, .cl-socialButtonsIconButton__custom_naver_auth",
         );
-        // 구글 버튼 컨테이너도 322px로 고정
+        // 구글 버튼 컨테이너도 322px로 고정 (BlockButton과 IconButton 모두)
         const hasGoogleButton = container.querySelector(
-          ".cl-socialButtonsIconButton__google",
+          ".cl-socialButtonsBlockButton__google, .cl-socialButtonsIconButton__google",
         );
         if (hasAnySocialButton) {
           if (hasNaverButton || hasGoogleButton) {
@@ -242,8 +242,9 @@ export default function SignInContent() {
         if (button.classList.contains("cl-socialButtonsIconButton__custom_naver_auth")) {
           return;
         }
-        // 구글 버튼도 제외 (별도로 처리)
-        if (button.classList.contains("cl-socialButtonsIconButton__google")) {
+        // 구글 버튼도 제외 (별도로 처리) - BlockButton과 IconButton 모두
+        if (button.classList.contains("cl-socialButtonsIconButton__google") || 
+            button.classList.contains("cl-socialButtonsBlockButton__google")) {
           return;
         }
         button.style.cssText += `
@@ -270,9 +271,9 @@ export default function SignInContent() {
         `;
       });
       
-      // 구글 버튼도 322px 고정 크기로 설정 (네이버와 동일)
+      // 구글 버튼도 322px 고정 크기로 설정 (네이버와 동일) - BlockButton과 IconButton 모두 처리
       const googleButtons = document.querySelectorAll(
-        ".cl-socialButtonsIconButton__google",
+        ".cl-socialButtonsBlockButton__google, .cl-socialButtonsIconButton__google",
       ) as NodeListOf<HTMLElement>;
       googleButtons.forEach((button) => {
         button.style.cssText += `
@@ -282,6 +283,9 @@ export default function SignInContent() {
           height: 40px !important;
           min-height: 40px !important;
           flex: none !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
         `;
       });
 
@@ -407,8 +411,111 @@ export default function SignInContent() {
         }
       });
 
+      // 구글 버튼 텍스트를 "Google 로그인"으로 변경 및 중앙 정렬
+      const updateGoogleButtonText = () => {
+        // BlockButton과 IconButton 모두 처리
+        const googleButton =
+          (document.querySelector(
+            ".cl-socialButtonsBlockButton__google",
+          ) as HTMLElement) ||
+          (document.querySelector(
+            ".cl-socialButtonsIconButton__google",
+          ) as HTMLElement);
+
+        if (googleButton) {
+          // 버튼 텍스트를 "Google 로그인"으로 강제 변경 및 중앙 정렬
+          const googleButtonText = googleButton.querySelector(
+            ".cl-socialButtonsBlockButtonText__google, .cl-socialButtonsBlockButtonText",
+          ) as HTMLElement;
+          if (googleButtonText) {
+            googleButtonText.textContent = "Google 로그인";
+            googleButtonText.style.cssText = `
+              color: inherit !important;
+              font-weight: 500 !important;
+              font-size: 15px !important;
+              display: flex !important;
+              align-items: center !important;
+              justify-content: center !important;
+              width: 100% !important;
+              height: 100% !important;
+              text-align: center !important;
+              margin: 0 !important;
+              padding: 0 !important;
+              line-height: 1 !important;
+            `;
+          }
+          
+          // 버튼 자체도 중앙 정렬 강화
+          googleButton.style.cssText += `
+            position: relative !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+          `;
+        }
+      };
+
+      // 구글 버튼 텍스트가 변경되어도 "Google 로그인"으로 유지
+      let lastGoogleUpdateTime = 0;
+      const GOOGLE_THROTTLE_MS = 1000; // 1초마다 최대 1회만 업데이트
+      let googleObserverSetupAttempts = 0;
+      const MAX_GOOGLE_SETUP_ATTEMPTS = 10; // 최대 10번만 시도
+      
+      const googleButtonObserver = new MutationObserver(() => {
+        const now = Date.now();
+        if (now - lastGoogleUpdateTime > GOOGLE_THROTTLE_MS) {
+          lastGoogleUpdateTime = now;
+          updateGoogleButtonText();
+        }
+      });
+
       // 초기 실행 및 지속적인 모니터링
       updateNaverButtonText();
+      updateGoogleButtonText();
+
+      // 구글 버튼이 나타날 때까지 대기 후 Observer 설정
+      const setupGoogleButtonObserver = () => {
+        // 최대 시도 횟수 제한
+        if (googleObserverSetupAttempts >= MAX_GOOGLE_SETUP_ATTEMPTS) {
+          logger.debug("[SignInContent] 구글 버튼 Observer 설정 최대 시도 횟수 도달");
+          return;
+        }
+        googleObserverSetupAttempts++;
+        
+        const googleButton =
+          document.querySelector(
+            ".cl-socialButtonsBlockButton__google",
+          ) ||
+          document.querySelector(
+            ".cl-socialButtonsIconButton__google",
+          );
+        if (googleButton) {
+          googleButtonObserver.observe(googleButton, {
+            childList: true,
+            subtree: false, // 직접 자식만 관찰 (성능 개선)
+            characterData: false, // 텍스트 변경 무시 (성능 개선)
+          });
+        } else {
+          // 버튼이 아직 없으면 100ms 후 다시 시도
+          setTimeout(setupGoogleButtonObserver, 100);
+        }
+      };
+
+      // 초기 시도
+      setupGoogleButtonObserver();
+
+      // DOM이 완전히 로드된 후 다시 한 번 실행
+      setTimeout(() => {
+        updateNaverButtonText();
+        updateGoogleButtonText();
+        setupGoogleButtonObserver();
+      }, 100);
+
+      setTimeout(() => {
+        updateNaverButtonText();
+        updateGoogleButtonText();
+        setupGoogleButtonObserver();
+      }, 500);
 
       // 네이버 버튼이 나타날 때까지 대기 후 Observer 설정
       const setupNaverButtonObserver = () => {
