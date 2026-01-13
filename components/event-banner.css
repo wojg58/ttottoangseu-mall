@@ -104,9 +104,9 @@
   background: linear-gradient(90deg, #ffd6e8, #ffb6d5);
 }
 
-/* 옐로우 (카카오톡 친구추가) - 리뷰 이벤트와 동일한 배경 */
+/* 옐로우 (카카오톡 친구추가) - 연한 노랑 배경 */
 .event-banner.yellow {
-  background: linear-gradient(90deg, #bbf7d0, #86efac);
+  background: linear-gradient(90deg, #fffef0, #fffacd);
 }
 
 .event-banner.pink .coupon::before,
@@ -121,7 +121,7 @@
 
 .event-banner.yellow .coupon::before,
 .event-banner.yellow .coupon::after {
-  background: #bbf7d0;
+  background: #fffef0;
 }
 
 /* 텍스트 */
