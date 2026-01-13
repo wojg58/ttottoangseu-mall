@@ -110,7 +110,7 @@ export default function KakaoChannelButton({
 
   // 버튼 크기 스타일
   const sizeClass = {
-    sm: "h-9 px-3 text-sm",
+    sm: "h-7 px-2 text-xs",
     default: "h-11 px-4 text-base",
     lg: "h-12 px-6 text-lg",
   }[variant];
@@ -139,8 +139,9 @@ export default function KakaoChannelButton({
           ${fullWidth ? "w-full" : ""}
           bg-[#FEE500] hover:bg-[#FEE500]/90
           text-[#3C1E1E] font-semibold
-          shadow-md hover:shadow-lg
+          ${variant === "sm" ? "shadow-none" : "shadow-md hover:shadow-lg"}
           transition-all duration-200
+          rounded-md
         `}
         onClick={handleClick}
       >
@@ -148,9 +149,9 @@ export default function KakaoChannelButton({
           href={channelUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center justify-center gap-2"
+          className="flex items-center justify-center gap-1.5"
         >
-          <MessageCircle className="w-5 h-5" />
+          <MessageCircle className={variant === "sm" ? "w-4 h-4" : "w-5 h-5"} />
           {buttonText}
         </Link>
       </Button>
