@@ -73,22 +73,21 @@ export default async function CategoryPage({
 
         {/* 카테고리 헤더 */}
         <div className="bg-white rounded-2xl p-8 mb-8 border border-gray-200">
-          <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-3xl font-bold text-[#4a3f48] whitespace-nowrap">
-              {category.name}
-            </h1>
-            {category.description && (
-              <p className="text-[#8b7d84] whitespace-nowrap">{category.description}</p>
-            )}
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-3 flex-wrap">
+              <h1 className="text-3xl font-bold text-[#4a3f48] whitespace-nowrap">
+                {category.name}
+              </h1>
+              {category.description && (
+                <p className="text-[#8b7d84] whitespace-nowrap">{category.description}</p>
+              )}
+            </div>
+            <ProductSortSelect defaultValue={filters.sortBy} />
           </div>
         </div>
 
         {/* 메인 컨텐츠 */}
         <div>
-            {/* 정렬 */}
-            <div className="flex items-center justify-end mb-6">
-              <ProductSortSelect defaultValue={filters.sortBy} />
-            </div>
 
             {/* 상품 그리드 (한 줄에 4개씩, 최대 10줄, 스크롤 가능) */}
             {productsResult.data.length > 0 ? (
