@@ -1,8 +1,5 @@
 /* 이벤트 배너 래퍼 */
 .event-wrapper {
-  display: flex;
-  flex-direction: row;
-  gap: 14px;
   margin: 24px 0;
   width: 100%;
   max-width: 1280px;
@@ -10,6 +7,39 @@
   margin-right: auto;
   padding: 0 16px;
   box-sizing: border-box;
+}
+
+/* 슬라이드 컨테이너 (오버플로우 숨김) */
+.event-slide-container {
+  overflow: hidden;
+  width: 100%;
+  position: relative;
+}
+
+/* 슬라이드 트랙 (애니메이션 적용) */
+.event-slide-track {
+  display: flex;
+  flex-direction: row;
+  gap: 14px;
+  width: fit-content;
+  animation: slide-left 20s linear infinite;
+  animation-play-state: running;
+}
+
+/* 호버 시 애니메이션 일시 정지 */
+.event-wrapper:hover .event-slide-track {
+  animation-play-state: paused;
+}
+
+/* 슬라이드 애니메이션 (왼쪽 → 오른쪽) */
+@keyframes slide-left {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    /* 두 개의 카드 + gap을 이동 (각 카드 너비 + gap) */
+    transform: translateX(calc(-50% - 7px));
+  }
 }
 
 /* shop-container와 동일한 패딩 적용 */
@@ -30,7 +60,9 @@
   text-decoration: none;
   color: inherit;
   display: block;
-  flex: 1;
+  flex-shrink: 0;
+  width: calc(50% - 7px);
+  min-width: 280px;
 }
 
 /* 공통 배너 */
@@ -143,8 +175,9 @@
 
 /* 모바일 대응 */
 @media (max-width: 640px) {
-  .event-wrapper {
-    flex-direction: column;
+  .event-banner-link {
+    width: calc(50% - 7px);
+    min-width: 240px;
   }
 
   .event-banner {
@@ -165,6 +198,11 @@
 
   .event-banner p {
     font-size: 13px;
+  }
+
+  /* 모바일에서 애니메이션 속도 조정 */
+  .event-slide-track {
+    animation-duration: 15s;
   }
 }
 
