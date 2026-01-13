@@ -102,7 +102,7 @@ export async function POST(request: NextRequest) {
     // 주문 확인
     const { data: order } = await supabase
       .from("orders")
-      .select("id, user_id, total_amount, status")
+      .select("id, user_id, total_amount, payment_status, status")
       .eq("id", orderId)
       .eq("user_id", user.id)
       .single();

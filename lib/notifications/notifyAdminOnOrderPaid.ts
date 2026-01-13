@@ -149,9 +149,10 @@ export async function notifyAdminOnOrderPaid(
           alimtalkSent = true;
           logger.info("[알림] ✅ 알림톡 발송 완료 및 기록 저장");
         }
-      } else if (!alimtalkResult.value.success) {
-        logger.error("[알림] ❌ 알림톡 발송 실패:", alimtalkResult.value.error);
-        errors.push(`알림톡: ${alimtalkResult.value.error || "알 수 없는 오류"}`);
+      } else if (alimtalkResult.value.success === false) {
+        const error = (alimtalkResult.value as { error?: string }).error || "알 수 없는 오류";
+        logger.error("[알림] ❌ 알림톡 발송 실패:", error);
+        errors.push(`알림톡: ${error}`);
       } else {
         alimtalkSent = true; // 이미 발송됨
       }
@@ -176,9 +177,10 @@ export async function notifyAdminOnOrderPaid(
           emailSent = true;
           logger.info("[알림] ✅ 이메일 발송 완료 및 기록 저장");
         }
-      } else if (!emailResult.value.success) {
-        logger.error("[알림] ❌ 이메일 발송 실패:", emailResult.value.error);
-        errors.push(`이메일: ${emailResult.value.error || "알 수 없는 오류"}`);
+      } else if (emailResult.value.success === false) {
+        const error = (emailResult.value as { error?: string }).error || "알 수 없는 오류";
+        logger.error("[알림] ❌ 이메일 발송 실패:", error);
+        errors.push(`이메일: ${error}`);
       } else {
         emailSent = true; // 이미 발송됨
       }

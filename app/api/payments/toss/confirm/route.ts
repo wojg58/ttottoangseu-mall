@@ -150,7 +150,7 @@ export async function POST(request: NextRequest) {
     logger.info("주문 정보 조회 중...");
     const { data: order, error: orderError } = await supabase
       .from("orders")
-      .select("id, user_id, total_amount, payment_status, fulfillment_status, status, order_number")
+      .select("id, user_id, total_amount, payment_status, fulfillment_status, status, order_number, created_at")
       .eq("id", orderId)
       .eq("user_id", user.id)
       .single();
