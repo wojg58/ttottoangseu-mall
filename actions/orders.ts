@@ -730,12 +730,10 @@ export async function savePaymentInfo(
 export async function cancelOrder(
   orderId: string,
 ): Promise<{ success: boolean; message: string }> {
-  logger.group("[cancelOrder] 주문 취소");
-
   try {
     const userId = await getCurrentUserId();
     if (!userId) {
-      logger.groupEnd();
+      logger.debug("[cancelOrder] 사용자 미인증");
       return { success: false, message: "로그인이 필요합니다." };
     }
 
@@ -749,8 +747,7 @@ export async function cancelOrder(
       .single();
 
     if (orderError || !order) {
-      logger.error("주문 조회 실패", orderError);
-      logger.groupEnd();
+      logger.error("[cancelOrder] 주문 조회 실패", orderError);
       return { success: false, message: "주문을 찾을 수 없습니다." };
     }
 
@@ -758,13 +755,13 @@ export async function cancelOrder(
     const fulfillmentStatus = order.fulfillment_status;
 
     if (paymentStatus === "CANCELED" || paymentStatus === "REFUNDED") {
-      logger.groupEnd();
+      logger.warn("[cancelOrder] 이미 취소/환불된 주문");
       return { success: false, message: "이미 취소되거나 환불된 주문입니다." };
     }
 
     // 배송 중이거나 배송 완료된 주문은 취소 불가
     if (fulfillmentStatus === "SHIPPED" || fulfillmentStatus === "DELIVERED") {
-      logger.groupEnd();
+      logger.warn("[cancelOrder] 배송 중/완료된 주문 취소 불가");
       return {
         success: false,
         message: "배송 중이거나 배송 완료된 주문은 취소할 수 없습니다.",
@@ -777,8 +774,7 @@ export async function cancelOrder(
       .eq("order_id", orderId);
 
     if (itemsError) {
-      logger.error("주문 아이템 조회 실패", itemsError);
-      logger.groupEnd();
+      logger.error("[cancelOrder] 주문 아이템 조회 실패", itemsError);
       return { success: false, message: "주문 정보 조회에 실패했습니다." };
     }
 
