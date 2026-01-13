@@ -62,17 +62,17 @@ export default function SignInContent() {
         return;
       }
 
-      // 소셜 버튼 루트 컨테이너가 한 줄로 배치되도록 설정 (구글, 카카오, 네이버 3개 나란히)
+      // 소셜 버튼 루트 컨테이너가 세로로 배치되도록 설정 (네이버, 구글 세로 배치)
       const socialButtonsRoot = document.querySelector(
         ".cl-socialButtonsRoot",
       ) as HTMLElement;
       if (socialButtonsRoot) {
         socialButtonsRoot.style.cssText = `
           display: flex !important;
-          flex-direction: row !important;
+          flex-direction: column !important;
           gap: 0.75rem !important;
           width: 100% !important;
-          flex-wrap: nowrap !important;
+          align-items: flex-start !important;
           margin-bottom: 18.9px !important;
         `;
       }
@@ -127,7 +127,7 @@ export default function SignInContent() {
           return container;
         };
 
-        // 순서대로 컨테이너 생성 및 추가: 네이버를 맨 앞에 배치 (상단)
+        // 순서대로 컨테이너 생성 및 추가: 네이버를 맨 앞에 배치 (상단), 구글은 네이버 아래
         const googleContainer = createButtonContainer(googleButton);
         const kakaoContainer = createButtonContainer(kakaoButton);
         const naverContainer = createButtonContainer(naverButton);
@@ -140,14 +140,23 @@ export default function SignInContent() {
           max-width: 322px !important;
           flex: none !important;
         `;
+        
+        // 구글 버튼 컨테이너 크기를 322px로 고정 (네이버와 동일)
+        googleContainer.style.cssText = `
+          display: flex !important;
+          width: 322px !important;
+          min-width: 322px !important;
+          max-width: 322px !important;
+          flex: none !important;
+        `;
 
-        // 네이버 버튼을 맨 앞에 배치 (상단)
+        // 네이버 버튼을 맨 앞에 배치 (상단), 구글은 네이버 아래
         socialButtonsRoot.appendChild(naverContainer);
         socialButtonsRoot.appendChild(googleContainer);
         socialButtonsRoot.appendChild(kakaoContainer);
       };
 
-      // 각 소셜 버튼 컨테이너도 flex로 설정 (한 줄에 배치, 동일한 크기)
+      // 각 소셜 버튼 컨테이너도 flex로 설정 (네이버와 구글은 322px 고정)
       const socialButtons = document.querySelectorAll(
         ".cl-socialButtons",
       ) as NodeListOf<HTMLElement>;
@@ -160,9 +169,13 @@ export default function SignInContent() {
         const hasNaverButton = container.querySelector(
           ".cl-socialButtonsBlockButton__custom_naver_auth, .cl-socialButtonsIconButton__custom_naver_auth",
         );
+        // 구글 버튼 컨테이너도 322px로 고정
+        const hasGoogleButton = container.querySelector(
+          ".cl-socialButtonsIconButton__google",
+        );
         if (hasAnySocialButton) {
-          if (hasNaverButton) {
-            // 네이버 버튼 컨테이너는 322px 고정
+          if (hasNaverButton || hasGoogleButton) {
+            // 네이버와 구글 버튼 컨테이너는 322px 고정
             container.style.cssText = `
               display: flex !important;
               width: 322px !important;
@@ -171,7 +184,7 @@ export default function SignInContent() {
               flex: none !important;
             `;
           } else {
-            // 다른 버튼들은 flex로 동일한 크기
+            // 다른 버튼들(카카오 등)은 flex로 동일한 크기
             container.style.cssText = `
               display: flex !important;
               width: 0 !important;
@@ -229,6 +242,10 @@ export default function SignInContent() {
         if (button.classList.contains("cl-socialButtonsIconButton__custom_naver_auth")) {
           return;
         }
+        // 구글 버튼도 제외 (별도로 처리)
+        if (button.classList.contains("cl-socialButtonsIconButton__google")) {
+          return;
+        }
         button.style.cssText += `
           width: 100% !important;
           min-width: 0 !important;
@@ -243,6 +260,21 @@ export default function SignInContent() {
         ".cl-socialButtonsBlockButton__custom_naver_auth, .cl-socialButtonsIconButton__custom_naver_auth",
       ) as NodeListOf<HTMLElement>;
       naverButtons.forEach((button) => {
+        button.style.cssText += `
+          width: 322px !important;
+          min-width: 322px !important;
+          max-width: 322px !important;
+          height: 40px !important;
+          min-height: 40px !important;
+          flex: none !important;
+        `;
+      });
+      
+      // 구글 버튼도 322px 고정 크기로 설정 (네이버와 동일)
+      const googleButtons = document.querySelectorAll(
+        ".cl-socialButtonsIconButton__google",
+      ) as NodeListOf<HTMLElement>;
+      googleButtons.forEach((button) => {
         button.style.cssText += `
           width: 322px !important;
           min-width: 322px !important;
