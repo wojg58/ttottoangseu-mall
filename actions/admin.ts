@@ -213,6 +213,9 @@ export async function getAllOrdersForExport(
       fulfillment_status,
       status,
       total_amount,
+      orderer_name,
+      orderer_phone,
+      orderer_email,
       shipping_name,
       shipping_phone,
       shipping_address,
@@ -285,7 +288,7 @@ export async function getAllOrdersForExport(
 
   // 각 주문의 상품 정보 조회
   const ordersWithItems = await Promise.all(
-    (orders as Array<Order & { user: { email: string } | null }>).map(async (order) => {
+    (orders as unknown as Array<Order & { user: { email: string } | null }>).map(async (order) => {
       const { data: items } = await supabase
         .from("order_items")
         .select("product_name, variant_info, quantity, price")
