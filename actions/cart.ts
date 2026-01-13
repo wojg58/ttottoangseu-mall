@@ -548,39 +548,21 @@ export async function addToCart(
   quantity: number = 1,
   variantId?: string,
 ): Promise<{ success: boolean; message: string }> {
-  logger.group("🛒 [addToCart] 장바구니 추가 시작");
-  logger.info("[addToCart] 1단계: 함수 호출됨");
-  logger.info("입력 파라미터:", { productId, quantity, variantId });
-  logger.info("타임스탬프:", new Date().toISOString());
-
   try {
-    logger.info("[addToCart] 2단계: getCurrentUserId() 호출");
     const userId = await getCurrentUserId();
-    logger.info("[addToCart] getCurrentUserId() 결과:", {
-      userId: userId || null,
-      hasUserId: !!userId,
-    });
 
     if (!userId) {
-      logger.warn("[addToCart] ⚠️ 사용자 ID 없음 - 로그인 필요");
-      logger.groupEnd();
+      logger.debug("[addToCart] 사용자 미인증");
       return { success: false, message: "로그인이 필요합니다." };
     }
 
     // PGRST301 에러 방지를 위해 토큰 확인
-    logger.info("[addToCart] 3단계: Clerk 토큰 확인");
     const authResult = await auth();
     const token = await authResult.getToken();
-    logger.info("[addToCart] 토큰 상태:", {
-      hasToken: !!token,
-      tokenPreview: token ? token.substring(0, 20) + "..." : null,
-    });
     let supabase;
 
     if (!token) {
-      logger.warn(
-        "[addToCart] Clerk 토큰이 없음 - service role 클라이언트 사용",
-      );
+      logger.debug("[addToCart] 토큰 없음, service role 클라이언트 사용");
       const { getServiceRoleClient } = await import(
         "@/lib/supabase/service-role"
       );
@@ -598,10 +580,7 @@ export async function addToCart(
 
     // PGRST301 에러 발생 시 service role 클라이언트로 재시도
     if (productError && productError.code === "PGRST301") {
-      logger.warn(
-        "[addToCart] PGRST301 에러 발생 - service role 클라이언트로 재시도",
-        { productId },
-      );
+      logger.debug("[addToCart] PGRST301 에러, service role로 재시도");
       const { getServiceRoleClient } = await import(
         "@/lib/supabase/service-role"
       );
@@ -615,29 +594,24 @@ export async function addToCart(
         .single();
 
       if (retryError) {
-        logger.error(
-          "[addToCart] service role 클라이언트로도 상품 조회 실패:",
-          {
-            error: retryError.message,
-            code: retryError.code,
-            productId,
-          },
-        );
+        logger.error("[addToCart] 상품 조회 실패", {
+          error: retryError.message,
+          code: retryError.code,
+        });
         return { success: false, message: "상품을 찾을 수 없습니다." };
       }
 
       product = retryProduct;
     } else if (productError) {
-      logger.error("[addToCart] 상품 조회 실패:", {
+      logger.error("[addToCart] 상품 조회 실패", {
         error: productError.message,
         code: productError.code,
-        productId,
       });
       return { success: false, message: "상품을 찾을 수 없습니다." };
     }
 
     if (!product) {
-      logger.warn("[addToCart] 상품을 찾을 수 없음:", productId);
+      logger.warn("[addToCart] 상품을 찾을 수 없음");
       return { success: false, message: "상품을 찾을 수 없습니다." };
     }
 
@@ -652,13 +626,8 @@ export async function addToCart(
       };
     }
 
-    logger.info("[addToCart] 5단계: getOrCreateCartId() 호출");
     const cartId = await getOrCreateCartId(userId);
-    logger.info("[addToCart] getOrCreateCartId() 결과:", {
-      cartId,
-    });
 
-    logger.info("[addToCart] 6단계: 기존 장바구니 아이템 확인");
     const { data: existingItem } = await supabase
       .from("cart_items")
       .select("id, quantity")
@@ -667,39 +636,22 @@ export async function addToCart(
       .eq("variant_id", variantId ?? null)
       .single();
 
-    logger.info("[addToCart] 기존 아이템 확인 결과:", {
-      hasExistingItem: !!existingItem,
-      existingItemId: existingItem?.id || null,
-      existingQuantity: existingItem?.quantity || null,
-    });
-
     const price = product.discount_price ?? product.price;
-    logger.info("[addToCart] 가격 정보:", {
-      originalPrice: product.price,
-      discountPrice: product.discount_price,
-      finalPrice: price,
-    });
 
     if (existingItem) {
-      logger.info("[addToCart] 7단계: 기존 아이템 업데이트");
       const newQuantity = existingItem.quantity + quantity;
-      logger.info("[addToCart] 수량 계산:", {
-        existingQuantity: existingItem.quantity,
-        addQuantity: quantity,
-        newQuantity,
-        stock: product.stock,
-      });
 
       if (newQuantity > product.stock) {
-        logger.warn("[addToCart] ⚠️ 재고 부족");
-        logger.groupEnd();
+        logger.warn("[addToCart] 재고 부족", {
+          requested: newQuantity,
+          available: product.stock,
+        });
         return {
           success: false,
           message: `재고가 부족합니다. (현재 재고: ${product.stock}개)`,
         };
       }
 
-      logger.info("[addToCart] UPDATE 쿼리 실행");
       const { error: updateError } = await supabase
         .from("cart_items")
         .update({
@@ -709,24 +661,9 @@ export async function addToCart(
         })
         .eq("id", existingItem.id);
 
-      logger.info("[addToCart] UPDATE 결과:", {
-        hasError: !!updateError,
-        error: updateError
-          ? {
-              code: updateError.code,
-              message: updateError.message,
-            }
-          : null,
-      });
-
       // PGRST301 에러 발생 시 service role 클라이언트로 재시도
       if (updateError && updateError.code === "PGRST301") {
-        logger.warn(
-          "[addToCart] ⚠️ UPDATE 시 PGRST301 에러 - service role로 재시도",
-        );
-        logger.warn(
-          "[addToCart] UPDATE 시 PGRST301 에러 발생 - service role 클라이언트로 재시도",
-        );
+        logger.debug("[addToCart] UPDATE PGRST301 에러, service role로 재시도");
         const { getServiceRoleClient } = await import(
           "@/lib/supabase/service-role"
         );
@@ -742,41 +679,20 @@ export async function addToCart(
           .eq("id", existingItem.id);
 
         if (retryUpdateError) {
-          logger.error(
-            "[addToCart] service role 클라이언트로도 업데이트 실패:",
-            retryUpdateError,
-          );
-          logger.groupEnd();
+          logger.error("[addToCart] 장바구니 업데이트 실패", retryUpdateError);
           return {
             success: false,
             message: "장바구니 업데이트에 실패했습니다.",
           };
         }
-        logger.info("[addToCart] ✅ UPDATE 재시도 성공");
       } else if (updateError) {
-        logger.error(
-          "[addToCart] ❌ 장바구니 아이템 업데이트 실패:",
-          updateError,
-        );
-        logger.groupEnd();
+        logger.error("[addToCart] 장바구니 업데이트 실패", updateError);
         return {
           success: false,
           message: "장바구니 업데이트에 실패했습니다.",
         };
-      } else {
-        logger.info("[addToCart] ✅ UPDATE 성공");
       }
     } else {
-      logger.info("[addToCart] 7단계: 새 아이템 INSERT");
-      logger.info("[addToCart] INSERT 데이터:", {
-        cart_id: cartId,
-        product_id: productId,
-        variant_id: variantId ?? null,
-        quantity,
-        price,
-      });
-
-      logger.info("[addToCart] INSERT 쿼리 실행");
       const { error: insertError } = await supabase.from("cart_items").insert({
         cart_id: cartId,
         product_id: productId,
@@ -785,29 +701,14 @@ export async function addToCart(
         price,
       });
 
-      logger.info("[addToCart] INSERT 결과:", {
-        hasError: !!insertError,
-        error: insertError
-          ? {
-              code: insertError.code,
-              message: insertError.message,
-              details: insertError.details,
-              hint: insertError.hint,
-            }
-          : null,
-      });
-
       // PGRST301 에러 발생 시 service role 클라이언트로 재시도
       if (insertError && insertError.code === "PGRST301") {
-        logger.warn(
-          "[addToCart] ⚠️ INSERT 시 PGRST301 에러 - service role로 재시도",
-        );
+        logger.debug("[addToCart] INSERT PGRST301 에러, service role로 재시도");
         const { getServiceRoleClient } = await import(
           "@/lib/supabase/service-role"
         );
         const serviceSupabase = getServiceRoleClient();
 
-        logger.info("[addToCart] INSERT 재시도 (service role)");
         const { error: retryInsertError } = await serviceSupabase
           .from("cart_items")
           .insert({
@@ -818,51 +719,27 @@ export async function addToCart(
             price,
           });
 
-        logger.info("[addToCart] INSERT 재시도 결과:", {
-          hasError: !!retryInsertError,
-          error: retryInsertError
-            ? {
-                code: retryInsertError.code,
-                message: retryInsertError.message,
-                details: retryInsertError.details,
-                hint: retryInsertError.hint,
-              }
-            : null,
-        });
-
         if (retryInsertError) {
-          logger.error(
-            "[addToCart] ❌ service role 클라이언트로도 추가 실패:",
-            retryInsertError,
-          );
-          logger.groupEnd();
+          logger.error("[addToCart] 장바구니 추가 실패", retryInsertError);
           return {
             success: false,
             message: "장바구니 추가에 실패했습니다.",
           };
         }
-        logger.info("[addToCart] ✅ INSERT 재시도 성공");
       } else if (insertError) {
-        logger.error("[addToCart] ❌ 장바구니 아이템 추가 실패:", insertError);
-        logger.groupEnd();
+        logger.error("[addToCart] 장바구니 추가 실패", insertError);
         return {
           success: false,
           message: "장바구니 추가에 실패했습니다.",
         };
-      } else {
-        logger.info("[addToCart] ✅ INSERT 성공");
       }
     }
 
-    logger.info("[addToCart] 8단계: revalidatePath 실행");
     revalidatePath("/cart");
     revalidatePath("/checkout");
-    logger.info("[addToCart] ✅ 9단계: 장바구니 추가 완료");
-    logger.groupEnd();
     return { success: true, message: "장바구니에 추가되었습니다." };
   } catch (error) {
-    logger.error("[addToCart] ❌ 예외 발생:", error);
-    logger.groupEnd();
+    logger.error("[addToCart] 예외 발생", error);
     return { success: false, message: "장바구니 추가에 실패했습니다." };
   }
 }
