@@ -10,10 +10,27 @@ export default function ChatbotLottieLauncher() {
 
   useEffect(() => {
     fetch("/lottie/chatbot-button.json")
-      .then((r) => r.json())
-      .then(setAnimationData)
+      .then((r) => {
+        if (!r.ok) {
+          throw new Error(`HTTP error! status: ${r.status}`);
+        }
+        return r.json();
+      })
+      .then((data) => {
+        // JSON 데이터 유효성 검사
+        if (data && typeof data === "object") {
+          setAnimationData(data);
+          logger.debug("[ChatbotLottieLauncher] 애니메이션 데이터 로드 성공");
+        } else {
+          throw new Error("Invalid animation data format");
+        }
+      })
       .catch((error) => {
-        logger.error("[ChatbotLottieLauncher] 애니메이션 데이터 로드 실패", error);
+        // 에러를 조용히 처리하고 컴포넌트는 정상적으로 작동하도록 함
+        logger.debug("[ChatbotLottieLauncher] 애니메이션 데이터 로드 실패 (무시됨)", {
+          error: error instanceof Error ? error.message : String(error),
+        });
+        // animationData는 null로 유지되어 버튼은 표시되지만 애니메이션 없이 작동
       });
   }, []);
 
