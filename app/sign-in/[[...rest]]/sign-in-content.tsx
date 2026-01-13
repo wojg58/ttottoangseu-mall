@@ -33,10 +33,10 @@ export default function SignInContent() {
 
   // 클라이언트 사이드에서만 실행 (useEffect 안으로 이동하여 hydration mismatch 방지)
   useEffect(() => {
-    console.group("[SignInContent] 로그인 페이지 초기화");
-    console.log("리다이렉트 URL:", redirectUrl);
-    console.log("현재 URL:", window.location.href);
-    console.groupEnd();
+    logger.debug("[SignInContent] 로그인 페이지 초기화", {
+      redirectUrl,
+      currentUrl: typeof window !== "undefined" ? window.location.href : undefined,
+    });
   }, [redirectUrl]);
 
   // 폼 필드를 세로 레이아웃으로 변경 (라벨 위, 입력칸 아래)
@@ -52,7 +52,7 @@ export default function SignInContent() {
     const updateForm = () => {
       // 무한 루프 방지: 최대 업데이트 횟수 제한
       if (updateCount >= MAX_UPDATES) {
-        console.log("[SignInContent] 최대 업데이트 횟수 도달, 업데이트 중지");
+        logger.debug("[SignInContent] 최대 업데이트 횟수 도달, 업데이트 중지");
         return;
       }
       updateCount++;
@@ -893,19 +893,18 @@ export default function SignInContent() {
 
         // 로그인 버튼 클릭 이벤트 로깅
         loginButton.addEventListener("click", () => {
-          console.group("[SignInContent] 로그인 버튼 클릭");
-          console.log("시간:", new Date().toISOString());
-          console.log("버튼 타입:", loginButton.type);
-          console.log("버튼 disabled:", loginButton.disabled);
-          console.groupEnd();
+          logger.debug("[SignInContent] 로그인 버튼 클릭", {
+            buttonType: loginButton.type,
+            disabled: loginButton.disabled,
+          });
         });
       } else {
-        console.log("로그인 버튼을 찾을 수 없음");
+        logger.debug("[SignInContent] 로그인 버튼을 찾을 수 없음");
       }
 
       // 로그인 버튼 컨테이너에도 간격 설정 (1cm = 37.8px)
       if (loginButtonContainer) {
-        console.log("로그인 버튼 컨테이너 간격 설정 - 1cm");
+        logger.debug("[SignInContent] 로그인 버튼 컨테이너 간격 설정 - 1cm");
         loginButtonContainer.style.cssText = `
           margin-top: 37.8px !important;
         `;
@@ -995,10 +994,9 @@ export default function SignInContent() {
   // 로그인 성공/실패 감지 및 리다이렉트 처리
   useEffect(() => {
     const handleSignIn = () => {
-      console.group("[SignInContent] 로그인 시도 감지");
-      console.log("시간:", new Date().toISOString());
-      console.log("리다이렉트 URL:", redirectUrl);
-      console.groupEnd();
+      logger.debug("[SignInContent] 로그인 시도 감지", {
+        redirectUrl,
+      });
     };
 
     // 폼 제출 이벤트 리스너
@@ -1132,11 +1130,9 @@ export default function SignInContent() {
 
       // 폼 제출 이벤트 가로채기
       const handleFormSubmit = async (e: SubmitEvent) => {
-        console.group(
-          "[SignInContent] Clerk 폼 제출 가로채기 - 바로 로그인 처리",
-        );
-        console.log("시간:", new Date().toISOString());
-        console.log("이벤트 타입:", e.type);
+        logger.debug("[SignInContent] Clerk 폼 제출 가로채기 - 바로 로그인 처리", {
+          eventType: e.type,
+        });
 
         // 기본 동작 완전히 방지 (Clerk의 기본 리다이렉트 막기)
         e.preventDefault();
@@ -1167,25 +1163,20 @@ export default function SignInContent() {
           let emailValue = identifierInput.value.trim();
           const passwordValue = passwordInput.value;
 
-          console.log("[SignInContent] 입력값 확인:");
-          logger.debug("[SignInContent] 이메일 입력 필드 확인", {
+          logger.debug("[SignInContent] 입력값 확인", {
             hasInput: !!identifierInput,
             hasValue: !!identifierInput?.value,
-            valueLength: emailValue.length,
+            emailLength: emailValue.length,
             hasPassword: !!passwordValue,
+            passwordLength: passwordValue ? passwordValue.length : 0,
           });
-          console.log(
-            "  - 비밀번호 값 길이:",
-            passwordValue ? passwordValue.length : 0,
-          );
 
           // 이메일 형식 검증
           const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
           if (emailValue && !emailRegex.test(emailValue)) {
-            console.error(
-              "[SignInContent] 이메일 형식이 올바르지 않음:",
-              emailValue,
-            );
+            logger.error("[SignInContent] 이메일 형식이 올바르지 않음", {
+              email: emailValue,
+            });
             alert(
               "올바른 이메일 주소 형식을 입력해주세요.\n예: example@email.com",
             );
@@ -1194,13 +1185,13 @@ export default function SignInContent() {
 
           // 빈 값 체크
           if (!emailValue || emailValue.length === 0) {
-            console.error("[SignInContent] 이메일 값이 비어있음");
+            logger.warn("[SignInContent] 이메일 값이 비어있음");
             alert("이메일 주소를 입력해주세요.");
             return;
           }
 
           if (!passwordValue || passwordValue.length === 0) {
-            console.error("[SignInContent] 비밀번호 값이 비어있음");
+            logger.warn("[SignInContent] 비밀번호 값이 비어있음");
             alert("비밀번호를 입력해주세요.");
             return;
           }
@@ -1260,7 +1251,7 @@ export default function SignInContent() {
                       if (intervalId) {
                         clearInterval(intervalId);
                       }
-                      console.log("[SignInContent] Clerk 초기화 확인 완료");
+                      logger.debug("[SignInContent] Clerk 초기화 확인 완료");
                       resolve(true);
                       return;
                     }
@@ -1270,24 +1261,20 @@ export default function SignInContent() {
                       if (intervalId) {
                         clearInterval(intervalId);
                       }
-                      console.warn(
-                        `[SignInContent] Clerk 초기화 타임아웃 (${elapsed}ms)`,
-                      );
-                      console.warn(
-                        `  - isLoaded: ${currentIsLoaded}`,
-                        `signInLoaded: ${currentSignInLoaded}`,
-                        `signIn: ${hasSignIn}`,
-                        `setActive: ${hasSetActive}`,
-                      );
+                      logger.warn("[SignInContent] Clerk 초기화 타임아웃", {
+                        elapsed,
+                        isLoaded: currentIsLoaded,
+                        signInLoaded: currentSignInLoaded,
+                        hasSignIn,
+                        hasSetActive,
+                      });
                       resolve(false);
                       return;
                     }
 
                     // 주기적으로 상태 로그 출력
                     if (elapsed > 0 && elapsed % 1000 === 0) {
-                      console.log(
-                        `[SignInContent] 초기화 대기 중... (${elapsed}ms)`,
-                      );
+                      logger.debug(`[SignInContent] 초기화 대기 중... (${elapsed}ms)`);
                     }
                   };
 
@@ -1309,19 +1296,12 @@ export default function SignInContent() {
                 !signIn ||
                 !clerk?.setActive
               ) {
-                console.error(
-                  "[SignInContent] Clerk가 초기화되지 않음 (타임아웃)",
-                );
-                console.error(
-                  "최종 상태 - isLoaded:",
+                logger.error("[SignInContent] Clerk가 초기화되지 않음 (타임아웃)", {
                   isLoaded,
-                  "signInLoaded:",
                   signInLoaded,
-                  "signIn:",
-                  !!signIn,
-                  "setActive:",
-                  !!clerk?.setActive,
-                );
+                  hasSignIn: !!signIn,
+                  hasSetActive: !!clerk?.setActive,
+                });
 
                 // 페이지 새로고침 제안
                 const shouldReload = confirm(
@@ -2181,9 +2161,7 @@ export default function SignInContent() {
       }, 1000);
     } else if (isLoaded && !isSignedIn) {
       // 로그인 페이지에 있는데 isSignedIn이 false인 경우 로그만 출력
-      console.log(
-        "[SignInContent] isLoaded는 true이지만 isSignedIn이 false입니다.",
-      );
+      logger.debug("[SignInContent] isLoaded는 true이지만 isSignedIn이 false입니다.");
     }
   }, [isLoaded, isSignedIn, router]);
 
