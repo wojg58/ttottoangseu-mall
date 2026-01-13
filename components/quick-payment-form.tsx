@@ -25,6 +25,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import PaymentWidget from "@/components/payment-widget";
 import { createQuickOrder } from "@/actions/orders";
+import logger from "@/lib/logger-client";
 
 // 결제 금액 (고정)
 const PAYMENT_AMOUNT = 12200;
@@ -71,10 +72,6 @@ export default function QuickPaymentForm() {
   }
 
   const onSubmit = (data: QuickPaymentFormData) => {
-    console.group("[QuickPaymentForm] 주문 생성");
-    console.log("입력 데이터:", data);
-    console.log("결제 금액:", PAYMENT_AMOUNT);
-
     startTransition(async () => {
       const result = await createQuickOrder({
         customerName: data.customerName,
@@ -83,21 +80,17 @@ export default function QuickPaymentForm() {
         amount: PAYMENT_AMOUNT,
       });
 
-      console.log("주문 생성 결과:", result);
-
       if (result.success && result.orderId && result.orderNumber) {
-        console.log("주문 생성 성공:", {
-          orderId: result.orderId,
-          orderNumber: result.orderNumber,
-        });
+        logger.debug("[QuickPaymentForm] 주문 생성 성공");
         setOrderId(result.orderId);
         setOrderNumber(result.orderNumber);
         setShowPaymentWidget(true);
       } else {
-        console.error("주문 생성 실패:", result.message);
+        logger.error("[QuickPaymentForm] 주문 생성 실패", {
+          message: result.message,
+        });
         alert(result.message || "주문 생성에 실패했습니다.");
       }
-      console.groupEnd();
     });
   };
 

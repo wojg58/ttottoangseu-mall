@@ -22,6 +22,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import logger from "@/lib/logger-client";
 
 interface KakaoChannelButtonProps {
   /**
@@ -59,7 +60,6 @@ function getKakaoChannelUrl(): string | null {
   const channelId = process.env.NEXT_PUBLIC_KAKAO_CHANNEL_ID;
 
   if (channelUrl) {
-    console.log("[KakaoChannelButton] 채널 URL 사용:", channelUrl);
     return channelUrl;
   }
 
@@ -67,17 +67,12 @@ function getKakaoChannelUrl(): string | null {
     // 카카오톡 채널 URL 형식: https://pf.kakao.com/_xxxxxxx 또는 https://open.kakao.com/o/xxxxxxx
     // ID가 이미 URL 형식이면 그대로 사용, 아니면 pf.kakao.com 형식으로 조합
     if (channelId.startsWith("http")) {
-      console.log("[KakaoChannelButton] 채널 ID (URL 형식) 사용:", channelId);
       return channelId;
     }
-    const url = `https://pf.kakao.com/_${channelId}`;
-    console.log("[KakaoChannelButton] 채널 ID로 URL 생성:", url);
-    return url;
+    return `https://pf.kakao.com/_${channelId}`;
   }
 
-  console.warn(
-    "[KakaoChannelButton] ⚠️ 카카오 채널 URL/ID가 설정되지 않았습니다.",
-  );
+  logger.warn("[KakaoChannelButton] 카카오 채널 URL/ID가 설정되지 않았습니다.");
   return null;
 }
 
@@ -101,9 +96,7 @@ export default function KakaoChannelButton({
   // 채널 URL이 없으면 버튼을 렌더링하지 않음
   if (!isMounted || !channelUrl) {
     if (isMounted && locationTag) {
-      console.warn(
-        `[KakaoChannelButton] ${locationTag}: 채널 URL이 설정되지 않아 버튼을 표시하지 않습니다.`,
-      );
+      logger.warn(`[KakaoChannelButton] ${locationTag}: 채널 URL이 설정되지 않아 버튼을 표시하지 않습니다.`);
     }
     return null;
   }
@@ -115,16 +108,9 @@ export default function KakaoChannelButton({
     lg: "h-12 px-6 text-lg",
   }[variant];
 
-  // 클릭 핸들러 (로깅)
+  // 클릭 핸들러
   const handleClick = () => {
-    console.group(
-      `[KakaoChannelButton] 카카오톡 채널 버튼 클릭${
-        locationTag ? ` (${locationTag})` : ""
-      }`,
-    );
-    console.log("채널 URL:", channelUrl);
-    console.log("새 탭으로 열기");
-    console.groupEnd();
+    logger.debug("[KakaoChannelButton] 카카오톡 채널 버튼 클릭");
   };
 
   return (

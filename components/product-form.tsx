@@ -93,8 +93,6 @@ export default function ProductForm({
     return `/admin/products${queryString ? `?${queryString}` : ""}`;
   };
 
-  console.log("[ProductForm] 카테고리 개수:", categories.length);
-  console.log("[ProductForm] 카테고리 목록:", categories.map((c) => c.name));
   const [descriptionHtml, setDescriptionHtml] = useState<string>(
     product?.description || "",
   );
@@ -268,13 +266,9 @@ export default function ProductForm({
           sort_order: img.sort_order,
           alt_text: img.alt_text,
         }));
-      console.log("[ProductForm] product prop 변경으로 이미지 상태 업데이트:", updatedImages.length, "개");
-      console.log("[ProductForm] 업데이트된 이미지 ID 목록:", updatedImages.map(img => img.id).filter(Boolean));
-      console.log("[ProductForm] 삭제된 이미지 ID 목록 (제외됨):", deletedImageIds);
       setProductImages(updatedImages);
       // ⚠️ 중요: 삭제된 이미지 ID 목록은 초기화하지 않음 (페이지 새로고침 전까지 유지)
     } else if (product && !product.images) {
-      console.log("[ProductForm] product prop 변경으로 이미지 상태 초기화");
       setProductImages([]);
       setDeletedImageIds([]);
     }
@@ -286,14 +280,6 @@ export default function ProductForm({
       const totalStock = productVariants.reduce((sum, variant) => {
         return sum + (variant.stock || 0);
       }, 0);
-      console.log("[ProductForm] 옵션 재고 합산:", {
-        variantsCount: productVariants.length,
-        totalStock,
-        variantStocks: productVariants.map((v) => ({
-          value: v.variant_value,
-          stock: v.stock,
-        })),
-      });
       form.setValue("stock", totalStock);
     }
   }, [productVariants, form]);
@@ -330,7 +316,6 @@ export default function ProductForm({
                 .setTextSelection(pos)
                 .deleteSelection()
                 .run();
-              console.log("[ProductForm] 에디터 이미지 삭제 완료");
             } else {
               // 이미지가 paragraph 안에 있는 경우
               const imagePos = $pos.before();
@@ -340,7 +325,6 @@ export default function ProductForm({
                 .setTextSelection(imagePos)
                 .deleteSelection()
                 .run();
-              console.log("[ProductForm] 에디터 이미지 삭제 완료 (paragraph 내)");
             }
           }
         }

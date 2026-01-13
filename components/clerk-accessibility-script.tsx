@@ -8,6 +8,7 @@
 "use client";
 
 import { useEffect } from "react";
+import logger from "@/lib/logger-client";
 
 export function ClerkAccessibilityScript() {
   useEffect(() => {
@@ -39,7 +40,10 @@ export function ClerkAccessibilityScript() {
         logs = JSON.parse(stored);
       }
     } catch (e) {
-      console.error("로그 불러오기 실패:", e);
+      // localStorage 접근 실패는 조용히 처리 (개발 환경에서만 로그)
+      if (process.env.NODE_ENV === "development") {
+        logger.error("[ClerkAccessibilityScript] 로그 불러오기 실패", e);
+      }
     }
 
     // 로그 저장 함수
@@ -181,7 +185,8 @@ export function ClerkAccessibilityScript() {
     (window as any).clearStoredLogs = function () {
       logs = [];
       localStorage.removeItem(STORAGE_KEY);
-      console.log("로그가 초기화되었습니다.");
+      // clearStoredLogs는 개발자 도구에서 직접 호출하는 함수이므로 console.log 유지
+      originalConsole.log("로그가 초기화되었습니다.");
     };
 
     (window as any).replayStoredLogs = function () {
@@ -222,10 +227,13 @@ export function ClerkAccessibilityScript() {
       console.groupEnd();
     };
 
-    console.log("💾 모든 콘솔 로그가 localStorage에 저장됩니다.");
-    console.log("   - getStoredLogs(): 저장된 로그 가져오기");
-    console.log("   - clearStoredLogs(): 로그 초기화");
-    console.log("   - replayStoredLogs(): 로그 재생");
+    // 개발 환경에서만 안내 메시지 출력
+    if (process.env.NODE_ENV === "development") {
+      originalConsole.log("💾 모든 콘솔 로그가 localStorage에 저장됩니다.");
+      originalConsole.log("   - getStoredLogs(): 저장된 로그 가져오기");
+      originalConsole.log("   - clearStoredLogs(): 로그 초기화");
+      originalConsole.log("   - replayStoredLogs(): 로그 재생");
+    }
 
     // cleanup 함수
     return () => {

@@ -33,6 +33,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useClerkSupabaseClient } from "@/lib/supabase/clerk-client";
+import logger from "@/lib/logger-client";
 
 // 카테고리 데이터 (DB에서 가져올 예정이지만 일단 하드코딩)
 const CATEGORIES = [
@@ -83,7 +84,6 @@ export default function ShopHeader() {
       }
 
       try {
-        console.log("[ShopHeader] 장바구니 개수 조회 시작");
         // users 테이블에서 clerk_user_id로 user_id 조회
         const { data: user } = await supabase
           .from("users")
@@ -115,10 +115,9 @@ export default function ShopHeader() {
           .eq("cart_id", cart.id);
 
         const newCount = count ?? 0;
-        console.log("[ShopHeader] 장바구니 개수:", newCount);
         setCartItemCount(newCount);
       } catch (error) {
-        console.error("[ShopHeader] 장바구니 수량 조회 실패:", error);
+        logger.error("[ShopHeader] 장바구니 수량 조회 실패", error);
         setCartItemCount(0);
       }
     }
@@ -130,7 +129,7 @@ export default function ShopHeader() {
 
     // 커스텀 이벤트 리스너: 주문 완료 시 장바구니 개수 즉시 갱신
     const handleCartUpdate = () => {
-      console.log("[ShopHeader] 주문 완료 이벤트 감지 - 장바구니 개수 갱신");
+      logger.debug("[ShopHeader] 주문 완료 이벤트 감지 - 장바구니 개수 갱신");
       fetchCartItemCount();
     };
     window.addEventListener("cart:update", handleCartUpdate);
@@ -215,7 +214,6 @@ export default function ShopHeader() {
                     className="inline-flex items-center justify-center w-6 h-6 sm:w-8 sm:h-8 md:w-9 md:h-9 hover:opacity-80 transition-opacity"
                     aria-label="카카오톡 채널 추가"
                     onClick={() => {
-                      console.log("[ShopHeader] 카카오톡 채널 버튼 클릭:", kakaoChannelUrl);
                     }}
                   >
                     <Image

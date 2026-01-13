@@ -9,6 +9,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Calendar, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import logger from "@/lib/logger-client";
 
 export default function AdminOrderDateFilter() {
   const router = useRouter();
@@ -23,11 +24,6 @@ export default function AdminOrderDateFilter() {
   const [endDate, setEndDate] = useState(endDateFromUrl);
 
   const handleApply = () => {
-    console.log("[AdminOrderDateFilter] 날짜 필터 적용:", {
-      startDate,
-      endDate,
-    });
-
     startTransition(() => {
       const newSearchParams = new URLSearchParams(searchParams.toString());
 
@@ -52,8 +48,6 @@ export default function AdminOrderDateFilter() {
   };
 
   const handleReset = () => {
-    console.log("[AdminOrderDateFilter] 날짜 필터 초기화");
-
     setStartDate("");
     setEndDate("");
 
@@ -68,7 +62,7 @@ export default function AdminOrderDateFilter() {
   };
 
   const handleDownload = () => {
-    console.log("[AdminOrderDateFilter] 엑셀 다운로드 시작");
+    logger.debug("[AdminOrderDateFilter] 엑셀 다운로드 시작");
 
     const downloadParams = new URLSearchParams();
     const currentStatus = searchParams.get("status");

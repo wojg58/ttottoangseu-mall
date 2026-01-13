@@ -15,6 +15,7 @@ import { X } from "lucide-react";
 import { getProducts } from "@/actions/products";
 import ProductCard from "@/components/product-card";
 import type { ProductListItem, Category } from "@/types/database";
+import logger from "@/lib/logger-client";
 
 interface CategoryProductsSectionProps {
   categories: Category[];
@@ -38,7 +39,6 @@ export default function CategoryProductsSection({
     }
 
     const loadProducts = async () => {
-      console.log("[CategoryProductsSection] 상품 로드 시작:", selectedCategory);
       setIsLoading(true);
 
       try {
@@ -49,15 +49,9 @@ export default function CategoryProductsSection({
           40 // 한 줄에 4개씩 10줄 = 40개
         );
 
-        console.log("[CategoryProductsSection] 상품 로드 완료:", {
-          category: selectedCategory,
-          count: result.data.length,
-          total: result.total,
-        });
-
         setProducts(result.data);
       } catch (error) {
-        console.error("[CategoryProductsSection] 상품 로드 에러:", error);
+        logger.error("[CategoryProductsSection] 상품 로드 실패", error);
         setProducts([]);
       } finally {
         setIsLoading(false);
