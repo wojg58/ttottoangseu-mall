@@ -108,20 +108,31 @@ async function sendEmailWithResend(
       errorType: response.error?.constructor?.name,
       errorMessage: response.error?.message,
       errorStatus: (response.error as any)?.status,
-      fullError: response.error ? JSON.stringify(response.error, Object.getOwnPropertyNames(response.error), 2) : null,
+      fullError: response.error
+        ? JSON.stringify(
+            response.error,
+            Object.getOwnPropertyNames(response.error),
+            2,
+          )
+        : null,
     });
 
     if (response.error) {
       const errorStatus = (response.error as any)?.status;
-      const errorMessage = response.error.message || JSON.stringify(response.error);
-      
+      const errorMessage =
+        response.error.message || JSON.stringify(response.error);
+
       logger.error("[이메일] Resend 발송 실패 (403 Forbidden 가능성):", {
         error: response.error,
         message: errorMessage,
         name: response.error.name,
         status: errorStatus,
         statusCode: errorStatus || "unknown",
-        fullError: JSON.stringify(response.error, Object.getOwnPropertyNames(response.error), 2),
+        fullError: JSON.stringify(
+          response.error,
+          Object.getOwnPropertyNames(response.error),
+          2,
+        ),
         troubleshooting: {
           apiKeyConfigured: !!apiKey,
           fromEmail: fromEmail,
@@ -136,7 +147,9 @@ async function sendEmailWithResend(
       logger.groupEnd();
       return {
         success: false,
-        error: `이메일 발송 실패 (${errorStatus || "Unknown"}): ${errorMessage}`,
+        error: `이메일 발송 실패 (${
+          errorStatus || "Unknown"
+        }): ${errorMessage}`,
       };
     }
 
@@ -256,7 +269,7 @@ async function sendEmailWithSMTP(
  *
  * @param orderNo - 주문번호
  * @param amount - 결제금액 (숫자, 원 단위)
- * @param orderDateKst - 주문일시 (KST 문자열, YYYY-MM-DD HH:mm:ss)
+ * @param orderDateKst - 주문일시 (KST 문자열, YYYY-MM-DD HH:mm)
  * @returns 발송 결과
  */
 export async function sendAdminEmail(

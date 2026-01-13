@@ -339,6 +339,56 @@ export async function POST(request: NextRequest) {
         await markEventProcessed(supabase, paymentKey, event.eventType);
       }
 
+      // 결제 완료(DONE) 시 관리자 알림 발송
+      if (status === "DONE") {
+        try {
+          // 주문 정보 조회 (알림 발송용)
+          const { data: order, error: orderError } = await supabase
+            .from("orders")
+            .select("order_number, total_amount, created_at")
+            .eq("id", orderId)
+            .single();
+
+          if (!orderError && order) {
+            // 알림 발송 (비동기, 실패해도 웹훅은 성공 응답)
+            logger.info("[웹훅] 관리자 알림 발송 시작:", {
+              orderId,
+              orderNo: order.order_number,
+              amount: order.total_amount,
+              createdAt: order.created_at,
+            });
+            
+            const { notifyAdminOnOrderPaid } = await import("@/lib/notifications/notifyAdminOnOrderPaid");
+            notifyAdminOnOrderPaid({
+              orderId,
+              orderNo: order.order_number,
+              amount: Number(order.total_amount),
+              createdAtUtc: order.created_at,
+            })
+              .then((result) => {
+                logger.info("[웹훅] 관리자 알림 발송 완료:", {
+                  success: result.success,
+                  alimtalkSent: result.alimtalkSent,
+                  emailSent: result.emailSent,
+                  errors: result.errors,
+                });
+              })
+              .catch((error) => {
+                // 알림 실패는 로그만 남기고 웹훅 흐름에는 영향 없음
+                logger.error("[웹훅] 관리자 알림 발송 실패 (무시됨):", {
+                  error: error instanceof Error ? error.message : String(error),
+                  stack: error instanceof Error ? error.stack : undefined,
+                });
+              });
+          } else {
+            logger.warn("[웹훅] 주문 정보 조회 실패, 알림 발송 스킵:", orderError);
+          }
+        } catch (error) {
+          // 알림 발송 중 예외는 로그만 남기고 웹훅 흐름에는 영향 없음
+          logger.error("[웹훅] 관리자 알림 발송 중 예외 (무시됨):", error);
+        }
+      }
+
       logger.info("✅ 웹훅 이벤트 처리 완료");
       logger.groupEnd();
       return NextResponse.json(

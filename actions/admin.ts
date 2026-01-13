@@ -14,6 +14,7 @@ import { auth, currentUser } from "@clerk/nextjs/server";
 import { createClient } from "@/lib/supabase/server";
 import type {
   Order,
+  OrderItem,
   ProductListItem,
   ProductWithDetails,
 } from "@/types/database";
@@ -698,6 +699,93 @@ export async function getAdminProducts(
   console.groupEnd();
 
   return { products, total, totalPages };
+}
+
+// 관리자용 주문 상세 조회
+export async function getAdminOrderById(
+  orderId: string,
+): Promise<(Order & { items: OrderItem[]; user_email: string | null; payment?: { method: string; amount: number; approved_at: string | null } | null }) | null> {
+  console.group("[getAdminOrderById] 관리자 주문 상세 조회");
+  console.log("주문 ID:", orderId);
+
+  const isAdminUser = await isAdmin();
+  if (!isAdminUser) {
+    console.log("관리자 권한 없음");
+    console.groupEnd();
+    return null;
+  }
+
+  const supabase = await createClient();
+
+  // 주문 조회 (users 테이블과 조인하여 이메일 포함)
+  const { data: order, error: orderError } = await supabase
+    .from("orders")
+    .select(`
+      id,
+      user_id,
+      order_number,
+      payment_status,
+      fulfillment_status,
+      status,
+      total_amount,
+      shipping_name,
+      shipping_phone,
+      shipping_address,
+      shipping_zip_code,
+      shipping_memo,
+      shipping_status,
+      tracking_number,
+      shipped_at,
+      delivered_at,
+      paid_at,
+      created_at,
+      updated_at,
+      coupon_id,
+      orderer_name,
+      orderer_phone,
+      orderer_email,
+      user:users!fk_orders_user_id(email)
+    `)
+    .eq("id", orderId)
+    .single();
+
+  if (orderError || !order) {
+    console.error("주문 조회 실패:", orderError);
+    console.groupEnd();
+    return null;
+  }
+
+  // 주문 상품 조회
+  const { data: items, error: itemsError } = await supabase
+    .from("order_items")
+    .select("*")
+    .eq("order_id", orderId);
+
+  if (itemsError) {
+    console.error("주문 상품 조회 실패:", itemsError);
+  }
+
+  // 결제 정보 조회
+  const { data: payment } = await supabase
+    .from("payments")
+    .select("method, amount, approved_at")
+    .eq("order_id", orderId)
+    .eq("status", "done")
+    .order("approved_at", { ascending: false })
+    .limit(1)
+    .single();
+
+  const orderWithData = {
+    ...order,
+    items: (items as OrderItem[]) || [],
+    user_email: (order as any).user?.email || null,
+    payment: payment || null,
+  } as Order & { items: OrderItem[]; user_email: string | null; payment?: { method: string; amount: number; approved_at: string | null } | null };
+
+  console.log("주문 조회 성공:", order.order_number);
+  console.groupEnd();
+
+  return orderWithData;
 }
 
 // 상품 ID로 조회 (관리자용)

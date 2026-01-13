@@ -502,6 +502,7 @@ export async function POST(request: NextRequest) {
 
     // 16. 관리자 알림 발송 (이메일/알림톡)
     logger.info("[POST /api/payments/toss/confirm] 관리자 알림 발송 시작...");
+    logger.info("[ALIMTALK_TRACE] /api/payments/toss/confirm -> notifyAdminOnOrderPaid called");
     try {
       const { notifyAdminOnOrderPaid } = await import("@/lib/notifications/notifyAdminOnOrderPaid");
       const notificationResult = await notifyAdminOnOrderPaid({

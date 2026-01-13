@@ -176,6 +176,7 @@
 - [x] 통합 알림 함수 구현 (`lib/notifications/notifyAdminOnOrderPaid.ts`)
 - [x] TossPayments 웹훅에 알림 트리거 연결 (DONE 처리 후)
 - [x] 환경변수 설정 (.env.example 업데이트)
+- [x] 관리자 알림톡/이메일 실발송 연결 완료
 - [ ] Solapi 템플릿 검수 통과 후 ADMIN_ALIMTALK_ENABLED=true로 전환 & 실주문 테스트
 
 ### n8n 자동화

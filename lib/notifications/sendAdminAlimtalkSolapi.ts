@@ -51,11 +51,22 @@ export async function sendAdminAlimtalkSolapi(
   amount: number,
   orderDateKst: string,
 ): Promise<AlimtalkSendResult> {
+  // 강제 트레이싱: 함수 시작
+  logger.info("[ALIMTALK_TRACE] function entered with params:", { orderNo, amount: amount + "원", orderDateKst });
+
   logger.group("[sendAdminAlimtalkSolapi] 알림톡 발송 시작");
   logger.info("[알림톡] 주문 정보:", { orderNo, amount, orderDateKst });
 
   // 환경변수 확인
   const enabled = process.env.ADMIN_ALIMTALK_ENABLED === "true";
+
+  // 강제 트레이싱: 환경변수 값들 (앞 6자만)
+  const pfId = process.env.SOLAPI_PF_ID;
+  const templateId = process.env.SOLAPI_TEMPLATE_ID_ADMIN_ORDER;
+  const apiKey = process.env.SOLAPI_API_KEY;
+  const adminPhone = process.env.ADMIN_PHONE;
+  logger.info("[ALIMTALK_TRACE] env values: enabled=" + enabled + " pfId=" + (pfId ? pfId.substring(0, 6) + "..." : "null") + " templateId=" + (templateId ? templateId.substring(0, 6) + "..." : "null") + " apiKey=" + (apiKey ? apiKey.substring(0, 6) + "..." : "null") + " adminPhone=" + (adminPhone ? adminPhone.substring(0, 4) + "****" : "null"));
+
   logger.info("[알림톡] 환경 변수 확인:", {
     ADMIN_ALIMTALK_ENABLED: enabled,
     SOLAPI_API_KEY: process.env.SOLAPI_API_KEY ? "설정됨" : "설정 안됨",
@@ -153,6 +164,21 @@ export async function sendAdminAlimtalkSolapi(
       disableSms: true, // 알림톡 실패 시 SMS 폴백 OFF
     };
 
+    // 강제 트레이싱: 최종 request payload (개인정보 마스킹)
+    const maskedPayload = {
+      ...requestBody,
+      to: phoneNumber.substring(0, 3) + "****" + phoneNumber.substring(phoneNumber.length - 4),
+    };
+    logger.info("[ALIMTALK_TRACE] final request payload: " + JSON.stringify(maskedPayload));
+
+    // memberId 포함 여부 확인
+    const payloadString = JSON.stringify(requestBody);
+    if (payloadString.includes('memberId')) {
+      logger.error("[ALIMTALK_TRACE] CRITICAL: memberId found in payload! payload=" + payloadString);
+    } else {
+      logger.info("[ALIMTALK_TRACE] memberId not found in payload - OK");
+    }
+
     // 디버깅 로그 강화: 발송 직전 상세 정보
     logger.info("[ALIMTALK] enabled=true templateId=" + templateId.substring(0, 6) + "... pfId=" + pfId.substring(0, 6) + "... to=010****#### variablesKeys=" + Object.keys(requestBody.variables).join(','));
 
@@ -173,6 +199,9 @@ export async function sendAdminAlimtalkSolapi(
       variables: Object.keys(requestBody.variables),
     });
 
+    // 강제 트레이싱: 실제 호출되는 endpoint/메서드
+    logger.info("[ALIMTALK_TRACE] calling: " + apiUrl + " (POST, REST API)");
+
     logger.info("[알림톡] 🔵 Solapi API 호출 시작...");
 
     // API 요청
@@ -192,6 +221,9 @@ export async function sendAdminAlimtalkSolapi(
     });
 
     const responseData = await response.json();
+
+    // 강제 트레이싱: Solapi 응답 상세 정보
+    logger.info("[ALIMTALK_TRACE] solapi response: status=" + response.status + " headers=" + JSON.stringify(Object.fromEntries(response.headers.entries())) + " body=" + JSON.stringify(responseData));
 
     if (!response.ok) {
       logger.error("[ALIMTALK] failed status=" + response.status + " body=" + JSON.stringify(responseData));
@@ -230,6 +262,13 @@ export async function sendAdminAlimtalkSolapi(
       messageId: messageId,
     };
   } catch (error) {
+    // 강제 트레이싱: 에러 상세 정보
+    logger.error("[ALIMTALK_TRACE] exception caught:", {
+      errorMessage: error instanceof Error ? error.message : String(error),
+      errorName: error instanceof Error ? error.name : "Unknown",
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+
     logger.error("[알림톡] ❌ 발송 예외 발생:", {
       errorMessage: error instanceof Error ? error.message : String(error),
     });
