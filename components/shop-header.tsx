@@ -219,7 +219,7 @@ export default function ShopHeader() {
                     }}
                   >
                     <Image
-                      src="/icons/icon_kakaotalk.png"
+                      src="/icons/kakao.png"
                       alt="카카오톡 채널 추가"
                       width={28}
                       height={28}
