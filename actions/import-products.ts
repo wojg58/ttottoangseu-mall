@@ -15,7 +15,7 @@ import { isAdmin } from "./admin";
 import { getServiceRoleClient } from "@/lib/supabase/service-role";
 import { revalidatePath } from "next/cache";
 import type { ParsedProductData } from "@/lib/utils/import-products";
-import type { CreateProductInput } from "./admin-products";
+import type { CreateProductInput } from "@/types/products";
 import { uploadImagesFromUrls } from "@/lib/utils/upload-image";
 
 // 상품 일괄 생성 결과
@@ -39,10 +39,12 @@ export async function importProducts(
   // 타임아웃 방지를 위한 설정
   const startTime = Date.now();
   const MAX_EXECUTION_TIME = 4 * 60 * 1000; // 4분 (Next.js 기본 타임아웃보다 짧게)
-  
+
   console.group("[importProducts] 상품 일괄 이관 시작");
   console.log("이관할 상품 수:", products.length);
-  console.log("[importProducts] 타임아웃 방지를 위해 이미지 업로드는 건너뜁니다.");
+  console.log(
+    "[importProducts] 타임아웃 방지를 위해 이미지 업로드는 건너뜁니다.",
+  );
 
   const isAdminUser = await isAdmin();
   if (!isAdminUser) {
@@ -104,10 +106,12 @@ export async function importProducts(
       // 진행 상황 로깅 (10개마다 또는 마지막)
       if (i % 10 === 0 || i === products.length - 1) {
         console.log(
-          `[importProducts] 진행 상황: ${i + 1}/${products.length} (${Math.round(((i + 1) / products.length) * 100)}%)`,
+          `[importProducts] 진행 상황: ${i + 1}/${
+            products.length
+          } (${Math.round(((i + 1) / products.length) * 100)}%)`,
         );
       }
-      
+
       console.log(
         `[importProducts] 상품 처리 중 (${i + 1}/${products.length}): ${
           productData.name
@@ -187,7 +191,9 @@ export async function importProducts(
             productData.category_slug ||
             "없음"
           })`;
-          console.error(`[importProducts] ${errorMessage}: ${productData.name}`);
+          console.error(
+            `[importProducts] ${errorMessage}: ${productData.name}`,
+          );
           errors.push({
             product_name: productData.name,
             message: errorMessage,
@@ -207,11 +213,15 @@ export async function importProducts(
 
       // slug 중복 확인 및 해결 (더 견고한 방식)
       let finalSlug = productData.slug || `product-${Date.now()}-${i}`;
-      
+
       // slug가 비어있거나 너무 짧으면 자동 생성
       if (!finalSlug || finalSlug.trim().length < 3) {
-        finalSlug = `product-${Date.now()}-${i}-${Math.random().toString(36).substring(2, 8)}`;
-        console.warn(`[importProducts] slug가 비어있어 자동 생성: ${finalSlug}`);
+        finalSlug = `product-${Date.now()}-${i}-${Math.random()
+          .toString(36)
+          .substring(2, 8)}`;
+        console.warn(
+          `[importProducts] slug가 비어있어 자동 생성: ${finalSlug}`,
+        );
       }
 
       // slug 중복 확인 (최대 20번 시도)
@@ -228,7 +238,10 @@ export async function importProducts(
 
         if (checkError && checkError.code !== "PGRST116") {
           // PGRST116은 "결과 없음" 에러이므로 정상
-          console.warn(`[importProducts] slug 중복 확인 중 에러 (무시):`, checkError);
+          console.warn(
+            `[importProducts] slug 중복 확인 중 에러 (무시):`,
+            checkError,
+          );
         }
 
         if (!existing) {
@@ -242,7 +255,7 @@ export async function importProducts(
           .substring(2, 9)}`;
         finalSlug = `${productData.slug || "product"}-${uniqueSuffix}`;
         slugRetryCount++;
-        
+
         if (slugRetryCount <= 5) {
           console.warn(
             `[importProducts] slug 중복 (시도 ${slugRetryCount}/${maxSlugRetries}), 새 slug 생성: ${finalSlug}`,
@@ -252,7 +265,9 @@ export async function importProducts(
 
       if (slugRetryCount >= maxSlugRetries) {
         // 최대 재시도 후에도 실패하면 완전히 고유한 slug 생성
-        finalSlug = `product-${Date.now()}-${i}-${Math.random().toString(36).substring(2, 15)}`;
+        finalSlug = `product-${Date.now()}-${i}-${Math.random()
+          .toString(36)
+          .substring(2, 15)}`;
         console.warn(
           `[importProducts] slug 중복 해결을 위해 완전히 새로운 slug 생성: ${finalSlug}`,
         );
@@ -287,15 +302,18 @@ export async function importProducts(
       };
 
       // 입력 데이터 검증 및 로깅
-      console.log(`[importProducts] 상품 생성 시도 (${i + 1}/${products.length}):`, {
-        name: createInput.name,
-        slug: createInput.slug,
-        category_id: createInput.category_id,
-        price: createInput.price,
-        discount_price: createInput.discount_price,
-        stock: createInput.stock,
-        status: createInput.status,
-      });
+      console.log(
+        `[importProducts] 상품 생성 시도 (${i + 1}/${products.length}):`,
+        {
+          name: createInput.name,
+          slug: createInput.slug,
+          category_id: createInput.category_id,
+          price: createInput.price,
+          discount_price: createInput.discount_price,
+          stock: createInput.stock,
+          status: createInput.status,
+        },
+      );
 
       // 데이터 검증
       if (!createInput.category_id) {
@@ -331,7 +349,10 @@ export async function importProducts(
         continue;
       }
 
-      if (createInput.discount_price !== null && createInput.discount_price > createInput.price) {
+      if (
+        createInput.discount_price !== null &&
+        createInput.discount_price > createInput.price
+      ) {
         const errorMessage = `할인가가 정가보다 큽니다: ${createInput.discount_price} > ${createInput.price}`;
         console.error(`[importProducts] ${errorMessage}: ${productData.name}`);
         errors.push({
@@ -384,7 +405,11 @@ export async function importProducts(
         // INSERT 직전에 slug 중복 다시 확인 (race condition 방지)
         if (insertRetryCount > 0) {
           // 재시도 시 slug 변경
-          currentSlug = `${createInput.slug}-retry-${insertRetryCount}-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+          currentSlug = `${
+            createInput.slug
+          }-retry-${insertRetryCount}-${Date.now()}-${Math.random()
+            .toString(36)
+            .substring(2, 8)}`;
           console.warn(
             `[importProducts] 상품 생성 재시도 ${insertRetryCount}/${maxInsertRetries}, slug 변경: ${currentSlug}`,
           );
@@ -410,7 +435,7 @@ export async function importProducts(
 
         if (insertError) {
           productError = insertError;
-          
+
           // slug 중복 에러인 경우 재시도
           if (
             insertError.code === "23505" ||
@@ -443,20 +468,17 @@ export async function importProducts(
         const errorMessage = `상품 생성 실패 (재시도 ${insertRetryCount}회): ${
           productError?.message || "알 수 없는 오류"
         } (코드: ${productError?.code || "N/A"})`;
-        console.error(
-          `[importProducts] ${errorMessage}: ${productData.name}`,
-          {
-            error: productError,
-            input: {
-              category_id: createInput.category_id,
-              slug: currentSlug,
-              price: createInput.price,
-              discount_price: createInput.discount_price,
-              stock: createInput.stock,
-              status: createInput.status,
-            },
+        console.error(`[importProducts] ${errorMessage}: ${productData.name}`, {
+          error: productError,
+          input: {
+            category_id: createInput.category_id,
+            slug: currentSlug,
+            price: createInput.price,
+            discount_price: createInput.discount_price,
+            stock: createInput.stock,
+            status: createInput.status,
           },
-        );
+        });
         console.warn(
           `[importProducts] 상품 생성 실패, 다음 상품으로 계속 진행합니다.`,
         );
@@ -560,7 +582,9 @@ export async function importProducts(
       // 진행 상황 로깅 (10개마다 또는 마지막)
       if (imported % 10 === 0 || imported === products.length) {
         console.log(
-          `[importProducts] 상품 생성 진행: ${imported}/${products.length} (${Math.round((imported / products.length) * 100)}%)`,
+          `[importProducts] 상품 생성 진행: ${imported}/${
+            products.length
+          } (${Math.round((imported / products.length) * 100)}%)`,
         );
       }
     } catch (error) {
