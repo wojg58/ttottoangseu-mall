@@ -24,6 +24,10 @@ import { logger } from "@/lib/logger";
 import { updateProductImages } from "@/lib/utils/product-image-manager";
 import { updateProductVariants } from "@/lib/utils/product-variant-manager";
 import { updateProductCategories } from "@/lib/utils/product-category-manager";
+import {
+  extractFilePathFromUrl,
+  extractBucketFromUrl,
+} from "@/lib/utils/storage-url";
 
 // 상품 생성
 export async function createProduct(
