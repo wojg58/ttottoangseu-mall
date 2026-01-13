@@ -9,6 +9,7 @@ import Link from "next/link";
 import { Home } from "lucide-react";
 import { getCartItems } from "@/actions/cart";
 import CheckoutForm from "@/components/checkout-form";
+import { logger } from "@/lib/logger";
 
 export default async function CheckoutPage({
   searchParams,
@@ -22,47 +23,20 @@ export default async function CheckoutPage({
       redirect("/sign-in?redirect_url=/checkout");
     }
 
-    console.group("🛒 [CheckoutPage] 체크아웃 페이지 렌더링 시작");
-    console.log("[CheckoutPage] 1단계: 페이지 렌더링 시작");
-    console.log("상태:", {
-      userId: userId || null,
-      hasUserId: !!userId,
-      timestamp: new Date().toISOString(),
-    });
-
     const params = await searchParams;
     const orderId = params.orderId;
     const buyNow = params.buyNow === "true";
-    console.log("[CheckoutPage] 2단계: searchParams 확인");
-    console.log("orderId:", orderId || "없음");
-    console.log("buyNow:", buyNow);
 
     // 장바구니 조회 (PGRST301 에러 처리 포함)
-    console.log("[CheckoutPage] 3단계: getCartItems() 첫 번째 호출");
     let cartItems: Awaited<ReturnType<typeof getCartItems>> = [];
     
     try {
       cartItems = await getCartItems();
     } catch (error) {
-      console.error("[CheckoutPage] ❌ getCartItems() 첫 번째 호출 실패:", error);
-      console.error("에러 상세:", {
-        message: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined,
-        name: error instanceof Error ? error.name : undefined,
-        digest: (error as any)?.digest,
-      });
+      logger.error("[CheckoutPage] getCartItems() 호출 실패", error);
       // 에러 발생 시 빈 배열로 처리하고 계속 진행
       cartItems = [];
     }
-  console.log("[CheckoutPage] 첫 번째 조회 결과:", {
-    itemsCount: cartItems.length,
-    items: cartItems.map((item) => ({
-      id: item.id,
-      productId: item.product_id,
-      variantId: item.variant_id,
-      quantity: item.quantity,
-    })),
-  });
 
     // 바로 구매하기로 온 경우, 장바구니가 비어있을 수 있으므로 더 긴 대기 후 재시도
     if (!orderId && cartItems.length === 0) {
@@ -70,37 +44,18 @@ export default async function CheckoutPage({
       const waitTime = buyNow ? 1500 : 500;
       const maxRetries = buyNow ? 3 : 1;
       
-      console.log(`[CheckoutPage] 4단계: 장바구니 비어있음 - ${waitTime}ms 대기 후 재시도 (최대 ${maxRetries}회)`);
-      
       for (let retry = 1; retry <= maxRetries; retry++) {
         // revalidatePath 후 데이터 반영을 위해 잠시 대기
         await new Promise((resolve) => setTimeout(resolve, waitTime));
-        console.log(`[CheckoutPage] 5단계-${retry}: getCartItems() 재시도 호출`);
         try {
           cartItems = await getCartItems();
-          console.log(`[CheckoutPage] 재시도 ${retry} 결과:`, {
-            itemsCount: cartItems.length,
-            items: cartItems.map((item) => ({
-              id: item.id,
-              productId: item.product_id,
-              variantId: item.variant_id,
-              quantity: item.quantity,
-            })),
-          });
           
           // 장바구니에 아이템이 있으면 재시도 중단
           if (cartItems.length > 0) {
-            console.log(`[CheckoutPage] ✅ 재시도 ${retry}에서 장바구니 아이템 확인됨 - 재시도 중단`);
             break;
           }
         } catch (error) {
-          console.error(`[CheckoutPage] ❌ getCartItems() 재시도 ${retry} 실패:`, error);
-          console.error("에러 상세:", {
-            message: error instanceof Error ? error.message : String(error),
-            stack: error instanceof Error ? error.stack : undefined,
-            name: error instanceof Error ? error.name : undefined,
-            digest: (error as any)?.digest,
-          });
+          logger.error(`[CheckoutPage] getCartItems() 재시도 ${retry} 실패`, error);
           // 에러 발생 시 빈 배열로 처리하고 계속 진행
           cartItems = [];
         }
@@ -109,54 +64,21 @@ export default async function CheckoutPage({
 
   // 주문이 생성된 상태(orderId가 있는 경우)가 아니고 장바구니가 비어있으면 장바구니 페이지로
   // 주문이 생성된 후에는 장바구니가 비워지므로, orderId가 있으면 체크를 건너뜀
-  console.log("[CheckoutPage] 6단계: 리다이렉트 조건 확인");
-  console.log("조건:", {
-    hasOrderId: !!orderId,
-    cartItemsLength: cartItems.length,
-    shouldRedirect: !orderId && cartItems.length === 0,
-  });
-
   if (!orderId && cartItems.length === 0) {
-    console.error("[CheckoutPage] ❌ 7단계: 장바구니 비어있음 - /cart로 리다이렉트");
-    console.error("리다이렉트 이유:", {
-      orderId: orderId || "없음",
+    logger.warn("[CheckoutPage] 장바구니 비어있음 - /cart로 리다이렉트", {
+      orderId: orderId || null,
       cartItemsCount: cartItems.length,
-      timestamp: new Date().toISOString(),
     });
-    console.groupEnd();
     redirect("/cart");
   }
 
-  console.log("[CheckoutPage] ✅ 7단계: 체크아웃 페이지 표시");
-  console.log("최종 상태:", {
-    orderId: orderId || "없음",
-    cartItemsCount: cartItems.length,
-    willShowCheckout: true,
-    cartItems: cartItems.map((item) => ({
-      id: item.id,
-      productId: item.product_id,
-      variantId: item.variant_id,
-      quantity: item.quantity,
-      price: item.price,
-    })),
-  });
-
   // 금액 계산
-  console.log("[CheckoutPage] 8단계: 금액 계산");
   const subtotal = cartItems.reduce(
     (sum, item) => sum + item.price * item.quantity,
     0,
   );
   const shippingFee = subtotal >= 50000 ? 0 : 3000;
   const total = subtotal + shippingFee;
-
-  console.log("[CheckoutPage] 금액 계산 결과:", {
-    subtotal,
-    shippingFee,
-    total,
-  });
-    console.log("[CheckoutPage] ✅ 9단계: 체크아웃 페이지 렌더링 완료");
-    console.groupEnd();
 
     return (
       <main className="py-8">
@@ -189,13 +111,7 @@ export default async function CheckoutPage({
       </main>
     );
   } catch (error) {
-    console.error("[CheckoutPage] ❌ Server Component 렌더링 에러:", error);
-    console.error("에러 상세:", {
-      message: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined,
-      name: error instanceof Error ? error.name : undefined,
-      digest: (error as any)?.digest,
-    });
+    logger.error("[CheckoutPage] Server Component 렌더링 에러", error);
 
     // redirect() 에러인 경우 다시 throw (Next.js가 처리)
     if (
@@ -218,7 +134,6 @@ export default async function CheckoutPage({
     }
 
     // 다른 에러는 장바구니로 리다이렉트
-    console.error("[CheckoutPage] 에러 발생 - 장바구니로 리다이렉트");
     redirect("/cart");
   }
 }

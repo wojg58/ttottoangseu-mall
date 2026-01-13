@@ -9,13 +9,14 @@ import { SignUp, SignedIn, SignedOut } from "@clerk/nextjs";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useEffect } from "react";
+import logger from "@/lib/logger-client";
 
 export default function SignUpContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const redirectUrl = searchParams.get("redirect_url") || "/";
 
-  console.log("[SignUpContent] 회원가입 폼 렌더링", { redirectUrl });
+  logger.debug("[SignUpContent] 회원가입 폼 렌더링", { redirectUrl });
 
   // 회원가입 폼 커스터마이징 - 안전한 방식으로 수정
   useEffect(() => {
@@ -25,19 +26,15 @@ export default function SignUpContent() {
       // 이미 커스터마이징이 완료되었으면 더 이상 실행하지 않음
       if (isCustomized) return;
 
-      console.group("[SignUpContent] 폼 필드 커스터마이징");
-
       // 1. lastName 필드를 숨기기
       const lastNameField = document.querySelector('.cl-formField__lastName') as HTMLElement;
       if (lastNameField && lastNameField.style.display !== 'none') {
-        console.log("성(lastName) 필드 숨김");
         lastNameField.style.display = 'none';
       }
 
       // firstName 필드의 라벨을 "이름"으로 변경
       const firstNameLabel = document.querySelector('label[for="firstName-field"]') as HTMLLabelElement;
       if (firstNameLabel && firstNameLabel.textContent !== "이름") {
-        console.log("이름 라벨 변경");
         firstNameLabel.textContent = "이름";
       }
 
@@ -45,7 +42,6 @@ export default function SignUpContent() {
       const firstNameField = document.querySelector('.cl-formField__firstName') as HTMLElement;
       const lastNameRow = document.querySelector('.cl-formFieldRow__name') as HTMLElement;
       if (firstNameField && lastNameRow && firstNameField.style.width !== '100%') {
-        console.log("이름 필드를 전체 너비로 설정");
         lastNameRow.style.display = 'block';
         firstNameField.style.width = '100%';
       }
@@ -58,8 +54,6 @@ export default function SignUpContent() {
       if (usernameRow && passwordRow && emailRow) {
         const form = usernameRow.parentElement;
         if (form && !form.hasAttribute('data-customized')) {
-          console.log("필드 순서 재정렬: 아이디 → 비밀번호 → 이메일");
-          
           // 순서 확인
           const formChildren = Array.from(form.children);
           const usernameIndex = formChildren.indexOf(usernameRow);
@@ -87,17 +81,13 @@ export default function SignUpContent() {
       // 3. placeholder 텍스트 변경
       const usernameInput = document.querySelector('input[name="username"]') as HTMLInputElement;
       if (usernameInput && !usernameInput.placeholder) {
-        console.log("아이디 placeholder 설정");
         usernameInput.placeholder = "아이디를 입력해주세요";
       }
 
       const passwordInput = document.querySelector('input[name="password"]') as HTMLInputElement;
       if (passwordInput && passwordInput.placeholder === "Enter your password") {
-        console.log("비밀번호 placeholder 변경");
         passwordInput.placeholder = "비밀번호를 입력하세요";
       }
-
-      console.groupEnd();
     };
 
     // 초기 실행 (여러 번 시도)

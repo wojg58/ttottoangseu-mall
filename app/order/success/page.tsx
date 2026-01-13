@@ -17,7 +17,7 @@ import { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2 } from "lucide-react";
-import logger from "@/lib/logger";
+import logger from "@/lib/logger-client";
 import CartUpdateTrigger from "@/components/cart-update-trigger";
 
 function OrderSuccessContent() {
@@ -39,46 +39,35 @@ function OrderSuccessContent() {
   } | null>(null);
 
   useEffect(() => {
-    logger.group("[OrderSuccessPage] 결제 성공 페이지 진입");
-
     const paymentKey = searchParams.get("paymentKey");
     const orderId = searchParams.get("orderId");
     const amount = searchParams.get("amount");
 
-    logger.info("쿼리 파라미터:", {
-      paymentKey: paymentKey ? paymentKey.substring(0, 10) + "..." : null,
-      orderId,
-      amount,
-    });
-
     // 필수 파라미터 검증
     if (!paymentKey || !orderId || !amount) {
-      logger.error("필수 파라미터 누락");
+      logger.error("[OrderSuccessPage] 필수 파라미터 누락");
       setResult({
         success: false,
         message: "잘못된 결제 요청입니다.",
       });
       setIsProcessing(false);
-      logger.groupEnd();
       return;
     }
 
     const amountNumber = parseInt(amount, 10);
     if (isNaN(amountNumber)) {
-      logger.error("잘못된 금액 형식:", amount);
+      logger.error("[OrderSuccessPage] 잘못된 금액 형식", { amount });
       setResult({
         success: false,
         message: "잘못된 결제 금액입니다.",
       });
       setIsProcessing(false);
-      logger.groupEnd();
       return;
     }
 
     // confirm API 호출
     const confirmPayment = async () => {
       try {
-        logger.info("confirm API 호출 시작");
         const response = await fetch("/api/payments/toss/confirm", {
           method: "POST",
           headers: {
@@ -93,13 +82,11 @@ function OrderSuccessContent() {
 
         const data = await response.json();
 
-        logger.group("[OrderSuccessPage] confirm API 결과");
-        logger.info("성공 여부:", data.success);
-        logger.info("메시지:", data.message);
-        if (data.orderId) {
-          logger.info("주문번호:", data.orderId);
+        if (!data.success) {
+          logger.error("[OrderSuccessPage] 결제 승인 실패", {
+            message: data.message,
+          });
         }
-        logger.groupEnd();
 
         setResult({
           success: data.success,
@@ -115,7 +102,7 @@ function OrderSuccessContent() {
           window.dispatchEvent(new CustomEvent("cart:update"));
         }
       } catch (error) {
-        logger.error("confirm API 호출 에러:", error);
+        logger.error("[OrderSuccessPage] confirm API 호출 에러", error);
         setResult({
           success: false,
           message:
@@ -125,7 +112,6 @@ function OrderSuccessContent() {
         });
       } finally {
         setIsProcessing(false);
-        logger.groupEnd();
       }
     };
 
