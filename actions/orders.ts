@@ -43,7 +43,7 @@ function generateOrderNumber(): string {
  */
 export async function deductOrderStock(
   orderId: string,
-  supabase: ReturnType<typeof createClient>,
+  supabase: Awaited<ReturnType<typeof createClient>>,
 ): Promise<{ success: boolean; message?: string }> {
   logger.group(`[deductOrderStock] 주문 재고 차감 시작: Order ID ${orderId}`);
 
@@ -73,8 +73,8 @@ export async function deductOrderStock(
     const productsToUpdateStock = new Set<string>();
 
     for (const item of orderItems) {
-      const product = item.product as { id: string; stock: number } | null;
-      const variant = item.variant as { id: string; stock: number; product_id: string } | null;
+      const product = (item.product as unknown) as { id: string; stock: number } | null;
+      const variant = (item.variant as unknown) as { id: string; stock: number; product_id: string } | null;
 
       if (!product) {
         logger.warn(`상품을 찾을 수 없음: Product ID ${item.product_id}`);
