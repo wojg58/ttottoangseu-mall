@@ -46,8 +46,8 @@ export default async function ProductsPage({
 
   const page = parseInt(params.page || "1", 10);
 
-  // 데이터 로드 (한 줄에 4개씩 10줄 = 40개)
-  const productsResult = await getProducts(filters, page, 40);
+  // 데이터 로드 (한 줄에 4개씩 6줄 = 24개)
+  const productsResult = await getProducts(filters, page, 24);
 
   // 페이지 타이틀 결정
   let pageTitle = "전체 상품";
@@ -82,18 +82,16 @@ export default async function ProductsPage({
               <ProductSortSelect defaultValue={filters.sortBy} />
             </div>
 
-            {/* 상품 그리드 (한 줄에 4개씩, 최대 10줄, 스크롤 가능) */}
+            {/* 상품 그리드 (한 줄에 4개씩, 6줄 = 24개) */}
             {productsResult.data.length > 0 ? (
               <>
-                <div className="max-h-[1200px] overflow-y-auto">
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6 pb-4">
-                    {productsResult.data.map((product) => (
-                      <ProductCard key={product.id} product={product} />
-                    ))}
-                  </div>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6 pb-4">
+                  {productsResult.data.map((product) => (
+                    <ProductCard key={product.id} product={product} />
+                  ))}
                 </div>
 
-                {/* 페이지네이션 (40개씩) */}
+                {/* 페이지네이션 (24개씩) */}
                 {productsResult.totalPages > 1 && (
                   <div className="flex items-center justify-center gap-2 mt-12">
                     {/* 이전 페이지 */}
