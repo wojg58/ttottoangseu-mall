@@ -42,7 +42,7 @@ export default function SignUpCompletePage() {
               <br />
               지금 가입하신 모든 회원님께
               <br />
-              <strong className="text-shop-rose">3,000원 할인 쿠폰</strong>을
+              <strong className="text-shop-rose">1,000원 할인 쿠폰</strong>을
               드립니다!
             </p>
           </div>
