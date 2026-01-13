@@ -104,9 +104,9 @@
   background: #ffffff;
 }
 
-/* 옐로우 (카카오톡 친구추가) - 화이트 배경 */
+/* 옐로우 (카카오톡 친구추가) - 핑크 그라데이션 배경 */
 .event-banner.yellow {
-  background: #ffffff;
+  background: linear-gradient(90deg, #ffd6e8, #ffb6d5);
 }
 
 .event-banner.pink .coupon::before,
@@ -121,7 +121,7 @@
 
 .event-banner.yellow .coupon::before,
 .event-banner.yellow .coupon::after {
-  background: #ffffff;
+  background: #ffd6e8;
 }
 
 /* 텍스트 */
