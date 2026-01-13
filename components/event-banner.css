@@ -61,8 +61,7 @@
   color: inherit;
   display: block;
   flex-shrink: 0;
-  width: calc(33.333% - 9.33px);
-  min-width: 280px;
+  width: 400px;
 }
 
 /* 공통 배너 */
@@ -196,8 +195,8 @@
 /* 모바일 대응 */
 @media (max-width: 640px) {
   .event-banner-link {
-    width: calc(33.333% - 9.33px);
-    min-width: 240px;
+    width: 100%;
+    max-width: 400px;
   }
 
   .event-banner {
