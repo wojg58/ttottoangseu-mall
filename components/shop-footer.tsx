@@ -76,8 +76,30 @@ export default function ShopFooter() {
             </div>
           </div>
 
-          {/* 고객 센터 - 중앙 섹션 */}
-          <div className="flex flex-col">
+          {/* 모바일: 고객센터와 계좌정보를 좌우로 배치 */}
+          <div className="col-span-1 flex flex-row gap-4 sm:hidden">
+            {/* 고객 센터 */}
+            <div className="flex flex-col flex-1">
+              <h4 className="font-bold mb-3 text-black text-sm">고객 센터</h4>
+              <div className="space-y-1 text-xs text-[#4a3f48]">
+                <div>010-4112-6168</div>
+                <div>ttottoangseu@naver.com</div>
+                <div>오전 9시 ~ 오후 6시<br />(주말/공휴일 휴무)</div>
+              </div>
+            </div>
+
+            {/* 계좌 정보 */}
+            <div className="flex flex-col flex-1">
+              <h4 className="font-bold mb-3 text-black text-sm">계좌 정보</h4>
+              <div className="space-y-1 text-xs text-[#4a3f48]">
+                <p>카카오뱅크<br />3333-28-2841708</p>
+                <p>예금주 : 우수정</p>
+              </div>
+            </div>
+          </div>
+
+          {/* 데스크톱: 고객 센터 - 중앙 섹션 */}
+          <div className="hidden sm:flex flex-col">
             <h4 className="font-bold mb-3 md:mb-4 text-black text-sm md:text-base">고객 센터</h4>
             <div className="space-y-1 md:space-y-2 text-xs md:text-sm text-[#4a3f48]">
               <div>010-4112-6168</div>
@@ -86,8 +108,8 @@ export default function ShopFooter() {
             </div>
           </div>
 
-          {/* 계좌 정보 - 우측 섹션 */}
-          <div className="flex flex-col">
+          {/* 데스크톱: 계좌 정보 - 우측 섹션 */}
+          <div className="hidden sm:flex flex-col">
             <h4 className="font-bold mb-3 md:mb-4 text-black text-sm md:text-base">계좌 정보</h4>
             <div className="space-y-1 md:space-y-2 text-xs md:text-sm text-[#4a3f48]">
               <p>카카오뱅크<br />3333-28-2841708</p>
