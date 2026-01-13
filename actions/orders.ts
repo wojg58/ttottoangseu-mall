@@ -502,7 +502,10 @@ export async function createOrder(input: CreateOrderInput): Promise<{
             .insert(queueData);
 
           if (queueError) {
-            logger.error("[createOrder] 네이버 동기화 큐 적재 실패", queueError);
+            logger.error(
+              "[createOrder] 네이버 동기화 큐 적재 실패",
+              queueError,
+            );
           }
         }
       }

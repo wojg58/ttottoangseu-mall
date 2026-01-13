@@ -14,7 +14,7 @@
 | --------------------------- | ----------- | ------------ | ------------ | --------------------- |
 | `actions/cart.ts`           | **258회**   | 0회          | 52회         | 과도한 단계별 로깅    |
 | `actions/orders.ts`         | 85회        | 5회          | 33회         | group 과다 사용       |
-| `actions/admin-products.ts`  | 87회        | 48회         | 28회         | console.log 혼재      |
+| `actions/admin-products.ts` | 87회        | 48회         | 28회         | console.log 혼재      |
 | `actions/sync-stock.ts`     | 49회        | 0회          | 22회         | group 과다 사용       |
 | `actions/member-actions.ts` | 23회        | 0회          | 10회         | 적절한 수준           |
 | 기타 파일                   | 0회         | **361회**    | 0회          | console.log 통일 필요 |
@@ -27,14 +27,14 @@
 
 ### 클라이언트 사이드 로깅 현황 ⚠️⚠️⚠️
 
-| 파일                              | console 호출 | logger 호출 | 민감 정보 노출 | 주요 문제                    |
-| --------------------------------- | ------------ | ----------- | -------------- | ---------------------------- |
-| `components/auth-session-sync.tsx` | **64회**     | 0회         | ✅ **심각**    | 사용자 ID, 이메일, 토큰 노출 |
-| `hooks/use-sync-user.ts`          | **15회**     | 0회         | ✅ **심각**    | 사용자 ID, 이메일, 토큰 노출 |
-| `components/checkout-form.tsx`     | 28회         | 33회        | ✅ **심각**    | 주문자 정보, 주소 노출       |
-| `components/payment-widget.tsx`    | 0회          | 31회        | ✅ **심각**    | 고객 이메일, 주문 정보 노출  |
-| `app/sign-in/.../sign-in-content.tsx` | **128회** | 0회         | ✅ **심각**    | 이메일, 비밀번호 관련 로그   |
-| 기타 컴포넌트                     | **317회**    | 107회       | ⚠️ **보통**    | console.log 직접 사용        |
+| 파일                                  | console 호출 | logger 호출 | 민감 정보 노출 | 주요 문제                    |
+| ------------------------------------- | ------------ | ----------- | -------------- | ---------------------------- |
+| `components/auth-session-sync.tsx`    | **64회**     | 0회         | ✅ **심각**    | 사용자 ID, 이메일, 토큰 노출 |
+| `hooks/use-sync-user.ts`              | **15회**     | 0회         | ✅ **심각**    | 사용자 ID, 이메일, 토큰 노출 |
+| `components/checkout-form.tsx`        | 28회         | 33회        | ✅ **심각**    | 주문자 정보, 주소 노출       |
+| `components/payment-widget.tsx`       | 0회          | 31회        | ✅ **심각**    | 고객 이메일, 주문 정보 노출  |
+| `app/sign-in/.../sign-in-content.tsx` | **128회**    | 0회         | ✅ **심각**    | 이메일, 비밀번호 관련 로그   |
+| 기타 컴포넌트                         | **317회**    | 107회       | ⚠️ **보통**    | console.log 직접 사용        |
 
 **클라이언트 사이드 총계**:
 
@@ -47,45 +47,48 @@
 **노출되는 민감 정보**:
 
 1. **사용자 개인정보**:
+
    ```typescript
    // ❌ components/auth-session-sync.tsx
    console.log("👤 Clerk 사용자 정보:", {
-     id: user.id,                    // 사용자 ID 노출
-     email: user.emailAddresses[0]?.emailAddress,  // 이메일 노출
-     name: user.fullName,            // 이름 노출
+     id: user.id, // 사용자 ID 노출
+     email: user.emailAddresses[0]?.emailAddress, // 이메일 노출
+     name: user.fullName, // 이름 노출
    });
    ```
 
 2. **인증 토큰 정보**:
+
    ```typescript
    // ❌ hooks/use-sync-user.ts
    console.log("토큰 존재:", !!token);
-   console.log("토큰 길이:", token.length);  // 토큰 길이 노출
+   console.log("토큰 길이:", token.length); // 토큰 길이 노출
    ```
 
 3. **주문자 정보**:
+
    ```typescript
    // ❌ components/checkout-form.tsx
    logger.info("주문자 정보:", {
-     name: formData.ordererName,      // 이름 노출
-     phone: formData.ordererPhone,   // 전화번호 노출
-     email: formData.ordererEmail,   // 이메일 노출
+     name: formData.ordererName, // 이름 노출
+     phone: formData.ordererPhone, // 전화번호 노출
+     email: formData.ordererEmail, // 이메일 노출
    });
    logger.info("배송 정보:", {
-     address: formData.shippingAddress,  // 주소 노출
-     zipCode: formData.shippingZipCode,  // 우편번호 노출
+     address: formData.shippingAddress, // 주소 노출
+     zipCode: formData.shippingZipCode, // 우편번호 노출
    });
    ```
 
 4. **결제 정보**:
    ```typescript
    // ❌ components/payment-widget.tsx
-   logger.info("[PaymentWidget] customerKey (이메일):", customerEmail);  // 이메일 노출
+   logger.info("[PaymentWidget] customerKey (이메일):", customerEmail); // 이메일 노출
    logger.info("[PaymentWidget] actualValues:", {
      orderId,
      amount,
      customerName,
-     customerEmail,  // 이메일 노출
+     customerEmail, // 이메일 노출
    });
    ```
 
@@ -184,25 +187,42 @@ logger.info("[getCart] 장바구니 조회");
 #### 0.1 클라이언트용 logger 생성
 
 **현재 문제**:
+
 - `lib/logger.ts`는 서버 사이드용 (`process.env.NODE_ENV` 사용)
 - 클라이언트에서 `logger` 사용 시 빌드 에러 발생 가능
 - 클라이언트에서 `console.log` 직접 사용으로 민감 정보 노출
 
 **해결 방안**:
+
 ```typescript
 // lib/logger-client.ts (신규 생성)
 "use client";
 
-const isDev = typeof window !== "undefined" && 
-  (process.env.NODE_ENV === "development" || 
-   window.location.hostname === "localhost");
+const isDev =
+  typeof window !== "undefined" &&
+  (process.env.NODE_ENV === "development" ||
+    window.location.hostname === "localhost");
 
 // 민감 정보 키워드 (서버와 동일)
 const SENSITIVE_KEYS = [
-  "password", "secret", "token", "key", "authorization",
-  "email", "userId", "user_id", "clerk_id", "phone",
-  "address", "zipCode", "zip_code", "name", "customerName",
-  "ordererName", "shippingName", "depositorName",
+  "password",
+  "secret",
+  "token",
+  "key",
+  "authorization",
+  "email",
+  "userId",
+  "user_id",
+  "clerk_id",
+  "phone",
+  "address",
+  "zipCode",
+  "zip_code",
+  "name",
+  "customerName",
+  "ordererName",
+  "shippingName",
+  "depositorName",
 ] as const;
 
 // 민감 정보 마스킹 함수
@@ -211,8 +231,11 @@ function maskSensitiveValue(value: unknown): unknown {
   if (typeof value === "string") {
     if (value.length <= 8) return "***";
     const visibleLength = Math.min(2, Math.floor(value.length / 4));
-    return value.substring(0, visibleLength) + "***" + 
-           value.substring(value.length - visibleLength);
+    return (
+      value.substring(0, visibleLength) +
+      "***" +
+      value.substring(value.length - visibleLength)
+    );
   }
   return "***";
 }
@@ -221,14 +244,14 @@ function maskSensitiveData(data: unknown): unknown {
   if (data === null || data === undefined) return data;
   if (typeof data !== "object") return data;
   if (Array.isArray(data)) return data.map(maskSensitiveData);
-  
+
   const masked: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(data)) {
     const lowerKey = key.toLowerCase();
-    const isSensitive = SENSITIVE_KEYS.some(sk => 
-      lowerKey.includes(sk.toLowerCase())
+    const isSensitive = SENSITIVE_KEYS.some((sk) =>
+      lowerKey.includes(sk.toLowerCase()),
     );
-    
+
     if (isSensitive) {
       masked[key] = maskSensitiveValue(value);
     } else if (typeof value === "object" && value !== null) {
@@ -251,7 +274,7 @@ export const logger = {
       }
     }
   },
-  
+
   info: (message: string, data?: unknown) => {
     if (isDev) {
       if (data !== undefined) {
@@ -262,7 +285,7 @@ export const logger = {
       }
     }
   },
-  
+
   warn: (message: string, data?: unknown) => {
     // 경고는 개발 환경에서만 (프로덕션 노출 방지)
     if (isDev) {
@@ -274,7 +297,7 @@ export const logger = {
       }
     }
   },
-  
+
   error: (message: string, error?: unknown) => {
     // 에러는 Sentry로만 전송 (민감 정보 제외)
     if (error !== undefined) {
@@ -289,11 +312,11 @@ export const logger = {
       }
     }
   },
-  
+
   group: (name: string) => {
     if (isDev) console.group(name);
   },
-  
+
   groupEnd: () => {
     if (isDev) console.groupEnd();
   },
@@ -328,7 +351,7 @@ if (user) {
     email: user.emailAddresses[0]?.emailAddress || "없음",
     name: user.fullName || user.username || "없음",
   };
-  console.log("👤 Clerk 사용자 정보:", userInfo);  // ❌ 민감 정보 노출
+  console.log("👤 Clerk 사용자 정보:", userInfo); // ❌ 민감 정보 노출
 }
 
 // ✅ 개선 후
@@ -337,7 +360,7 @@ import logger from "@/lib/logger-client";
 if (user) {
   // 민감 정보는 로깅하지 않음
   logger.debug("[AuthSessionSync] 사용자 인증 확인됨");
-  
+
   // 디버깅 필요 시 마스킹된 정보만
   if (isDev) {
     logger.debug("[AuthSessionSync] 사용자 상태:", {
@@ -359,7 +382,8 @@ if (user) {
 - [ ] `app/sign-in/.../sign-in-content.tsx` 리팩토링
 - [ ] 기타 컴포넌트 리팩토링
 
-**예상 결과**: 
+**예상 결과**:
+
 - 클라이언트 `console.log` 646회 → **0회**
 - 민감 정보 노출 → **0건**
 

@@ -91,7 +91,7 @@ function matchProduct(productName: string, targetName: string): number {
 
   if (targetWords.length > 0) {
     const matchedWords = targetWords.filter((word) =>
-      normalizedProduct.includes(word)
+      normalizedProduct.includes(word),
     );
     const matchRatio = matchedWords.length / targetWords.length;
 
@@ -103,7 +103,7 @@ function matchProduct(productName: string, targetName: string): number {
   const productWords = new Set(normalizedProduct.split(/\s+/));
   const targetWordsSet = new Set(normalizedTarget.split(/\s+/));
   const commonWords = [...productWords].filter((word) =>
-    targetWordsSet.has(word)
+    targetWordsSet.has(word),
   );
   const commonRatio =
     commonWords.length / Math.max(productWords.size, targetWordsSet.size);
@@ -117,7 +117,7 @@ function matchProduct(productName: string, targetName: string): number {
 function findMatchedProducts<T extends { name: string }>(
   products: T[],
   targetNames: string[],
-  label: string
+  label: string,
 ): T[] {
   return targetNames
     .map((targetName, index) => {
@@ -132,10 +132,15 @@ function findMatchedProducts<T extends { name: string }>(
       const bestMatch = scoredProducts[0];
 
       if (bestMatch && bestMatch.score >= 50) {
-        logger.debug(`[HomePage] ${label} ${index + 1}번 매칭 (${bestMatch.score.toFixed(0)}점)`, {
-          target: targetName.substring(0, 30) + "...",
-          found: bestMatch.product.name.substring(0, 30) + "...",
-        });
+        logger.debug(
+          `[HomePage] ${label} ${index + 1}번 매칭 (${bestMatch.score.toFixed(
+            0,
+          )}점)`,
+          {
+            target: targetName.substring(0, 30) + "...",
+            found: bestMatch.product.name.substring(0, 30) + "...",
+          },
+        );
         return bestMatch.product;
       }
 
@@ -144,7 +149,9 @@ function findMatchedProducts<T extends { name: string }>(
       });
       return null;
     })
-    .filter((product): product is NonNullable<typeof product> => product !== null);
+    .filter(
+      (product): product is NonNullable<typeof product> => product !== null,
+    );
 }
 
 /**
@@ -166,7 +173,7 @@ async function getProducts() {
       *,
       category:categories!fk_products_category_id(id, name, slug),
       images:product_images(id, image_url, is_primary, alt_text)
-    `
+    `,
     )
     .eq("status", "active")
     .is("deleted_at", null);
@@ -194,14 +201,14 @@ async function getProducts() {
   const featuredProducts = findMatchedProducts(
     productsWithName,
     BEST_PRODUCT_NAMES,
-    "베스트"
+    "베스트",
   );
 
   // 전체 상품 매칭
   const allProducts = findMatchedProducts(
     productsWithName,
     ALL_PRODUCT_NAMES,
-    "전체상품"
+    "전체상품",
   );
 
   // 카테고리 목록
@@ -396,7 +403,9 @@ export default async function HomePage() {
             ) : (
               <div className="text-center py-12 bg-shop-pink-light rounded-xl">
                 <span className="text-4xl mb-4 block">🎀</span>
-                <p className="text-shop-text-muted">베스트 상품을 준비 중이에요!</p>
+                <p className="text-shop-text-muted">
+                  베스트 상품을 준비 중이에요!
+                </p>
               </div>
             )}
           </div>

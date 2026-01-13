@@ -327,7 +327,10 @@ export async function deleteProduct(
         .eq("product_id", productId);
 
       if (deleteImagesError) {
-        logger.error("[deleteProduct] 이미지 레코드 삭제 실패", deleteImagesError);
+        logger.error(
+          "[deleteProduct] 이미지 레코드 삭제 실패",
+          deleteImagesError,
+        );
       }
     }
 
