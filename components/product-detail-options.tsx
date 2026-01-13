@@ -27,6 +27,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { addToCart, buyNowAndRedirect, buyNowWithOptionsAndRedirect } from "@/actions/cart";
+import logger from "@/lib/logger-client";
 
 interface ProductDetailOptionsProps {
   productId: string;
@@ -57,24 +58,11 @@ export default function ProductDetailOptions({
   const { isLoaded, userId, isSignedIn } = useAuth();
   const router = useRouter();
 
-  console.group("🟡 [ProductDetailOptions] 컴포넌트 렌더링");
-  console.log("렌더링 시간:", new Date().toISOString());
-  console.log("상태:", {
-    productId,
-    selectedOptionsCount: selectedOptions.length,
-    hasVariants: variants && variants.filter((v) => !v.deleted_at).length > 0,
-    isSignedIn,
-    quantity,
-  });
-  console.groupEnd();
-
   // 옵션이 있고 필수인 경우 선택 여부 확인
   const hasVariants = variants && variants.filter((v) => !v.deleted_at).length > 0;
 
   const handleVariantChange = (variantId: string | null, variant: ProductVariant | null) => {
     if (!variantId || !variant) return;
-
-    console.log("[ProductDetailOptions] 옵션 선택:", { variantId, variant: variant.variant_value });
 
     // 이미 선택된 옵션인지 확인
     const existingIndex = selectedOptions.findIndex((opt) => opt.variant.id === variantId);
@@ -93,7 +81,6 @@ export default function ProductDetailOptions({
 
   const handleRemoveOption = (variantId: string) => {
     setSelectedOptions((prev) => prev.filter((opt) => opt.variant.id !== variantId));
-    console.log("[ProductDetailOptions] 옵션 제거:", variantId);
   };
 
   const handleQuantityChange = (variantId: string, delta: number) => {
@@ -109,7 +96,6 @@ export default function ProductDetailOptions({
         return opt;
       }),
     );
-    console.log("[ProductDetailOptions] 수량 변경:", variantId, delta);
   };
 
   // 총 수량과 총 금액 계산
@@ -120,23 +106,15 @@ export default function ProductDetailOptions({
   );
 
   const handleAddToCart = async () => {
-    console.log("[ProductDetailOptions] 장바구니 담기 버튼 클릭:", {
-      isLoaded,
-      userId,
-      isSignedIn,
-      hasVariants,
-      selectedOptionsCount: selectedOptions.length,
-    });
-
     // Clerk 인증 상태가 아직 로드되지 않았으면 대기
     if (!isLoaded) {
-      console.log("[ProductDetailOptions] Clerk 인증 상태 로딩 중...");
+      logger.debug("[ProductDetailOptions] Clerk 인증 상태 로딩 중");
       return;
     }
 
     // 인증 상태가 로드되었는데 userId가 없으면 로그인 필요
     if (!userId) {
-      console.log("[ProductDetailOptions] 로그인 필요");
+      logger.debug("[ProductDetailOptions] 로그인 필요");
       const currentUrl = window.location.pathname + window.location.search;
       router.push("/sign-in?redirect_url=" + encodeURIComponent(currentUrl));
       return;
@@ -147,12 +125,6 @@ export default function ProductDetailOptions({
       alert("옵션을 선택해주세요.");
       return;
     }
-
-    console.log("[ProductDetailOptions] 장바구니 담기 시작:", {
-      hasVariants,
-      selectedOptions,
-      quantity,
-    });
 
     startTransition(async () => {
       try {
@@ -165,13 +137,13 @@ export default function ProductDetailOptions({
               option.variant.id,
             );
             if (!result.success) {
-              console.error("[ProductDetailOptions] 장바구니 담기 실패:", {
-                option: option.variant.variant_value,
+              logger.error("[ProductDetailOptions] 장바구니 담기 실패", {
                 message: result.message,
               });
               
               // 로그인 관련 에러인 경우 로그인 페이지로 리다이렉트
               if (result.message.includes("로그인이 필요")) {
+                logger.warn("[ProductDetailOptions] 세션 만료");
                 alert("로그인 세션이 만료되었습니다. 다시 로그인해주세요.");
                 router.push("/sign-in?redirect_url=" + window.location.pathname);
                 return;
@@ -188,12 +160,13 @@ export default function ProductDetailOptions({
           // 옵션이 없는 상품: 수량만 지정하여 장바구니에 추가
           const result = await addToCart(productId, quantity);
           if (!result.success) {
-            console.error("[ProductDetailOptions] 장바구니 담기 실패:", {
+            logger.error("[ProductDetailOptions] 장바구니 담기 실패", {
               message: result.message,
             });
             
             // 로그인 관련 에러인 경우 로그인 페이지로 리다이렉트
             if (result.message.includes("로그인이 필요")) {
+              logger.warn("[ProductDetailOptions] 세션 만료");
               alert("로그인 세션이 만료되었습니다. 다시 로그인해주세요.");
               router.push("/sign-in?redirect_url=" + window.location.pathname);
               return;
@@ -204,36 +177,24 @@ export default function ProductDetailOptions({
           }
           setShowSuccessModal(true);
         }
-        console.log("[ProductDetailOptions] 장바구니 담기 성공");
+        logger.debug("[ProductDetailOptions] 장바구니 담기 성공");
       } catch (error) {
-        console.error("[ProductDetailOptions] 장바구니 담기 실패:", error);
+        logger.error("[ProductDetailOptions] 장바구니 담기 실패", error);
         alert("장바구니 담기에 실패했습니다.");
       }
     });
   };
 
   const handleBuyNow = async () => {
-    console.group("🔵 [ProductDetailOptions] 바로 구매 버튼 클릭");
-    console.log("클릭 시간:", new Date().toISOString());
-    console.log("상태:", {
-      isLoaded,
-      userId,
-      isSignedIn,
-      hasVariants,
-      selectedOptionsCount: selectedOptions.length,
-      productId,
-      quantity,
-    });
-
     // Clerk 인증 상태가 아직 로드되지 않았으면 대기
     if (!isLoaded) {
-      console.log("[ProductDetailOptions] Clerk 인증 상태 로딩 중...");
+      logger.warn("[ProductDetailOptions] Clerk 인증 상태 로딩 중");
       return;
     }
 
     // 인증 상태가 로드되었는데 userId가 없으면 로그인 필요
     if (!userId) {
-      console.log("[ProductDetailOptions] 로그인 필요");
+      logger.warn("[ProductDetailOptions] 로그인 필요");
       const currentUrl = window.location.pathname + window.location.search;
       router.push("/sign-in?redirect_url=" + encodeURIComponent(currentUrl));
       return;
@@ -241,28 +202,13 @@ export default function ProductDetailOptions({
 
     // 옵션이 있는 상품은 옵션 선택 필수
     if (hasVariants && selectedOptions.length === 0) {
-      console.warn("⚠️ 옵션 선택 필요");
-      console.groupEnd();
+      logger.warn("[ProductDetailOptions] 옵션 선택 필요");
       alert("옵션을 선택해주세요.");
       return;
     }
 
-    console.log("✅ 모든 검증 통과 - 바로 구매 시작:", {
-      hasVariants,
-      selectedOptions,
-      quantity,
-    });
-
     startTransition(async () => {
       try {
-        console.log("[ProductDetailOptions] 2단계: 인증 확인 완료 - Server Action 호출 시작");
-        console.log("요청 데이터:", {
-          productId,
-          hasVariants,
-          optionsCount: hasVariants ? selectedOptions.length : 0,
-          quantity: hasVariants ? undefined : quantity,
-        });
-
         let result: { success: boolean; message?: string };
         
         if (hasVariants) {
@@ -271,70 +217,52 @@ export default function ProductDetailOptions({
             variantId: option.variant.id,
             quantity: option.quantity,
           }));
-          console.log("[ProductDetailOptions] 3단계: buyNowWithOptionsAndRedirect() 호출");
-          console.log("옵션 목록:", options);
           result = await buyNowWithOptionsAndRedirect(productId, options);
         } else {
           // 옵션이 없는 상품: Server Action에서 처리
-          console.log("[ProductDetailOptions] 3단계: buyNowAndRedirect() 호출");
           result = await buyNowAndRedirect(productId, quantity);
         }
         
-        console.log("[ProductDetailOptions] Server Action 결과:", result);
-        
         if (result.success) {
-          console.log("[ProductDetailOptions] ✅ 4단계: 성공 - 장바구니 반영 대기 후 체크아웃 페이지로 이동");
+          logger.debug("[ProductDetailOptions] 바로 구매 성공");
           // 장바구니 DB 반영을 위해 잠시 대기 (바로구매 플래그 포함)
           await new Promise((resolve) => setTimeout(resolve, 800));
-          console.log("[ProductDetailOptions] 대기 완료 - 체크아웃 페이지로 이동");
           // 바로구매 플래그를 쿼리 파라미터로 전달
           router.push("/checkout?buyNow=true");
-          console.groupEnd();
           return;
         } else {
           // 실패한 경우에도 체크아웃 페이지로 이동 (장바구니 추가 실패해도 주문 진행 가능)
-          console.warn("[ProductDetailOptions] ⚠️ 장바구니 추가 실패했지만 체크아웃 페이지로 이동:", result.message);
-          console.log("[ProductDetailOptions] ✅ 체크아웃 페이지로 이동 (장바구니 상태 확인 필요)");
+          logger.warn("[ProductDetailOptions] 장바구니 추가 실패했지만 체크아웃 페이지로 이동", {
+            message: result.message,
+          });
           router.push("/checkout?buyNow=true");
-          console.groupEnd();
           return;
         }
       } catch (error: any) {
+        // Next.js의 redirect()는 NEXT_REDIRECT 에러를 throw합니다. 이건 정상 동작이므로 다시 throw
+        if (
+          error &&
+          (error.message === "NEXT_REDIRECT" ||
+            error.message?.includes("NEXT_REDIRECT") ||
+            error.digest?.includes("NEXT_REDIRECT"))
+        ) {
+          throw error;
+        }
+
         // 실제 에러인 경우에만 로그 및 알림 표시
-        console.error("[ProductDetailOptions] ❌ 4단계: 바로 구매 실패");
-        console.error("에러 타입:", typeof error);
-        console.error("에러 객체:", error);
-        console.error("에러 메시지:", error?.message);
-        console.error("에러 코드:", error?.code);
-        console.error("에러 digest:", error?.digest);
-        console.error("에러 stack:", error?.stack);
-        console.error("전체 에러 (JSON):", JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
-        
-        // 에러 상세를 객체로도 출력 (개발자 도구에서 펼쳐볼 수 있도록)
-        const errorDetails = {
-          message: error?.message,
-          code: error?.code,
-          digest: error?.digest,
-          stack: error?.stack,
-          name: error?.name,
-          cause: error?.cause,
-          fullError: error,
-        };
-        console.error("에러 상세 객체:", errorDetails);
+        logger.error("[ProductDetailOptions] 바로 구매 실패", error);
         
         const errorMessage = error instanceof Error ? error.message : "주문에 실패했습니다.";
         
         // 서버에서 반환한 로그인 관련 에러인 경우 (실제 세션 만료)
         if (errorMessage.includes("로그인이 필요")) {
-          console.error("❌ 서버에서 로그인 필요 응답 - 실제 세션 만료");
+          logger.warn("[ProductDetailOptions] 세션 만료");
           alert("로그인 세션이 만료되었습니다. 다시 로그인해주세요.");
           router.push("/sign-in?redirect_url=" + window.location.pathname);
-          console.groupEnd();
           return;
         }
         
         alert(errorMessage);
-        console.groupEnd();
       }
     });
   };
@@ -496,12 +424,7 @@ export default function ProductDetailOptions({
           {!isLoaded ? "로딩 중..." : isPending ? "담는 중..." : "장바구니"}
         </Button>
         <Button
-          onClick={(e) => {
-            console.log("🟢 [ProductDetailOptions] 바로 구매 버튼 클릭 이벤트 발생!");
-            console.log("이벤트:", e);
-            console.log("현재 상태:", { isLoaded, userId, isSignedIn, hasVariants, selectedOptionsCount: selectedOptions.length });
-            handleBuyNow();
-          }}
+          onClick={handleBuyNow}
           disabled={
             !isLoaded ||
             (hasVariants && selectedOptions.length === 0) ||
