@@ -76,8 +76,8 @@ export default function ShopFooter() {
             </div>
           </div>
 
-          {/* 모바일: 고객센터와 계좌정보를 좌우로 배치 */}
-          <div className="flex flex-row gap-4 sm:flex-col sm:gap-0 lg:flex-col">
+          {/* 모바일: 고객센터와 계좌정보를 좌우로 배치, 데스크톱도 좌우 배치 */}
+          <div className="flex flex-row gap-4 sm:flex-col sm:gap-0 md:flex-row md:gap-4">
             {/* 고객 센터 */}
             <div className="flex flex-col flex-1 sm:flex-none">
               <h4 className="font-bold mb-3 md:mb-4 text-black text-sm md:text-base">고객 센터</h4>
