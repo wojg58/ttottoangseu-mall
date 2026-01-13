@@ -87,7 +87,7 @@ export default function EventBanner() {
           <div className="text">
             <h3>카카오톡 친구추가 혜택</h3>
             <p>
-              친구추가 시 <strong>1,000원</strong> 쿠폰 즉시 증정!
+              친구추가 시 <strong>1,000원</strong> 쿠폰 증정!
             </p>
           </div>
           <div className="coupon">
