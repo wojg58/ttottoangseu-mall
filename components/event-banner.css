@@ -94,34 +94,34 @@
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
 }
 
-/* 핑크 (리뷰 이벤트) - 그린으로 통일 */
+/* 핑크 (리뷰 이벤트) - 화이트 배경 */
 .event-banner.pink {
-  background: linear-gradient(90deg, #bbf7d0, #86efac);
+  background: #ffffff;
 }
 
-/* 블루 (신규가입) - 핑크 배경 */
+/* 블루 (신규가입) - 화이트 배경 */
 .event-banner.blue {
-  background: linear-gradient(90deg, #ffd6e8, #ffb6d5);
+  background: #ffffff;
 }
 
-/* 옐로우 (카카오톡 친구추가) - 연한 노랑 배경 */
+/* 옐로우 (카카오톡 친구추가) - 화이트 배경 */
 .event-banner.yellow {
-  background: linear-gradient(90deg, #fffef0, #fffacd);
+  background: #ffffff;
 }
 
 .event-banner.pink .coupon::before,
 .event-banner.pink .coupon::after {
-  background: #bbf7d0;
+  background: #ffffff;
 }
 
 .event-banner.blue .coupon::before,
 .event-banner.blue .coupon::after {
-  background: #ffd6e8;
+  background: #ffffff;
 }
 
 .event-banner.yellow .coupon::before,
 .event-banner.yellow .coupon::after {
-  background: #fffef0;
+  background: #ffffff;
 }
 
 /* 텍스트 */
