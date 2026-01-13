@@ -57,14 +57,14 @@ export default function EventBanner() {
   );
 
   const SignupBanner = () => (
-    <Link href="/sign-up/join" className="event-banner-link">
+    <Link href="/sign-up/join" className="event-banner-link event-banner-link-signup">
       <div className="event-banner blue">
-          <div className="text">
-            <h3>신규가입 시 쿠폰 증정</h3>
-            <p>
-              신규가입하고 <strong>1,000원</strong> 할인받자!
-            </p>
-          </div>
+        <div className="text">
+          <h3>신규가입 시 쿠폰 증정</h3>
+          <p>
+            신규가입하고 <strong>1,000원</strong> 할인받자!
+          </p>
+        </div>
         <div className="coupon">
           <span>할인</span>
           <strong>1,000원</strong>

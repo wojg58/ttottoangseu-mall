@@ -64,6 +64,11 @@
   width: 400px;
 }
 
+/* 신규가입 배너만 380px */
+.event-banner-link-signup {
+  width: 380px;
+}
+
 /* 공통 배너 */
 .event-banner {
   display: flex;
