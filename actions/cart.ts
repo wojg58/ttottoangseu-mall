@@ -235,37 +235,20 @@ async function getOrCreateCartId(userId: string): Promise<string> {
 
 // 장바구니 아이템 조회
 export async function getCartItems(): Promise<CartItemWithProduct[]> {
-  logger.group("🛒 [getCartItems] 장바구니 조회 시작");
-  logger.info("[getCartItems] 1단계: 함수 호출됨");
-  logger.info("타임스탬프:", new Date().toISOString());
-
-  logger.info("[getCartItems] 2단계: getCurrentUserId() 호출");
   const userId = await getCurrentUserId();
-  logger.info("[getCartItems] getCurrentUserId() 결과:", {
-    userId: userId || null,
-    hasUserId: !!userId,
-  });
 
   if (!userId) {
-    logger.warn("[getCartItems] ⚠️ 사용자 ID 없음 - 빈 배열 반환");
-    logger.groupEnd();
+    logger.debug("[getCartItems] 사용자 미인증");
     return [];
   }
 
   // PGRST301 에러 방지를 위해 토큰 확인
-  logger.info("[getCartItems] 3단계: Clerk 토큰 확인");
   const authResult = await auth();
   const token = await authResult.getToken();
-  logger.info("[getCartItems] 토큰 상태:", {
-    hasToken: !!token,
-    tokenPreview: token ? token.substring(0, 20) + "..." : null,
-  });
   let supabase;
 
   if (!token) {
-    logger.warn(
-      "[getCartItems] Clerk 토큰이 없음 - service role 클라이언트 사용",
-    );
+    logger.debug("[getCartItems] 토큰 없음, service role 클라이언트 사용");
     const { getServiceRoleClient } = await import(
       "@/lib/supabase/service-role"
     );
@@ -274,30 +257,15 @@ export async function getCartItems(): Promise<CartItemWithProduct[]> {
     supabase = await createClient();
   }
 
-  logger.info("[getCartItems] 4단계: carts 테이블 조회 시작");
   let { data: cart, error: cartError } = await supabase
     .from("carts")
     .select("id")
     .eq("user_id", userId)
     .single();
 
-  logger.info("[getCartItems] carts 조회 결과:", {
-    hasCart: !!cart,
-    cartId: cart?.id || null,
-    error: cartError
-      ? {
-          code: cartError.code,
-          message: cartError.message,
-        }
-      : null,
-  });
-
   // PGRST301 에러 발생 시 service role 클라이언트로 재시도
   if (cartError && cartError.code === "PGRST301") {
-    logger.warn("[getCartItems] ⚠️ PGRST301 에러 발생 - service role로 재시도");
-    logger.warn(
-      "[getCartItems] PGRST301 에러 발생 - service role 클라이언트로 재시도",
-    );
+    logger.debug("[getCartItems] PGRST301 에러, service role로 재시도");
     const { getServiceRoleClient } = await import(
       "@/lib/supabase/service-role"
     );
@@ -311,27 +279,21 @@ export async function getCartItems(): Promise<CartItemWithProduct[]> {
 
     if (retryCartError && retryCartError.code !== "PGRST116") {
       // PGRST116은 "no rows returned" 에러이므로 정상
-      logger.error("[getCartItems] 장바구니 조회 실패:", retryCartError);
+      logger.error("[getCartItems] 장바구니 조회 실패", retryCartError);
       return [];
     }
 
     cart = retryCart;
   } else if (cartError && cartError.code !== "PGRST116") {
     // PGRST116은 "no rows returned" 에러이므로 정상
-    logger.error("[getCartItems] 장바구니 조회 실패:", cartError);
+    logger.error("[getCartItems] 장바구니 조회 실패", cartError);
     return [];
   }
 
   if (!cart) {
-    logger.warn("[getCartItems] ⚠️ 장바구니 없음 - 빈 배열 반환");
-    logger.groupEnd();
+    logger.debug("[getCartItems] 장바구니 없음");
     return [];
   }
-
-  logger.info("[getCartItems] 5단계: cart_items 테이블 조회 시작");
-  logger.info("조회 조건:", {
-    cartId: cart.id,
-  });
 
   const { data: items, error } = await supabase
     .from("cart_items")
@@ -348,22 +310,9 @@ export async function getCartItems(): Promise<CartItemWithProduct[]> {
     .eq("cart_id", cart.id)
     .order("created_at", { ascending: false });
 
-  logger.info("[getCartItems] cart_items 조회 결과:", {
-    itemsCount: items?.length || 0,
-    hasError: !!error,
-    error: error
-      ? {
-          code: error.code,
-          message: error.message,
-        }
-      : null,
-  });
-
   // PGRST301 에러 발생 시 service role 클라이언트로 재시도
   if (error && error.code === "PGRST301") {
-    logger.warn(
-      "[getCartItems] cart_items 조회 시 PGRST301 에러 발생 - service role 클라이언트로 재시도",
-    );
+    logger.debug("[getCartItems] cart_items PGRST301 에러, service role로 재시도");
     const { getServiceRoleClient } = await import(
       "@/lib/supabase/service-role"
     );
@@ -385,7 +334,7 @@ export async function getCartItems(): Promise<CartItemWithProduct[]> {
       .order("created_at", { ascending: false });
 
     if (retryError) {
-      logger.error("[getCartItems] cart_items 재조회 실패:", retryError);
+      logger.error("[getCartItems] cart_items 조회 실패", retryError);
       return [];
     }
 
@@ -461,12 +410,10 @@ export async function getCartItems(): Promise<CartItemWithProduct[]> {
   }
 
   if (error) {
-    logger.error("[getCartItems] ❌ cart_items 조회 실패:", error);
-    logger.groupEnd();
+    logger.error("[getCartItems] cart_items 조회 실패", error);
     return [];
   }
 
-  logger.info("[getCartItems] cart_items 조회 성공 - 데이터 변환 시작");
   const finalItems = (items || []).map((item) => {
     const product = item.product as {
       id: string;
@@ -536,9 +483,6 @@ export async function getCartItems(): Promise<CartItemWithProduct[]> {
     };
   });
 
-  logger.info("[getCartItems] ✅ 6단계: 최종 결과 반환");
-  logger.info("반환할 아이템 수:", finalItems.length);
-  logger.groupEnd();
   return finalItems;
 }
 
