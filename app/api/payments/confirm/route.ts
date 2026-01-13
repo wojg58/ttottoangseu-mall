@@ -20,6 +20,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { getServiceRoleClient } from "@/lib/supabase/service-role";
+import { logger } from "@/lib/logger";
 
 interface PaymentConfirmRequest {
   paymentKey: string;
@@ -28,14 +29,11 @@ interface PaymentConfirmRequest {
 }
 
 export async function POST(request: NextRequest) {
-  console.group("[POST /api/payments/confirm] 결제 승인 처리");
-  
   try {
     // 인증 확인
     const { userId: clerkUserId } = await auth();
     if (!clerkUserId) {
-      console.log("인증 실패");
-      console.groupEnd();
+      logger.warn("[POST /api/payments/confirm] 인증 실패");
       return NextResponse.json(
         { success: false, message: "로그인이 필요합니다." },
         { status: 401 }
@@ -43,14 +41,11 @@ export async function POST(request: NextRequest) {
     }
 
     const body: PaymentConfirmRequest = await request.json();
-    console.log("결제 승인 요청 데이터:", body);
-
     const { paymentKey, orderId, amount } = body;
 
     // 입력값 검증
     if (!paymentKey || !orderId || !amount) {
-      console.log("필수 입력값 누락");
-      console.groupEnd();
+      logger.warn("[POST /api/payments/confirm] 필수 입력값 누락");
       return NextResponse.json(
         { success: false, message: "필수 입력값이 누락되었습니다." },
         { status: 400 }
@@ -58,8 +53,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (amount <= 0) {
-      console.log("잘못된 결제 금액");
-      console.groupEnd();
+      logger.warn("[POST /api/payments/confirm] 잘못된 결제 금액", { amount });
       return NextResponse.json(
         { success: false, message: "결제 금액이 올바르지 않습니다." },
         { status: 400 }
@@ -77,8 +71,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (!user) {
-      console.log("사용자 없음");
-      console.groupEnd();
+      logger.warn("[POST /api/payments/confirm] 사용자 없음", { clerkUserId });
       return NextResponse.json(
         { success: false, message: "사용자를 찾을 수 없습니다." },
         { status: 404 }
@@ -94,8 +87,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (!order) {
-      console.log("주문 없음");
-      console.groupEnd();
+      logger.warn("[POST /api/payments/confirm] 주문 없음", { orderId });
       return NextResponse.json(
         { success: false, message: "주문을 찾을 수 없습니다." },
         { status: 404 }
@@ -104,8 +96,7 @@ export async function POST(request: NextRequest) {
 
     // 금액 확인
     if (order.total_amount !== amount) {
-      console.log("금액 불일치");
-      console.groupEnd();
+      logger.warn("[POST /api/payments/confirm] 금액 불일치", { orderId, orderAmount: order.total_amount, requestAmount: amount });
       return NextResponse.json(
         { success: false, message: "결제 금액이 주문 금액과 일치하지 않습니다." },
         { status: 400 }
@@ -115,8 +106,7 @@ export async function POST(request: NextRequest) {
     // TossPayments 시크릿 키 확인
     const secretKey = process.env.TOSS_PAYMENTS_SECRET_KEY;
     if (!secretKey) {
-      console.error("TossPayments 시크릿 키가 설정되지 않았습니다.");
-      console.groupEnd();
+      logger.error("[POST /api/payments/confirm] TossPayments 시크릿 키 미설정");
       return NextResponse.json(
         { success: false, message: "결제 서비스 설정 오류입니다." },
         { status: 500 }
@@ -124,8 +114,6 @@ export async function POST(request: NextRequest) {
     }
 
     // TossPayments 결제 승인 API 호출
-    console.log("TossPayments 결제 승인 API 호출");
-    
     // 테스트 환경에서 에러 재현을 위한 헤더 준비
     const headers: Record<string, string> = {
       "Authorization": `Basic ${Buffer.from(`${secretKey}:`).toString("base64")}`,
@@ -137,7 +125,7 @@ export async function POST(request: NextRequest) {
     const testCode = process.env.TOSS_PAYMENTS_TEST_CODE;
     if (testCode && secretKey.startsWith("test_")) {
       headers["TossPayments-Test-Code"] = testCode;
-      console.log(`[테스트 모드] TossPayments-Test-Code: ${testCode}`);
+      logger.debug(`[POST /api/payments/confirm] 테스트 모드: TossPayments-Test-Code: ${testCode}`);
     }
     
     const tossResponse = await fetch("https://api.tosspayments.com/v1/payments/confirm", {
@@ -152,7 +140,7 @@ export async function POST(request: NextRequest) {
 
     if (!tossResponse.ok) {
       const errorData = await tossResponse.json();
-      console.error("TossPayments 결제 승인 실패:", errorData);
+      logger.error("[POST /api/payments/confirm] TossPayments 결제 승인 실패", errorData);
       
       // 결제 실패 정보 저장
       const { data: payment } = await supabase
@@ -174,7 +162,6 @@ export async function POST(request: NextRequest) {
           .eq("id", payment.id);
       }
 
-      console.groupEnd();
       return NextResponse.json(
         { success: false, message: errorData.message || "결제 승인에 실패했습니다." },
         { status: 400 }
@@ -182,7 +169,6 @@ export async function POST(request: NextRequest) {
     }
 
     const tossPaymentData = await tossResponse.json();
-    console.log("TossPayments 결제 승인 성공:", tossPaymentData);
 
     // 결제 정보 업데이트
     const { data: payment } = await supabase
@@ -193,8 +179,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (!payment) {
-      console.log("결제 정보 없음");
-      console.groupEnd();
+      logger.warn("[POST /api/payments/confirm] 결제 정보 없음", { orderId });
       return NextResponse.json(
         { success: false, message: "결제 정보를 찾을 수 없습니다." },
         { status: 404 }
@@ -222,8 +207,7 @@ export async function POST(request: NextRequest) {
       .eq("id", payment.id);
 
     if (updateError) {
-      console.error("결제 정보 업데이트 에러:", updateError);
-      console.groupEnd();
+      logger.error("[POST /api/payments/confirm] 결제 정보 업데이트 실패", updateError);
       return NextResponse.json(
         { success: false, message: "결제 정보 업데이트에 실패했습니다." },
         { status: 500 }
@@ -231,15 +215,11 @@ export async function POST(request: NextRequest) {
     }
 
     // 재고 차감 (결제 성공 시점에만 수행)
-    console.log("[POST /api/payments/confirm] 재고 차감 시작...");
     const { deductOrderStock } = await import("@/actions/orders");
     const stockResult = await deductOrderStock(orderId, supabase);
     
     if (!stockResult.success) {
-      console.error("⚠️ 재고 차감 실패:", stockResult.message);
-      // 재고 차감 실패 시에도 결제는 완료되었으므로 경고만 로그
-    } else {
-      console.log("✅ 재고 차감 완료");
+      logger.warn("[POST /api/payments/confirm] 재고 차감 실패 (결제는 성공)", { message: stockResult.message });
     }
 
     // 주문 상태 업데이트
@@ -269,8 +249,7 @@ export async function POST(request: NextRequest) {
       .eq("id", orderId);
 
     if (orderUpdateError) {
-      console.error("주문 상태 업데이트 에러:", orderUpdateError);
-      // 결제는 성공했으므로 경고만 로그
+      logger.warn("[POST /api/payments/confirm] 주문 상태 업데이트 실패 (결제는 성공)", orderUpdateError);
     }
 
     // 주문번호 및 주문 정보 조회
@@ -281,7 +260,6 @@ export async function POST(request: NextRequest) {
       .single();
 
     // 관리자 알림 발송 (이메일/알림톡)
-    console.log("[POST /api/payments/confirm] 관리자 알림 발송 시작...");
     try {
       const { notifyAdminOnOrderPaid } = await import("@/lib/notifications/notifyAdminOnOrderPaid");
       if (orderData) {
@@ -292,22 +270,13 @@ export async function POST(request: NextRequest) {
           createdAtUtc: orderData.created_at,
         });
 
-        if (notificationResult.success) {
-          console.log("[POST /api/payments/confirm] ✅ 관리자 알림 발송 완료:", {
-            alimtalkSent: notificationResult.alimtalkSent,
-            emailSent: notificationResult.emailSent,
-          });
-        } else {
-          console.warn("[POST /api/payments/confirm] ⚠️ 관리자 알림 발송 실패 (결제는 성공):", notificationResult.errors);
+        if (!notificationResult.success) {
+          logger.warn("[POST /api/payments/confirm] 관리자 알림 발송 실패 (결제는 성공)", { errors: notificationResult.errors });
         }
       }
     } catch (e) {
-      console.error("[POST /api/payments/confirm] ❌ 관리자 알림 발송 예외 (결제는 성공):", e);
-      // 알림 발송 실패해도 결제는 성공했으므로 계속 진행
+      logger.warn("[POST /api/payments/confirm] 관리자 알림 발송 예외 (결제는 성공)", e);
     }
-
-    console.log("결제 승인 처리 완료");
-    console.groupEnd();
 
     return NextResponse.json({
       success: true,
@@ -317,8 +286,7 @@ export async function POST(request: NextRequest) {
       orderNumber: orderData?.order_number || null,
     });
   } catch (error) {
-    console.error("결제 승인 처리 에러:", error);
-    console.groupEnd();
+    logger.error("[POST /api/payments/confirm] 예외 발생", error);
     return NextResponse.json(
       { success: false, message: "결제 승인 처리 중 오류가 발생했습니다." },
       { status: 500 }

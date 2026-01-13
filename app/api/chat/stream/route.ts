@@ -16,6 +16,7 @@ import {
   sanitizeDatabaseError,
   logError,
 } from "@/lib/error-handler";
+import { logger } from "@/lib/logger";
 
 /**
  * @file app/api/chat/stream/route.ts
@@ -39,8 +40,6 @@ function sseEvent(event: string, data: unknown): string {
 }
 
 export async function POST(req: Request) {
-  console.group("[ChatStreamAPI] POST /api/chat/stream");
-
   // Rate Limiting 체크
   const rateLimitResult = await rateLimitMiddleware(
     req,
@@ -49,7 +48,7 @@ export async function POST(req: Request) {
   );
 
   if (!rateLimitResult?.success) {
-    console.warn("[RateLimit] 챗봇 API 요청 제한 초과");
+    logger.warn("[POST /api/chat/stream] RateLimit 초과");
     return NextResponse.json(
       { error: "요청이 너무 많습니다. 잠시 후 다시 시도해주세요." },
       {
@@ -63,10 +62,9 @@ export async function POST(req: Request) {
 
   try {
     const { userId } = await auth();
-    console.log("auth:", { userId });
 
     if (!userId) {
-      console.warn("Unauthorized: userId is missing");
+      logger.warn("[POST /api/chat/stream] 인증 실패: userId 없음");
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
@@ -75,7 +73,7 @@ export async function POST(req: Request) {
     const validationResult = validateSchema(chatMessageSchema, body);
 
     if (validationResult.success === false) {
-      console.warn("[Validation] 챗봇 메시지 검증 실패:", validationResult.error);
+      logger.warn("[POST /api/chat/stream] 검증 실패", { error: validationResult.error });
       return NextResponse.json(
         { error: validationResult.error },
         { status: 400 },
@@ -84,11 +82,6 @@ export async function POST(req: Request) {
 
     // 타입 가드: success가 true이면 data가 존재함
     const { sessionId, message } = validationResult.data;
-
-    console.log("requestBody:", {
-      sessionId,
-      messageLength: message.length,
-    });
 
     const supabase = getServiceRoleClient();
 
@@ -109,7 +102,7 @@ export async function POST(req: Request) {
     }
 
     if (!userRow) {
-      console.warn("User not synced yet. Ask client to retry after sync-user.");
+      logger.warn("[POST /api/chat/stream] 사용자 미동기화", { userId });
       return NextResponse.json(
         { error: "User not found. Please sign out/in again." },
         { status: 404 },
@@ -133,7 +126,7 @@ export async function POST(req: Request) {
     }
 
     if (!session) {
-      console.warn("Session not found:", sessionId);
+      logger.warn("[POST /api/chat/stream] 세션 없음", { sessionId });
       return NextResponse.json(
         { error: "세션을 찾을 수 없습니다." },
         { status: 404 }
@@ -152,9 +145,9 @@ export async function POST(req: Request) {
           requestUserId: userRow.id,
         }
       );
-      console.warn("Forbidden: session owner mismatch", {
+      logger.warn("[POST /api/chat/stream] 세션 소유자 불일치", {
         sessionUserId: session.user_id,
-        userId: userRow.id,
+        requestUserId: userRow.id,
       });
       return NextResponse.json(
         { error: "세션에 접근할 권한이 없습니다." },
@@ -166,7 +159,7 @@ export async function POST(req: Request) {
     const sessionAge = Date.now() - new Date(session.created_at || 0).getTime();
     const maxSessionAge = 24 * 60 * 60 * 1000; // 24시간
     if (sessionAge > maxSessionAge) {
-      console.warn("Session expired:", { sessionId, age: sessionAge });
+      logger.warn("[POST /api/chat/stream] 세션 만료", { sessionId, age: sessionAge });
       return NextResponse.json(
         { error: "세션이 만료되었습니다. 새 세션을 생성해주세요." },
         { status: 410 } // 410 Gone
@@ -216,11 +209,6 @@ export async function POST(req: Request) {
     ];
 
     const MODEL_NAME = "gemini-2.5-flash";
-    console.log("Gemini call start:", {
-      MODEL_NAME,
-      modelMessagesCount: modelMessages.length,
-      hasSystemPrompt: true,
-    });
 
     // 5) SSE 스트리밍 응답
     let assistantText = "";
@@ -245,9 +233,7 @@ export async function POST(req: Request) {
               .insert({ session_id: sessionId, role: "assistant", content: assistantText });
 
             if (insertAssistantError) {
-              console.error("Failed to insert assistant message:", insertAssistantError);
-            } else {
-              console.log("Inserted assistant message:", { length: assistantText.length });
+              logger.error("[POST /api/chat/stream] assistant 메시지 저장 실패", insertAssistantError);
             }
           }
 
@@ -256,7 +242,7 @@ export async function POST(req: Request) {
           );
           controller.close();
         } catch (err) {
-          console.error("Streaming error:", err);
+          logger.error("[POST /api/chat/stream] 스트리밍 에러", err);
           controller.enqueue(
             encoder.encode(
               sseEvent("error", {
@@ -272,7 +258,7 @@ export async function POST(req: Request) {
         }
       },
       async cancel(reason) {
-        console.warn("Client cancelled stream:", reason);
+        logger.debug("[POST /api/chat/stream] 클라이언트 스트림 취소", { reason });
       },
     });
 
@@ -290,8 +276,6 @@ export async function POST(req: Request) {
       { error: "서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요." },
       { status: 500 },
     );
-  } finally {
-    console.groupEnd();
   }
 }
 

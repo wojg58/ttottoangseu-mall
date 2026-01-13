@@ -12,6 +12,7 @@ import {
   rateLimitHeaders,
   RATE_LIMITS,
 } from "@/lib/rate-limit";
+import { logger } from "@/lib/logger";
 
 /**
  * Clerk 사용자를 Supabase users 테이블에 동기화하는 API
@@ -21,8 +22,6 @@ import {
  */
 export async function POST(request: Request) {
   try {
-    console.group("🔐 API: 사용자 동기화 요청");
-
     // Rate Limiting 체크
     const rateLimitResult = await rateLimitMiddleware(
       request,
@@ -31,8 +30,7 @@ export async function POST(request: Request) {
     );
 
     if (!rateLimitResult?.success) {
-      console.warn("[RateLimit] 사용자 동기화 API 요청 제한 초과");
-      console.groupEnd();
+      logger.warn("[POST /api/sync-user] RateLimit 초과");
       return NextResponse.json(
         { error: "요청이 너무 많습니다. 잠시 후 다시 시도해주세요." },
         {
@@ -46,23 +44,18 @@ export async function POST(request: Request) {
     const authResult = await auth();
     let userId = authResult?.userId;
 
-    console.log("auth() 결과:", { userId, hasAuth: !!authResult });
-
     // auth()로 userId를 못 가져온 경우, Authorization 헤더에서 토큰 확인
     if (!userId) {
       const authHeader = request.headers.get("Authorization");
       if (authHeader?.startsWith("Bearer ")) {
-        console.log("Authorization 헤더에서 토큰 발견, 재시도...");
         // 토큰이 있으면 auth()를 다시 시도 (미들웨어가 처리했을 수 있음)
         const retryAuth = await auth();
         userId = retryAuth?.userId;
-        console.log("재시도 결과:", { userId });
       }
     }
 
     if (!userId) {
-      console.error("❌ 인증 실패: userId가 없습니다");
-      console.log("요청 헤더:", Object.fromEntries(request.headers.entries()));
+      logger.error("[POST /api/sync-user] 인증 실패: userId 없음");
       
       // Sentry에 인증 실패 이벤트 전송
       Sentry.captureMessage("사용자 동기화 API 인증 실패", {
@@ -80,58 +73,24 @@ export async function POST(request: Request) {
         },
       });
       
-      console.groupEnd();
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    console.log("✅ 인증 확인됨, userId:", userId);
-
     // Clerk에서 사용자 정보 가져오기
-    console.log("📥 Clerk에서 사용자 정보 가져오는 중...");
     const client = await clerkClient();
     const clerkUser = await client.users.getUser(userId);
 
     if (!clerkUser) {
-      console.error("❌ Clerk 사용자를 찾을 수 없습니다");
-      console.groupEnd();
+      logger.error("[POST /api/sync-user] Clerk 사용자 없음", { userId });
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
-
-    console.log("✅ Clerk 사용자 정보:", {
-      id: clerkUser.id,
-      name: clerkUser.fullName || clerkUser.username,
-      email: clerkUser.emailAddresses[0]?.emailAddress,
-      emailAddresses: clerkUser.emailAddresses,
-      externalAccounts: clerkUser.externalAccounts,
-      createdAt: clerkUser.createdAt,
-      firstName: clerkUser.firstName,
-      lastName: clerkUser.lastName,
-      username: clerkUser.username,
-      imageUrl: clerkUser.imageUrl,
-    });
     
     // External Accounts 상세 로그 (핵심: 네이버 로그인 연결 여부 확인)
-    if (clerkUser.externalAccounts && clerkUser.externalAccounts.length > 0) {
-      console.log("✅ External Accounts 연결됨:", clerkUser.externalAccounts.map(acc => ({
-        provider: acc.provider,
-        id: acc.id,
-        emailAddress: acc.emailAddress,
-        verified: acc.verification?.status,
-        username: acc.username,
-        firstName: acc.firstName,
-        lastName: acc.lastName,
-        imageUrl: acc.imageUrl,
-      })));
-    } else {
-      console.error("❌ [중요] External Accounts가 없습니다!");
-      console.error("   → 네이버 로그인이 Clerk에 연결되지 않았습니다.");
-      console.error("   → 가능한 원인:");
-      console.error("      1. Proxy 서버 응답의 'sub' 값이 Clerk가 기대하는 형식과 다름");
-      console.error("      2. Clerk Dashboard의 Attribute Mapping 설정 문제");
-      console.error("         - User ID / Subject → 'sub' (대소문자 주의)");
-      console.error("         - Email → 'email'");
-      console.error("      3. Proxy 서버가 Clerk에 응답을 제대로 반환하지 못함");
-      console.error("   → Proxy 서버 로그 확인: ssh로 접속 후 'pm2 logs clerk-userinfo-proxy'");
+    if (!clerkUser.externalAccounts || clerkUser.externalAccounts.length === 0) {
+      logger.warn("[POST /api/sync-user] External Accounts 없음", {
+        userId: clerkUser.id,
+        email: clerkUser.emailAddresses[0]?.emailAddress,
+      });
       
       // Sentry에 External Account 누락 이벤트 전송
       Sentry.captureMessage("OAuth External Account 누락 - 사용자 동기화 API", {
@@ -162,20 +121,10 @@ export async function POST(request: Request) {
     
     // 이메일 주소 상세 확인
     if (!clerkUser.emailAddresses || clerkUser.emailAddresses.length === 0) {
-      console.error("❌ 이메일 주소가 없습니다! Clerk가 네이버에서 이메일을 가져오지 못했습니다.");
-      console.error("이것은 Clerk의 User Info Mapping 설정 문제일 수 있습니다.");
-      console.error("Clerk 대시보드에서 User Info Mapping을 확인하세요:");
-      console.error("  - Email: response.email 또는 $.response.email");
-      console.error("  - Name: response.name 또는 $.response.name");
-    } else {
-      console.log("✅ 이메일 주소 확인됨:", clerkUser.emailAddresses.map(e => ({
-        email: e.emailAddress,
-        verified: e.verification?.status,
-      })));
+      logger.warn("[POST /api/sync-user] 이메일 주소 없음", { userId: clerkUser.id });
     }
 
     // Supabase에 사용자 정보 동기화
-    console.log("💾 Supabase에 사용자 정보 동기화 중...");
     const supabase = getServiceRoleClient();
 
     const userData = {
@@ -189,10 +138,7 @@ export async function POST(request: Request) {
       role: "customer",
     };
 
-    console.log("저장할 데이터:", userData);
-
     // 먼저 clerk_user_id로 기존 사용자 조회 (삭제되지 않은 사용자만)
-    console.log("🔍 clerk_user_id로 사용자 조회 중...");
     const { data: existingUserByClerkId, error: fetchErrorByClerkId } =
       await supabase
         .from("users")
@@ -203,7 +149,6 @@ export async function POST(request: Request) {
 
     if (fetchErrorByClerkId) {
       logError(fetchErrorByClerkId, { api: "/api/sync-user", step: "fetch_user_by_clerk_id" });
-      console.groupEnd();
       return NextResponse.json(
         { error: sanitizeDatabaseError(fetchErrorByClerkId) },
         { status: 500 },
@@ -214,7 +159,6 @@ export async function POST(request: Request) {
 
     // clerk_user_id로 찾지 못했고, 이메일이 있는 경우 이메일로도 조회
     if (!existingUser && userData.email) {
-      console.log("🔍 이메일로 사용자 조회 중...");
       const { data: existingUserByEmail, error: fetchErrorByEmail } =
         await supabase
           .from("users")
@@ -224,12 +168,10 @@ export async function POST(request: Request) {
           .maybeSingle();
 
       if (fetchErrorByEmail) {
-        console.error("❌ 이메일로 사용자 조회 에러:", fetchErrorByEmail);
+        logger.warn("[POST /api/sync-user] 이메일로 사용자 조회 실패", fetchErrorByEmail);
         // 이메일 조회 실패는 치명적이지 않으므로 계속 진행
       } else if (existingUserByEmail) {
-        console.log(
-          "⚠️ 같은 이메일을 가진 사용자 발견, clerk_user_id 연결 중...",
-        );
+        logger.debug("[POST /api/sync-user] 같은 이메일 사용자 발견, clerk_user_id 연결");
         existingUser = existingUserByEmail;
       }
     }
@@ -237,7 +179,6 @@ export async function POST(request: Request) {
     let result;
     if (existingUser) {
       // 기존 사용자 업데이트
-      console.log("기존 사용자 발견, 업데이트 중...");
       const updateData: {
         name: string;
         email: string;
@@ -251,9 +192,7 @@ export async function POST(request: Request) {
 
       // clerk_user_id가 없거나 다른 경우 업데이트
       if (existingUser.clerk_user_id !== clerkUser.id) {
-        console.log(
-          `clerk_user_id 업데이트: ${existingUser.clerk_user_id} → ${clerkUser.id}`,
-        );
+        logger.debug(`[POST /api/sync-user] clerk_user_id 업데이트: ${existingUser.clerk_user_id} → ${clerkUser.id}`);
         updateData.clerk_user_id = clerkUser.id;
       }
 
@@ -266,7 +205,6 @@ export async function POST(request: Request) {
 
       if (updateError) {
         logError(updateError, { api: "/api/sync-user", step: "update_user" });
-        console.groupEnd();
         return NextResponse.json(
           { error: sanitizeDatabaseError(updateError) },
           { status: 500 },
@@ -275,7 +213,6 @@ export async function POST(request: Request) {
       result = data;
     } else {
       // 새 사용자 생성
-      console.log("새 사용자 생성 중...");
       const { data, error: insertError } = await supabase
         .from("users")
         .insert(userData)
@@ -284,7 +221,6 @@ export async function POST(request: Request) {
 
       if (insertError) {
         logError(insertError, { api: "/api/sync-user", step: "create_user" });
-        console.groupEnd();
         return NextResponse.json(
           { error: sanitizeDatabaseError(insertError) },
           { status: 500 },
@@ -293,7 +229,6 @@ export async function POST(request: Request) {
       result = data;
 
       // 신규 가입 시 1,000원 쿠폰 발급
-      console.log("🎁 신규 가입 쿠폰 발급 중...");
       const couponCode = `WELCOME-${result.id.toString().substring(0, 8).toUpperCase()}`;
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 30); // 30일 후 만료
@@ -310,30 +245,16 @@ export async function POST(request: Request) {
       });
 
       if (couponError) {
-        console.error("❌ 쿠폰 발급 에러:", couponError);
-        // 쿠폰 발급 실패해도 사용자 생성은 성공한 것으로 처리
-      } else {
-        console.log("✅ 쿠폰 발급 완료:", couponCode);
+        logger.warn("[POST /api/sync-user] 쿠폰 발급 실패 (사용자 생성은 성공)", couponError);
       }
     }
-
-    // 시간 필드를 한국 시간으로 변환하여 로그에 표시
-    const { formatKoreaTimeForLog } = await import("@/lib/utils/format-time");
-    console.log("✅ Supabase 동기화 완료:", {
-      ...result,
-      created_at: formatKoreaTimeForLog(result.created_at),
-      updated_at: formatKoreaTimeForLog(result.updated_at),
-      deleted_at: result.deleted_at ? formatKoreaTimeForLog(result.deleted_at) : null,
-    });
-    console.groupEnd();
 
     return NextResponse.json({
       success: true,
       user: result,
     });
   } catch (error) {
-    console.error("❌ 동기화 중 예외 발생:", error);
-    console.groupEnd();
+    logger.error("[POST /api/sync-user] 예외 발생", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 },

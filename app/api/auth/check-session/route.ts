@@ -8,6 +8,7 @@
 
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 
 export const runtime = "nodejs";
 
@@ -18,11 +19,10 @@ export async function GET() {
     // 세션 상태 로깅 (배포 환경 디버깅용)
     const isAuthenticated = !!userId;
     
-    console.log("[CheckSessionAPI] 세션 확인:", {
-      userId: userId || "null",
-      sessionId: sessionId || "null",
+    logger.debug("[GET /api/auth/check-session] 세션 확인", {
+      userId: userId || null,
+      sessionId: sessionId || null,
       isAuthenticated,
-      timestamp: new Date().toISOString(),
     });
 
     return NextResponse.json({
@@ -32,7 +32,7 @@ export async function GET() {
       sessionId: sessionId || null,
     });
   } catch (error) {
-    console.error("[CheckSessionAPI] 세션 확인 실패:", error);
+    logger.error("[GET /api/auth/check-session] 세션 확인 실패", error);
     return NextResponse.json(
       {
         success: false,

@@ -25,8 +25,6 @@ import {
 import { logger } from "@/lib/logger";
 
 export async function GET(request: NextRequest) {
-  console.group("[GET /api/sync-stock] 재고 동기화 API 호출");
-
   try {
     const searchParams = request.nextUrl.searchParams;
     const productId = searchParams.get("productId");
@@ -35,20 +33,18 @@ export async function GET(request: NextRequest) {
     // 옵션 단위 동기화
     if (variantMode) {
       if (productId) {
-        logger.info(`[API] 단일 상품 옵션 재고 동기화: ${productId}`);
+        logger.info(`[GET /api/sync-stock] 단일 상품 옵션 재고 동기화: ${productId}`);
         const result = await syncVariantStocks(productId);
 
-        console.groupEnd();
         return NextResponse.json(result, {
           status: result.success ? 200 : 500,
         });
       }
 
       // 전체 상품 옵션 재고 동기화
-      logger.info("[API] 전체 상품 옵션 재고 동기화 시작");
+      logger.info("[GET /api/sync-stock] 전체 상품 옵션 재고 동기화 시작");
       const result = await syncAllVariantStocks();
 
-      console.groupEnd();
       return NextResponse.json(result, {
         status: result.success ? 200 : 500,
       });
@@ -56,26 +52,23 @@ export async function GET(request: NextRequest) {
 
     // 기존 상품 단위 동기화 (하위 호환성)
     if (productId) {
-      logger.info(`[API] 단일 상품 재고 동기화: ${productId}`);
+      logger.info(`[GET /api/sync-stock] 단일 상품 재고 동기화: ${productId}`);
       const result = await syncProductStock(productId);
 
-      console.groupEnd();
       return NextResponse.json(result, {
         status: result.success ? 200 : 500,
       });
     }
 
     // 전체 상품 동기화
-    logger.info("[API] 전체 상품 재고 동기화 시작");
+    logger.info("[GET /api/sync-stock] 전체 상품 재고 동기화 시작");
     const result = await syncAllStocks();
 
-    console.groupEnd();
     return NextResponse.json(result, {
       status: result.success ? 200 : 500,
     });
   } catch (error) {
-    logger.error("[API] 재고 동기화 예외", error);
-    console.groupEnd();
+    logger.error("[GET /api/sync-stock] 예외 발생", error);
     return NextResponse.json(
       {
         success: false,

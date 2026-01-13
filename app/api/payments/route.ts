@@ -23,9 +23,9 @@ import {
   paymentRequestSchema,
   validateSchema,
 } from "@/lib/validation";
+import { logger } from "@/lib/logger";
 
 export async function POST(request: NextRequest) {
-  console.group("[POST /api/payments] 결제 요청");
 
   // Rate Limiting 체크
   const rateLimitResult = await rateLimitMiddleware(
@@ -35,8 +35,7 @@ export async function POST(request: NextRequest) {
   );
 
   if (!rateLimitResult?.success) {
-    console.warn("[RateLimit] 결제 요청 API 요청 제한 초과");
-    console.groupEnd();
+    logger.warn("[POST /api/payments] RateLimit 초과");
     return NextResponse.json(
       { success: false, message: "요청이 너무 많습니다. 잠시 후 다시 시도해주세요." },
       {
@@ -50,8 +49,7 @@ export async function POST(request: NextRequest) {
     // 인증 확인
     const { userId: clerkUserId } = await auth();
     if (!clerkUserId) {
-      console.log("인증 실패");
-      console.groupEnd();
+      logger.warn("[POST /api/payments] 인증 실패");
       return NextResponse.json(
         { success: false, message: "로그인이 필요합니다." },
         { status: 401 }
@@ -63,8 +61,7 @@ export async function POST(request: NextRequest) {
     const validationResult = validateSchema(paymentRequestSchema, body);
 
     if (validationResult.success === false) {
-      console.warn("[Validation] 결제 요청 검증 실패:", validationResult.error);
-      console.groupEnd();
+      logger.warn("[POST /api/payments] 검증 실패", { error: validationResult.error });
       return NextResponse.json(
         { success: false, message: validationResult.error },
         { status: 400 }
@@ -72,13 +69,6 @@ export async function POST(request: NextRequest) {
     }
 
     const { orderId, orderNumber, amount, customerName, customerEmail } = validationResult.data;
-    console.log("결제 요청 데이터:", {
-      orderId,
-      orderNumber,
-      amount,
-      customerName,
-      customerEmail: customerEmail.substring(0, 3) + "***",
-    });
 
     // Supabase 서비스 롤 클라이언트 생성 (RLS 우회)
     const supabase = getServiceRoleClient();
@@ -91,8 +81,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (!user) {
-      console.log("사용자 없음");
-      console.groupEnd();
+      logger.warn("[POST /api/payments] 사용자 없음", { clerkUserId });
       return NextResponse.json(
         { success: false, message: "사용자를 찾을 수 없습니다." },
         { status: 404 }
@@ -108,8 +97,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (!order) {
-      console.log("주문 없음");
-      console.groupEnd();
+      logger.warn("[POST /api/payments] 주문 없음", { orderId });
       return NextResponse.json(
         { success: false, message: "주문을 찾을 수 없습니다." },
         { status: 404 }
@@ -118,8 +106,7 @@ export async function POST(request: NextRequest) {
 
     const paymentStatus = order.payment_status || order.status;
     if (paymentStatus !== "PENDING") {
-      console.log("이미 처리된 주문");
-      console.groupEnd();
+      logger.warn("[POST /api/payments] 이미 처리된 주문", { orderId, paymentStatus });
       return NextResponse.json(
         { success: false, message: "이미 처리된 주문입니다." },
         { status: 400 }
@@ -128,8 +115,7 @@ export async function POST(request: NextRequest) {
 
     // 금액 확인
     if (order.total_amount !== amount) {
-      console.log("금액 불일치");
-      console.groupEnd();
+      logger.warn("[POST /api/payments] 금액 불일치", { orderId, orderAmount: order.total_amount, requestAmount: amount });
       return NextResponse.json(
         { success: false, message: "결제 금액이 주문 금액과 일치하지 않습니다." },
         { status: 400 }
@@ -139,8 +125,7 @@ export async function POST(request: NextRequest) {
     // TossPayments 시크릿 키 확인
     const secretKey = process.env.TOSS_PAYMENTS_SECRET_KEY;
     if (!secretKey) {
-      console.error("TossPayments 시크릿 키가 설정되지 않았습니다.");
-      console.groupEnd();
+      logger.error("[POST /api/payments] TossPayments 시크릿 키 미설정");
       return NextResponse.json(
         { success: false, message: "결제 서비스 설정 오류입니다." },
         { status: 500 }
@@ -172,16 +157,12 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (paymentError || !payment) {
-      console.error("결제 정보 저장 에러:", paymentError);
-      console.groupEnd();
+      logger.error("[POST /api/payments] 결제 정보 저장 실패", paymentError);
       return NextResponse.json(
         { success: false, message: "결제 정보 저장에 실패했습니다." },
         { status: 500 }
       );
     }
-
-    console.log("결제 요청 성공:", paymentId);
-    console.groupEnd();
 
     return NextResponse.json({
       success: true,
@@ -191,8 +172,7 @@ export async function POST(request: NextRequest) {
       amount,
     });
   } catch (error) {
-    console.error("결제 요청 에러:", error);
-    console.groupEnd();
+    logger.error("[POST /api/payments] 예외 발생", error);
     return NextResponse.json(
       { success: false, message: "결제 요청 처리 중 오류가 발생했습니다." },
       { status: 500 }

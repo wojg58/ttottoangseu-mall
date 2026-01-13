@@ -10,6 +10,7 @@ import {
   rateLimitHeaders,
   RATE_LIMITS,
 } from "@/lib/rate-limit";
+import { logger } from "@/lib/logger";
 
 /**
  * @file app/api/chat/session/route.ts
@@ -24,8 +25,6 @@ import {
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
-  console.group("[ChatSessionAPI] POST /api/chat/session");
-  
   // Rate Limiting 체크
   const rateLimitResult = await rateLimitMiddleware(
     request,
@@ -34,8 +33,7 @@ export async function POST(request: Request) {
   );
 
   if (!rateLimitResult?.success) {
-    console.warn("[RateLimit] 챗봇 세션 생성 API 요청 제한 초과");
-    console.groupEnd();
+    logger.warn("[POST /api/chat/session] RateLimit 초과");
     return NextResponse.json(
       { error: "요청이 너무 많습니다. 잠시 후 다시 시도해주세요." },
       {
@@ -47,10 +45,9 @@ export async function POST(request: Request) {
 
   try {
     const { userId } = await auth();
-    console.log("auth:", { userId });
 
     if (!userId) {
-      console.warn("Unauthorized: userId is missing");
+      logger.warn("[POST /api/chat/session] 인증 실패: userId 없음");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -76,7 +73,7 @@ export async function POST(request: Request) {
 
     // 2) 없으면 Clerk에서 가져와 생성
     if (!userRow) {
-      console.log("User not found in Supabase. Creating one from Clerk...");
+      logger.debug("[POST /api/chat/session] Supabase 사용자 없음, Clerk에서 생성");
       const client = await clerkClient();
       const clerkUser = await client.users.getUser(userId);
 
@@ -122,7 +119,7 @@ export async function POST(request: Request) {
       .maybeSingle();
 
     if (recentSession) {
-      console.log("최근 생성된 세션 재사용:", recentSession.id);
+      logger.debug("[POST /api/chat/session] 최근 세션 재사용", { sessionId: recentSession.id });
       return NextResponse.json({ sessionId: recentSession.id });
     }
 
@@ -141,7 +138,6 @@ export async function POST(request: Request) {
       );
     }
 
-    console.log("Created session:", session);
     return NextResponse.json({ sessionId: session.id });
   } catch (e) {
     logError(e, { api: "/api/chat/session", step: "unexpected_error" });
@@ -149,8 +145,6 @@ export async function POST(request: Request) {
       { error: "서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요." },
       { status: 500 },
     );
-  } finally {
-    console.groupEnd();
   }
 }
 
