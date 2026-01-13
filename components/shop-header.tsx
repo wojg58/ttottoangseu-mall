@@ -145,23 +145,23 @@ export default function ShopHeader() {
 
   return (
     <>
-      {/* 카카오톡 친구 추가 배너 */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="shop-container">
-          <div className="flex items-center justify-center h-[30px] gap-2">
-            <KakaoChannelButton
-              variant="sm"
-              locationTag="HeaderBanner"
-              buttonText="카카오톡"
-            />
-            <span className="text-black text-xs font-medium">
-              카카오톡 친구 추가시 1,000원 할인 쿠폰
-            </span>
+      <header className="sticky top-0 z-50 w-full">
+        {/* 카카오톡 친구 추가 배너 */}
+        <div className="bg-white border-b border-gray-200">
+          <div className="shop-container">
+            <div className="flex items-center h-[30px] gap-2">
+              <KakaoChannelButton
+                variant="sm"
+                locationTag="HeaderBanner"
+                buttonText="카카오톡"
+              />
+              <span className="text-black text-xs font-medium">
+                카카오톡 친구 추가시 1,000원 할인 쿠폰
+              </span>
+            </div>
           </div>
         </div>
-      </div>
 
-      <header className="sticky top-0 z-50 w-full">
         {/* 메인 헤더 - 핑크 배경 (대비율 개선: 더 진한 핑크 사용) */}
         <div className="bg-[#FF5088]">
           <div className="shop-container h-[70px] sm:h-[90px] md:h-[120px] flex items-center">
