@@ -13,6 +13,7 @@ const isPublicRoute = createRouteMatcher([
   "/sign-in(.*)",
   "/sign-up(.*)",
   "/api/webhooks(.*)",
+  "/api/test(.*)", // 테스트 엔드포인트는 인증 없이 접근 가능
   "/products(.*)",
   "/company",
   "/terms",

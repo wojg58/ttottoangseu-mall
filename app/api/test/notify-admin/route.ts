@@ -30,6 +30,15 @@ interface TestNotifyRequest {
   orderDateUtc: string; // ISO string (UTC)
 }
 
+export async function GET() {
+  return NextResponse.json({
+    success: true,
+    message: "테스트 엔드포인트가 정상 작동 중입니다.",
+    endpoint: "/api/test/notify-admin",
+    method: "POST",
+  });
+}
+
 export async function POST(request: NextRequest) {
   logger.group("[POST /api/test/notify-admin] 관리자 알림 테스트");
 
