@@ -93,9 +93,9 @@
   background: linear-gradient(90deg, #bbf7d0, #86efac);
 }
 
-/* 블루 (신규가입) - green-200 배경 */
+/* 블루 (신규가입) - 핑크 배경 */
 .event-banner.blue {
-  background: linear-gradient(90deg, #bbf7d0, #86efac);
+  background: linear-gradient(90deg, #ffd6e8, #ffb6d5);
 }
 
 /* 옐로우 (카카오톡 친구추가) - #86efac 배경 */
@@ -110,7 +110,7 @@
 
 .event-banner.blue .coupon::before,
 .event-banner.blue .coupon::after {
-  background: #bbf7d0;
+  background: #ffd6e8;
 }
 
 .event-banner.yellow .coupon::before,
@@ -187,7 +187,7 @@
 
 .event-banner.blue .coupon::before,
 .event-banner.blue .coupon::after {
-  background: #bbf7d0;
+  background: #ffd6e8;
 }
 
 .coupon::before {
