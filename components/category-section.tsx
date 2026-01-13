@@ -13,6 +13,7 @@ import { useState } from "react";
 import Image from "next/image";
 import type { Category } from "@/types/database";
 import CategoryProductsSection from "./category-products-section";
+import logger from "@/lib/logger-client";
 
 // 카테고리별 이모지 매핑
 const CATEGORY_EMOJI: Record<string, string> = {
@@ -31,7 +32,7 @@ export default function CategorySection({ categories }: CategorySectionProps) {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   const handleCategoryClick = (categorySlug: string) => {
-    console.log("[CategorySection] 카테고리 클릭:", categorySlug);
+    logger.debug("[CategorySection] 카테고리 클릭");
     // 같은 카테고리를 다시 클릭하면 닫기
     if (selectedCategory === categorySlug) {
       setSelectedCategory(null);

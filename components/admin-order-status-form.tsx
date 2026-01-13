@@ -11,6 +11,7 @@ import { updateOrderStatus } from "@/actions/admin";
 import type { Order, OrderPaymentStatus, OrderFulfillmentStatus } from "@/types/database";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import logger from "@/lib/logger-client";
 
 interface AdminOrderStatusFormProps {
   order: Order;
@@ -44,13 +45,6 @@ export default function AdminOrderStatusForm({ order }: AdminOrderStatusFormProp
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    console.log("[AdminOrderStatusForm] 주문 상태 변경:", {
-      orderId: order.id,
-      paymentStatus,
-      fulfillmentStatus,
-      trackingNumber,
-    });
-
     startTransition(async () => {
       const result = await updateOrderStatus(
         order.id,
@@ -60,8 +54,12 @@ export default function AdminOrderStatusForm({ order }: AdminOrderStatusFormProp
       );
 
       if (result.success) {
+        logger.debug("[AdminOrderStatusForm] 주문 상태 변경 성공");
         router.refresh();
       } else {
+        logger.error("[AdminOrderStatusForm] 주문 상태 변경 실패", {
+          message: result.message,
+        });
         alert(result.message);
       }
     });

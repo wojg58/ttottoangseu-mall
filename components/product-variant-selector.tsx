@@ -13,6 +13,7 @@
 
 import { useState, useEffect } from "react";
 import type { ProductVariant } from "@/types/database";
+import logger from "@/lib/logger-client";
 
 interface ProductVariantSelectorProps {
   variants: ProductVariant[];
@@ -33,11 +34,6 @@ export default function ProductVariantSelector({
   const [selectedVariantId, setSelectedVariantId] = useState<string | null>(
     null,
   );
-
-  console.log("[ProductVariantSelector] 렌더링:", {
-    variantsCount: variants.length,
-    selectedVariantId,
-  });
 
   // 필터링된 variants (삭제되지 않은 것만)
   const availableVariants = variants.filter((v) => !v.deleted_at);
@@ -93,8 +89,6 @@ export default function ProductVariantSelector({
   });
 
   const handleVariantClick = (variantId: string) => {
-    console.log("[ProductVariantSelector] 옵션 선택:", variantId);
-
     // 이미 선택된 옵션을 다시 클릭하면 선택 해제
     if (selectedVariantId === variantId) {
       if (!required) {

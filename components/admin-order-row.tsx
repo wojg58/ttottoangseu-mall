@@ -11,6 +11,7 @@ import { updateOrderStatus } from "@/actions/admin";
 import type { Order, OrderPaymentStatus } from "@/types/database";
 import { Button } from "@/components/ui/button";
 import DateDisplay from "@/components/date-display";
+import logger from "@/lib/logger-client";
 
 interface AdminOrderRowProps {
   order: Order;
@@ -30,17 +31,15 @@ export default function AdminOrderRow({ order }: AdminOrderRowProps) {
   );
 
   const handlePaymentStatusChange = (newStatus: OrderPaymentStatus) => {
-    console.log(
-      "[AdminOrderRow] 결제 상태 변경:",
-      order.order_number,
-      newStatus,
-    );
-
     startTransition(async () => {
       const result = await updateOrderStatus(order.id, newStatus);
       if (result.success) {
+        logger.debug("[AdminOrderRow] 결제 상태 변경 성공");
         setCurrentPaymentStatus(newStatus);
       } else {
+        logger.error("[AdminOrderRow] 결제 상태 변경 실패", {
+          message: result.message,
+        });
         alert(result.message);
       }
     });

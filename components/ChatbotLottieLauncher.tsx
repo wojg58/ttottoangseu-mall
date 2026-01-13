@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Lottie from "lottie-react";
 import { openChatWidget } from "@/lib/chat-widget-utils";
+import logger from "@/lib/logger-client";
 
 export default function ChatbotLottieLauncher() {
   const [animationData, setAnimationData] = useState<any>(null);
@@ -11,7 +12,9 @@ export default function ChatbotLottieLauncher() {
     fetch("/lottie/chatbot-button.json")
       .then((r) => r.json())
       .then(setAnimationData)
-      .catch(console.error);
+      .catch((error) => {
+        logger.error("[ChatbotLottieLauncher] 애니메이션 데이터 로드 실패", error);
+      });
   }, []);
 
   // 기존 런처 버튼 숨기기 (opacity:0 + pointer-events:none)

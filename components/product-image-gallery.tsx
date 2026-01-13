@@ -13,6 +13,7 @@
 import Image from "next/image";
 import { useState } from "react";
 import type { ProductImage } from "@/types/database";
+import logger from "@/lib/logger-client";
 
 interface ProductImageGalleryProps {
   images: ProductImage[];
@@ -35,8 +36,6 @@ export default function ProductImageGallery({
     return (a.sort_order || 0) - (b.sort_order || 0);
   });
 
-  console.log("[ProductImageGallery] 렌더링, 이미지 수:", sortedImages.length);
-
   // 이미지가 없는 경우
   if (!sortedImages || sortedImages.length === 0) {
     return (
@@ -51,11 +50,8 @@ export default function ProductImageGallery({
 
   const currentImage = sortedImages[selectedIndex];
 
-  const handleImageError = (index: number, imageUrl: string) => {
-    console.warn(
-      `[ProductImageGallery] 이미지 로딩 실패 (인덱스 ${index}):`,
-      imageUrl,
-    );
+  const handleImageError = (index: number) => {
+    logger.warn("[ProductImageGallery] 이미지 로딩 실패", { index });
     setImageErrors((prev) => new Set(prev).add(index));
   };
 
@@ -71,13 +67,7 @@ export default function ProductImageGallery({
             className="object-contain"
             sizes="(max-width: 1024px) 100vw, 50vw"
             priority
-            onError={() => handleImageError(selectedIndex, currentImage.image_url)}
-            onLoadingComplete={() => {
-              console.log(
-                "[ProductImageGallery] 메인 이미지 로딩 완료:",
-                currentImage.image_url,
-              );
-            }}
+            onError={() => handleImageError(selectedIndex)}
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
@@ -97,7 +87,6 @@ export default function ProductImageGallery({
               key={image.id}
               onClick={() => {
                 setSelectedIndex(index);
-                console.log("[ProductImageGallery] 이미지 선택:", index);
               }}
               className={`relative w-20 h-20 shrink-0 rounded-lg overflow-hidden border-2 bg-[#f5f5f5] p-1 transition-colors ${
                 selectedIndex === index
@@ -112,7 +101,7 @@ export default function ProductImageGallery({
                   fill
                   className="object-contain"
                   sizes="80px"
-                  onError={() => handleImageError(index, image.image_url)}
+                  onError={() => handleImageError(index)}
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center bg-gray-100">
