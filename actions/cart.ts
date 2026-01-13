@@ -1198,39 +1198,21 @@ export async function updateCartItemQuantity(
 export async function removeFromCart(
   itemId: string,
 ): Promise<{ success: boolean; message: string }> {
-  logger.group("🛒 [removeFromCart] 장바구니 아이템 삭제 시작");
-  logger.info("[removeFromCart] 1단계: 함수 호출됨");
-  logger.info("입력 파라미터:", { itemId });
-  logger.info("타임스탬프:", new Date().toISOString());
-
   try {
-    logger.info("[removeFromCart] 2단계: getCurrentUserId() 호출");
     const userId = await getCurrentUserId();
-    logger.info("[removeFromCart] getCurrentUserId() 결과:", {
-      userId: userId || null,
-      hasUserId: !!userId,
-    });
 
     if (!userId) {
-      logger.warn("[removeFromCart] ⚠️ 사용자 ID 없음 - 로그인 필요");
-      logger.groupEnd();
+      logger.debug("[removeFromCart] 사용자 미인증");
       return { success: false, message: "로그인이 필요합니다." };
     }
 
     // PGRST301 에러 방지를 위해 토큰 확인
-    logger.info("[removeFromCart] 3단계: Clerk 토큰 확인");
     const authResult = await auth();
     const token = await authResult.getToken();
-    logger.info("[removeFromCart] 토큰 상태:", {
-      hasToken: !!token,
-      tokenPreview: token ? token.substring(0, 20) + "..." : null,
-    });
     let supabase;
 
     if (!token) {
-      logger.warn(
-        "[removeFromCart] Clerk 토큰이 없음 - service role 클라이언트 사용",
-      );
+      logger.debug("[removeFromCart] 토큰 없음, service role 클라이언트 사용");
       const { getServiceRoleClient } = await import(
         "@/lib/supabase/service-role"
       );
@@ -1239,56 +1221,28 @@ export async function removeFromCart(
       supabase = await createClient();
     }
 
-    logger.info("[removeFromCart] 4단계: 장바구니 아이템 조회");
     let { data: item, error: selectError } = await supabase
       .from("cart_items")
       .select("cart:carts!fk_cart_items_cart_id(user_id)")
       .eq("id", itemId)
       .single();
 
-    logger.info("[removeFromCart] 장바구니 아이템 조회 결과:", {
-      hasItem: !!item,
-      error: selectError
-        ? {
-            code: selectError.code,
-            message: selectError.message,
-          }
-        : null,
-    });
-
     // PGRST301 에러 발생 시 service role 클라이언트로 재시도
     if (selectError && selectError.code === "PGRST301") {
-      logger.warn(
-        "[removeFromCart] ⚠️ SELECT 시 PGRST301 에러 - service role로 재시도",
-      );
+      logger.debug("[removeFromCart] SELECT PGRST301 에러, service role로 재시도");
       const { getServiceRoleClient } = await import(
         "@/lib/supabase/service-role"
       );
       supabase = getServiceRoleClient();
 
-      logger.info("[removeFromCart] SELECT 재시도 (service role)");
       const { data: retryItem, error: retrySelectError } = await supabase
         .from("cart_items")
         .select("cart:carts!fk_cart_items_cart_id(user_id)")
         .eq("id", itemId)
         .single();
 
-      logger.info("[removeFromCart] SELECT 재시도 결과:", {
-        hasItem: !!retryItem,
-        error: retrySelectError
-          ? {
-              code: retrySelectError.code,
-              message: retrySelectError.message,
-            }
-          : null,
-      });
-
       if (retrySelectError) {
-        logger.error(
-          "[removeFromCart] ❌ SELECT 재시도 실패:",
-          retrySelectError,
-        );
-        logger.groupEnd();
+        logger.error("[removeFromCart] 장바구니 아이템 조회 실패", retrySelectError);
         return {
           success: false,
           message: "장바구니 아이템을 찾을 수 없습니다.",
@@ -1296,104 +1250,55 @@ export async function removeFromCart(
       }
 
       item = retryItem;
-      logger.info("[removeFromCart] ✅ SELECT 재시도 성공");
     } else if (selectError) {
-      logger.error(
-        "[removeFromCart] ❌ 장바구니 아이템 조회 실패:",
-        selectError,
-      );
-      logger.groupEnd();
+      logger.error("[removeFromCart] 장바구니 아이템 조회 실패", selectError);
       return { success: false, message: "장바구니 아이템을 찾을 수 없습니다." };
     }
 
     if (!item) {
-      logger.warn("[removeFromCart] ⚠️ 장바구니 아이템 없음");
-      logger.groupEnd();
+      logger.warn("[removeFromCart] 장바구니 아이템 없음");
       return { success: false, message: "장바구니 아이템을 찾을 수 없습니다." };
     }
 
     const cart = item.cart as unknown as { user_id: string } | null;
-    logger.info("[removeFromCart] 권한 확인:", {
-      hasCart: !!cart,
-      cartUserId: cart?.user_id || null,
-      currentUserId: userId,
-      isAuthorized: cart?.user_id === userId,
-    });
 
     if (!cart || cart.user_id !== userId) {
-      logger.warn("[removeFromCart] ⚠️ 권한 없음");
-      logger.groupEnd();
+      logger.warn("[removeFromCart] 권한 없음");
       return { success: false, message: "권한이 없습니다." };
     }
 
-    logger.info("[removeFromCart] 5단계: DELETE 쿼리 실행");
     const { error: deleteError } = await supabase
       .from("cart_items")
       .delete()
       .eq("id", itemId);
 
-    logger.info("[removeFromCart] DELETE 결과:", {
-      hasError: !!deleteError,
-      error: deleteError
-        ? {
-            code: deleteError.code,
-            message: deleteError.message,
-          }
-        : null,
-    });
-
     // PGRST301 에러 발생 시 service role 클라이언트로 재시도
     if (deleteError && deleteError.code === "PGRST301") {
-      logger.warn(
-        "[removeFromCart] ⚠️ DELETE 시 PGRST301 에러 - service role로 재시도",
-      );
+      logger.debug("[removeFromCart] DELETE PGRST301 에러, service role로 재시도");
       const { getServiceRoleClient } = await import(
         "@/lib/supabase/service-role"
       );
       const serviceSupabase = getServiceRoleClient();
 
-      logger.info("[removeFromCart] DELETE 재시도 (service role)");
       const { error: retryDeleteError } = await serviceSupabase
         .from("cart_items")
         .delete()
         .eq("id", itemId);
 
-      logger.info("[removeFromCart] DELETE 재시도 결과:", {
-        hasError: !!retryDeleteError,
-        error: retryDeleteError
-          ? {
-              code: retryDeleteError.code,
-              message: retryDeleteError.message,
-            }
-          : null,
-      });
-
       if (retryDeleteError) {
-        logger.error(
-          "[removeFromCart] ❌ DELETE 재시도 실패:",
-          retryDeleteError,
-        );
-        logger.groupEnd();
+        logger.error("[removeFromCart] 장바구니 아이템 삭제 실패", retryDeleteError);
         return { success: false, message: "삭제에 실패했습니다." };
       }
-      logger.info("[removeFromCart] ✅ DELETE 재시도 성공");
     } else if (deleteError) {
-      logger.error("[removeFromCart] ❌ DELETE 실패:", deleteError);
-      logger.groupEnd();
+      logger.error("[removeFromCart] 장바구니 아이템 삭제 실패", deleteError);
       return { success: false, message: "삭제에 실패했습니다." };
-    } else {
-      logger.info("[removeFromCart] ✅ DELETE 성공");
     }
 
-    logger.info("[removeFromCart] 6단계: revalidatePath 실행");
     revalidatePath("/cart");
     revalidatePath("/checkout");
-    logger.info("[removeFromCart] ✅ 7단계: 장바구니 아이템 삭제 완료");
-    logger.groupEnd();
     return { success: true, message: "상품이 삭제되었습니다." };
   } catch (error) {
-    logger.error("[removeFromCart] ❌ 예외 발생:", error);
-    logger.groupEnd();
+    logger.error("[removeFromCart] 예외 발생", error);
     return { success: false, message: "삭제에 실패했습니다." };
   }
 }
