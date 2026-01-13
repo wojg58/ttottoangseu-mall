@@ -62,8 +62,6 @@ export default function SignInContent() {
         return;
       }
 
-      console.group("[SignInContent] 폼 필드 업데이트 - 가로 레이아웃");
-
       // 소셜 버튼 루트 컨테이너가 한 줄로 배치되도록 설정 (구글, 카카오, 네이버 3개 나란히)
       const socialButtonsRoot = document.querySelector(
         ".cl-socialButtonsRoot",
@@ -137,10 +135,6 @@ export default function SignInContent() {
         socialButtonsRoot.appendChild(googleContainer);
         socialButtonsRoot.appendChild(kakaoContainer);
         socialButtonsRoot.appendChild(naverContainer);
-
-        console.log(
-          "[SignInContent] 소셜 버튼 순서 변경 및 개별 컨테이너로 분리: 구글 → 카카오 → 네이버",
-        );
       };
 
       // 각 소셜 버튼 컨테이너도 flex로 설정 (한 줄에 배치, 동일한 크기)
@@ -243,7 +237,6 @@ export default function SignInContent() {
           ) as HTMLElement;
           if (kakaoTextElement && kakaoTextElement.textContent !== "kakao") {
             kakaoTextElement.textContent = "kakao";
-            console.log("[SignInContent] 카카오 버튼 텍스트를 'kakao'로 변경");
           }
         }
       };
@@ -321,7 +314,6 @@ export default function SignInContent() {
               top: 50% !important;
               transform: translate(-50%, -50%) !important;
             `;
-            console.log("[SignInContent] 네이버 버튼 텍스트를 'NAVER'로 변경 및 중앙 정렬");
           }
           
           // 버튼 자체도 중앙 정렬 강화
@@ -355,7 +347,7 @@ export default function SignInContent() {
       const setupNaverButtonObserver = () => {
         // 최대 시도 횟수 제한
         if (naverObserverSetupAttempts >= MAX_NAVER_SETUP_ATTEMPTS) {
-          console.warn("[SignInContent] 네이버 버튼 Observer 설정 최대 시도 횟수 도달");
+          logger.debug("[SignInContent] 네이버 버튼 Observer 설정 최대 시도 횟수 도달");
           return;
         }
         naverObserverSetupAttempts++;
@@ -418,7 +410,7 @@ export default function SignInContent() {
             alertText.includes("External Account was not found") ||
             alertText.includes("외부 계정을 찾을 수 없습니다")
           ) {
-            console.log("[SignInContent] Clerk 에러 메시지 숨김:", alertText);
+            logger.debug("[SignInContent] Clerk 에러 메시지 숨김", { alertText });
             alertElement.style.cssText = `
               display: none !important;
               visibility: hidden !important;
@@ -448,12 +440,9 @@ export default function SignInContent() {
       ) as HTMLElement;
 
       if (identifierRow && identifierInput && !isEmailFieldApplied) {
-        console.log("[SignInContent] 이메일 주소 입력칸 스타일 적용 및 활성화");
-
         // 라벨 텍스트를 "이메일 주소"로 변경
         if (identifierLabel) {
           identifierLabel.textContent = "이메일 주소";
-          console.log("[SignInContent] 라벨 텍스트를 '이메일 주소'로 변경");
 
           // 기존 observer가 있으면 해제
           if (labelObserver) {
@@ -473,9 +462,6 @@ export default function SignInContent() {
             ) {
               lastLabelUpdateTime = now;
               identifierLabel.textContent = "이메일 주소";
-              console.log(
-                "[SignInContent] 라벨 텍스트를 '이메일 주소'로 재변경",
-              );
             }
           });
 
@@ -526,7 +512,6 @@ export default function SignInContent() {
           ) as HTMLInputElement;
           if (passwordInput && identifierInput.value) {
             // 비밀번호 필드가 있으면 포커스 이동하지 않음 (사용자가 직접 클릭하도록)
-            console.log("[SignInContent] 이메일 입력 완료, 비밀번호 입력 대기");
           }
 
           // 에러 메시지 제거
@@ -589,7 +574,6 @@ export default function SignInContent() {
       ) as HTMLElement;
 
       if (passwordRow && passwordInput && !isPasswordFieldApplied) {
-        console.log("[SignInContent] 비밀번호 입력칸 스타일 적용 및 활성화");
 
         // 비밀번호 입력칸 컨테이너 표시 및 활성화
         passwordRow.style.cssText = `
@@ -668,7 +652,6 @@ export default function SignInContent() {
           showPasswordButton.setAttribute("tabindex", "0");
           showPasswordButton.style.pointerEvents = "auto";
           showPasswordButton.style.cursor = "pointer";
-          console.log("비밀번호 표시/숨김 버튼 활성화");
         }
 
         // 입력 시 에러 메시지 제거
@@ -771,7 +754,6 @@ export default function SignInContent() {
       ) as HTMLElement;
 
       if (loginButton) {
-        console.log("로그인 버튼 스타일 적용 및 클릭 가능하도록 설정");
 
         // 로그인 버튼을 클릭 가능하도록 설정
         loginButton.removeAttribute("disabled");
@@ -962,7 +944,7 @@ export default function SignInContent() {
           alertText.includes("External Account was not found") ||
           alertText.includes("외부 계정을 찾을 수 없습니다")
         ) {
-          console.log("[SignInContent] Clerk 에러 메시지 숨김:", alertText);
+          logger.debug("[SignInContent] Clerk 에러 메시지 숨김", { alertText });
           alertElement.style.cssText = `
             display: none !important;
             visibility: hidden !important;
@@ -1025,10 +1007,7 @@ export default function SignInContent() {
         currentPath === "/sign-up" ||
         currentPath.includes("/sign-up/")
       ) {
-        console.log(
-          "[SignInContent] 중간 페이지로 이동 감지, 즉시 홈으로 리다이렉트",
-        );
-        console.log("현재 경로:", currentPath);
+        logger.debug("[SignInContent] 중간 페이지로 이동 감지, 즉시 홈으로 리다이렉트", { currentPath });
 
         // 리다이렉트 플래그 설정
         isRedirecting = true;
@@ -1056,7 +1035,7 @@ export default function SignInContent() {
         url.includes("/sign-in/create") ||
         url.includes("/sign-in/verify")
       ) {
-        console.log("[SignInContent] pushState 차단 (중간 페이지 방지):", url);
+        logger.debug("[SignInContent] pushState 차단 (중간 페이지 방지)", { url });
         // 중간 페이지로 이동하려는 시도를 홈으로 리다이렉트
         if (window.location.pathname === "/sign-in" && !isRedirecting) {
           isRedirecting = true;
@@ -1077,10 +1056,7 @@ export default function SignInContent() {
         url.includes("/sign-in/create") ||
         url.includes("/sign-in/verify")
       ) {
-        console.log(
-          "[SignInContent] replaceState 차단 (중간 페이지 방지):",
-          url,
-        );
+        logger.debug("[SignInContent] replaceState 차단 (중간 페이지 방지)", { url });
         // 중간 페이지로 이동하려는 시도를 홈으로 리다이렉트
         if (window.location.pathname === "/sign-in" && !isRedirecting) {
           isRedirecting = true;
@@ -1214,14 +1190,9 @@ export default function SignInContent() {
             hasEmail: !!emailValue,
             emailLength: emailValue.length,
           });
-          console.log(
-            "[SignInContent] 이메일 정제 후 길이:",
-            emailValue.length,
-          );
 
           if (emailValue && passwordValue) {
             try {
-              console.log("[SignInContent] Clerk 초기화 대기 시작");
 
               // Clerk가 초기화될 때까지 대기 (Promise 기반, 최대 5초)
               const waitForClerkInit = (): Promise<boolean> => {
@@ -1328,10 +1299,7 @@ export default function SignInContent() {
               // 최종 검증: 이메일 형식 재확인
               const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
               if (!emailRegex.test(emailValue)) {
-                console.error(
-                  "[SignInContent] 최종 검증 실패 - 이메일 형식이 올바르지 않음:",
-                  emailValue,
-                );
+                logger.warn("[SignInContent] 최종 검증 실패 - 이메일 형식이 올바르지 않음");
                 alert(
                   "올바른 이메일 주소 형식을 입력해주세요.\n예: example@email.com",
                 );
@@ -1346,9 +1314,6 @@ export default function SignInContent() {
 
               try {
                 // 1단계: identifier만으로 signIn 생성
-                console.log(
-                  "[SignInContent] 1단계: identifier만으로 SignIn.create 호출",
-                );
                 logger.debug("[SignInContent] identifier 값 확인", {
                   hasValue: !!emailValue,
                   type: typeof emailValue,
@@ -1377,58 +1342,38 @@ export default function SignInContent() {
                   password: passwordValue,
                 });
 
-                console.log(
-                  "[SignInContent] attemptFirstFactor 성공, 상태:",
-                  result.status,
-                );
+                logger.debug("[SignInContent] attemptFirstFactor 성공", {
+                  status: result.status,
+                });
               } catch (error: any) {
                 // 에러 상세 로깅
-                console.error(
-                  "[SignInContent] 로그인 과정에서 에러 발생:",
-                  error,
-                );
-                console.error("[SignInContent] 에러 타입:", typeof error);
-                console.error("[SignInContent] 에러 이름:", error?.name);
-                console.error("[SignInContent] 에러 메시지:", error?.message);
-                console.error(
-                  "[SignInContent] 에러 코드:",
-                  error?.errors?.[0]?.code,
-                );
-                console.error(
-                  "[SignInContent] 에러 전체:",
-                  JSON.stringify(error, null, 2),
-                );
+                logger.error("[SignInContent] 로그인 과정에서 에러 발생", {
+                  errorType: typeof error,
+                  errorName: error?.name,
+                  errorMessage: error?.message,
+                  errorCode: error?.errors?.[0]?.code,
+                });
 
                 // 에러를 다시 throw하여 상위 catch 블록에서 처리
                 throw error;
               }
 
-              console.log("[SignInContent] 로그인 성공, 상태:", result.status);
-              console.log("[SignInContent] result 전체:", result);
-              console.log(
-                "[SignInContent] createdSessionId:",
-                result.createdSessionId,
-              );
+              logger.debug("[SignInContent] 로그인 성공", {
+                status: result.status,
+                hasCreatedSessionId: !!result.createdSessionId,
+              });
 
               // 로그인 성공 후 세션 활성화 및 리다이렉트
               if (result.status === "complete") {
-                console.log("[SignInContent] 로그인 완료, 세션 활성화 시작");
-                console.log(
-                  "[SignInContent] result.createdSessionId:",
-                  result.createdSessionId,
-                );
-                console.log(
-                  "[SignInContent] clerk.setActive 존재:",
-                  !!clerk?.setActive,
-                );
+                logger.debug("[SignInContent] 로그인 완료, 세션 활성화 시작", {
+                  hasCreatedSessionId: !!result.createdSessionId,
+                  hasSetActive: !!clerk?.setActive,
+                });
 
                 // 세션 활성화
                 if (result.createdSessionId && clerk.setActive) {
                   try {
-                    console.log(
-                      "[SignInContent] setActive 호출 중, sessionId:",
-                      result.createdSessionId,
-                    );
+                    logger.debug("[SignInContent] setActive 호출 중");
 
                     // 프로덕션 환경에서 세션 활성화 재시도 로직
                     let setActiveSuccess = false;
@@ -1436,27 +1381,19 @@ export default function SignInContent() {
 
                     for (let attempt = 1; attempt <= 3; attempt++) {
                       try {
-                        console.log(
-                          `[SignInContent] setActive 시도 ${attempt}/3`,
-                        );
+                        logger.debug(`[SignInContent] setActive 시도 ${attempt}/3`);
                         await clerk.setActive({
                           session: result.createdSessionId,
                         });
                         setActiveSuccess = true;
-                        console.log("[SignInContent] setActive 완료");
+                        logger.debug("[SignInContent] setActive 완료");
 
                         // setActive 직후 즉시 홈으로 리다이렉트하여 중간 페이지 방지
-                        console.log(
-                          "[SignInContent] setActive 직후 즉시 홈으로 리다이렉트",
-                        );
                         window.location.replace("/");
                         return; // 즉시 함수 종료하여 추가 처리 방지
                       } catch (retryError: any) {
                         lastError = retryError;
-                        console.warn(
-                          `[SignInContent] setActive 시도 ${attempt} 실패:`,
-                          retryError,
-                        );
+                        logger.warn(`[SignInContent] setActive 시도 ${attempt} 실패`, retryError);
 
                         if (attempt < 3) {
                           // 재시도 전 대기
@@ -1472,30 +1409,16 @@ export default function SignInContent() {
                     }
 
                     // setActive 후 즉시 홈으로 리다이렉트 (딜레이 제거하여 중간 페이지 방지)
-                    console.log(
-                      "[SignInContent] 세션 활성화 완료, 즉시 홈으로 리다이렉트",
-                    );
-                    console.log("[SignInContent] 항상 홈(/)으로 이동");
-
                     // 로그인 성공 시 즉시 홈으로 이동 (중간 페이지 방지)
                     const homePath = `${window.location.origin}/`;
-
-                    console.log(
-                      "[SignInContent] 최종 리다이렉트 경로 (홈):",
-                      homePath,
-                    );
 
                     // 즉시 홈으로 리다이렉트하여 중간 페이지로 이동하는 것을 방지
                     // window.location.replace를 사용하여 히스토리에 남기지 않음
                     window.location.replace(homePath);
                   } catch (setActiveError: any) {
-                    console.error(
-                      "[SignInContent] setActive 실패:",
-                      setActiveError,
-                    );
-                    console.error("[SignInContent] 에러 상세:", {
+                    logger.error("[SignInContent] setActive 실패", {
                       message: setActiveError.message,
-                      errors: setActiveError.errors,
+                      errorCode: setActiveError.errors?.[0]?.code,
                       status: setActiveError.status,
                       stack: setActiveError.stack,
                     });
@@ -1530,31 +1453,18 @@ export default function SignInContent() {
                     return;
                   }
                 } else {
-                  console.warn(
-                    "[SignInContent] createdSessionId 또는 setActive가 없음",
-                  );
-                  console.warn(
-                    "[SignInContent] createdSessionId:",
-                    result.createdSessionId,
-                  );
-                  console.warn(
-                    "[SignInContent] setActive:",
-                    !!clerk?.setActive,
-                  );
+                  logger.warn("[SignInContent] createdSessionId 또는 setActive가 없음", {
+                    hasCreatedSessionId: !!result.createdSessionId,
+                    hasSetActive: !!clerk?.setActive,
+                  });
 
                   // createdSessionId가 없으면 홈으로 이동
-                  console.log("[SignInContent] 홈으로 리다이렉트");
                   window.location.href = "/";
                 }
               } else {
-                console.warn(
-                  "[SignInContent] 로그인 상태가 complete가 아님:",
-                  result.status,
-                );
-                console.warn(
-                  "[SignInContent] result 전체:",
-                  JSON.stringify(result, null, 2),
-                );
+                logger.warn("[SignInContent] 로그인 상태가 complete가 아님", {
+                  status: result.status,
+                });
 
                 // 상태별 안내 메시지
                 let errorMessage =
@@ -1565,17 +1475,11 @@ export default function SignInContent() {
                   alert(errorMessage);
                 } else if (result.status === "needs_second_factor") {
                   // 2단계 인증이 필요한 경우 (새로운 클라이언트/기기에서 로그인 시)
-                  console.log(
-                    "[SignInContent] 2단계 인증 필요, 자동 처리 시작",
-                  );
-                  console.log(
-                    "[SignInContent] supportedSecondFactors:",
-                    result.supportedSecondFactors,
-                  );
-                  console.log(
-                    "[SignInContent] clientTrustState:",
-                    result.clientTrustState,
-                  );
+                  logger.debug("[SignInContent] 2단계 인증 필요, 자동 처리 시작", {
+                    hasSupportedSecondFactors: !!result.supportedSecondFactors,
+                    supportedSecondFactorsCount: result.supportedSecondFactors?.length || 0,
+                    clientTrustState: result.clientTrustState,
+                  });
 
                   try {
                     // 이메일 링크를 우선적으로 사용 (사용자가 링크를 클릭하면 자동으로 로그인됨)
@@ -1585,11 +1489,7 @@ export default function SignInContent() {
                       );
 
                     if (emailLinkStrategy) {
-                      console.log("[SignInContent] 이메일 링크 전송 시작");
-                      console.log(
-                        "[SignInContent] 리다이렉트 URL:",
-                        redirectUrl,
-                      );
+                      logger.debug("[SignInContent] 이메일 링크 전송 시작");
 
                       // 이메일 링크 전송 (링크를 클릭하면 자동으로 로그인됨)
                       await signInAttempt.prepareSecondFactor({
@@ -1599,7 +1499,7 @@ export default function SignInContent() {
                           : `${window.location.origin}${redirectUrl}`,
                       });
 
-                      console.log("[SignInContent] 이메일 링크 전송 완료");
+                      logger.debug("[SignInContent] 이메일 링크 전송 완료");
 
                       // 사용자에게 안내 메시지 표시
                       alert(
@@ -1618,37 +1518,28 @@ export default function SignInContent() {
                       );
 
                     if (emailCodeStrategy) {
-                      console.log("[SignInContent] 이메일 코드 전송 시작");
+                      logger.debug("[SignInContent] 이메일 코드 전송 시작");
                       // 2단계 인증 코드 전송
                       await signInAttempt.prepareSecondFactor({
                         strategy: "email_code",
                       });
 
-                      console.log("[SignInContent] 이메일 코드 전송 완료");
-                      console.log(
-                        "[SignInContent] 이메일 코드 입력 UI가 자동으로 표시됩니다",
-                      );
+                      logger.debug("[SignInContent] 이메일 코드 전송 완료, UI 자동 표시");
                       // 이메일 코드 입력 UI가 자동으로 표시됨 (Clerk가 처리)
                       // 사용자가 코드를 입력하면 자동으로 인증 완료됨
                       return;
                     } else {
                       // 지원되는 2단계 인증 방법이 없는 경우
-                      console.warn(
-                        "[SignInContent] 지원되는 2단계 인증 방법을 찾을 수 없음",
-                      );
+                      logger.warn("[SignInContent] 지원되는 2단계 인증 방법을 찾을 수 없음");
                       errorMessage =
                         "2단계 인증이 필요하지만 지원되는 방법을 찾을 수 없습니다.\n\n" +
                         "Clerk Dashboard에서 이메일 인증 설정을 확인해주세요.";
                       alert(errorMessage);
                     }
                   } catch (mfaError: any) {
-                    console.error(
-                      "[SignInContent] 2단계 인증 처리 중 에러:",
-                      mfaError,
-                    );
-                    console.error("[SignInContent] 에러 상세:", {
+                    logger.error("[SignInContent] 2단계 인증 처리 중 에러", {
                       message: mfaError.message,
-                      errors: mfaError.errors,
+                      errorCode: mfaError.errors?.[0]?.code,
                       status: mfaError.status,
                     });
                     errorMessage =
@@ -1673,30 +1564,16 @@ export default function SignInContent() {
               }
             } catch (err: any) {
               const isProduction = window.location.hostname !== "localhost";
+              const errorCode = err.errors?.[0]?.code;
 
-              console.error("[SignInContent] 로그인 실패:", err);
-              console.error("[SignInContent] 환경 정보:", {
-                isProduction,
-                hostname: window.location.hostname,
-                protocol: window.location.protocol,
-                href: window.location.href,
-              });
-              console.error("[SignInContent] 에러 상세:", {
-                message: err.message,
-                errors: err.errors,
+              logger.error("[SignInContent] 로그인 실패", {
+                errorCode,
+                errorMessage: err.message,
+                errorName: err.name,
                 status: err.status,
                 statusCode: err.statusCode,
-                name: err.name,
-                stack: err.stack,
+                isProduction,
               });
-
-              // 에러 코드 확인
-              const errorCode = err.errors?.[0]?.code;
-              console.error("[SignInContent] 에러 코드:", errorCode);
-              console.error(
-                "[SignInContent] 에러 전체 객체:",
-                JSON.stringify(err, null, 2),
-              );
 
               // 에러 메시지 추출
               let errorMessage = "로그인에 실패했습니다.";
@@ -1877,7 +1754,6 @@ export default function SignInContent() {
           }
         }
 
-        console.groupEnd();
         return false;
       };
 
@@ -1911,21 +1787,14 @@ export default function SignInContent() {
           }
 
           isUpdating = true; // 업데이트 시작 플래그
-          console.log("[SignInContent] 버튼 텍스트를 '로그인'으로 변경 시도");
 
           // 1. cl-internal-2iusy0 클래스를 가진 span 요소를 정확히 찾아서 변경
           const continueSpan = loginButton.querySelector(
             "span.cl-internal-2iusy0",
           ) as HTMLElement;
           if (continueSpan && !continueSpan.textContent?.includes("로그인")) {
-            console.log(
-              "[SignInContent] cl-internal-2iusy0 span 요소 발견, 텍스트 변경 및 아이콘 제거",
-            );
             // SVG 아이콘 제거하고 텍스트만 "로그인"으로 변경
             continueSpan.innerHTML = "로그인";
-            console.log(
-              "[SignInContent] span innerHTML을 '로그인'으로 변경 (아이콘 제거)",
-            );
           }
 
           // 2. cl-internal 클래스를 포함한 모든 span 요소 확인
@@ -1942,9 +1811,6 @@ export default function SignInContent() {
             ) {
               // "로그인"이 아닌 경우만 "로그인"으로 변경
               spanElement.innerHTML = "로그인";
-              console.log(
-                "[SignInContent] cl-internal span 요소에서 '로그인'으로 변경",
-              );
             }
           });
 
@@ -1960,9 +1826,6 @@ export default function SignInContent() {
             ) {
               // SVG 아이콘 제거하고 텍스트만 "로그인"으로 변경
               spanElement.innerHTML = "로그인";
-              console.log(
-                "[SignInContent] span 요소에서 '계속'을 '로그인'으로 변경 (아이콘 제거)",
-              );
             }
           });
 
@@ -1971,7 +1834,6 @@ export default function SignInContent() {
           if (allSvgs.length > 0) {
             allSvgs.forEach((svg) => {
               svg.remove();
-              console.log("[SignInContent] SVG 아이콘 제거");
             });
           }
 
@@ -1990,9 +1852,6 @@ export default function SignInContent() {
               !node.textContent.includes("로그인")
             ) {
               node.textContent = "로그인";
-              console.log(
-                "[SignInContent] 텍스트 노드에서 '계속'을 '로그인'으로 변경",
-              );
             }
           }
 
@@ -2005,9 +1864,6 @@ export default function SignInContent() {
           ) {
             // 버튼의 모든 자식 요소를 제거하고 "로그인"만 추가
             loginButton.innerHTML = "로그인";
-            console.log(
-              "[SignInContent] 버튼 전체 내용을 '로그인'으로 강제 변경",
-            );
           }
 
           // 다음 프레임에서 플래그 해제 (MutationObserver가 트리거되지 않도록)
@@ -2040,7 +1896,7 @@ export default function SignInContent() {
 
         // 버튼 클릭 이벤트도 가로채기 (폼 제출과 동일한 처리)
         const handleButtonClick = async (e: MouseEvent) => {
-          console.log("[SignInContent] 로그인 버튼 클릭 감지");
+          logger.debug("[SignInContent] 로그인 버튼 클릭 감지");
           e.preventDefault();
           e.stopPropagation();
           e.stopImmediatePropagation();
@@ -2148,12 +2004,10 @@ export default function SignInContent() {
   // 로그인 성공 후 홈으로 리다이렉트 처리
   useEffect(() => {
     if (isLoaded && isSignedIn) {
-      console.group("[SignInContent] 로그인 성공 감지");
-      console.log("홈(/)으로 이동");
-      console.log("시간:", new Date().toISOString());
-      console.log("isSignedIn:", isSignedIn);
-      console.log("isLoaded:", isLoaded);
-      console.groupEnd();
+      logger.debug("[SignInContent] 로그인 성공 감지, 홈으로 이동", {
+        isSignedIn,
+        isLoaded,
+      });
 
       // 항상 홈으로 리다이렉트 (약간의 딜레이를 두어 사용자 동기화가 완료될 시간을 줌)
       setTimeout(() => {
@@ -2176,7 +2030,7 @@ export default function SignInContent() {
             </p>
             <button
               onClick={() => {
-                console.log("[SignInContent] 홈으로 이동");
+                logger.debug("[SignInContent] 홈으로 이동");
                 router.push("/");
               }}
               className="shop-btn-accent"
@@ -2248,9 +2102,7 @@ export default function SignInContent() {
                   className="text-[#ff6b9d] hover:text-[#ff5088] font-semibold transition-colors"
                   onClick={(e) => {
                     e.preventDefault();
-                    console.log(
-                      "[SignInContent] 회원가입 페이지로 이동: /sign-up/join",
-                    );
+                    logger.debug("[SignInContent] 회원가입 페이지로 이동: /sign-up/join");
                     // window.location을 사용하여 강제로 페이지 이동 (서버 컴포넌트 리렌더링 보장)
                     window.location.href = "/sign-up/join";
                   }}
