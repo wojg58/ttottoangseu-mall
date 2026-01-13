@@ -7,6 +7,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronDown } from "lucide-react";
+import logger from "@/lib/logger-client";
 
 interface ProductSortSelectProps {
   defaultValue: "newest" | "price_asc" | "price_desc" | "name";
@@ -19,7 +20,7 @@ export default function ProductSortSelect({
   const searchParams = useSearchParams();
 
   const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    console.log("[ProductSortSelect] 정렬 변경:", e.target.value);
+    logger.debug("[ProductSortSelect] 정렬 변경");
 
     const newSearchParams = new URLSearchParams(searchParams.toString());
     newSearchParams.set("sort", e.target.value);

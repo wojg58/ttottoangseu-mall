@@ -12,6 +12,7 @@
 
 import { useEffect, useState } from "react";
 import { formatKoreaTime } from "@/lib/utils/format-time";
+import logger from "@/lib/logger-client";
 
 interface DateDisplayProps {
   date: string | Date;
@@ -35,11 +36,8 @@ export default function DateDisplay({
     setFormattedDate(formatted);
     
     // 개발 환경에서 디버깅 로그
-    if (process.env.NODE_ENV === "development" && format === "datetime") {
-      console.log("[DateDisplay] 시간 변환:", {
-        원본_UTC: date,
-        변환된_KST: formatted,
-      });
+    if (format === "datetime") {
+      logger.debug("[DateDisplay] 시간 변환");
     }
   }, [date, format]);
 

@@ -22,6 +22,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import logger from "@/lib/logger-client";
 
 const inquirySchema = z.object({
   title: z.string().min(2, "제목은 최소 2자 이상 작성해주세요."),
@@ -52,12 +53,6 @@ export default function InquiryForm({
   });
 
   const onSubmit = (data: InquiryFormData) => {
-    console.group("[InquiryForm] 문의 작성 시도");
-    console.log("상품 ID:", productId);
-    console.log("제목:", data.title);
-    console.log("내용:", data.content);
-    console.log("비밀글:", data.is_secret);
-
     startTransition(async () => {
       const result = await createInquiry({
         product_id: productId,
@@ -67,14 +62,13 @@ export default function InquiryForm({
       });
 
       if (result.success) {
-        console.log("문의 작성 성공");
+        logger.debug("[InquiryForm] 문의 작성 성공");
         form.reset();
         onSuccess?.();
       } else {
-        console.error("문의 작성 실패:", result.error);
+        logger.error("[InquiryForm] 문의 작성 실패", { error: result.error });
         alert(result.error || "문의 작성에 실패했습니다.");
       }
-      console.groupEnd();
     });
   };
 

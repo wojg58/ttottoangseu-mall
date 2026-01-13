@@ -16,6 +16,7 @@ import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
 import { cancelOrder } from "@/actions/orders";
 import { Button } from "@/components/ui/button";
+import logger from "@/lib/logger-client";
 
 interface OrderCancelButtonProps {
   orderId: string;
@@ -44,11 +45,10 @@ export default function OrderCancelButton({
       return;
     }
 
-    console.log("[OrderCancelButton] 주문 취소 요청:", orderId);
     startTransition(async () => {
       const result = await cancelOrder(orderId);
       if (result.success) {
-        console.log("[OrderCancelButton] 주문 취소 성공:", result.message);
+        logger.debug("[OrderCancelButton] 주문 취소 성공");
         alert(result.message);
         if (onCancelSuccess) {
           onCancelSuccess();
@@ -56,7 +56,9 @@ export default function OrderCancelButton({
           router.refresh(); // 페이지 새로고침
         }
       } else {
-        console.error("[OrderCancelButton] 주문 취소 실패:", result.message);
+        logger.error("[OrderCancelButton] 주문 취소 실패", {
+          message: result.message,
+        });
         alert(result.message);
       }
     });

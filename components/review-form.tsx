@@ -21,6 +21,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import logger from "@/lib/logger-client";
 
 const reviewSchema = z.object({
   rating: z.number().min(1).max(5),
@@ -47,11 +48,6 @@ export default function ReviewForm({ productId, onSuccess }: ReviewFormProps) {
   });
 
   const onSubmit = (data: ReviewFormData) => {
-    console.group("[ReviewForm] 리뷰 작성 시도");
-    console.log("상품 ID:", productId);
-    console.log("평점:", data.rating);
-    console.log("내용:", data.content);
-
     startTransition(async () => {
       const result = await createReview({
         product_id: productId,
@@ -60,14 +56,13 @@ export default function ReviewForm({ productId, onSuccess }: ReviewFormProps) {
       });
 
       if (result.success) {
-        console.log("리뷰 작성 성공");
+        logger.debug("[ReviewForm] 리뷰 작성 성공");
         form.reset();
         onSuccess?.();
       } else {
-        console.error("리뷰 작성 실패:", result.error);
+        logger.error("[ReviewForm] 리뷰 작성 실패", { error: result.error });
         alert(result.error || "리뷰 작성에 실패했습니다.");
       }
-      console.groupEnd();
     });
   };
 

@@ -8,11 +8,12 @@
 "use client";
 
 import { useEffect } from "react";
+import logger from "@/lib/logger-client";
 
 export default function CartUpdateTrigger() {
   useEffect(() => {
     // 페이지 마운트 시 커스텀 이벤트 발생
-    console.log("[CartUpdateTrigger] 주문 완료 페이지 로드 - 장바구니 갱신 이벤트 발생");
+    logger.debug("[CartUpdateTrigger] 주문 완료 페이지 로드 - 장바구니 갱신 이벤트 발생");
     window.dispatchEvent(new CustomEvent("cart:update"));
   }, []);
 
