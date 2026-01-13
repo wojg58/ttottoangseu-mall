@@ -98,9 +98,9 @@
   background: linear-gradient(90deg, #bbf7d0, #86efac);
 }
 
-/* 옐로우 (카카오톡 친구추가) - 그린으로 통일 */
+/* 옐로우 (카카오톡 친구추가) - #86efac 배경 */
 .event-banner.yellow {
-  background: linear-gradient(90deg, #bbf7d0, #86efac);
+  background: #86efac;
 }
 
 .event-banner.pink .coupon::before,
@@ -115,7 +115,7 @@
 
 .event-banner.yellow .coupon::before,
 .event-banner.yellow .coupon::after {
-  background: #bbf7d0;
+  background: #86efac;
 }
 
 /* 텍스트 */
