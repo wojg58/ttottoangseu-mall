@@ -33,13 +33,9 @@ import {
 export async function createProduct(
   input: CreateProductInput,
 ): Promise<ProductActionResult> {
-  logger.group("[createProduct] 상품 생성");
-  logger.debug("입력:", input);
-
   const isAdminUser = await isAdmin();
   if (!isAdminUser) {
-    logger.warn("관리자 권한 없음");
-    logger.groupEnd();
+    logger.warn("[createProduct] 관리자 권한 없음");
     return { success: false, message: "관리자 권한이 필요합니다." };
   }
 
@@ -55,8 +51,7 @@ export async function createProduct(
       .single();
 
     if (existing) {
-      logger.warn("slug 중복");
-      logger.groupEnd();
+      logger.warn("[createProduct] slug 중복", { slug: input.slug });
       return { success: false, message: "이미 사용 중인 slug입니다." };
     }
 
@@ -79,8 +74,7 @@ export async function createProduct(
       .single();
 
     if (productError || !product) {
-      logger.error("상품 생성 에러:", productError);
-      logger.groupEnd();
+      logger.error("[createProduct] 상품 생성 실패", productError);
       return { success: false, message: "상품 생성에 실패했습니다." };
     }
 
@@ -99,8 +93,7 @@ export async function createProduct(
         .insert(imageData);
 
       if (imageError) {
-        logger.error("이미지 추가 에러:", imageError);
-        // 상품은 생성되었으므로 경고만 출력
+        logger.error("[createProduct] 이미지 추가 실패", imageError);
       }
     }
 
@@ -123,16 +116,12 @@ export async function createProduct(
         .insert(productCategoryData);
 
       if (categoryError) {
-        logger.error("카테고리 추가 에러:", categoryError);
-        // 상품은 생성되었으므로 경고만 출력
-      } else {
-        logger.info(`카테고리 ${categoryIds.length}개 추가 완료`);
+        logger.error("[createProduct] 카테고리 추가 실패", categoryError);
       }
     }
 
     // 옵션 추가 (variants가 제공된 경우)
     if (input.variants && input.variants.length > 0) {
-      logger.debug("[createProduct] 옵션 추가 시작");
       const variantData = input.variants.map((variant) => ({
         product_id: product.id,
         variant_name: variant.variant_name,
@@ -147,25 +136,21 @@ export async function createProduct(
         .insert(variantData);
 
       if (variantError) {
-        logger.error("옵션 추가 에러:", variantError);
-      } else {
-        logger.info(`옵션 ${input.variants.length}개 추가 완료`);
+        logger.error("[createProduct] 옵션 추가 실패", variantError);
       }
     }
 
     revalidatePath("/admin/products");
     revalidatePath("/products");
 
-    logger.info("상품 생성 성공:", product.id);
-    logger.groupEnd();
+    logger.info("[createProduct] 상품 생성 완료", { productId: product.id });
     return {
       success: true,
       message: "상품이 생성되었습니다.",
       productId: product.id,
     };
   } catch (error) {
-    logger.error("에러:", error);
-    logger.groupEnd();
+    logger.error("[createProduct] 예외 발생", error);
     return { success: false, message: "상품 생성에 실패했습니다." };
   }
 }
@@ -174,13 +159,9 @@ export async function createProduct(
 export async function updateProduct(
   input: UpdateProductInput,
 ): Promise<ProductActionResult> {
-  logger.group("[updateProduct] 상품 수정");
-  logger.debug("입력:", input);
-
   const isAdminUser = await isAdmin();
   if (!isAdminUser) {
-    logger.warn("관리자 권한 없음");
-    logger.groupEnd();
+    logger.warn("[updateProduct] 관리자 권한 없음");
     return { success: false, message: "관리자 권한이 필요합니다." };
   }
 
@@ -198,8 +179,7 @@ export async function updateProduct(
         .single();
 
       if (existing) {
-        logger.warn("slug 중복");
-        logger.groupEnd();
+        logger.warn("[updateProduct] slug 중복", { slug: input.slug });
         return { success: false, message: "이미 사용 중인 slug입니다." };
       }
     }
@@ -228,8 +208,7 @@ export async function updateProduct(
       .eq("id", input.id);
 
     if (error) {
-      logger.error("상품 수정 에러:", error);
-      logger.groupEnd();
+      logger.error("[updateProduct] 상품 수정 실패", error);
       return { success: false, message: "상품 수정에 실패했습니다." };
     }
 
@@ -258,12 +237,10 @@ export async function updateProduct(
     revalidatePath(`/products/${input.slug || ""}`);
     revalidatePath("/products");
 
-    logger.info("상품 수정 성공");
-    logger.groupEnd();
+    logger.info("[updateProduct] 상품 수정 완료", { productId: input.id });
     return { success: true, message: "상품이 수정되었습니다." };
   } catch (error) {
-    logger.error("에러:", error);
-    logger.groupEnd();
+    logger.error("[updateProduct] 예외 발생", error);
     return { success: false, message: "상품 수정에 실패했습니다." };
   }
 }
@@ -272,13 +249,9 @@ export async function updateProduct(
 export async function deleteProduct(
   productId: string,
 ): Promise<{ success: boolean; message: string }> {
-  logger.group("[deleteProduct] 상품 삭제");
-  logger.debug("상품 ID:", productId);
-
   const isAdminUser = await isAdmin();
   if (!isAdminUser) {
-    logger.warn("관리자 권한 없음");
-    logger.groupEnd();
+    logger.warn("[deleteProduct] 관리자 권한 없음");
     return { success: false, message: "관리자 권한이 필요합니다." };
   }
 
@@ -292,173 +265,90 @@ export async function deleteProduct(
     const serviceRoleSupabase = getServiceRoleClient();
 
     // 1. 상품의 모든 이미지 조회
-    logger.debug("[deleteProduct] 상품 이미지 조회 중...");
     const { data: productImages, error: imagesError } = await supabase
       .from("product_images")
       .select("id, image_url")
       .eq("product_id", productId);
 
     if (imagesError) {
-      logger.error("[deleteProduct] 이미지 조회 에러:", imagesError);
+      logger.error("[deleteProduct] 이미지 조회 실패", imagesError);
       // 이미지 조회 실패해도 상품 삭제는 진행
-    } else {
-      logger.debug(
-        `[deleteProduct] 발견된 이미지 수: ${productImages?.length || 0}개`,
-      );
-
-      if (productImages && productImages.length > 0) {
-        logger.debug(
-          "[deleteProduct] 이미지 목록:",
-          productImages.map((img) => ({
-            id: img.id,
-            url: img.image_url,
-          })),
-        );
-      }
-
+    } else if (productImages && productImages.length > 0) {
       // 2. 각 이미지의 Storage 파일 삭제
-      if (productImages && productImages.length > 0) {
-        let deletedCount = 0;
-        let skippedCount = 0;
-        let failedCount = 0;
-
-        for (const image of productImages) {
-          if (image.image_url) {
-            logger.debug(`[deleteProduct] 이미지 삭제 처리 시작:`, {
-              imageId: image.id,
-              imageUrl: image.image_url,
-            });
-
-            // Next.js Image 최적화 URL인 경우 원본 URL 추출
-            let originalUrl = image.image_url;
-            if (image.image_url.includes("/_next/image?url=")) {
-              try {
-                const urlParams = new URLSearchParams(
-                  image.image_url.split("?")[1],
-                );
-                const encodedUrl = urlParams.get("url");
-                if (encodedUrl) {
-                  originalUrl = decodeURIComponent(encodedUrl);
-                  logger.debug(
-                    `[deleteProduct] Next.js Image URL에서 원본 URL 추출: ${originalUrl}`,
-                  );
-                }
-              } catch (e) {
-                logger.warn(`[deleteProduct] URL 디코딩 실패:`, e);
-              }
-            }
-
-            const filePath = extractFilePathFromUrl(originalUrl);
-            const bucketName = extractBucketFromUrl(originalUrl);
-
-            logger.debug(`[deleteProduct] 추출된 정보:`, {
-              originalUrl,
-              filePath,
-              bucketName,
-            });
-
-            if (filePath && bucketName) {
-              logger.debug(
-                `[deleteProduct] Storage 파일 삭제 시도: ${bucketName}/${filePath}`,
+      for (const image of productImages) {
+        if (image.image_url) {
+          // Next.js Image 최적화 URL인 경우 원본 URL 추출
+          let originalUrl = image.image_url;
+          if (image.image_url.includes("/_next/image?url=")) {
+            try {
+              const urlParams = new URLSearchParams(
+                image.image_url.split("?")[1],
               );
-              const { data: removeData, error: storageError } =
-                await serviceRoleSupabase.storage
-                  .from(bucketName)
-                  .remove([filePath]);
-
-              if (storageError) {
-                logger.error(
-                  `[deleteProduct] Storage 파일 삭제 실패 (${bucketName}/${filePath}):`,
-                  storageError,
-                );
-                logger.error(
-                  `[deleteProduct] 에러 상세:`,
-                  JSON.stringify(storageError, null, 2),
-                );
-                failedCount++;
-                // Storage 삭제 실패해도 DB 삭제는 진행
-              } else {
-                logger.debug(
-                  `[deleteProduct] Storage 파일 삭제 성공: ${bucketName}/${filePath}`,
-                );
-                logger.debug(`[deleteProduct] 삭제 결과:`, removeData);
-                deletedCount++;
+              const encodedUrl = urlParams.get("url");
+              if (encodedUrl) {
+                originalUrl = decodeURIComponent(encodedUrl);
               }
-            } else {
-              // 외부 URL인 경우 (네이버 스마트스토어 등) - Storage에 없으므로 삭제할 필요 없음
-              if (
-                originalUrl.includes("shop-phinf.pstatic.net") ||
-                originalUrl.includes("shop1.phinf.naver.net") ||
-                !originalUrl.includes("supabase.co/storage")
-              ) {
-                logger.debug(
-                  `[deleteProduct] 외부 URL이므로 Storage 삭제 건너뜀: ${originalUrl}`,
-                );
-                skippedCount++;
-              } else {
-                logger.warn(`[deleteProduct] 파일 경로 또는 버킷 추출 실패:`, {
-                  originalUrl,
-                  filePath,
-                  bucketName,
-                });
-                failedCount++;
-              }
+            } catch (e) {
+              logger.warn("[deleteProduct] URL 디코딩 실패", e);
             }
           }
+
+          const filePath = extractFilePathFromUrl(originalUrl);
+          const bucketName = extractBucketFromUrl(originalUrl);
+
+          if (filePath && bucketName) {
+            const { error: storageError } = await serviceRoleSupabase.storage
+              .from(bucketName)
+              .remove([filePath]);
+
+            if (storageError) {
+              logger.error("[deleteProduct] Storage 파일 삭제 실패", {
+                bucketName,
+                filePath,
+                error: storageError,
+              });
+            }
+          } else if (
+            !originalUrl.includes("shop-phinf.pstatic.net") &&
+            !originalUrl.includes("shop1.phinf.naver.net") &&
+            originalUrl.includes("supabase.co/storage")
+          ) {
+            logger.warn("[deleteProduct] 파일 경로 또는 버킷 추출 실패", {
+              originalUrl,
+            });
+          }
         }
+      }
 
-        logger.info(`[deleteProduct] 이미지 삭제 요약:`, {
-          총개수: productImages.length,
-          삭제성공: deletedCount,
-          건너뜀: skippedCount,
-          실패: failedCount,
-        });
+      // 3. 데이터베이스에서 이미지 레코드 삭제
+      const { error: deleteImagesError } = await supabase
+        .from("product_images")
+        .delete()
+        .eq("product_id", productId);
 
-        // 3. 데이터베이스에서 이미지 레코드 삭제
-        logger.debug(
-          "[deleteProduct] 데이터베이스에서 이미지 레코드 삭제 중...",
-        );
-        const { error: deleteImagesError } = await supabase
-          .from("product_images")
-          .delete()
-          .eq("product_id", productId);
-
-        if (deleteImagesError) {
-          logger.error(
-            "[deleteProduct] 이미지 레코드 삭제 에러:",
-            deleteImagesError,
-          );
-          // 이미지 레코드 삭제 실패해도 상품 삭제는 진행
-        } else {
-          logger.info(
-            `[deleteProduct] ${productImages.length}개 이미지 레코드 삭제 완료`,
-          );
-        }
+      if (deleteImagesError) {
+        logger.error("[deleteProduct] 이미지 레코드 삭제 실패", deleteImagesError);
       }
     }
 
     // 4. 상품 삭제 (soft delete)
-    logger.debug("[deleteProduct] 상품 삭제 처리 중...");
     const { error } = await supabase
       .from("products")
       .update({ deleted_at: new Date().toISOString() })
       .eq("id", productId);
 
     if (error) {
-      logger.error("상품 삭제 에러:", error);
-      logger.groupEnd();
+      logger.error("[deleteProduct] 상품 삭제 실패", error);
       return { success: false, message: "상품 삭제에 실패했습니다." };
     }
 
     revalidatePath("/admin/products");
     revalidatePath("/products");
 
-    logger.info("상품 삭제 성공");
-    logger.groupEnd();
+    logger.info("[deleteProduct] 상품 삭제 완료", { productId });
     return { success: true, message: "상품이 삭제되었습니다." };
   } catch (error) {
-    logger.error("에러:", error);
-    logger.groupEnd();
+    logger.error("[deleteProduct] 예외 발생", error);
     return { success: false, message: "상품 삭제에 실패했습니다." };
   }
 }
@@ -473,11 +363,9 @@ export async function addProductImage(
     alt_text?: string | null;
   },
 ): Promise<{ success: boolean; message: string; imageId?: string }> {
-  logger.group("[addProductImage] 이미지 추가");
-
   const isAdminUser = await isAdmin();
   if (!isAdminUser) {
-    logger.groupEnd();
+    logger.warn("[addProductImage] 관리자 권한 없음");
     return { success: false, message: "관리자 권한이 필요합니다." };
   }
 
@@ -503,24 +391,21 @@ export async function addProductImage(
       .single();
 
     if (error || !data) {
-      logger.error("이미지 추가 에러:", error);
-      logger.groupEnd();
+      logger.error("[addProductImage] 이미지 추가 실패", error);
       return { success: false, message: "이미지 추가에 실패했습니다." };
     }
 
     revalidatePath(`/admin/products/${productId}`);
     revalidatePath("/products");
 
-    logger.info("이미지 추가 성공");
-    logger.groupEnd();
+    logger.info("[addProductImage] 이미지 추가 완료", { imageId: data.id });
     return {
       success: true,
       message: "이미지가 추가되었습니다.",
       imageId: data.id,
     };
   } catch (error) {
-    logger.error("에러:", error);
-    logger.groupEnd();
+    logger.error("[addProductImage] 예외 발생", error);
     return { success: false, message: "이미지 추가에 실패했습니다." };
   }
 }
@@ -529,11 +414,9 @@ export async function addProductImage(
 export async function deleteProductImage(
   imageId: string,
 ): Promise<{ success: boolean; message: string }> {
-  logger.group("[deleteProductImage] 이미지 삭제");
-
   const isAdminUser = await isAdmin();
   if (!isAdminUser) {
-    logger.groupEnd();
+    logger.warn("[deleteProductImage] 관리자 권한 없음");
     return { success: false, message: "관리자 권한이 필요합니다." };
   }
 
@@ -548,8 +431,7 @@ export async function deleteProductImage(
       .single();
 
     if (fetchError) {
-      logger.error("이미지 정보 조회 에러:", fetchError);
-      logger.groupEnd();
+      logger.error("[deleteProductImage] 이미지 정보 조회 실패", fetchError);
       return {
         success: false,
         message: "이미지 정보를 가져오는데 실패했습니다.",
@@ -558,57 +440,29 @@ export async function deleteProductImage(
 
     // Storage에서 파일 삭제
     if (imageData?.image_url) {
-      logger.debug(
-        `[deleteProductImage] 삭제 대상 이미지 URL: ${imageData.image_url}`,
-      );
-
       const filePath = extractFilePathFromUrl(imageData.image_url);
       const bucketName = extractBucketFromUrl(imageData.image_url);
 
-      logger.debug(`[deleteProductImage] 추출된 정보:`, {
-        filePath,
-        bucketName,
-      });
-
       if (filePath && bucketName) {
-        logger.debug(
-          `[deleteProductImage] Storage 파일 삭제 시도: ${bucketName}/${filePath}`,
-        );
-        const { data, error: storageError } = await supabase.storage
+        const { error: storageError } = await supabase.storage
           .from(bucketName)
           .remove([filePath]);
 
         if (storageError) {
-          logger.error(
-            `[deleteProductImage] Storage 파일 삭제 실패 (${bucketName}/${filePath}):`,
-            storageError,
-          );
-          logger.error(
-            `[deleteProductImage] 에러 상세:`,
-            JSON.stringify(storageError, null, 2),
-          );
+          logger.error("[deleteProductImage] Storage 파일 삭제 실패", {
+            bucketName,
+            filePath,
+            error: storageError,
+          });
           // Storage 삭제 실패해도 DB 삭제는 진행
-        } else {
-          logger.debug(
-            `[deleteProductImage] Storage 파일 삭제 성공: ${bucketName}/${filePath}`,
-          );
-          logger.debug(`[deleteProductImage] 삭제 결과:`, data);
         }
-      } else {
-        // 외부 URL인 경우 (네이버 스마트스토어 등) - Storage에 없으므로 삭제할 필요 없음
-        if (
-          imageData.image_url.includes("shop-phinf.pstatic.net") ||
-          imageData.image_url.includes("http://") ||
-          imageData.image_url.includes("https://")
-        ) {
-          logger.debug(
-            `[deleteProductImage] 외부 URL이므로 Storage 삭제 건너뜀: ${imageData.image_url}`,
-          );
-        } else {
-          logger.warn(
-            `[deleteProductImage] 파일 경로 또는 버킷 추출 실패: ${imageData.image_url}`,
-          );
-        }
+      } else if (
+        !imageData.image_url.includes("shop-phinf.pstatic.net") &&
+        !imageData.image_url.includes("supabase.co/storage")
+      ) {
+        logger.warn("[deleteProductImage] 파일 경로 또는 버킷 추출 실패", {
+          imageUrl: imageData.image_url,
+        });
       }
     }
 
@@ -619,20 +473,17 @@ export async function deleteProductImage(
       .eq("id", imageId);
 
     if (error) {
-      logger.error("이미지 삭제 에러:", error);
-      logger.groupEnd();
+      logger.error("[deleteProductImage] 이미지 삭제 실패", error);
       return { success: false, message: "이미지 삭제에 실패했습니다." };
     }
 
     revalidatePath("/admin/products");
     revalidatePath("/products");
 
-    logger.info("이미지 삭제 성공");
-    logger.groupEnd();
+    logger.info("[deleteProductImage] 이미지 삭제 완료", { imageId });
     return { success: true, message: "이미지가 삭제되었습니다." };
   } catch (error) {
-    logger.error("에러:", error);
-    logger.groupEnd();
+    logger.error("[deleteProductImage] 예외 발생", error);
     return { success: false, message: "이미지 삭제에 실패했습니다." };
   }
 }
