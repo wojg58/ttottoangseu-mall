@@ -107,13 +107,13 @@ export default function EventBanner() {
       <div className="event-slide-container">
         <div className="event-slide-track">
           {/* 첫 번째 세트 (원본) */}
-          <ReviewBanner />
-          <SignupBanner />
           <KakaoBanner />
+          <SignupBanner />
+          <ReviewBanner />
           {/* 두 번째 세트 (무한 루프용 복제) */}
-          <ReviewBanner />
-          <SignupBanner />
           <KakaoBanner />
+          <SignupBanner />
+          <ReviewBanner />
         </div>
       </div>
     </section>
