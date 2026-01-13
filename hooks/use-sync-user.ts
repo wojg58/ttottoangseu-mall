@@ -125,13 +125,4 @@ export function useSyncUser() {
 
     syncUser();
   }, [isLoaded, isSignedIn, userId, getToken, userLoaded, user]);
-
-  // 네이버 로그인 후 Clerk 사용자 생성 실패 진단
-  useEffect(() => {
-    // isLoaded가 true인데 isSignedIn이 false면 Clerk가 사용자를 생성하지 못한 것
-    if (isLoaded && !isSignedIn && !userId) {
-      logger.error("[useSyncUser] 네이버 로그인 후 Clerk 사용자 생성 실패");
-      logger.debug("[useSyncUser] 가능한 원인: Proxy 서버 응답 문제 또는 Clerk 설정 문제");
-    }
-  }, [isLoaded, isSignedIn, userId]);
 }
