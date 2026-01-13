@@ -154,7 +154,7 @@ export default function ShopHeader() {
               locationTag="HeaderBanner"
               buttonText="카카오톡"
             />
-            <span className="text-black text-sm font-medium">
+            <span className="text-black text-xs font-medium">
               카카오톡 친구 추가시 1,000원 할인 쿠폰
             </span>
           </div>
