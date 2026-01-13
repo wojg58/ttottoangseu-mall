@@ -33,7 +33,6 @@ import { useRouter, usePathname } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useClerkSupabaseClient } from "@/lib/supabase/clerk-client";
-import { MessageCircle } from "lucide-react";
 
 // 카테고리 데이터 (DB에서 가져올 예정이지만 일단 하드코딩)
 const CATEGORIES = [
@@ -213,13 +212,21 @@ export default function ShopHeader() {
                     href={kakaoChannelUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center justify-center w-6 h-6 sm:w-8 sm:h-8 md:w-9 md:h-9 hover:opacity-80 transition-opacity text-white"
+                    className="inline-flex items-center justify-center w-6 h-6 sm:w-8 sm:h-8 md:w-9 md:h-9 hover:opacity-80 transition-opacity"
                     aria-label="카카오톡 채널 추가"
                     onClick={() => {
                       console.log("[ShopHeader] 카카오톡 채널 버튼 클릭:", kakaoChannelUrl);
                     }}
                   >
-                    <MessageCircle className="w-6 h-6 sm:w-8 sm:h-8 md:w-9 md:h-9" />
+                    <Image
+                      src="/icons/icon-kakao.png"
+                      alt="카카오톡 채널 추가"
+                      width={28}
+                      height={28}
+                      className="object-contain block"
+                      sizes="(max-width: 640px) 24px, (max-width: 768px) 28px, 28px"
+                      priority
+                    />
                   </a>
                 )}
               </div>
