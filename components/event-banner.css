@@ -278,16 +278,12 @@
     transform: translateX(0);
   }
   /* 첫 번째 배너가 완전히 사라질 때까지 (각 배너는 100vw) */
-  33.333% {
+  50% {
     transform: translateX(-100vw);
   }
-  /* 두 번째 배너가 완전히 사라질 때까지 */
-  66.666% {
-    transform: translateX(-200vw);
-  }
-  /* 세 번째 배너가 완전히 사라질 때까지 (무한 루프를 위해 원점으로) */
+  /* 두 번째 배너가 완전히 사라질 때까지 (무한 루프를 위해 원점으로) */
   100% {
-    transform: translateX(-300vw);
+    transform: translateX(-200vw);
   }
 }
 
