@@ -105,9 +105,10 @@ export async function createProduct(
     }
 
     // 다중 카테고리 추가 (product_categories 테이블)
-    const categoryIds = input.category_ids && input.category_ids.length > 0
-      ? input.category_ids
-      : [input.category_id]; // category_ids가 없으면 기본 category_id 사용
+    const categoryIds =
+      input.category_ids && input.category_ids.length > 0
+        ? input.category_ids
+        : [input.category_id]; // category_ids가 없으면 기본 category_id 사용
 
     if (categoryIds.length > 0) {
       const productCategoryData = categoryIds.map((categoryId, index) => ({
@@ -283,9 +284,11 @@ export async function deleteProduct(
 
   try {
     const supabase = await createClient();
-    
+
     // Service Role 클라이언트 가져오기 (Storage 파일 삭제용)
-    const { getServiceRoleClient } = await import("@/lib/supabase/service-role");
+    const { getServiceRoleClient } = await import(
+      "@/lib/supabase/service-role"
+    );
     const serviceRoleSupabase = getServiceRoleClient();
 
     // 1. 상품의 모든 이미지 조회
@@ -299,13 +302,18 @@ export async function deleteProduct(
       logger.error("[deleteProduct] 이미지 조회 에러:", imagesError);
       // 이미지 조회 실패해도 상품 삭제는 진행
     } else {
-      logger.debug(`[deleteProduct] 발견된 이미지 수: ${productImages?.length || 0}개`);
-      
+      logger.debug(
+        `[deleteProduct] 발견된 이미지 수: ${productImages?.length || 0}개`,
+      );
+
       if (productImages && productImages.length > 0) {
-        logger.debug("[deleteProduct] 이미지 목록:", productImages.map(img => ({
-          id: img.id,
-          url: img.image_url
-        })));
+        logger.debug(
+          "[deleteProduct] 이미지 목록:",
+          productImages.map((img) => ({
+            id: img.id,
+            url: img.image_url,
+          })),
+        );
       }
 
       // 2. 각 이미지의 Storage 파일 삭제
@@ -313,92 +321,118 @@ export async function deleteProduct(
         let deletedCount = 0;
         let skippedCount = 0;
         let failedCount = 0;
-        
+
         for (const image of productImages) {
           if (image.image_url) {
             logger.debug(`[deleteProduct] 이미지 삭제 처리 시작:`, {
               imageId: image.id,
-              imageUrl: image.image_url
+              imageUrl: image.image_url,
             });
-            
+
             // Next.js Image 최적화 URL인 경우 원본 URL 추출
             let originalUrl = image.image_url;
             if (image.image_url.includes("/_next/image?url=")) {
               try {
-                const urlParams = new URLSearchParams(image.image_url.split("?")[1]);
+                const urlParams = new URLSearchParams(
+                  image.image_url.split("?")[1],
+                );
                 const encodedUrl = urlParams.get("url");
                 if (encodedUrl) {
                   originalUrl = decodeURIComponent(encodedUrl);
-                  logger.debug(`[deleteProduct] Next.js Image URL에서 원본 URL 추출: ${originalUrl}`);
+                  logger.debug(
+                    `[deleteProduct] Next.js Image URL에서 원본 URL 추출: ${originalUrl}`,
+                  );
                 }
               } catch (e) {
                 logger.warn(`[deleteProduct] URL 디코딩 실패:`, e);
               }
             }
-            
+
             const filePath = extractFilePathFromUrl(originalUrl);
             const bucketName = extractBucketFromUrl(originalUrl);
-            
+
             logger.debug(`[deleteProduct] 추출된 정보:`, {
               originalUrl,
               filePath,
-              bucketName
+              bucketName,
             });
-            
+
             if (filePath && bucketName) {
-              logger.debug(`[deleteProduct] Storage 파일 삭제 시도: ${bucketName}/${filePath}`);
-              const { data: removeData, error: storageError } = await serviceRoleSupabase.storage
-                .from(bucketName)
-                .remove([filePath]);
+              logger.debug(
+                `[deleteProduct] Storage 파일 삭제 시도: ${bucketName}/${filePath}`,
+              );
+              const { data: removeData, error: storageError } =
+                await serviceRoleSupabase.storage
+                  .from(bucketName)
+                  .remove([filePath]);
 
               if (storageError) {
-                logger.error(`[deleteProduct] Storage 파일 삭제 실패 (${bucketName}/${filePath}):`, storageError);
-                logger.error(`[deleteProduct] 에러 상세:`, JSON.stringify(storageError, null, 2));
+                logger.error(
+                  `[deleteProduct] Storage 파일 삭제 실패 (${bucketName}/${filePath}):`,
+                  storageError,
+                );
+                logger.error(
+                  `[deleteProduct] 에러 상세:`,
+                  JSON.stringify(storageError, null, 2),
+                );
                 failedCount++;
                 // Storage 삭제 실패해도 DB 삭제는 진행
               } else {
-                logger.debug(`[deleteProduct] Storage 파일 삭제 성공: ${bucketName}/${filePath}`);
+                logger.debug(
+                  `[deleteProduct] Storage 파일 삭제 성공: ${bucketName}/${filePath}`,
+                );
                 logger.debug(`[deleteProduct] 삭제 결과:`, removeData);
                 deletedCount++;
               }
             } else {
               // 외부 URL인 경우 (네이버 스마트스토어 등) - Storage에 없으므로 삭제할 필요 없음
-              if (originalUrl.includes("shop-phinf.pstatic.net") || 
-                  originalUrl.includes("shop1.phinf.naver.net") ||
-                  (!originalUrl.includes("supabase.co/storage"))) {
-                logger.debug(`[deleteProduct] 외부 URL이므로 Storage 삭제 건너뜀: ${originalUrl}`);
+              if (
+                originalUrl.includes("shop-phinf.pstatic.net") ||
+                originalUrl.includes("shop1.phinf.naver.net") ||
+                !originalUrl.includes("supabase.co/storage")
+              ) {
+                logger.debug(
+                  `[deleteProduct] 외부 URL이므로 Storage 삭제 건너뜀: ${originalUrl}`,
+                );
                 skippedCount++;
               } else {
                 logger.warn(`[deleteProduct] 파일 경로 또는 버킷 추출 실패:`, {
                   originalUrl,
                   filePath,
-                  bucketName
+                  bucketName,
                 });
                 failedCount++;
               }
             }
           }
         }
-        
+
         logger.info(`[deleteProduct] 이미지 삭제 요약:`, {
           총개수: productImages.length,
           삭제성공: deletedCount,
           건너뜀: skippedCount,
-          실패: failedCount
+          실패: failedCount,
         });
 
         // 3. 데이터베이스에서 이미지 레코드 삭제
-        logger.debug("[deleteProduct] 데이터베이스에서 이미지 레코드 삭제 중...");
+        logger.debug(
+          "[deleteProduct] 데이터베이스에서 이미지 레코드 삭제 중...",
+        );
         const { error: deleteImagesError } = await supabase
           .from("product_images")
           .delete()
           .eq("product_id", productId);
 
         if (deleteImagesError) {
-          logger.error("[deleteProduct] 이미지 레코드 삭제 에러:", deleteImagesError);
+          logger.error(
+            "[deleteProduct] 이미지 레코드 삭제 에러:",
+            deleteImagesError,
+          );
           // 이미지 레코드 삭제 실패해도 상품 삭제는 진행
         } else {
-          logger.info(`[deleteProduct] ${productImages.length}개 이미지 레코드 삭제 완료`);
+          logger.info(
+            `[deleteProduct] ${productImages.length}개 이미지 레코드 삭제 완료`,
+          );
         }
       }
     }
@@ -516,40 +550,64 @@ export async function deleteProductImage(
     if (fetchError) {
       logger.error("이미지 정보 조회 에러:", fetchError);
       logger.groupEnd();
-      return { success: false, message: "이미지 정보를 가져오는데 실패했습니다." };
+      return {
+        success: false,
+        message: "이미지 정보를 가져오는데 실패했습니다.",
+      };
     }
 
     // Storage에서 파일 삭제
     if (imageData?.image_url) {
-      logger.debug(`[deleteProductImage] 삭제 대상 이미지 URL: ${imageData.image_url}`);
-      
+      logger.debug(
+        `[deleteProductImage] 삭제 대상 이미지 URL: ${imageData.image_url}`,
+      );
+
       const filePath = extractFilePathFromUrl(imageData.image_url);
       const bucketName = extractBucketFromUrl(imageData.image_url);
-      
-      logger.debug(`[deleteProductImage] 추출된 정보:`, { filePath, bucketName });
-      
+
+      logger.debug(`[deleteProductImage] 추출된 정보:`, {
+        filePath,
+        bucketName,
+      });
+
       if (filePath && bucketName) {
-        logger.debug(`[deleteProductImage] Storage 파일 삭제 시도: ${bucketName}/${filePath}`);
+        logger.debug(
+          `[deleteProductImage] Storage 파일 삭제 시도: ${bucketName}/${filePath}`,
+        );
         const { data, error: storageError } = await supabase.storage
           .from(bucketName)
           .remove([filePath]);
 
         if (storageError) {
-          logger.error(`[deleteProductImage] Storage 파일 삭제 실패 (${bucketName}/${filePath}):`, storageError);
-          logger.error(`[deleteProductImage] 에러 상세:`, JSON.stringify(storageError, null, 2));
+          logger.error(
+            `[deleteProductImage] Storage 파일 삭제 실패 (${bucketName}/${filePath}):`,
+            storageError,
+          );
+          logger.error(
+            `[deleteProductImage] 에러 상세:`,
+            JSON.stringify(storageError, null, 2),
+          );
           // Storage 삭제 실패해도 DB 삭제는 진행
         } else {
-          logger.debug(`[deleteProductImage] Storage 파일 삭제 성공: ${bucketName}/${filePath}`);
+          logger.debug(
+            `[deleteProductImage] Storage 파일 삭제 성공: ${bucketName}/${filePath}`,
+          );
           logger.debug(`[deleteProductImage] 삭제 결과:`, data);
         }
       } else {
         // 외부 URL인 경우 (네이버 스마트스토어 등) - Storage에 없으므로 삭제할 필요 없음
-        if (imageData.image_url.includes("shop-phinf.pstatic.net") || 
-            imageData.image_url.includes("http://") || 
-            imageData.image_url.includes("https://")) {
-          logger.debug(`[deleteProductImage] 외부 URL이므로 Storage 삭제 건너뜀: ${imageData.image_url}`);
+        if (
+          imageData.image_url.includes("shop-phinf.pstatic.net") ||
+          imageData.image_url.includes("http://") ||
+          imageData.image_url.includes("https://")
+        ) {
+          logger.debug(
+            `[deleteProductImage] 외부 URL이므로 Storage 삭제 건너뜀: ${imageData.image_url}`,
+          );
         } else {
-          logger.warn(`[deleteProductImage] 파일 경로 또는 버킷 추출 실패: ${imageData.image_url}`);
+          logger.warn(
+            `[deleteProductImage] 파일 경로 또는 버킷 추출 실패: ${imageData.image_url}`,
+          );
         }
       }
     }
