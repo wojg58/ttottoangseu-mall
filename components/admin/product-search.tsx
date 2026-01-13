@@ -19,6 +19,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import logger from "@/lib/logger-client";
 
 export default function ProductSearch() {
   const router = useRouter();
@@ -29,13 +30,10 @@ export default function ProductSearch() {
   useEffect(() => {
     const query = searchParams.get("search") || "";
     setSearchQuery(query);
-    console.log("[ProductSearch] URL에서 검색어 로드:", query);
   }, [searchParams]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    console.group("[ProductSearch] 검색 실행");
-    console.log("검색어:", searchQuery);
 
     const params = new URLSearchParams(searchParams.toString());
     
@@ -47,14 +45,10 @@ export default function ProductSearch() {
       params.delete("page");
     }
 
-    const newUrl = `/admin/products?${params.toString()}`;
-    console.log("[ProductSearch] 이동할 URL:", newUrl);
-    router.push(newUrl);
-    console.groupEnd();
+    router.push(`/admin/products?${params.toString()}`);
   };
 
   const handleClear = () => {
-    console.log("[ProductSearch] 검색어 초기화");
     setSearchQuery("");
     const params = new URLSearchParams(searchParams.toString());
     params.delete("search");

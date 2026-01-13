@@ -13,6 +13,7 @@ import type { ProductListItem } from "@/types/database";
 import DeleteProductButton from "@/components/delete-product-button";
 import NumberDisplay from "@/components/number-display";
 import BulkActionButton from "@/components/bulk-action-button";
+import logger from "@/lib/logger-client";
 
 interface ProductListWithSelectionProps {
   products: ProductListItem[];
@@ -221,11 +222,7 @@ function ProductRow({
       timeoutRef.current = setTimeout(() => {
         // 10초가 지나도 이미지가 로드되지 않으면 에러 처리
         if (imageLoading) {
-          console.warn(
-            "[ProductRow] 이미지 로딩 타임아웃:",
-            product.name,
-            product.primary_image?.image_url,
-          );
+          logger.warn("[ProductRow] 이미지 로딩 타임아웃");
           setImageError(true);
           setImageLoading(false);
         }
@@ -269,7 +266,6 @@ function ProductRow({
               className="object-cover"
               sizes="64px"
               onLoadingComplete={() => {
-                console.log("[ProductRow] 이미지 로딩 완료:", product.name);
                 if (timeoutRef.current) {
                   clearTimeout(timeoutRef.current);
                 }

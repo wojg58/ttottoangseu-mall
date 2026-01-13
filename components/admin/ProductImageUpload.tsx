@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { compressImages, getCompressionStats } from '@/lib/utils/compress-image-client';
 import Image from 'next/image';
+import logger from '@/lib/logger-client';
 
 interface ProductImageUploadProps {
   productId: string;
@@ -39,10 +40,11 @@ export default function ProductImageUpload({
       const compressedFiles = await compressImages(fileArray, compressionOptions);
       const stats = getCompressionStats(fileArray, compressedFiles);
 
-      console.log(`압축 완료: ${stats.originalMB} MB → ${stats.compressedMB} MB`);
-      if (productId === 'ttotto_pr_255') {
-        console.log('[ProductImageUpload] 사이즈 제한 없이 압축 완료 (상품 ID: ttotto_pr_255)');
-      }
+      logger.debug('[ProductImageUpload] 압축 완료', {
+        originalMB: stats.originalMB,
+        compressedMB: stats.compressedMB,
+        reduction: stats.reduction,
+      });
 
       setSelectedFiles(compressedFiles);
 
@@ -51,7 +53,7 @@ export default function ProductImageUpload({
 
       alert(`압축 완료! ${stats.reduction}% 절감`);
     } catch (error) {
-      console.error('압축 실패:', error);
+      logger.error('[ProductImageUpload] 압축 실패', error);
       alert('이미지 압축 중 오류가 발생했습니다.');
     } finally {
       setIsCompressing(false);
@@ -83,7 +85,7 @@ export default function ProductImageUpload({
           });
 
         if (uploadError) {
-          console.error(`업로드 실패:`, uploadError);
+          logger.error('[ProductImageUpload] 업로드 실패', uploadError);
           throw uploadError;
         }
 
@@ -103,7 +105,7 @@ export default function ProductImageUpload({
       alert(`${selectedFiles.length}장 업로드 완료!`);
       window.location.reload();
     } catch (error) {
-      console.error('업로드 실패:', error);
+      logger.error('[ProductImageUpload] 업로드 실패', error);
       alert('이미지 업로드 중 오류가 발생했습니다.');
     } finally {
       setIsUploading(false);

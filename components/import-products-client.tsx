@@ -31,6 +31,7 @@ import {
 import { importProducts } from "@/actions/import-products";
 import type { Category } from "@/types/database";
 import { Button } from "@/components/ui/button";
+import logger from "@/lib/logger-client";
 
 interface ImportProductsClientProps {
   categories: Category[];
@@ -66,8 +67,6 @@ export default function ImportProductsClient({
     setIsMounted(true);
   }, []);
 
-  console.log("[ImportProductsClient] 렌더링");
-
   // 카테고리 매핑 초기화
   const initializeCategoryMap = () => {
     const map = createCategoryMap(categories);
@@ -80,7 +79,6 @@ export default function ImportProductsClient({
     const selectedFile = e.target.files?.[0];
     if (!selectedFile) return;
 
-    console.log("[ImportProductsClient] 파일 선택:", selectedFile.name);
     setFile(selectedFile);
     setParseResult(null);
     setImportResult(null);
@@ -92,11 +90,10 @@ export default function ImportProductsClient({
     // 파일 파싱
     try {
       const result = await parseProductFile(selectedFile, map);
-      console.log("[ImportProductsClient] 파싱 결과:", result);
       setParseResult(result);
       setCategoryMap(map);
     } catch (error) {
-      console.error("[ImportProductsClient] 파싱 에러:", error);
+      logger.error("[ImportProductsClient] 파싱 실패", error);
       setParseResult({
         success: false,
         products: [],
@@ -196,7 +193,6 @@ export default function ImportProductsClient({
       return;
     }
 
-    console.log("[ImportProductsClient] 상품 이관 시작");
     setIsImporting(true);
     setImportResult(null);
 
@@ -230,7 +226,10 @@ export default function ImportProductsClient({
         });
 
         const result = await importProducts(mappedProducts);
-        console.log("[ImportProductsClient] 이관 결과:", result);
+        logger.debug("[ImportProductsClient] 이관 완료", {
+          imported: result.imported,
+          failed: result.failed,
+        });
         setImportResult(result);
 
         if (result.success || result.imported > 0) {
@@ -241,7 +240,7 @@ export default function ImportProductsClient({
           }, 2000);
         }
       } catch (error) {
-        console.error("[ImportProductsClient] 이관 에러:", error);
+        logger.error("[ImportProductsClient] 이관 실패", error);
         setImportResult({
           success: false,
           message: `이관 중 오류가 발생했습니다: ${error instanceof Error ? error.message : "알 수 없는 오류"}`,

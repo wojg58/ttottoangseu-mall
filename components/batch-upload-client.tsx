@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { uploadAndCompressImage } from "@/actions/batch-upload-images";
 import { Button } from "@/components/ui/button";
+import logger from "@/lib/logger-client";
 
 interface UploadedImage {
   fileName: string;
@@ -144,7 +145,6 @@ export default function BatchUploadClient() {
       // 각 이미지를 개별적으로 순차 업로드
       for (let i = 0; i < selectedFiles.length; i++) {
         const file = selectedFiles[i];
-        console.log(`[${i + 1}/${selectedFiles.length}] 업로드 중: ${file.name}`);
 
         // 진행률 업데이트
         setProgress({ current: i, total: selectedFiles.length });
@@ -165,16 +165,18 @@ export default function BatchUploadClient() {
               compressedSize: result.compressedSize!,
               compressionRatio: result.compressionRatio!,
             });
-            console.log(`[${i + 1}/${selectedFiles.length}] 업로드 성공: ${file.name}`);
           } else {
             failed.push({
               fileName: result.fileName || file.name,
               error: result.error || "알 수 없는 오류",
             });
-            console.error(`[${i + 1}/${selectedFiles.length}] 업로드 실패: ${file.name}`, result.error);
+            logger.error("[BatchUploadClient] 업로드 실패", {
+              fileName: file.name,
+              error: result.error,
+            });
           }
         } catch (error) {
-          console.error(`[${i + 1}/${selectedFiles.length}] 업로드 에러: ${file.name}`, error);
+          logger.error("[BatchUploadClient] 업로드 에러", error);
           failed.push({
             fileName: file.name,
             error: error instanceof Error ? error.message : "업로드에 실패했습니다.",
@@ -220,7 +222,7 @@ export default function BatchUploadClient() {
         );
       }
     } catch (error) {
-      console.error("업로드 에러:", error);
+      logger.error("[BatchUploadClient] 업로드 에러", error);
       alert(
         error instanceof Error
           ? error.message

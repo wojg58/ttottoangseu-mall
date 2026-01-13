@@ -18,6 +18,7 @@ import {
   downloadMobileCalendar,
   downloadCharacterImage,
 } from "@/lib/utils/download-calendar";
+import logger from "@/lib/logger-client";
 
 export default function CalendarDownloadButtons() {
   const [downloading, setDownloading] = useState<string | null>(null);
@@ -29,12 +30,11 @@ export default function CalendarDownloadButtons() {
     if (downloading) return; // 이미 다운로드 중이면 무시
 
     setDownloading(type);
-    console.log(`[CalendarDownloadButtons] ${type} 다운로드 시작`);
 
     try {
       await downloadFn();
     } catch (error) {
-      console.error(`[CalendarDownloadButtons] ${type} 다운로드 실패:`, error);
+      logger.error(`[CalendarDownloadButtons] ${type} 다운로드 실패`, error);
       alert("다운로드 중 오류가 발생했습니다. 다시 시도해주세요.");
     } finally {
       setDownloading(null);

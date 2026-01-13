@@ -23,6 +23,7 @@ import { useAuth } from "@clerk/nextjs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import logger from "@/lib/logger-client";
 
 type ChatRole = "user" | "assistant";
 
@@ -108,21 +109,21 @@ export function ChatWidget() {
   const ensureSession = useCallback(async () => {
     if (sessionId) return sessionId;
 
-    console.group("[ChatWidget] ensureSession");
     try {
       const res = await fetch("/api/chat/session", { method: "POST" });
       if (!res.ok) {
         const payload = (await res.json().catch(() => null)) as unknown;
-        console.error("Failed to create session:", res.status, payload);
+        logger.error("[ChatWidget] 세션 생성 실패", { status: res.status, payload });
         throw new Error("세션 생성에 실패했어요. 잠시 후 다시 시도해 주세요.");
       }
 
       const data = (await res.json()) as { sessionId: string };
-      console.log("Created sessionId:", data.sessionId);
+      logger.debug("[ChatWidget] 세션 생성 완료");
       setSessionId(data.sessionId);
       return data.sessionId;
-    } finally {
-      console.groupEnd();
+    } catch (error) {
+      logger.error("[ChatWidget] ensureSession 실패", error);
+      throw error;
     }
   }, [sessionId]);
 
@@ -182,10 +183,6 @@ export function ChatWidget() {
 
   const startStream = useCallback(
     async (sid: string, text: string) => {
-      console.group("[ChatWidget] startStream");
-      console.log("sessionId:", sid);
-      console.log("messageLength:", text.length);
-
       const assistantId = safeUuid();
       appendMessage({ id: assistantId, role: "assistant", content: "", isStreaming: true });
 
@@ -199,7 +196,7 @@ export function ChatWidget() {
 
         if (!res.ok || !res.body) {
           const payload = (await res.json().catch(() => null)) as unknown;
-          console.error("Stream request failed:", res.status, payload);
+          logger.error("[ChatWidget] 스트림 요청 실패", { status: res.status, payload });
           updateLastAssistant("\n\n(오류) 답변을 가져오지 못했어요.", true);
           return;
         }
@@ -231,11 +228,10 @@ export function ChatWidget() {
           }
         }
       } catch (e) {
-        console.error("Stream error:", e);
+        logger.error("[ChatWidget] 스트림 에러", e);
         updateLastAssistant("\n\n(오류) 스트리밍 중 문제가 발생했어요.", true);
       } finally {
         setIsSending(false);
-        console.groupEnd();
       }
     },
     [appendMessage, updateLastAssistant],
@@ -247,7 +243,6 @@ export function ChatWidget() {
     if (!isSignedIn) return;
     if (isSending) return;
 
-    console.group("[ChatWidget] handleSend");
     try {
       setInput("");
       // 전송 후 textarea 높이 초기화
@@ -258,14 +253,12 @@ export function ChatWidget() {
       const sid = await ensureSession();
       await startStream(sid, text);
     } catch (e) {
-      console.error("Send failed:", e);
+      logger.error("[ChatWidget] 메시지 전송 실패", e);
       appendMessage({
         id: safeUuid(),
         role: "assistant",
         content: "세션을 만들지 못했어요. 잠시 후 다시 시도해 주세요.",
       });
-    } finally {
-      console.groupEnd();
     }
   }, [appendMessage, ensureSession, input, isSending, isSignedIn, startStream]);
 
