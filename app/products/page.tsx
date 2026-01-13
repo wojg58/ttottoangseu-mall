@@ -31,8 +31,6 @@ export default async function ProductsPage({
 }: ProductsPageProps) {
   const params = await searchParams;
 
-  console.log("[ProductsPage] 렌더링, params:", params);
-
   // 필터 파싱
   const filters = {
     featured: params.featured === "true",

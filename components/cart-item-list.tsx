@@ -15,6 +15,7 @@ import {
   clearCart,
 } from "@/actions/cart";
 import type { CartItemWithProduct } from "@/types/database";
+import logger from "@/lib/logger-client";
 
 interface CartItemListProps {
   items: CartItemWithProduct[];
@@ -31,20 +32,20 @@ export default function CartItemList({ items }: CartItemListProps) {
 
   const handleQuantityChange = (itemId: string, newQuantity: number) => {
     if (newQuantity < 1) return;
-    console.log("[CartItemList] 수량 변경:", itemId, newQuantity);
     startTransition(async () => {
       const result = await updateCartItemQuantity(itemId, newQuantity);
       if (!result.success) {
+        logger.error("[CartItemList] 수량 변경 실패", { message: result.message });
         alert(result.message);
       }
     });
   };
 
   const handleRemove = (itemId: string) => {
-    console.log("[CartItemList] 아이템 삭제:", itemId);
     startTransition(async () => {
       const result = await removeFromCart(itemId);
       if (!result.success) {
+        logger.error("[CartItemList] 아이템 삭제 실패", { message: result.message });
         alert(result.message);
       }
     });
@@ -52,10 +53,10 @@ export default function CartItemList({ items }: CartItemListProps) {
 
   const handleClearCart = () => {
     if (!confirm("장바구니를 비우시겠습니까?")) return;
-    console.log("[CartItemList] 장바구니 비우기");
     startTransition(async () => {
       const result = await clearCart();
       if (!result.success) {
+        logger.error("[CartItemList] 장바구니 비우기 실패", { message: result.message });
         alert(result.message);
       }
     });
