@@ -298,7 +298,7 @@ export default async function HomePage() {
       {/* 배경 이미지 - LCP가 아니므로 priority 제거 */}
       <div className="fixed inset-0 -z-10">
         <Image
-          src="/f.jpg"
+          src="/background.jpg"
           alt=""
           fill
           className="object-cover"
