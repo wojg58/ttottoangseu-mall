@@ -149,6 +149,15 @@ export default function SignInContent() {
           max-width: 322px !important;
           flex: none !important;
         `;
+        
+        // 카카오 버튼 컨테이너 크기를 322px로 고정 (네이버, 구글과 동일)
+        kakaoContainer.style.cssText = `
+          display: flex !important;
+          width: 322px !important;
+          min-width: 322px !important;
+          max-width: 322px !important;
+          flex: none !important;
+        `;
 
         // 네이버 버튼을 맨 앞에 배치 (상단), 구글은 네이버 아래
         socialButtonsRoot.appendChild(naverContainer);
@@ -173,9 +182,13 @@ export default function SignInContent() {
         const hasGoogleButton = container.querySelector(
           ".cl-socialButtonsBlockButton__google, .cl-socialButtonsIconButton__google",
         );
+        // 카카오 버튼 컨테이너도 322px로 고정
+        const hasKakaoButton = container.querySelector(
+          ".cl-socialButtonsIconButton__custom_kakao",
+        );
         if (hasAnySocialButton) {
-          if (hasNaverButton || hasGoogleButton) {
-            // 네이버와 구글 버튼 컨테이너는 322px 고정
+          if (hasNaverButton || hasGoogleButton || hasKakaoButton) {
+            // 네이버, 구글, 카카오 버튼 컨테이너는 322px 고정
             container.style.cssText = `
               display: flex !important;
               width: 322px !important;
@@ -209,11 +222,15 @@ export default function SignInContent() {
       setTimeout(() => {
         reorderSocialButtons();
         updateNaverButtonText();
+        updateGoogleButtonText();
+        updateKakaoButtonText();
       }, 100);
 
       setTimeout(() => {
         reorderSocialButtons();
         updateNaverButtonText();
+        updateGoogleButtonText();
+        updateKakaoButtonText();
       }, 500);
 
       // 소셜 버튼들도 flex로 설정 (모든 버튼 동일한 높이)
@@ -245,6 +262,10 @@ export default function SignInContent() {
         // 구글 버튼도 제외 (별도로 처리) - BlockButton과 IconButton 모두
         if (button.classList.contains("cl-socialButtonsIconButton__google") || 
             button.classList.contains("cl-socialButtonsBlockButton__google")) {
+          return;
+        }
+        // 카카오 버튼도 제외 (별도로 처리)
+        if (button.classList.contains("cl-socialButtonsIconButton__custom_kakao")) {
           return;
         }
         button.style.cssText += `
@@ -288,6 +309,24 @@ export default function SignInContent() {
           justify-content: center !important;
         `;
       });
+      
+      // 카카오 버튼도 322px 고정 크기로 설정 (네이버, 구글과 동일)
+      const kakaoButtons = document.querySelectorAll(
+        ".cl-socialButtonsIconButton__custom_kakao",
+      ) as NodeListOf<HTMLElement>;
+      kakaoButtons.forEach((button) => {
+        button.style.cssText += `
+          width: 322px !important;
+          min-width: 322px !important;
+          max-width: 322px !important;
+          height: 40px !important;
+          min-height: 40px !important;
+          flex: none !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+        `;
+      });
 
       // 네이버 버튼의 중복 텍스트 제거 (아이콘 텍스트 숨기기)
       const naverIconTexts = document.querySelectorAll(
@@ -297,26 +336,51 @@ export default function SignInContent() {
         element.style.cssText = `display: none !important;`;
       });
 
-      // 카카오 버튼의 "K" 글자를 "kakao"로 변경
+      // 카카오 버튼 텍스트를 "Kakao 로그인"으로 변경 및 중앙 정렬
       const updateKakaoButtonText = () => {
         const kakaoButton = document.querySelector(
           ".cl-socialButtonsIconButton__custom_kakao",
         ) as HTMLElement;
         if (kakaoButton) {
+          // 버튼 텍스트를 "Kakao 로그인"으로 강제 변경 및 중앙 정렬
           const kakaoTextElement = kakaoButton.querySelector(
             ".cl-internal-g5v6j2",
           ) as HTMLElement;
-          if (kakaoTextElement && kakaoTextElement.textContent !== "kakao") {
-            kakaoTextElement.textContent = "kakao";
+          if (kakaoTextElement) {
+            kakaoTextElement.textContent = "Kakao 로그인";
+            kakaoTextElement.style.cssText = `
+              color: inherit !important;
+              font-weight: 500 !important;
+              font-size: 15px !important;
+              display: flex !important;
+              align-items: center !important;
+              justify-content: center !important;
+              width: 100% !important;
+              height: 100% !important;
+              text-align: center !important;
+              margin: 0 !important;
+              padding: 0 !important;
+              line-height: 1 !important;
+            `;
           }
+          
+          // 버튼 자체도 중앙 정렬 강화
+          kakaoButton.style.cssText += `
+            position: relative !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+          `;
         }
       };
 
       updateKakaoButtonText();
 
-      // 카카오 버튼 텍스트가 변경되어도 "kakao"로 유지
+      // 카카오 버튼 텍스트가 변경되어도 "Kakao 로그인"으로 유지
       let lastKakaoUpdateTime = 0;
       const KAKAO_THROTTLE_MS = 1000; // 1초마다 최대 1회만 업데이트
+      let kakaoObserverSetupAttempts = 0;
+      const MAX_KAKAO_SETUP_ATTEMPTS = 10; // 최대 10번만 시도
       
       const kakaoButtonObserver = new MutationObserver(() => {
         const now = Date.now();
@@ -326,16 +390,46 @@ export default function SignInContent() {
         }
       });
 
-      const kakaoButton = document.querySelector(
-        ".cl-socialButtonsIconButton__custom_kakao",
-      );
-      if (kakaoButton) {
-        kakaoButtonObserver.observe(kakaoButton, {
-          childList: true,
-          subtree: false, // true에서 false로 변경 - 직접 자식만 관찰 (성능 개선)
-          characterData: false, // false로 변경 - 텍스트 변경 무시 (성능 개선)
-        });
-      }
+      // 초기 실행 및 지속적인 모니터링
+      updateKakaoButtonText();
+
+      // 카카오 버튼이 나타날 때까지 대기 후 Observer 설정
+      const setupKakaoButtonObserver = () => {
+        // 최대 시도 횟수 제한
+        if (kakaoObserverSetupAttempts >= MAX_KAKAO_SETUP_ATTEMPTS) {
+          logger.debug("[SignInContent] 카카오 버튼 Observer 설정 최대 시도 횟수 도달");
+          return;
+        }
+        kakaoObserverSetupAttempts++;
+        
+        const kakaoButton = document.querySelector(
+          ".cl-socialButtonsIconButton__custom_kakao",
+        );
+        if (kakaoButton) {
+          kakaoButtonObserver.observe(kakaoButton, {
+            childList: true,
+            subtree: false, // 직접 자식만 관찰 (성능 개선)
+            characterData: false, // 텍스트 변경 무시 (성능 개선)
+          });
+        } else {
+          // 버튼이 아직 없으면 100ms 후 다시 시도
+          setTimeout(setupKakaoButtonObserver, 100);
+        }
+      };
+
+      // 초기 시도
+      setupKakaoButtonObserver();
+
+      // DOM이 완전히 로드된 후 다시 한 번 실행
+      setTimeout(() => {
+        updateKakaoButtonText();
+        setupKakaoButtonObserver();
+      }, 100);
+
+      setTimeout(() => {
+        updateKakaoButtonText();
+        setupKakaoButtonObserver();
+      }, 500);
 
       // 네이버 버튼 텍스트를 "NAVER"로 변경 (이미지처럼 중앙 정렬, 중복 제거)
       const updateNaverButtonText = () => {
