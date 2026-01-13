@@ -146,17 +146,17 @@ export default function ShopHeader() {
   return (
     <>
       {/* 카카오톡 친구 추가 배너 */}
-      <div className="bg-[#bbf7d0] border-b border-gray-200">
+      <div className="bg-white border-b border-gray-200">
         <div className="shop-container">
           <div className="flex items-center justify-center h-[30px] gap-2">
-            <span className="text-black text-sm font-medium">
-              카카오톡 친구 추가시 1,000원 할인 쿠폰
-            </span>
             <KakaoChannelButton
               variant="sm"
               locationTag="HeaderBanner"
               buttonText="카카오톡"
             />
+            <span className="text-black text-sm font-medium">
+              카카오톡 친구 추가시 1,000원 할인 쿠폰
+            </span>
           </div>
         </div>
       </div>
