@@ -45,48 +45,60 @@ export async function deductOrderStock(
   orderId: string,
   supabase: Awaited<ReturnType<typeof createClient>>,
 ): Promise<{ success: boolean; message?: string }> {
-  logger.group(`[deductOrderStock] 주문 재고 차감 시작: Order ID ${orderId}`);
-
   try {
     // 주문 아이템 조회
     const { data: orderItems, error: itemsError } = await supabase
       .from("order_items")
-      .select(`
+      .select(
+        `
         quantity,
         variant_id,
         product_id,
         product:products!fk_order_items_product_id(id, stock),
         variant:product_variants!fk_order_items_variant_id(id, stock, product_id)
-      `)
+      `,
+      )
       .eq("order_id", orderId);
 
     if (itemsError || !orderItems || orderItems.length === 0) {
-      logger.error("주문 아이템 조회 실패:", itemsError);
-      logger.groupEnd();
+      logger.error("[deductOrderStock] 주문 아이템 조회 실패", itemsError);
       return { success: false, message: "주문 아이템을 찾을 수 없습니다." };
     }
-
-    logger.info(`주문 아이템 ${orderItems.length}개 조회 완료`);
 
     // 재고 차감 (옵션이 있으면 옵션만, 없으면 상품만)
     // 옵션이 있는 상품의 경우 총 재고 업데이트를 위해 추적
     const productsToUpdateStock = new Set<string>();
 
     for (const item of orderItems) {
-      const product = (item.product as unknown) as { id: string; stock: number } | null;
-      const variant = (item.variant as unknown) as { id: string; stock: number; product_id: string } | null;
+      const product = item.product as unknown as {
+        id: string;
+        stock: number;
+      } | null;
+      const variant = item.variant as unknown as {
+        id: string;
+        stock: number;
+        product_id: string;
+      } | null;
 
       if (!product) {
-        logger.warn(`상품을 찾을 수 없음: Product ID ${item.product_id}`);
+        logger.warn("[deductOrderStock] 상품을 찾을 수 없음", {
+          productId: item.product_id,
+        });
         continue;
       }
 
       if (variant) {
         // 옵션이 있는 경우: 옵션 재고만 차감
         if (variant.stock < item.quantity) {
-          logger.error(`재고 부족: Variant ID ${variant.id}, 현재 재고: ${variant.stock}, 요청 수량: ${item.quantity}`);
-          logger.groupEnd();
-          return { success: false, message: `재고가 부족합니다. (옵션 ID: ${variant.id})` };
+          logger.error("[deductOrderStock] 재고 부족", {
+            variantId: variant.id,
+            currentStock: variant.stock,
+            requestedQuantity: item.quantity,
+          });
+          return {
+            success: false,
+            message: `재고가 부족합니다. (옵션 ID: ${variant.id})`,
+          };
         }
 
         const { error: variantError } = await supabase
@@ -95,21 +107,24 @@ export async function deductOrderStock(
           .eq("id", variant.id);
 
         if (variantError) {
-          logger.error(`옵션 재고 차감 실패: Variant ID ${variant.id}`, variantError);
-          logger.groupEnd();
+          logger.error("[deductOrderStock] 옵션 재고 차감 실패", variantError);
           return { success: false, message: "재고 차감에 실패했습니다." };
         }
 
-        logger.info(`✅ 옵션 재고 차감: Variant ID ${variant.id}, 기존 ${variant.stock} -> ${variant.stock - item.quantity}`);
-        
         // 옵션이 있는 상품은 총 재고도 업데이트 필요
         productsToUpdateStock.add(product.id);
       } else {
         // 옵션이 없는 경우: 상품 재고만 차감
         if (product.stock < item.quantity) {
-          logger.error(`재고 부족: Product ID ${product.id}, 현재 재고: ${product.stock}, 요청 수량: ${item.quantity}`);
-          logger.groupEnd();
-          return { success: false, message: `재고가 부족합니다. (상품 ID: ${product.id})` };
+          logger.error("[deductOrderStock] 재고 부족", {
+            productId: product.id,
+            currentStock: product.stock,
+            requestedQuantity: item.quantity,
+          });
+          return {
+            success: false,
+            message: `재고가 부족합니다. (상품 ID: ${product.id})`,
+          };
         }
 
         const { error: productError } = await supabase
@@ -118,19 +133,18 @@ export async function deductOrderStock(
           .eq("id", product.id);
 
         if (productError) {
-          logger.error(`상품 재고 차감 실패: Product ID ${product.id}`, productError);
-          logger.groupEnd();
+          logger.error("[deductOrderStock] 상품 재고 차감 실패", productError);
           return { success: false, message: "재고 차감에 실패했습니다." };
         }
-
-        logger.info(`✅ 상품 재고 차감: Product ID ${product.id}, 기존 ${product.stock} -> ${product.stock - item.quantity}`);
       }
     }
 
     // 옵션이 있는 상품의 총 재고 업데이트 (모든 옵션 재고 합산)
     if (productsToUpdateStock.size > 0) {
-      logger.info(`옵션이 있는 상품 ${productsToUpdateStock.size}개의 총 재고 업데이트 시작`);
-      
+      logger.debug("[deductOrderStock] 옵션이 있는 상품 총 재고 업데이트", {
+        count: productsToUpdateStock.size,
+      });
+
       for (const productId of productsToUpdateStock) {
         // 해당 상품의 모든 옵션 재고 합산
         const { data: variants, error: variantsError } = await supabase
@@ -140,33 +154,37 @@ export async function deductOrderStock(
           .is("deleted_at", null);
 
         if (variantsError) {
-          logger.error(`옵션 재고 조회 실패 (Product ID: ${productId}):`, variantsError);
+          logger.error("[deductOrderStock] 옵션 재고 조회 실패", {
+            productId,
+            error: variantsError,
+          });
           continue;
         }
 
         if (variants && variants.length > 0) {
-          const totalStock = variants.reduce((sum, v) => sum + (v.stock || 0), 0);
-          
+          const totalStock = variants.reduce(
+            (sum, v) => sum + (v.stock || 0),
+            0,
+          );
+
           const { error: updateError } = await supabase
             .from("products")
             .update({ stock: totalStock })
             .eq("id", productId);
 
           if (updateError) {
-            logger.error(`총 재고 업데이트 실패 (Product ID: ${productId}):`, updateError);
-          } else {
-            logger.info(`✅ 총 재고 업데이트 완료: Product ID ${productId} -> ${totalStock}개`);
+            logger.error("[deductOrderStock] 총 재고 업데이트 실패", {
+              productId,
+              error: updateError,
+            });
           }
         }
       }
     }
 
-    logger.info("✅ 주문 재고 차감 완료");
-    logger.groupEnd();
     return { success: true };
   } catch (error) {
-    logger.error("재고 차감 예외:", error);
-    logger.groupEnd();
+    logger.error("[deductOrderStock] 예외 발생", error);
     return { success: false, message: "재고 차감 중 오류가 발생했습니다." };
   }
 }
@@ -191,24 +209,10 @@ export async function createOrder(input: CreateOrderInput): Promise<{
   orderId?: string;
   orderNumber?: string;
 }> {
-  logger.group("[createOrder] 주문 생성");
-  logger.info("주문자 정보:", {
-    name: input.ordererName,
-    phone: input.ordererPhone,
-    email: input.ordererEmail,
-  });
-  logger.info("배송 정보:", {
-    name: input.shippingName,
-    phone: input.shippingPhone,
-    address: input.shippingAddress,
-    zipCode: input.shippingZipCode,
-    memo: input.shippingMemo,
-  });
-
   try {
     const userId = await getCurrentUserId();
     if (!userId) {
-      logger.groupEnd();
+      logger.debug("[createOrder] 사용자 미인증");
       return { success: false, message: "로그인이 필요합니다." };
     }
 
@@ -222,7 +226,7 @@ export async function createOrder(input: CreateOrderInput): Promise<{
       .single();
 
     if (!cart) {
-      logger.groupEnd();
+      logger.debug("[createOrder] 장바구니 없음");
       return { success: false, message: "장바구니가 비어있습니다." };
     }
 
@@ -239,7 +243,7 @@ export async function createOrder(input: CreateOrderInput): Promise<{
       .eq("cart_id", cart.id);
 
     if (!cartItems || cartItems.length === 0) {
-      logger.groupEnd();
+      logger.debug("[createOrder] 장바구니 아이템 없음");
       return { success: false, message: "장바구니가 비어있습니다." };
     }
 
@@ -271,7 +275,7 @@ export async function createOrder(input: CreateOrderInput): Promise<{
 
       // 품절 확인
       if (product.status === "sold_out" || product.stock === 0) {
-        logger.groupEnd();
+        logger.warn("[createOrder] 품절 상품", { productName: product.name });
         return {
           success: false,
           message: `${product.name}은(는) 품절된 상품입니다.`,
@@ -288,16 +292,27 @@ export async function createOrder(input: CreateOrderInput): Promise<{
           .single();
 
         if (!variantData || variantData.stock < item.quantity) {
-          logger.groupEnd();
+          logger.warn("[createOrder] 재고 부족", {
+            productName: product.name,
+            variantValue: variant.variant_value,
+            availableStock: variantData?.stock || 0,
+            requestedQuantity: item.quantity,
+          });
           return {
             success: false,
-            message: `${product.name} (${variant.variant_value})의 재고가 부족합니다. (현재 재고: ${variantData?.stock || 0}개)`,
+            message: `${product.name} (${
+              variant.variant_value
+            })의 재고가 부족합니다. (현재 재고: ${variantData?.stock || 0}개)`,
           };
         }
       } else {
         // 상품 재고 확인
         if (product.stock < item.quantity) {
-          logger.groupEnd();
+          logger.warn("[createOrder] 재고 부족", {
+            productName: product.name,
+            availableStock: product.stock,
+            requestedQuantity: item.quantity,
+          });
           return {
             success: false,
             message: `${product.name}의 재고가 부족합니다. (현재 재고: ${product.stock}개)`,
@@ -345,7 +360,10 @@ export async function createOrder(input: CreateOrderInput): Promise<{
               couponDiscount = coupon.discount_amount;
             } else if (coupon.discount_type === "percentage") {
               couponDiscount = (subtotal * coupon.discount_amount) / 100;
-              if (coupon.max_discount_amount && couponDiscount > coupon.max_discount_amount) {
+              if (
+                coupon.max_discount_amount &&
+                couponDiscount > coupon.max_discount_amount
+              ) {
                 couponDiscount = coupon.max_discount_amount;
               }
             }
@@ -378,8 +396,7 @@ export async function createOrder(input: CreateOrderInput): Promise<{
       .single();
 
     if (orderError || !order) {
-      logger.error("주문 생성 실패", orderError);
-      logger.groupEnd();
+      logger.error("[createOrder] 주문 생성 실패", orderError);
       return { success: false, message: "주문 생성에 실패했습니다." };
     }
 
@@ -394,24 +411,17 @@ export async function createOrder(input: CreateOrderInput): Promise<{
       .insert(orderItemsWithOrderId);
 
     if (itemsError) {
-      logger.error("주문 아이템 생성 실패", itemsError);
+      logger.error("[createOrder] 주문 아이템 생성 실패", itemsError);
       await supabase.from("orders").delete().eq("id", order.id);
-      logger.groupEnd();
       return { success: false, message: "주문 생성에 실패했습니다." };
     }
 
-    // ⚠️ 재고 차감은 결제 성공 시점에만 수행됩니다 (deductOrderStock 함수 호출)
-    // 주문 생성 시점에서는 재고를 차감하지 않습니다.
-    logger.info("[createOrder] 주문 생성 완료 - 재고 차감은 결제 성공 시점에 수행됩니다");
-
     // 네이버 동기화 큐 적재 (옵션 단위, 주문 생성 후)
-    // ⚠️ 주의: 재고 차감은 결제 성공 시점에 수행되므로, 여기서는 현재 재고 기준으로 적재됩니다.
-    // 정확한 재고 동기화를 위해서는 결제 성공 후 재고 차감 후에 동기화 큐를 다시 적재해야 합니다.
-    logger.info("[createOrder] 네이버 동기화 큐 적재 시작 (옵션 단위)");
     try {
       const { data: orderItems, error: orderItemsError } = await supabase
         .from("order_items")
-        .select(`
+        .select(
+          `
           quantity,
           variant_id,
           product:products(id, smartstore_product_id, stock),
@@ -421,91 +431,83 @@ export async function createOrder(input: CreateOrderInput): Promise<{
             smartstore_option_id,
             smartstore_channel_product_no
           )
-        `)
+        `,
+        )
         .eq("order_id", order.id);
 
       if (orderItemsError) {
-        logger.error("[createOrder] ❌ order_items 조회 실패:", orderItemsError);
-      } else {
-        logger.info(`[createOrder] order_items 조회 완료: ${orderItems?.length || 0}건`);
-        
-        if (orderItems && orderItems.length > 0) {
-          const queueData: Array<{
-            product_id: string;
-            variant_id: string | null;
-            smartstore_id: string;
+        logger.error("[createOrder] order_items 조회 실패", orderItemsError);
+      } else if (orderItems && orderItems.length > 0) {
+        const queueData: Array<{
+          product_id: string;
+          variant_id: string | null;
+          smartstore_id: string;
+          smartstore_option_id: number | null;
+          target_stock: number;
+          status: string;
+        }> = [];
+
+        for (const item of orderItems) {
+          // Supabase 관계형 쿼리 결과가 배열로 추론될 수 있으므로 unknown을 거쳐 타입 단언
+          const product = item.product as unknown as {
+            id: string;
+            smartstore_product_id: string | null;
+            stock: number;
+          } | null;
+          const variant = item.variant as unknown as {
+            id: string;
+            stock: number;
             smartstore_option_id: number | null;
-            target_stock: number;
-            status: string;
-          }> = [];
+            smartstore_channel_product_no: number | null;
+          } | null;
 
-          for (const item of orderItems) {
-            // Supabase 관계형 쿼리 결과가 배열로 추론될 수 있으므로 unknown을 거쳐 타입 단언
-            const product = (item.product as unknown) as { id: string; smartstore_product_id: string | null; stock: number } | null;
-            const variant = (item.variant as unknown) as {
-              id: string;
-              stock: number;
-              smartstore_option_id: number | null;
-              smartstore_channel_product_no: number | null;
-            } | null;
-
-            // 네이버 연동 상품만 처리
-            if (!product || !product.smartstore_product_id) {
-              continue;
-            }
-
-            // 옵션이 있고 스마트스토어 옵션 매핑이 있는 경우 → 옵션 단위 동기화
-            if (variant && variant.smartstore_option_id && variant.smartstore_channel_product_no) {
-              queueData.push({
-                product_id: product.id,
-                variant_id: variant.id,
-                smartstore_id: variant.smartstore_channel_product_no.toString(),
-                smartstore_option_id: variant.smartstore_option_id,
-                target_stock: variant.stock, // 옵션 재고 (이미 차감됨)
-                status: 'pending'
-              });
-              logger.info(
-                `[createOrder] 옵션 단위 큐 추가: ${product.id} / variant ${variant.id} → 스마트스토어 옵션 ${variant.smartstore_option_id} (재고: ${variant.stock})`
-              );
-            } else {
-              // 옵션이 없거나 매핑이 없는 경우 → 상품 단위 동기화
-              queueData.push({
-                product_id: product.id,
-                variant_id: null,
-                smartstore_id: product.smartstore_product_id,
-                smartstore_option_id: null,
-                target_stock: product.stock, // 상품 재고 (이미 차감됨)
-                status: 'pending'
-              });
-              logger.info(
-                `[createOrder] 상품 단위 큐 추가: ${product.id} → 스마트스토어 ${product.smartstore_product_id} (재고: ${product.stock})`
-              );
-            }
+          // 네이버 연동 상품만 처리
+          if (!product || !product.smartstore_product_id) {
+            continue;
           }
 
-          logger.info(`[createOrder] 네이버 연동 상품 필터링 결과: ${queueData.length}건`);
-
-          if (queueData.length > 0) {
-            logger.info("[createOrder] 큐에 추가할 데이터:", queueData);
-            const { error: queueError, data: insertedData } = await supabase
-              .from('naver_sync_queue')
-              .insert(queueData)
-              .select();
-
-            if (queueError) {
-              logger.error("[createOrder] ❌ 네이버 동기화 큐 적재 실패:", queueError);
-            } else {
-              logger.info(`[createOrder] ✅ 네이버 동기화 큐 적재 완료: ${queueData.length}건`, insertedData);
-            }
+          // 옵션이 있고 스마트스토어 옵션 매핑이 있는 경우 → 옵션 단위 동기화
+          if (
+            variant &&
+            variant.smartstore_option_id &&
+            variant.smartstore_channel_product_no
+          ) {
+            queueData.push({
+              product_id: product.id,
+              variant_id: variant.id,
+              smartstore_id: variant.smartstore_channel_product_no.toString(),
+              smartstore_option_id: variant.smartstore_option_id,
+              target_stock: variant.stock,
+              status: "pending",
+            });
           } else {
-            logger.info("[createOrder] 네이버 연동 상품 없음 (smartstore_product_id가 없는 상품만 있음)");
+            // 옵션이 없거나 매핑이 없는 경우 → 상품 단위 동기화
+            queueData.push({
+              product_id: product.id,
+              variant_id: null,
+              smartstore_id: product.smartstore_product_id,
+              smartstore_option_id: null,
+              target_stock: product.stock,
+              status: "pending",
+            });
           }
-        } else {
-          logger.warn("[createOrder] order_items가 비어있음");
+        }
+
+        if (queueData.length > 0) {
+          logger.debug("[createOrder] 네이버 동기화 큐 적재", {
+            count: queueData.length,
+          });
+          const { error: queueError } = await supabase
+            .from("naver_sync_queue")
+            .insert(queueData);
+
+          if (queueError) {
+            logger.error("[createOrder] 네이버 동기화 큐 적재 실패", queueError);
+          }
         }
       }
     } catch (e) {
-      logger.error("[createOrder] ❌ 네이버 동기화 큐 적재 실패 (주문은 성공):", e);
+      logger.error("[createOrder] 네이버 동기화 큐 적재 실패 (주문은 성공)", e);
       // 큐 적재 실패해도 주문은 성공했으므로 계속 진행
     }
 
@@ -528,10 +530,8 @@ export async function createOrder(input: CreateOrderInput): Promise<{
     // checkout 페이지는 revalidate하지 않음 (주문 생성 후에도 페이지에 머물 수 있도록)
     revalidatePath("/cart");
     revalidatePath("/mypage/orders");
-    // checkout 페이지는 revalidate하지 않음 - 주문 생성 후에도 결제 위젯을 표시하기 위해
 
-    logger.info("주문 생성 완료", orderNumber);
-    logger.groupEnd();
+    logger.info("[createOrder] 주문 생성 완료", { orderNumber });
     return {
       success: true,
       message: "주문이 생성되었습니다.",
@@ -539,8 +539,7 @@ export async function createOrder(input: CreateOrderInput): Promise<{
       orderNumber,
     };
   } catch (error) {
-    logger.error("주문 생성 예외", error);
-    logger.groupEnd();
+    logger.error("[createOrder] 예외 발생", error);
     return { success: false, message: "주문 생성에 실패했습니다." };
   }
 }
@@ -554,21 +553,16 @@ export interface CreateQuickOrderInput {
 }
 
 // 간편 결제용 주문 생성 (12,200원 고정)
-export async function createQuickOrder(
-  input: CreateQuickOrderInput,
-): Promise<{
+export async function createQuickOrder(input: CreateQuickOrderInput): Promise<{
   success: boolean;
   message: string;
   orderId?: string;
   orderNumber?: string;
 }> {
-  logger.group("[createQuickOrder] 간편 주문 생성");
-  console.log("[createQuickOrder] 입력 데이터:", input);
-
   try {
     const userId = await getCurrentUserId();
     if (!userId) {
-      logger.groupEnd();
+      logger.debug("[createQuickOrder] 사용자 미인증");
       return { success: false, message: "로그인이 필요합니다." };
     }
 
@@ -576,7 +570,6 @@ export async function createQuickOrder(
 
     // 주문 생성 (배송 정보는 최소화)
     const orderNumber = generateOrderNumber();
-    console.log("[createQuickOrder] 주문번호 생성:", orderNumber);
 
     const { data: order, error: orderError } = await supabase
       .from("orders")
@@ -597,19 +590,11 @@ export async function createQuickOrder(
       .single();
 
     if (orderError || !order) {
-      logger.error("간편 주문 생성 실패", orderError);
-      console.error("[createQuickOrder] 주문 생성 에러:", orderError);
-      logger.groupEnd();
+      logger.error("[createQuickOrder] 주문 생성 실패", orderError);
       return { success: false, message: "주문 생성에 실패했습니다." };
     }
 
-    console.log("[createQuickOrder] 주문 생성 성공:", {
-      orderId: order.id,
-      orderNumber,
-    });
-
-    logger.info("간편 주문 생성 완료", orderNumber);
-    logger.groupEnd();
+    logger.info("[createQuickOrder] 주문 생성 완료", { orderNumber });
     return {
       success: true,
       message: "주문이 생성되었습니다.",
@@ -617,9 +602,7 @@ export async function createQuickOrder(
       orderNumber,
     };
   } catch (error) {
-    logger.error("간편 주문 생성 예외", error);
-    console.error("[createQuickOrder] 예외 발생:", error);
-    logger.groupEnd();
+    logger.error("[createQuickOrder] 예외 발생", error);
     return { success: false, message: "주문 생성에 실패했습니다." };
   }
 }
@@ -705,9 +688,11 @@ export async function savePaymentInfo(
       return { success: false, message: "주문을 찾을 수 없습니다." };
     }
 
-    const { normalizePaymentMethod } = await import("@/lib/utils/payment-method");
+    const { normalizePaymentMethod } = await import(
+      "@/lib/utils/payment-method"
+    );
     const normalizedMethod = normalizePaymentMethod(paymentData.method);
-    
+
     const { error: paymentError } = await supabase.from("payments").insert({
       order_id: orderId,
       payment_key: paymentData.paymentKey,
@@ -724,10 +709,10 @@ export async function savePaymentInfo(
 
     await supabase
       .from("orders")
-      .update({ 
+      .update({
         payment_status: "PAID",
         fulfillment_status: "UNFULFILLED",
-        status: "PAID" // 하위 호환성
+        status: "PAID", // 하위 호환성
       })
       .eq("id", orderId);
 
@@ -771,7 +756,7 @@ export async function cancelOrder(
 
     const paymentStatus = order.payment_status || order.status;
     const fulfillmentStatus = order.fulfillment_status;
-    
+
     if (paymentStatus === "CANCELED" || paymentStatus === "REFUNDED") {
       logger.groupEnd();
       return { success: false, message: "이미 취소되거나 환불된 주문입니다." };
@@ -816,8 +801,7 @@ export async function cancelOrder(
               .from("product_variants")
               .update({ stock: variant.stock + item.quantity })
               .eq("id", item.variant_id);
-            logger.info(`[cancelOrder] 옵션 재고 복구: Variant ID ${item.variant_id}, 기존 ${variant.stock} -> ${variant.stock + item.quantity}`);
-            
+
             // 옵션이 있는 상품은 총 재고도 업데이트 필요
             productsToUpdateStock.add(variant.product_id);
           }
@@ -834,7 +818,6 @@ export async function cancelOrder(
               .from("products")
               .update({ stock: product.stock + item.quantity })
               .eq("id", item.product_id);
-            logger.info(`[cancelOrder] 상품 재고 복구: Product ID ${item.product_id}, 기존 ${product.stock} -> ${product.stock + item.quantity}`);
           }
         }
       }
@@ -842,8 +825,10 @@ export async function cancelOrder(
 
     // 옵션이 있는 상품의 총 재고 업데이트 (모든 옵션 재고 합산)
     if (productsToUpdateStock.size > 0) {
-      logger.info(`[cancelOrder] 옵션이 있는 상품 ${productsToUpdateStock.size}개의 총 재고 업데이트 시작`);
-      
+      logger.debug("[cancelOrder] 옵션이 있는 상품 총 재고 업데이트", {
+        count: productsToUpdateStock.size,
+      });
+
       for (const productId of productsToUpdateStock) {
         // 해당 상품의 모든 옵션 재고 합산
         const { data: variants, error: variantsError } = await supabase
@@ -853,22 +838,29 @@ export async function cancelOrder(
           .is("deleted_at", null);
 
         if (variantsError) {
-          logger.error(`[cancelOrder] 옵션 재고 조회 실패 (Product ID: ${productId}):`, variantsError);
+          logger.error("[cancelOrder] 옵션 재고 조회 실패", {
+            productId,
+            error: variantsError,
+          });
           continue;
         }
 
         if (variants && variants.length > 0) {
-          const totalStock = variants.reduce((sum, v) => sum + (v.stock || 0), 0);
-          
+          const totalStock = variants.reduce(
+            (sum, v) => sum + (v.stock || 0),
+            0,
+          );
+
           const { error: updateError } = await supabase
             .from("products")
             .update({ stock: totalStock })
             .eq("id", productId);
 
           if (updateError) {
-            logger.error(`[cancelOrder] 총 재고 업데이트 실패 (Product ID: ${productId}):`, updateError);
-          } else {
-            logger.info(`[cancelOrder] 총 재고 업데이트 완료: Product ID ${productId} -> ${totalStock}개`);
+            logger.error("[cancelOrder] 총 재고 업데이트 실패", {
+              productId,
+              error: updateError,
+            });
           }
         }
       }
@@ -888,28 +880,27 @@ export async function cancelOrder(
 
     const { error: updateError } = await supabase
       .from("orders")
-      .update({ 
+      .update({
         payment_status: "CANCELED",
         fulfillment_status: "CANCELED",
-        status: "CANCELED" // 하위 호환성
+        status: "CANCELED", // 하위 호환성
       })
       .eq("id", orderId);
 
     if (updateError) {
-      logger.error("주문 취소 실패", updateError);
-      logger.groupEnd();
+      logger.error("[cancelOrder] 주문 취소 실패", updateError);
       return { success: false, message: "주문 취소에 실패했습니다." };
     }
 
     revalidatePath("/mypage/orders");
     revalidatePath(`/mypage/orders/${orderId}`);
 
-    logger.info("주문 취소 완료", order.order_number);
-    logger.groupEnd();
+    logger.info("[cancelOrder] 주문 취소 완료", {
+      orderNumber: order.order_number,
+    });
     return { success: true, message: "주문이 취소되었습니다." };
   } catch (error) {
-    logger.error("주문 취소 예외", error);
-    logger.groupEnd();
+    logger.error("[cancelOrder] 예외 발생", error);
     return { success: false, message: "주문 취소 중 오류가 발생했습니다." };
   }
 }
