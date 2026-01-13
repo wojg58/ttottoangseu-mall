@@ -188,12 +188,12 @@
 
 .event-banner.pink .coupon::before,
 .event-banner.pink .coupon::after {
-  background: #bbf7d0;
+  background: #ffffff;
 }
 
 .event-banner.blue .coupon::before,
 .event-banner.blue .coupon::after {
-  background: #ffd6e8;
+  background: #ffffff;
 }
 
 .coupon::before {
