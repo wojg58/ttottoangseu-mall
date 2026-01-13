@@ -85,11 +85,8 @@ export async function sendAdminAlimtalkSolapi(
     };
   }
 
-  const apiKey = process.env.SOLAPI_API_KEY;
+  // apiSecret은 위에서 선언하지 않았으므로 여기서 선언
   const apiSecret = process.env.SOLAPI_API_SECRET;
-  const pfId = process.env.SOLAPI_PF_ID;
-  const templateId = process.env.SOLAPI_TEMPLATE_ID_ADMIN_ORDER;
-  let adminPhone = process.env.ADMIN_PHONE;
 
   // 필수 환경변수 확인
   if (!apiKey || !apiSecret) {
