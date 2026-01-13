@@ -326,7 +326,7 @@ export default async function HomePage() {
                 <p className="text-black mb-12 md:mb-6 text-base md:text-lg font-bold leading-relaxed">
                   산리오, 짱구, 유키오 등 사랑스러운 캐릭터 굿즈를 만나보세요.
                   <br className="hidden md:inline" />
-                  인형 키링, 파우치, 완구, 스티커 등 다양한 아이템이 가득!
+                  인형 키링, 파우치, 완구, 스티커 등 귀여운 아이템이 가득!
                 </p>
               </div>
               {/* 이미지 영역 - 모바일에서 텍스트 아래에 표시 */}
