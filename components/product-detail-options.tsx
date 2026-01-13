@@ -283,16 +283,19 @@ export default function ProductDetailOptions({
         console.log("[ProductDetailOptions] Server Action 결과:", result);
         
         if (result.success) {
-          console.log("[ProductDetailOptions] ✅ 4단계: 성공 - 체크아웃 페이지로 이동");
-          // 클라이언트에서 리다이렉트
-          router.push("/checkout");
+          console.log("[ProductDetailOptions] ✅ 4단계: 성공 - 장바구니 반영 대기 후 체크아웃 페이지로 이동");
+          // 장바구니 DB 반영을 위해 잠시 대기 (바로구매 플래그 포함)
+          await new Promise((resolve) => setTimeout(resolve, 800));
+          console.log("[ProductDetailOptions] 대기 완료 - 체크아웃 페이지로 이동");
+          // 바로구매 플래그를 쿼리 파라미터로 전달
+          router.push("/checkout?buyNow=true");
           console.groupEnd();
           return;
         } else {
           // 실패한 경우에도 체크아웃 페이지로 이동 (장바구니 추가 실패해도 주문 진행 가능)
           console.warn("[ProductDetailOptions] ⚠️ 장바구니 추가 실패했지만 체크아웃 페이지로 이동:", result.message);
           console.log("[ProductDetailOptions] ✅ 체크아웃 페이지로 이동 (장바구니 상태 확인 필요)");
-          router.push("/checkout");
+          router.push("/checkout?buyNow=true");
           console.groupEnd();
           return;
         }

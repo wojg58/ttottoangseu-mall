@@ -13,7 +13,7 @@ import CheckoutForm from "@/components/checkout-form";
 export default async function CheckoutPage({
   searchParams,
 }: {
-  searchParams: Promise<{ orderId?: string }>;
+  searchParams: Promise<{ orderId?: string; buyNow?: string }>;
 }) {
   try {
     const { userId } = await auth();
@@ -32,8 +32,10 @@ export default async function CheckoutPage({
 
     const params = await searchParams;
     const orderId = params.orderId;
+    const buyNow = params.buyNow === "true";
     console.log("[CheckoutPage] 2단계: searchParams 확인");
     console.log("orderId:", orderId || "없음");
+    console.log("buyNow:", buyNow);
 
     // 장바구니 조회 (PGRST301 에러 처리 포함)
     console.log("[CheckoutPage] 3단계: getCartItems() 첫 번째 호출");
@@ -62,35 +64,48 @@ export default async function CheckoutPage({
     })),
   });
 
-    // 바로 구매하기로 온 경우, 장바구니가 비어있을 수 있으므로 잠시 대기 후 재시도
+    // 바로 구매하기로 온 경우, 장바구니가 비어있을 수 있으므로 더 긴 대기 후 재시도
     if (!orderId && cartItems.length === 0) {
-      console.log("[CheckoutPage] 4단계: 장바구니 비어있음 - 500ms 대기 후 재시도");
-      // revalidatePath 후 데이터 반영을 위해 잠시 대기
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      console.log("[CheckoutPage] 5단계: getCartItems() 두 번째 호출");
-      try {
-        cartItems = await getCartItems();
-      } catch (error) {
-        console.error("[CheckoutPage] ❌ getCartItems() 두 번째 호출 실패:", error);
-        console.error("에러 상세:", {
-          message: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined,
-          name: error instanceof Error ? error.name : undefined,
-          digest: (error as any)?.digest,
-        });
-        // 에러 발생 시 빈 배열로 처리하고 계속 진행
-        cartItems = [];
+      // 바로구매인 경우 더 긴 대기 시간 (DB 반영 시간 확보)
+      const waitTime = buyNow ? 1500 : 500;
+      const maxRetries = buyNow ? 3 : 1;
+      
+      console.log(`[CheckoutPage] 4단계: 장바구니 비어있음 - ${waitTime}ms 대기 후 재시도 (최대 ${maxRetries}회)`);
+      
+      for (let retry = 1; retry <= maxRetries; retry++) {
+        // revalidatePath 후 데이터 반영을 위해 잠시 대기
+        await new Promise((resolve) => setTimeout(resolve, waitTime));
+        console.log(`[CheckoutPage] 5단계-${retry}: getCartItems() 재시도 호출`);
+        try {
+          cartItems = await getCartItems();
+          console.log(`[CheckoutPage] 재시도 ${retry} 결과:`, {
+            itemsCount: cartItems.length,
+            items: cartItems.map((item) => ({
+              id: item.id,
+              productId: item.product_id,
+              variantId: item.variant_id,
+              quantity: item.quantity,
+            })),
+          });
+          
+          // 장바구니에 아이템이 있으면 재시도 중단
+          if (cartItems.length > 0) {
+            console.log(`[CheckoutPage] ✅ 재시도 ${retry}에서 장바구니 아이템 확인됨 - 재시도 중단`);
+            break;
+          }
+        } catch (error) {
+          console.error(`[CheckoutPage] ❌ getCartItems() 재시도 ${retry} 실패:`, error);
+          console.error("에러 상세:", {
+            message: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            name: error instanceof Error ? error.name : undefined,
+            digest: (error as any)?.digest,
+          });
+          // 에러 발생 시 빈 배열로 처리하고 계속 진행
+          cartItems = [];
+        }
       }
-    console.log("[CheckoutPage] 두 번째 조회 결과:", {
-      itemsCount: cartItems.length,
-      items: cartItems.map((item) => ({
-        id: item.id,
-        productId: item.product_id,
-        variantId: item.variant_id,
-        quantity: item.quantity,
-      })),
-    });
-  }
+    }
 
   // 주문이 생성된 상태(orderId가 있는 경우)가 아니고 장바구니가 비어있으면 장바구니 페이지로
   // 주문이 생성된 후에는 장바구니가 비워지므로, orderId가 있으면 체크를 건너뜀

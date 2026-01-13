@@ -154,12 +154,24 @@ export default function AddToCartButton({
     startTransition(async () => {
       try {
         console.log("[AddToCartButton] 3단계: buyNowAndRedirect() 호출");
-        // Server Action에서 직접 리다이렉트 (DB 트랜잭션 완료 후 실행됨)
-        await buyNowAndRedirect(productId, quantity, variantId);
-        // redirect()는 never를 반환하므로 여기 도달하지 않음
-        console.log(
-          "[AddToCartButton] ✅ 리다이렉트 완료 (이 로그는 보이지 않아야 함)",
-        );
+        const result = await buyNowAndRedirect(productId, quantity, variantId);
+        console.log("[AddToCartButton] Server Action 결과:", result);
+        
+        if (result.success) {
+          console.log("[AddToCartButton] ✅ 4단계: 성공 - 장바구니 반영 대기 후 체크아웃 페이지로 이동");
+          // 장바구니 DB 반영을 위해 잠시 대기 (바로구매 플래그 포함)
+          await new Promise((resolve) => setTimeout(resolve, 800));
+          console.log("[AddToCartButton] 대기 완료 - 체크아웃 페이지로 이동");
+          // 바로구매 플래그를 쿼리 파라미터로 전달
+          router.push("/checkout?buyNow=true");
+          console.groupEnd();
+          return;
+        } else {
+          console.warn("[AddToCartButton] ⚠️ 장바구니 추가 실패:", result.message);
+          alert(result.message || "장바구니 추가에 실패했습니다.");
+          console.groupEnd();
+          return;
+        }
       } catch (error: any) {
         // Next.js의 redirect()는 NEXT_REDIRECT 에러를 throw합니다. 이건 정상 동작이므로 다시 throw
         // redirect 에러는 message나 digest 속성에 NEXT_REDIRECT가 포함됨
