@@ -64,9 +64,10 @@
   width: 400px;
 }
 
-/* 신규가입 배너만 380px */
-.event-banner-link-signup {
-  width: 380px;
+/* 신규가입 배너와 카카오톡 배너 390px */
+.event-banner-link-signup,
+.event-banner-link-kakao {
+  width: 390px;
 }
 
 /* 공통 배너 */

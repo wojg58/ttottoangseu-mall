@@ -57,7 +57,10 @@ export default function EventBanner() {
   );
 
   const SignupBanner = () => (
-    <Link href="/sign-up/join" className="event-banner-link event-banner-link-signup">
+    <Link
+      href="/sign-up/join"
+      className="event-banner-link event-banner-link-signup"
+    >
       <div className="event-banner blue">
         <div className="text">
           <h3>신규가입 시 쿠폰 증정</h3>
@@ -81,7 +84,7 @@ export default function EventBanner() {
         href={kakaoChannelUrl}
         target="_blank"
         rel="noopener noreferrer"
-        className="event-banner-link"
+        className="event-banner-link event-banner-link-kakao"
       >
         <div className="event-banner yellow">
           <div className="text">
