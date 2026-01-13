@@ -16,6 +16,7 @@ import { X, Plus, Minus } from "lucide-react";
 import { getOrderById } from "@/actions/orders";
 import { removeFromCart, updateCartItemQuantity } from "@/actions/cart";
 import { getAvailableCoupons, type Coupon } from "@/actions/coupons";
+import { getMemberAdditionalInfo } from "@/actions/member-actions";
 import { calculateCouponDiscount } from "@/lib/coupon-utils";
 import type { CartItemWithProduct } from "@/types/database";
 import { Button } from "@/components/ui/button";
@@ -484,6 +485,39 @@ export default function CheckoutForm({
       if (ordererPhone) {
         form.setValue("shippingPhone", ordererPhone);
       }
+
+      // 회원 추가 정보에서 주소 정보 가져오기
+      getMemberAdditionalInfo()
+        .then((result) => {
+          if (result.success && result.data) {
+            console.log("[CheckoutForm] 회원 주소 정보 로드 완료", {
+              postcode: result.data.postcode,
+              addr1: result.data.addr1,
+              addr2: result.data.addr2,
+            });
+
+            // 우편번호
+            if (result.data.postcode) {
+              form.setValue("shippingZipCode", result.data.postcode);
+            }
+            // 기본 주소
+            if (result.data.addr1) {
+              form.setValue("shippingAddress", result.data.addr1);
+            }
+            // 상세 주소
+            if (result.data.addr2) {
+              form.setValue("shippingAddressDetail", result.data.addr2);
+            }
+
+            // 유효성 검사 트리거
+            form.trigger(["shippingZipCode", "shippingAddress", "shippingAddressDetail"]);
+          } else {
+            console.log("[CheckoutForm] 회원 주소 정보 없음 또는 로드 실패");
+          }
+        })
+        .catch((error) => {
+          console.error("[CheckoutForm] 회원 주소 정보 로드 에러:", error);
+        });
     } else if (!useMemberInfo) {
       // 새로운 배송지 선택 시 필드 초기화
       form.setValue("shippingName", "");
