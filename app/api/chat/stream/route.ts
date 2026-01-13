@@ -74,7 +74,7 @@ export async function POST(req: Request) {
     const body = await req.json();
     const validationResult = validateSchema(chatMessageSchema, body);
 
-    if (!validationResult.success) {
+    if (validationResult.success === false) {
       console.warn("[Validation] 챗봇 메시지 검증 실패:", validationResult.error);
       return NextResponse.json(
         { error: validationResult.error },
@@ -82,6 +82,7 @@ export async function POST(req: Request) {
       );
     }
 
+    // 타입 가드: success가 true이면 data가 존재함
     const { sessionId, message } = validationResult.data;
 
     console.log("requestBody:", {

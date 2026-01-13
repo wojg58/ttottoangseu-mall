@@ -46,7 +46,10 @@ export async function GET(request: NextRequest) {
     console.log("엑셀 파일 다운로드 성공:", filename);
     console.groupEnd();
 
-    return new NextResponse(result.buffer, {
+    // Buffer를 Uint8Array로 변환하여 NextResponse에 전달
+    const buffer = new Uint8Array(result.buffer);
+    
+    return new NextResponse(buffer, {
       headers: {
         "Content-Type":
           "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
