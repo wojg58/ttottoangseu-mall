@@ -24,11 +24,17 @@
   width: fit-content;
 }
 
-/* 데스크톱에서는 애니메이션 비활성화 */
+/* 데스크톱에서는 애니메이션 비활성화 및 배치 조정 */
 @media (min-width: 641px) {
   .event-slide-track {
     /* animation: slide-left 20s linear infinite; */
     /* animation-play-state: running; */
+    justify-content: center;
+  }
+  
+  /* 데스크톱에서 무한 루프용 복제본 숨김 (2개만 표시) */
+  .event-slide-track > *:nth-child(n+3) {
+    display: none;
   }
 }
 
@@ -67,13 +73,13 @@
   color: inherit;
   display: block;
   flex-shrink: 0;
-  width: 400px;
+  width: 600px;
 }
 
-/* 신규가입 배너와 카카오톡 배너 390px */
+/* 신규가입 배너와 카카오톡 배너 600px */
 .event-banner-link-signup,
 .event-banner-link-kakao {
-  width: 390px;
+  width: 600px;
 }
 
 /* 공통 배너 */
