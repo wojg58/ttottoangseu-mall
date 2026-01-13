@@ -13,48 +13,27 @@ import type { CartItemWithProduct } from "@/types/database";
 
 // 현재 사용자의 Supabase user ID 조회
 async function getCurrentUserId(): Promise<string | null> {
-  logger.group("[getCurrentUserId] 사용자 ID 조회 시작");
-  logger.info("[getCurrentUserId] 1단계: 함수 호출됨");
-  logger.info("타임스탬프:", new Date().toISOString());
-
   const authResult = await auth();
   const { userId: clerkUserId } = authResult;
 
-  logger.info("[getCurrentUserId] 2단계: Clerk 인증 확인");
-  logger.info("Clerk userId:", clerkUserId);
-
   if (!clerkUserId) {
-    logger.warn("[getCurrentUserId] ⚠️ Clerk userId가 없음 - 로그인하지 않음");
-    logger.groupEnd();
+    logger.debug("[getCurrentUserId] 사용자 미인증");
     return null;
   }
 
   // Clerk 토큰 확인 (PGRST301 에러 방지)
-  logger.info("[getCurrentUserId] 3단계: Clerk 토큰 확인");
   const token = await authResult.getToken();
-  logger.info("[getCurrentUserId] 토큰 상태:", {
-    hasToken: !!token,
-    tokenPreview: token ? token.substring(0, 20) + "..." : null,
-  });
   let supabase;
 
   if (!token) {
-    logger.warn(
-      "[getCurrentUserId] Clerk 토큰이 없음 - service role 클라이언트 사용",
-    );
+    logger.debug("[getCurrentUserId] 토큰 없음, service role 클라이언트 사용");
     const { getServiceRoleClient } = await import(
       "@/lib/supabase/service-role"
     );
     supabase = getServiceRoleClient();
   } else {
-    logger.info("[getCurrentUserId] Clerk 토큰 확인됨 - 일반 클라이언트 사용");
     supabase = await createClient();
   }
-
-  logger.info("[getCurrentUserId] 4단계: Supabase users 테이블 조회");
-  logger.info("조회 조건:", {
-    clerk_user_id: clerkUserId,
-  });
 
   let { data: user, error } = await supabase
     .from("users")
@@ -63,23 +42,9 @@ async function getCurrentUserId(): Promise<string | null> {
     .is("deleted_at", null)
     .maybeSingle();
 
-  logger.info("[getCurrentUserId] Supabase 사용자 조회 결과:", {
-    found: !!user,
-    userId: user?.id || null,
-    error: error
-      ? {
-          code: error.code,
-          message: error.message,
-        }
-      : null,
-    hasToken: !!token,
-  });
-
   // PGRST301 에러 발생 시 service role 클라이언트로 재시도
   if (error && error.code === "PGRST301") {
-    logger.warn(
-      "[getCurrentUserId] PGRST301 에러 발생 - service role 클라이언트로 재시도",
-    );
+    logger.debug("[getCurrentUserId] PGRST301 에러, service role로 재시도");
     const { getServiceRoleClient } = await import(
       "@/lib/supabase/service-role"
     );
@@ -93,30 +58,21 @@ async function getCurrentUserId(): Promise<string | null> {
       .maybeSingle();
 
     if (retryError) {
-      logger.error(
-        "[getCurrentUserId] service role 클라이언트로도 조회 실패:",
-        {
-          error: retryError.message,
-          code: retryError.code,
-        },
-      );
-      logger.groupEnd();
+      logger.error("[getCurrentUserId] service role로도 조회 실패", {
+        error: retryError.message,
+        code: retryError.code,
+      });
       return null;
     }
 
     if (retryUser) {
-      logger.info(
-        "[getCurrentUserId] service role 클라이언트로 조회 성공:",
-        retryUser.id,
-      );
-      logger.groupEnd();
       return retryUser.id;
     }
   }
 
   // 사용자가 없으면 동기화 시도
   if (!user && !error) {
-    logger.info("[getCurrentUserId] 사용자가 없음 - 동기화 시도");
+    logger.debug("[getCurrentUserId] 사용자 없음, 동기화 시도");
     try {
       const { clerkClient } = await import("@clerk/nextjs/server");
       const { getServiceRoleClient } = await import(
@@ -127,11 +83,6 @@ async function getCurrentUserId(): Promise<string | null> {
       const clerkUser = await client.users.getUser(clerkUserId);
 
       if (clerkUser) {
-        logger.info("[getCurrentUserId] Clerk 사용자 정보 조회 성공:", {
-          id: clerkUser.id,
-          email: clerkUser.emailAddresses[0]?.emailAddress,
-        });
-
         const serviceSupabase = getServiceRoleClient();
         const userData = {
           clerk_user_id: clerkUser.id,
@@ -151,17 +102,16 @@ async function getCurrentUserId(): Promise<string | null> {
           .single();
 
         if (!insertError && newUser) {
-          logger.info("[getCurrentUserId] 사용자 동기화 성공:", newUser.id);
-          logger.groupEnd();
+          logger.debug("[getCurrentUserId] 사용자 동기화 성공");
           return newUser.id;
         } else {
-          logger.error("[getCurrentUserId] 사용자 동기화 실패:", insertError);
+          logger.error("[getCurrentUserId] 사용자 동기화 실패", insertError);
         }
       } else {
         logger.warn("[getCurrentUserId] Clerk 사용자 정보 조회 실패");
       }
     } catch (syncError) {
-      logger.error("[getCurrentUserId] 사용자 동기화 중 예외 발생:", syncError);
+      logger.error("[getCurrentUserId] 사용자 동기화 중 예외 발생", syncError);
     }
 
     // 동기화 후 다시 조회 (동일한 클라이언트 사용)
@@ -173,12 +123,10 @@ async function getCurrentUserId(): Promise<string | null> {
       .maybeSingle();
 
     if (retryError) {
-      logger.error("[getCurrentUserId] 재조회 실패:", {
+      logger.error("[getCurrentUserId] 재조회 실패", {
         error: retryError.message,
         code: retryError.code,
       });
-    } else if (retryUser) {
-      logger.info("[getCurrentUserId] 재조회 성공:", retryUser.id);
     }
 
     user = retryUser;
@@ -186,18 +134,14 @@ async function getCurrentUserId(): Promise<string | null> {
 
   // 일반 에러 처리 (PGRST301이 아닌 경우)
   if (error && error.code !== "PGRST301") {
-    logger.error("[getCurrentUserId] 사용자 조회 실패:", {
+    logger.error("[getCurrentUserId] 사용자 조회 실패", {
       error: error.message,
       code: error.code,
     });
-    logger.groupEnd();
     return null;
   }
 
-  const result = user?.id ?? null;
-  logger.info("[getCurrentUserId] 최종 결과:", result);
-  logger.groupEnd();
-  return result;
+  return user?.id ?? null;
 }
 
 // 장바구니 ID 조회/생성
