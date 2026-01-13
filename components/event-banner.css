@@ -16,20 +16,20 @@
   position: relative;
 }
 
-/* 슬라이드 트랙 (애니메이션 적용) */
+/* 슬라이드 트랙 (애니메이션 비활성화) */
 .event-slide-track {
   display: flex;
   flex-direction: row;
   gap: 14px;
   width: fit-content;
-  animation: slide-left 20s linear infinite;
-  animation-play-state: running;
+  /* animation: slide-left 20s linear infinite; */
+  /* animation-play-state: running; */
 }
 
-/* 호버 시 애니메이션 일시 정지 */
-.event-wrapper:hover .event-slide-track {
+/* 호버 시 애니메이션 일시 정지 (애니메이션 비활성화로 주석 처리) */
+/* .event-wrapper:hover .event-slide-track {
   animation-play-state: paused;
-}
+} */
 
 /* 슬라이드 애니메이션 (왼쪽 → 오른쪽) */
 @keyframes slide-left {
