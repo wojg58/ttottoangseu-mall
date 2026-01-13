@@ -110,7 +110,7 @@ export default function KakaoChannelButton({
 
   // 버튼 크기 스타일
   const sizeClass = {
-    sm: "h-7 px-2 text-xs",
+    sm: "h-6 px-1.5 text-[11px]",
     default: "h-11 px-4 text-base",
     lg: "h-12 px-6 text-lg",
   }[variant];
@@ -149,9 +149,9 @@ export default function KakaoChannelButton({
           href={channelUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center justify-center gap-1.5"
+          className="flex items-center justify-center gap-1"
         >
-          <MessageCircle className={variant === "sm" ? "w-4 h-4" : "w-5 h-5"} />
+          <MessageCircle className={variant === "sm" ? "w-3.5 h-3.5" : "w-5 h-5"} />
           {buttonText}
         </Link>
       </Button>
