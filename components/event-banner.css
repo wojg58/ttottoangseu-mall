@@ -73,13 +73,13 @@
   color: inherit;
   display: block;
   flex-shrink: 0;
-  width: 600px;
+  width: 395px;
 }
 
-/* 신규가입 배너와 카카오톡 배너 600px */
+/* 신규가입 배너와 카카오톡 배너 395px */
 .event-banner-link-signup,
 .event-banner-link-kakao {
-  width: 600px;
+  width: 395px;
 }
 
 /* 공통 배너 */
