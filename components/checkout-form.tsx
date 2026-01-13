@@ -388,7 +388,7 @@ export default function CheckoutForm({
           }
         })
         .catch((error) => {
-          console.error("[CheckoutForm] 주문 정보 로드 실패:", error);
+          logger.error("[CheckoutForm] 주문 정보 로드 실패", error);
         });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -405,33 +405,14 @@ export default function CheckoutForm({
 
       getAvailableCoupons()
         .then((couponList) => {
-          console.log(
-            `[CheckoutForm] ✅ ${couponList.length}개의 쿠폰 조회 완료`,
-          );
-          if (couponList.length > 0) {
-            console.log(
-              "쿠폰 목록:",
-              couponList.map((c) => ({
-                id: c.id,
-                name: c.name,
-                discount: c.discount_amount,
-                type: c.discount_type,
-                status: c.status,
-                expires_at: c.expires_at,
-              })),
-            );
-          } else {
-            console.log("[CheckoutForm] ⚠️ 사용 가능한 쿠폰이 없습니다.");
-          }
+          logger.debug("[CheckoutForm] 쿠폰 조회 완료", {
+            count: couponList.length,
+          });
           setCoupons(couponList);
-          console.groupEnd();
+          logger.groupEnd();
         })
         .catch((error) => {
-          console.error("[CheckoutForm] ❌ 쿠폰 조회 실패:", error);
-          console.error("에러 상세:", {
-            message: error instanceof Error ? error.message : String(error),
-            stack: error instanceof Error ? error.stack : undefined,
-          });
+          logger.error("[CheckoutForm] 쿠폰 조회 실패", error);
           setCoupons([]);
           console.groupEnd();
         });
@@ -522,11 +503,11 @@ export default function CheckoutForm({
             // 유효성 검사 트리거
             form.trigger(["shippingZipCode", "shippingAddress", "shippingAddressDetail"]);
           } else {
-            console.log("[CheckoutForm] 회원 주소 정보 없음 또는 로드 실패");
+            logger.debug("[CheckoutForm] 회원 주소 정보 없음 또는 로드 실패");
           }
         })
         .catch((error) => {
-          console.error("[CheckoutForm] 회원 주소 정보 로드 에러:", error);
+          logger.error("[CheckoutForm] 회원 주소 정보 로드 실패", error);
         });
     } else if (!useMemberInfo) {
       // 새로운 배송지 선택 시 필드 초기화

@@ -105,10 +105,7 @@ export default function CartItemList({ items }: CartItemListProps) {
                       className="object-contain"
                       sizes="96px"
                       onError={() => {
-                        console.warn(
-                          "[CartItemList] 이미지 로딩 실패:",
-                          item.primary_image?.image_url,
-                        );
+                        logger.warn("[CartItemList] 이미지 로딩 실패");
                         setImageErrors((prev) => new Set(prev).add(item.id));
                       }}
                     />

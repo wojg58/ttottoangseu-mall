@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Image from "next/image";
 import { X, Upload, Star, ChevronUp, ChevronDown, Plus } from "lucide-react";
+import logger from "@/lib/logger-client";
 import {
   Form,
   FormControl,
@@ -365,8 +366,6 @@ export default function ProductForm({
   }, [showSymbolMenu]);
 
   const onSubmit = (data: ProductFormData) => {
-    console.log("[ProductForm] 제출:", data);
-
     startTransition(async () => {
       if (isEdit && product) {
         // 수정
@@ -382,14 +381,6 @@ export default function ProductForm({
             sort_order: index, // 현재 순서를 sort_order로 설정
             alt_text: img.alt_text || data.name,
           }));
-
-        console.group("[ProductForm] 수정 시 이미지 처리");
-        console.log("[ProductForm] 수정 시 이미지 데이터:", imagesData);
-        console.log("[ProductForm] 이미지 ID 목록:", imagesData.map(img => img.id).filter(Boolean));
-        console.log("[ProductForm] 현재 productImages 상태:", productImages.map(img => ({ id: img.id, is_primary: img.is_primary })));
-        console.log("[ProductForm] 삭제된 이미지 ID 목록:", deletedImageIds);
-        console.log("[ProductForm] 수정 시 옵션 데이터:", productVariants);
-        console.groupEnd();
 
         // 옵션 데이터 준비 (빈 값 필터링)
         const variantsData = productVariants
@@ -445,7 +436,6 @@ export default function ProductForm({
             sku: v.sku ?? null,
           }));
 
-        console.log("[ProductForm] 생성 시 옵션 데이터:", variantsData);
 
         const result = await createProduct({
           category_id: data.category_id, // 기본 카테고리 (하위 호환성)
@@ -1362,20 +1352,11 @@ export default function ProductForm({
                           const files = e.target.files;
                           if (!files || files.length === 0 || !editor) return;
 
-                          console.log(
-                            `[ProductForm] 상품 설명 에디터 이미지 업로드 시작: ${files.length}개`,
-                          );
-
                           setIsUploadingImage(true);
                           try {
                             // 여러 이미지를 순차적으로 업로드
                             for (let i = 0; i < files.length; i++) {
                               const file = files[i];
-                              console.log(
-                                `[ProductForm] 이미지 ${i + 1}/${files.length} 업로드 중:`,
-                                file.name,
-                                `(${(file.size / 1024).toFixed(2)} KB)`,
-                              );
 
                               const formData = new FormData();
                               formData.append("file", file);
@@ -1390,21 +1371,9 @@ export default function ProductForm({
                                     fit: "cover" as const, // 정사각형으로 자르기
                                   };
                               
-                              console.log(
-                                `[ProductForm] 이미지 ${i + 1} 압축 및 업로드 중... ${
-                                  isSpecialProduct 
-                                    ? '(사이즈 제한 없음)' 
-                                    : '(800x800으로 통일)'
-                                }`,
-                              );
-                              
                               const result = await uploadImageFile(formData, uploadOptions);
 
                               if (result.success && result.url) {
-                                console.log(
-                                  `[ProductForm] 이미지 ${i + 1} 업로드 및 압축 완료:`,
-                                  result.url,
-                                );
                                 // 에디터에 이미지 삽입
                                 editor
                                   .chain()
@@ -1417,24 +1386,21 @@ export default function ProductForm({
                                   editor.chain().focus().insertContent("<br>").run();
                                 }
                               } else {
-                                console.error(
-                                  `[ProductForm] 이미지 ${i + 1} 업로드 실패:`,
-                                  result.error,
-                                );
+                                logger.error("[ProductForm] 이미지 업로드 실패", {
+                                  index: i + 1,
+                                  error: result.error,
+                                });
                                 alert(
                                   `이미지 ${i + 1} 업로드 실패: ${result.error || "이미지 업로드에 실패했습니다."}`,
                                 );
                               }
                             }
 
-                            console.log(
-                              `[ProductForm] 모든 이미지 업로드 완료: ${files.length}개`,
-                            );
+                            logger.debug("[ProductForm] 모든 이미지 업로드 완료", {
+                              count: files.length,
+                            });
                           } catch (error) {
-                            console.error(
-                              "[ProductForm] 이미지 업로드 에러:",
-                              error,
-                            );
+                            logger.error("[ProductForm] 이미지 업로드 에러", error);
                             alert("이미지 업로드 중 오류가 발생했습니다.");
                           } finally {
                             setIsUploadingImage(false);
@@ -1614,10 +1580,6 @@ export default function ProductForm({
                       const formData = new FormData();
                       formData.append("file", file);
 
-                      console.log(
-                        `[ProductForm] 이미지 ${i + 1}/${files.length} 업로드 중...`,
-                      );
-
                       // 특정 상품 ID에 대해서는 사이즈 제한 없이 압축
                       const uploadOptions = product?.id === 'ttotto_pr_255'
                         ? { maxWidth: undefined } // 사이즈 제한 없음
@@ -1633,27 +1595,24 @@ export default function ProductForm({
                           alt_text: file.name,
                         });
                         uploadedCount++;
-                        console.log(
-                          `[ProductForm] 이미지 ${i + 1} 업로드 완료 (sort_order: ${currentImageCount + uploadedCount - 1})`,
-                        );
                       } else {
-                        console.error(
-                          `[ProductForm] 이미지 ${i + 1} 업로드 실패:`,
-                          result.error,
-                        );
+                        logger.error("[ProductForm] 이미지 업로드 실패", {
+                          index: i + 1,
+                          error: result.error,
+                        });
                       }
                     }
 
                     if (uploadedImages.length > 0) {
                       setProductImages((prev) => [...prev, ...uploadedImages]);
-                      console.log(
-                        `[ProductForm] 이미지 갤러리 업로드 성공: ${uploadedImages.length}개`,
-                      );
+                      logger.debug("[ProductForm] 이미지 갤러리 업로드 성공", {
+                        count: uploadedImages.length,
+                      });
                     } else {
                       alert("이미지 업로드에 실패했습니다.");
                     }
                   } catch (error) {
-                    console.error("이미지 갤러리 업로드 에러:", error);
+                    logger.error("[ProductForm] 이미지 갤러리 업로드 에러", error);
                     alert("이미지 업로드 중 오류가 발생했습니다.");
                   } finally {
                     setIsUploadingGalleryImage(false);
@@ -1689,23 +1648,11 @@ export default function ProductForm({
                       onClick={() => {
                         const primaryImage = productImages.find((img) => img.is_primary);
                         if (primaryImage) {
-                          console.group("[ProductForm] 대표 이미지 제외하고 모두 삭제");
-                          console.log("[ProductForm] 대표 이미지 정보:", {
-                            id: primaryImage.id,
-                            image_url: primaryImage.image_url,
-                            is_primary: primaryImage.is_primary
-                          });
-                          console.log("[ProductForm] 삭제 전 이미지 수:", productImages.length);
-                          
                           // 삭제할 이미지 ID 수집 (대표 이미지가 아닌 것들 중 id가 있는 것들)
                           const imagesToDelete = productImages.filter(
                             (img) => !img.is_primary && img.id
                           );
                           const deletedIds = imagesToDelete.map((img) => img.id!);
-                          
-                          console.log("[ProductForm] 삭제 대상 이미지 수:", imagesToDelete.length);
-                          console.log("[ProductForm] 삭제 대상 이미지 ID 목록:", deletedIds);
-                          console.log("[ProductForm] 삭제 대상 이미지 URL 목록:", imagesToDelete.map(img => img.image_url));
                           
                           // 삭제된 이미지 ID 저장 (폼 제출 시 사용) - 중복 방지
                           setDeletedImageIds((prev) => {
@@ -1720,10 +1667,11 @@ export default function ProductForm({
                           
                           // 상태 업데이트 (대표 이미지만 남김)
                           setProductImages([primaryImage]);
-                          console.log("[ProductForm] 삭제 후 이미지 수: 1 (대표 이미지만)");
-                          console.groupEnd();
+                          logger.debug("[ProductForm] 대표 이미지 제외하고 모두 삭제", {
+                            deletedCount: deletedIds.length,
+                          });
                         } else {
-                          console.warn("[ProductForm] 대표 이미지를 찾을 수 없습니다!");
+                          logger.warn("[ProductForm] 대표 이미지를 찾을 수 없습니다");
                         }
                       }}
                       variant="outline"
@@ -1763,7 +1711,6 @@ export default function ProductForm({
                       onClick={() => {
                         // 삭제할 이미지가 기존 이미지인 경우 (id가 있는 경우) 삭제 목록에 추가
                         if (img.id) {
-                          console.log("[ProductForm] 기존 이미지 삭제:", { id: img.id, image_url: img.image_url });
                           setDeletedImageIds((prev) => {
                             // 중복 방지
                             if (prev.includes(img.id!)) {
@@ -1781,7 +1728,6 @@ export default function ProductForm({
                           }
                           return newImages;
                         });
-                        console.log("[ProductForm] 이미지 삭제:", index);
                       }}
                       className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
                     >
@@ -1799,7 +1745,6 @@ export default function ProductForm({
                               is_primary: i === index,
                             })),
                           );
-                          console.log("[ProductForm] 대표 이미지 설정:", index);
                         }}
                         className="absolute bottom-2 left-2 right-2 bg-white/90 text-[#4a3f48] px-2 py-1 rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity text-center"
                       >
@@ -1825,9 +1770,6 @@ export default function ProductForm({
                               newImages.forEach((img, i) => {
                                 img.sort_order = i;
                               });
-                              console.log(
-                                `[ProductForm] 이미지 ${index + 1}을 위로 이동`,
-                              );
                               return newImages;
                             });
                           }}
@@ -1859,9 +1801,6 @@ export default function ProductForm({
                               newImages.forEach((img, i) => {
                                 img.sort_order = i;
                               });
-                              console.log(
-                                `[ProductForm] 이미지 ${index + 1}을 아래로 이동`,
-                              );
                               return newImages;
                             });
                           }}
@@ -1911,7 +1850,6 @@ export default function ProductForm({
                       sku: null,
                     },
                   ]);
-                  console.log("[ProductForm] 옵션 추가");
                 }}
                 variant="outline"
                 className="border-[#fad2e6] text-[#4a3f48] hover:bg-[#ffeef5]"
@@ -2031,7 +1969,6 @@ export default function ProductForm({
                             setProductVariants((prev) =>
                               prev.filter((_, i) => i !== index),
                             );
-                            console.log("[ProductForm] 옵션 삭제:", index);
                           }}
                           className="w-full h-9 bg-red-500 text-white rounded hover:bg-red-600 transition-colors flex items-center justify-center"
                         >
