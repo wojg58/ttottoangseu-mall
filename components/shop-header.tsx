@@ -33,6 +33,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { useClerkSupabaseClient } from "@/lib/supabase/clerk-client";
+import KakaoChannelButton from "@/components/kakao-channel-button";
 
 // 카테고리 데이터 (DB에서 가져올 예정이지만 일단 하드코딩)
 const CATEGORIES = [
@@ -144,10 +145,19 @@ export default function ShopHeader() {
 
   return (
     <>
-      {/* Announcement Bar */}
+      {/* 카카오톡 친구 추가 배너 */}
       <div className="bg-white border-b border-gray-200">
         <div className="shop-container">
-          <div className="flex items-center h-[30px]">{/* 빈 공간 */}</div>
+          <div className="flex items-center justify-center h-[30px] gap-2">
+            <span className="text-black text-sm font-medium">
+              카카오톡 친구 추가시 1,000원 할인 쿠폰
+            </span>
+            <KakaoChannelButton
+              variant="sm"
+              locationTag="HeaderBanner"
+              buttonText="카카오톡"
+            />
+          </div>
         </div>
       </div>
 
