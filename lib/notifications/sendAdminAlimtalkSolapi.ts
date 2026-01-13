@@ -32,7 +32,7 @@ interface AlimtalkSendResult {
 
 interface AlimtalkMessage {
   to: string;
-  type: string;
+  // type 필드 제거: kakaoOptions가 있으면 자동으로 카카오 알림톡으로 인식됨
   kakaoOptions: {
     pfId: string;
     templateId: string;
@@ -150,11 +150,11 @@ export async function sendAdminAlimtalkSolapi(
     });
 
     // Solapi 공식 카카오 알림톡 payload 구조
-    // messages 배열 안에 type과 kakaoOptions를 포함한 메시지 객체
+    // messages 배열 안에 kakaoOptions를 포함한 메시지 객체
+    // type 필드는 필요 없음: kakaoOptions가 있으면 자동으로 카카오 알림톡으로 인식됨
     // memberId는 사용하지 않음 (pfId + templateId + variables만 사용)
     const message: AlimtalkMessage = {
       to: phoneNumber,
-      type: "KAKAO_ALIMTALK", // 카카오 알림톡 타입 명시
       kakaoOptions: {
         pfId: pfId,
         templateId: templateId,
@@ -194,7 +194,6 @@ export async function sendAdminAlimtalkSolapi(
 
     logger.info("[알림톡] 메시지 구성 완료:", {
       to: maskedPhone,
-      type: message.type,
       templateId: message.kakaoOptions.templateId,
       pfId: message.kakaoOptions.pfId,
       variables: Object.keys(message.kakaoOptions.variables),
