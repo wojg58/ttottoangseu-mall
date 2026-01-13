@@ -5,9 +5,10 @@
  * 주요 기능:
  * 1. 신규가입 쿠폰 배너 (1,000원 할인)
  * 2. 카카오톡 친구추가 배너 (1,000원 쿠폰)
- * 3. 자동 슬라이드 애니메이션 (왼쪽 → 오른쪽)
- * 4. 무한 루프
- * 5. 호버 시 일시 정지
+ * 3. 리뷰 이벤트 배너 (1,000원 적립)
+ * 4. 자동 슬라이드 애니메이션 (왼쪽 → 오른쪽)
+ * 5. 무한 루프
+ * 6. 호버 시 일시 정지
  *
  * @dependencies
  * - event-banner.css: 배너 스타일 및 슬라이드 애니메이션
@@ -39,6 +40,23 @@ export default function EventBanner() {
   }, []);
 
   // 배너 카드 컴포넌트
+  const ReviewBanner = () => (
+    <Link href="/events/review" className="event-banner-link">
+      <div className="event-banner pink">
+        <div className="text">
+          <h3>또또앙스 스토어 리뷰 이벤트</h3>
+          <p>
+            상품구매 후기 작성 시 <strong>1,000원</strong> 적립!
+          </p>
+        </div>
+        <div className="coupon">
+          <span>적립</span>
+          <strong>1,000원</strong>
+        </div>
+      </div>
+    </Link>
+  );
+
   const SignupBanner = () => (
     <Link
       href="/sign-up/join"
@@ -92,9 +110,11 @@ export default function EventBanner() {
           {/* 첫 번째 세트 (원본) */}
           <KakaoBanner />
           <SignupBanner />
+          <ReviewBanner />
           {/* 두 번째 세트 (무한 루프용 복제) */}
           <KakaoBanner />
           <SignupBanner />
+          <ReviewBanner />
         </div>
       </div>
     </section>
