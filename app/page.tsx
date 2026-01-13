@@ -343,14 +343,6 @@ export default async function HomePage() {
               {/* 이미지 영역 - 모바일에서 텍스트 아래에 표시 */}
               <div className="w-full max-w-[160px] mx-auto md:max-w-md lg:max-w-lg md:flex-1 order-2 md:order-none mt-4 md:mt-0">
                 <div className="relative w-full aspect-square max-h-[160px] md:max-h-none">
-                  {/* 장식적인 원들 - 데스크탑에서만 표시 */}
-                  <div className="hidden lg:block absolute w-32 h-32 bg-shop-rose/20 rounded-full"
-                       style={{
-                         left: "50%",
-                         top: "50%",
-                         transform: "translate(calc(50% - 300px), calc(50% + 60px))",
-                       }}
-                  />
                   <div className="relative w-full h-full flex items-center justify-center">
                     <Image
                       src="/kity.png"
