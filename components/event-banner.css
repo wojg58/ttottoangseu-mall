@@ -100,9 +100,9 @@
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
 }
 
-/* 핑크 (리뷰 이벤트) - 화이트 배경 */
+/* 핑크 (리뷰 이벤트) - 핑크 그라데이션 배경 */
 .event-banner.pink {
-  background: #ffffff;
+  background: linear-gradient(90deg, #ffd6e8, #ffb6d5);
 }
 
 /* 블루 (신규가입) - 그린 그라데이션 배경 */
@@ -117,7 +117,7 @@
 
 .event-banner.pink .coupon::before,
 .event-banner.pink .coupon::after {
-  background: #ffffff;
+  background: #ffd6e8;
 }
 
 .event-banner.blue .coupon::before,
@@ -194,7 +194,7 @@
 
 .event-banner.pink .coupon::before,
 .event-banner.pink .coupon::after {
-  background: #ffffff;
+  background: #ffd6e8;
 }
 
 .event-banner.blue .coupon::before,
