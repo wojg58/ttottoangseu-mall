@@ -126,7 +126,7 @@ export default function AdminOrderStatusForm({ order }: AdminOrderStatusFormProp
           className="w-full"
         />
         <p className="mt-1 text-xs text-[#8b7d84]">
-          배송 상태를 &quot;배송중&quot;으로 변경하면 자동으로 배송 시작 시간이 기록됩니다.
+          배송 상태를 {'"'}배송중{'"'}으로 변경하면 자동으로 배송 시작 시간이 기록됩니다.
         </p>
       </div>
 
