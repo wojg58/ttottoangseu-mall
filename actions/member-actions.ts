@@ -24,25 +24,14 @@ import type { MemberAdditionalInfo } from "@/types/member";
 export async function saveMemberAdditionalInfo(
   data: Omit<MemberAdditionalInfo, "clerk_id" | "created_at" | "updated_at">
 ): Promise<{ success: boolean; error?: string }> {
-  logger.group("[saveMemberAdditionalInfo] 회원 추가 정보 저장 시작");
-
   try {
     // 현재 로그인한 사용자 확인
     const { userId } = await auth();
 
     if (!userId) {
       logger.error("[saveMemberAdditionalInfo] 로그인 필요");
-      logger.groupEnd();
       return { success: false, error: "로그인이 필요합니다." };
     }
-
-    logger.debug("[saveMemberAdditionalInfo] Clerk User ID:", userId);
-    logger.debug("[saveMemberAdditionalInfo] 저장할 데이터:", {
-      gender: data.gender,
-      birth_date: data.birth_date,
-      mobile: data.mobile,
-      member_type: data.member_type,
-    });
 
     const supabase = await createClient();
 
@@ -81,27 +70,14 @@ export async function saveMemberAdditionalInfo(
       .select();
 
     if (error) {
-      logger.error("[saveMemberAdditionalInfo] DB 저장 에러:", error);
-      logger.error("[saveMemberAdditionalInfo] 에러 상세:", {
-        code: error.code,
-        message: error.message,
-        details: error.details,
-        hint: error.hint,
-      });
-      logger.groupEnd();
+      logger.error("[saveMemberAdditionalInfo] DB 저장 실패", error);
       return { success: false, error: "정보 저장에 실패했습니다." };
     }
 
-    logger.debug("[saveMemberAdditionalInfo] 저장 완료:", {
-      gender: insertedData?.[0]?.gender,
-      birth_date: insertedData?.[0]?.birth_date,
-      mobile: insertedData?.[0]?.mobile,
-    });
-    logger.groupEnd();
+    logger.info("[saveMemberAdditionalInfo] 저장 완료");
     return { success: true };
   } catch (error) {
-    logger.error("[saveMemberAdditionalInfo] 예외 발생:", error);
-    logger.groupEnd();
+    logger.error("[saveMemberAdditionalInfo] 예외 발생", error);
     return { success: false, error: "예상치 못한 오류가 발생했습니다." };
   }
 }
@@ -114,20 +90,15 @@ export async function getMemberAdditionalInfo(): Promise<{
   data?: MemberAdditionalInfo;
   error?: string;
 }> {
-  logger.group("[getMemberAdditionalInfo] 회원 추가 정보 조회");
-
   try {
     const { userId } = await auth();
 
     if (!userId) {
       logger.error("[getMemberAdditionalInfo] 로그인 필요");
-      logger.groupEnd();
       return { success: false, error: "로그인이 필요합니다." };
     }
 
     const supabase = await createClient();
-
-    logger.debug("[getMemberAdditionalInfo] Clerk User ID:", userId);
 
     const { data, error } = await supabase
       .from("member_additional_info")
@@ -138,24 +109,16 @@ export async function getMemberAdditionalInfo(): Promise<{
     if (error) {
       // PGRST116은 데이터가 없을 때 발생하는 에러
       if (error.code === "PGRST116") {
-        logger.warn("[getMemberAdditionalInfo] 데이터 없음 (회원 추가 정보가 아직 저장되지 않음)");
+        logger.debug("[getMemberAdditionalInfo] 데이터 없음");
       } else {
-        logger.error("[getMemberAdditionalInfo] 조회 에러:", error);
+        logger.error("[getMemberAdditionalInfo] 조회 실패", error);
       }
-      logger.groupEnd();
       return { success: false, error: "정보를 불러올 수 없습니다." };
     }
 
-    logger.debug("[getMemberAdditionalInfo] 조회 완료:", {
-      gender: data?.gender,
-      birth_date: data?.birth_date,
-      mobile: data?.mobile,
-    });
-    logger.groupEnd();
     return { success: true, data: data as MemberAdditionalInfo };
   } catch (error) {
-    logger.error("[getMemberAdditionalInfo] 예외 발생:", error);
-    logger.groupEnd();
+    logger.error("[getMemberAdditionalInfo] 예외 발생", error);
     return { success: false, error: "예상치 못한 오류가 발생했습니다." };
   }
 }

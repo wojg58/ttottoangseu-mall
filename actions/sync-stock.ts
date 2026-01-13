@@ -48,10 +48,6 @@ export interface SyncVariantStockResult {
 export async function syncProductStock(
   smartstoreProductId: string,
 ): Promise<{ success: boolean; message: string; stock?: number }> {
-  logger.group(
-    `[syncProductStock] 재고 동기화 시작: ${smartstoreProductId}`,
-  );
-
   try {
     // 1. Supabase에서 해당 상품 조회
     const supabase = getServiceRoleClient();
@@ -63,11 +59,7 @@ export async function syncProductStock(
       .single();
 
     if (findError || !product) {
-      logger.error(
-        "[syncProductStock] 상품을 찾을 수 없습니다",
-        findError,
-      );
-      logger.groupEnd();
+      logger.error("[syncProductStock] 상품을 찾을 수 없습니다", findError);
       return {
         success: false,
         message: `상품을 찾을 수 없습니다: ${smartstoreProductId}`,
@@ -82,7 +74,6 @@ export async function syncProductStock(
       logger.error(
         "[syncProductStock] 네이버 스마트스토어에서 상품 정보를 가져올 수 없습니다",
       );
-      logger.groupEnd();
       return {
         success: false,
         message: `네이버 스마트스토어에서 상품 정보를 가져올 수 없습니다: ${smartstoreProductId}`,
@@ -122,17 +113,17 @@ export async function syncProductStock(
 
     if (updateError) {
       logger.error("[syncProductStock] 재고 업데이트 실패", updateError);
-      logger.groupEnd();
       return {
         success: false,
         message: `재고 업데이트 실패: ${updateError.message}`,
       };
     }
 
-    logger.info(
-      `[syncProductStock] 재고 동기화 완료: ${product.name} (${product.stock} → ${newStock})`,
-    );
-    logger.groupEnd();
+    logger.info("[syncProductStock] 재고 동기화 완료", {
+      productName: product.name,
+      oldStock: product.stock,
+      newStock,
+    });
 
     return {
       success: true,
@@ -140,8 +131,7 @@ export async function syncProductStock(
       stock: newStock,
     };
   } catch (error) {
-    logger.error("[syncProductStock] 재고 동기화 예외", error);
-    logger.groupEnd();
+    logger.error("[syncProductStock] 예외 발생", error);
     return {
       success: false,
       message: `재고 동기화 중 오류 발생: ${error instanceof Error ? error.message : "알 수 없는 오류"}`,
@@ -153,8 +143,6 @@ export async function syncProductStock(
  * 모든 상품 재고 동기화 (smartstore_product_id가 있는 상품만)
  */
 export async function syncAllStocks(): Promise<SyncStockResult> {
-  logger.group("[syncAllStocks] 전체 재고 동기화 시작");
-
   const result: SyncStockResult = {
     success: true,
     message: "",
@@ -176,20 +164,18 @@ export async function syncAllStocks(): Promise<SyncStockResult> {
       logger.error("[syncAllStocks] 상품 조회 실패", findError);
       result.success = false;
       result.message = `상품 조회 실패: ${findError.message}`;
-      logger.groupEnd();
       return result;
     }
 
     if (!products || products.length === 0) {
-      logger.info("[syncAllStocks] 동기화 대상 상품이 없습니다");
+      logger.debug("[syncAllStocks] 동기화 대상 상품 없음");
       result.message = "동기화 대상 상품이 없습니다";
-      logger.groupEnd();
       return result;
     }
 
-    logger.info(
-      `[syncAllStocks] 동기화 대상 상품: ${products.length}개`,
-    );
+    logger.debug("[syncAllStocks] 동기화 시작", {
+      count: products.length,
+    });
 
     // 2. 각 상품의 재고 동기화
     for (const product of products) {
@@ -216,15 +202,16 @@ export async function syncAllStocks(): Promise<SyncStockResult> {
     }
 
     result.message = `재고 동기화 완료: 성공 ${result.syncedCount}개, 실패 ${result.failedCount}개`;
-    logger.info(`[syncAllStocks] ${result.message}`);
-    logger.groupEnd();
+    logger.info("[syncAllStocks] 동기화 완료", {
+      syncedCount: result.syncedCount,
+      failedCount: result.failedCount,
+    });
 
     return result;
   } catch (error) {
-    logger.error("[syncAllStocks] 전체 재고 동기화 예외", error);
+    logger.error("[syncAllStocks] 예외 발생", error);
     result.success = false;
     result.message = `재고 동기화 중 오류 발생: ${error instanceof Error ? error.message : "알 수 없는 오류"}`;
-    logger.groupEnd();
     return result;
   }
 }
@@ -238,10 +225,6 @@ export async function syncAllStocks(): Promise<SyncStockResult> {
 export async function syncVariantStocks(
   smartstoreProductId: string,
 ): Promise<SyncVariantStockResult> {
-  logger.group(
-    `[syncVariantStocks] 옵션 단위 재고 동기화 시작: ${smartstoreProductId}`,
-  );
-
   const result: SyncVariantStockResult = {
     success: true,
     message: "",
@@ -263,13 +246,9 @@ export async function syncVariantStocks(
       .single();
 
     if (findError || !product) {
-      logger.error(
-        "[syncVariantStocks] 상품을 찾을 수 없습니다",
-        findError,
-      );
+      logger.error("[syncVariantStocks] 상품을 찾을 수 없습니다", findError);
       result.success = false;
       result.message = `상품을 찾을 수 없습니다: ${smartstoreProductId}`;
-      logger.groupEnd();
       return result;
     }
 
@@ -279,12 +258,9 @@ export async function syncVariantStocks(
     );
 
     if (!channelProduct) {
-      logger.error(
-        "[syncVariantStocks] 스마트스토어 상품 조회 실패",
-      );
+      logger.error("[syncVariantStocks] 스마트스토어 상품 조회 실패");
       result.success = false;
       result.message = `스마트스토어 상품 조회 실패: ${smartstoreProductId}`;
-      logger.groupEnd();
       return result;
     }
 
@@ -296,13 +272,12 @@ export async function syncVariantStocks(
         "[syncVariantStocks] 옵션이 없거나 재고관리를 사용하지 않는 상품",
       );
       result.message = "옵션이 없거나 재고관리를 사용하지 않는 상품입니다";
-      logger.groupEnd();
       return result;
     }
 
-    logger.info(
-      `[syncVariantStocks] 옵션 ${options.length}개 발견`,
-    );
+    logger.debug("[syncVariantStocks] 옵션 발견", {
+      count: options.length,
+    });
 
     // 4. originProductNo 확인
     // 우선순위: 1) 채널 상품 조회 응답, 2) DB 매핑 정보
@@ -311,9 +286,6 @@ export async function syncVariantStocks(
     // 1차: 채널 상품 조회 응답에서 가져오기
     if (channelProduct.originProductNo) {
       originProductNo = channelProduct.originProductNo;
-      logger.info(
-        `[syncVariantStocks] originProductNo를 채널 상품 조회 응답에서 가져옴: ${originProductNo}`,
-      );
     } else {
       // 2차: DB에서 기존 매핑 정보 사용
       const { data: existingVariants } = await supabase
@@ -326,9 +298,6 @@ export async function syncVariantStocks(
 
       if (existingVariants && existingVariants.length > 0) {
         originProductNo = existingVariants[0].smartstore_origin_product_no;
-        logger.info(
-          `[syncVariantStocks] originProductNo를 DB 매핑에서 가져옴: ${originProductNo}`,
-        );
       }
     }
 
@@ -417,22 +386,20 @@ export async function syncVariantStocks(
         );
       } else {
         result.syncedCount++;
-        logger.info(
-          `[syncVariantStocks] 재고 동기화 완료: ${variant.variant_value || variant.sku || "옵션"} (${variant.stock} → ${option.stockQuantity})`,
-        );
       }
     }
 
     result.message = `옵션 재고 동기화 완료: 성공 ${result.syncedCount}개, 실패 ${result.failedCount}개`;
-    logger.info(`[syncVariantStocks] ${result.message}`);
-    logger.groupEnd();
+    logger.info("[syncVariantStocks] 동기화 완료", {
+      syncedCount: result.syncedCount,
+      failedCount: result.failedCount,
+    });
 
     return result;
   } catch (error) {
-    logger.error("[syncVariantStocks] 옵션 재고 동기화 예외", error);
+    logger.error("[syncVariantStocks] 예외 발생", error);
     result.success = false;
     result.message = `옵션 재고 동기화 중 오류 발생: ${error instanceof Error ? error.message : "알 수 없는 오류"}`;
-    logger.groupEnd();
     return result;
   }
 }
@@ -441,8 +408,6 @@ export async function syncVariantStocks(
  * 전체 상품 옵션 재고 동기화
  */
 export async function syncAllVariantStocks(): Promise<SyncVariantStockResult> {
-  logger.group("[syncAllVariantStocks] 전체 옵션 재고 동기화 시작");
-
   const totalResult: SyncVariantStockResult = {
     success: true,
     message: "",
@@ -465,20 +430,18 @@ export async function syncAllVariantStocks(): Promise<SyncVariantStockResult> {
       logger.error("[syncAllVariantStocks] 상품 조회 실패", findError);
       totalResult.success = false;
       totalResult.message = `상품 조회 실패: ${findError.message}`;
-      logger.groupEnd();
       return totalResult;
     }
 
     if (!products || products.length === 0) {
       totalResult.message = "동기화 대상 상품 없음";
-      logger.info("[syncAllVariantStocks] 동기화 대상 상품이 없습니다");
-      logger.groupEnd();
+      logger.debug("[syncAllVariantStocks] 동기화 대상 상품 없음");
       return totalResult;
     }
 
-    logger.info(
-      `[syncAllVariantStocks] 동기화 대상 상품: ${products.length}개`,
-    );
+    logger.debug("[syncAllVariantStocks] 동기화 시작", {
+      count: products.length,
+    });
 
     for (const product of products) {
       if (!product.smartstore_product_id) continue;
@@ -494,15 +457,16 @@ export async function syncAllVariantStocks(): Promise<SyncVariantStockResult> {
     }
 
     totalResult.message = `전체 옵션 재고 동기화 완료: 성공 ${totalResult.syncedCount}개, 실패 ${totalResult.failedCount}개`;
-    logger.info(`[syncAllVariantStocks] ${totalResult.message}`);
-    logger.groupEnd();
+    logger.info("[syncAllVariantStocks] 동기화 완료", {
+      syncedCount: totalResult.syncedCount,
+      failedCount: totalResult.failedCount,
+    });
 
     return totalResult;
   } catch (error) {
-    logger.error("[syncAllVariantStocks] 전체 옵션 재고 동기화 예외", error);
+    logger.error("[syncAllVariantStocks] 예외 발생", error);
     totalResult.success = false;
     totalResult.message = `전체 옵션 재고 동기화 중 오류 발생: ${error instanceof Error ? error.message : "알 수 없는 오류"}`;
-    logger.groupEnd();
     return totalResult;
   }
 }
