@@ -16,9 +16,28 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import "./event-banner.css";
 
 export default function EventBanner() {
+  const [kakaoChannelUrl, setKakaoChannelUrl] = useState<string | null>(null);
+
+  // 카카오톡 채널 URL 가져오기
+  useEffect(() => {
+    const channelUrl = process.env.NEXT_PUBLIC_KAKAO_CHANNEL_URL;
+    const channelId = process.env.NEXT_PUBLIC_KAKAO_CHANNEL_ID;
+
+    if (channelUrl) {
+      setKakaoChannelUrl(channelUrl);
+    } else if (channelId) {
+      if (channelId.startsWith("http")) {
+        setKakaoChannelUrl(channelId);
+      } else {
+        setKakaoChannelUrl(`https://pf.kakao.com/_${channelId}`);
+      }
+    }
+  }, []);
+
   // 배너 카드 컴포넌트
   const ReviewBanner = () => (
     <Link href="/events/review" className="event-banner-link">
@@ -54,6 +73,32 @@ export default function EventBanner() {
     </Link>
   );
 
+  const KakaoBanner = () => {
+    if (!kakaoChannelUrl) return null;
+
+    return (
+      <a
+        href={kakaoChannelUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="event-banner-link"
+      >
+        <div className="event-banner yellow">
+          <div className="text">
+            <h3>카카오톡 친구추가 혜택</h3>
+            <p>
+              친구추가 시 <strong>1,000원</strong> 쿠폰 즉시 증정!
+            </p>
+          </div>
+          <div className="coupon">
+            <span>쿠폰</span>
+            <strong>1,000원</strong>
+          </div>
+        </div>
+      </a>
+    );
+  };
+
   return (
     <section className="event-wrapper">
       <div className="event-slide-container">
@@ -61,9 +106,11 @@ export default function EventBanner() {
           {/* 첫 번째 세트 (원본) */}
           <ReviewBanner />
           <SignupBanner />
+          <KakaoBanner />
           {/* 두 번째 세트 (무한 루프용 복제) */}
           <ReviewBanner />
           <SignupBanner />
+          <KakaoBanner />
         </div>
       </div>
     </section>

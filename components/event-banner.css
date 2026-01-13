@@ -37,8 +37,8 @@
     transform: translateX(0);
   }
   100% {
-    /* 두 개의 카드 + gap을 이동 (각 카드 너비 + gap) */
-    transform: translateX(calc(-50% - 7px));
+    /* 세 개의 카드 + gap을 이동 (각 카드 너비 + gap) */
+    transform: translateX(calc(-33.333% - 9.33px));
   }
 }
 
@@ -61,7 +61,7 @@
   color: inherit;
   display: block;
   flex-shrink: 0;
-  width: calc(50% - 7px);
+  width: calc(33.333% - 9.33px);
   min-width: 280px;
 }
 
@@ -91,6 +91,16 @@
 /* 블루 (신규가입) - green-200 배경 */
 .event-banner.blue {
   background: linear-gradient(90deg, #bbf7d0, #86efac);
+}
+
+/* 옐로우 (카카오톡 친구추가) - 카카오톡 브랜드 색상 */
+.event-banner.yellow {
+  background: linear-gradient(90deg, #fee500, #fdd835);
+}
+
+.event-banner.yellow .coupon::before,
+.event-banner.yellow .coupon::after {
+  background: #fee500;
 }
 
 /* 텍스트 */
@@ -176,7 +186,7 @@
 /* 모바일 대응 */
 @media (max-width: 640px) {
   .event-banner-link {
-    width: calc(50% - 7px);
+    width: calc(33.333% - 9.33px);
     min-width: 240px;
   }
 
