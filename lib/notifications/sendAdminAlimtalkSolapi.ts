@@ -1,22 +1,29 @@
 /**
  * @file lib/notifications/sendAdminAlimtalkSolapi.ts
- * @description 솔라피(Solapi)를 통한 관리자 알림톡 발송
+ * @description 솔라피(Solapi) SDK를 통한 관리자 알림톡 발송
  *
  * 주문 완료 시 관리자에게 알림톡을 발송합니다.
  *
  * 주요 기능:
- * - Solapi API를 통한 알림톡 발송
+ * - Solapi 공식 SDK (solapi 패키지)를 통한 알림톡 발송
  * - 환경변수 ADMIN_ALIMTALK_ENABLED로 발송 제어
+ * - 전화번호 포맷 자동 변환 (국내 형식 -> E.164 형식)
  * - 실패 시 throw하지 않고 결과 반환 (상위에서 로깅)
  *
  * API 방식 설명:
- * - Solapi SDK (solapi 패키지) 사용
+ * - Solapi SDK (solapi@5.5.3) 사용
+ * - SolapiMessageService.send() 메서드 호출
  * - memberId, groupId, appUserId 등 member 관련 필드 사용하지 않음
  * - pfId + templateId + variables로 알림톡 발송
  * - SDK가 내부적으로 올바른 형식으로 변환해줌
  *
+ * 전화번호 포맷 처리:
+ * - 1차 시도: 국내 형식 (010XXXXXXXX)
+ * - 실패 시 2차 시도: E.164 형식 (8210XXXXXXXX)
+ * - ValidationError 발생 시 자동으로 2차 시도
+ *
  * @dependencies
- * - solapi: Solapi 공식 Node.js SDK
+ * - solapi@5.5.3: Solapi 공식 Node.js SDK
  * - Solapi API Key/Secret (환경변수)
  * - Solapi 알림톡 템플릿 ID (환경변수)
  *
@@ -126,19 +133,41 @@ export async function sendAdminAlimtalkSolapi(
   logger.info("[알림톡] ✅ 필수 환경변수 모두 확인 완료");
 
   try {
-    // 전화번호 하이픈 제거 및 형식 확인
-    let phoneNumber = adminPhone.replace(/-/g, "").replace(/\s/g, "");
-
-    logger.info("[알림톡] 전화번호 변환:", {
-      마스킹: maskedPhone,
-      길이: phoneNumber.length,
-      형식: phoneNumber.startsWith("010") ? "국내 형식" : "기타",
-    });
-
-    // Solapi SDK를 사용한 카카오 알림톡 발송
-    // SDK가 내부적으로 올바른 형식으로 변환해줌
+    // Solapi SDK 클라이언트 생성
     const messageService = new SolapiMessageService(apiKey, apiSecret);
 
+    // 전화번호 포맷 변환 함수
+    const formatPhoneNumber = (phone: string, format: "local" | "e164"): string => {
+      let cleaned = phone.replace(/-/g, "").replace(/\s/g, "");
+      
+      if (format === "local") {
+        // 국내 형식: 010XXXXXXXX
+        return cleaned;
+      } else {
+        // E.164 형식: +8210XXXXXXXX 또는 8210XXXXXXXX
+        if (cleaned.startsWith("010")) {
+          return `82${cleaned.substring(1)}`; // 010 -> 8210
+        } else if (cleaned.startsWith("0")) {
+          return `82${cleaned.substring(1)}`; // 0XX -> 82XX
+        } else if (cleaned.startsWith("82")) {
+          return cleaned; // 이미 E.164 형식
+        } else {
+          return `82${cleaned}`; // 기타
+        }
+      }
+    };
+
+    // 1차 시도: 국내 형식 (010XXXXXXXX)
+    let phoneNumber = formatPhoneNumber(adminPhone, "local");
+    
+    logger.info("[알림톡] 전화번호 변환 (1차 시도):", {
+      마스킹: maskedPhone,
+      길이: phoneNumber.length,
+      형식: "국내 형식 (010XXXXXXXX)",
+      번호: phoneNumber.substring(0, 3) + "****" + phoneNumber.substring(phoneNumber.length - 4),
+    });
+
+    // 메시지 구성
     const message = {
       to: phoneNumber,
       kakaoOptions: {
@@ -149,27 +178,12 @@ export async function sendAdminAlimtalkSolapi(
           amount: amount.toLocaleString("ko-KR"),
           orderDate: orderDateKst,
         },
-        disableSms: true, // 알림톡 실패 시 SMS 폴백 OFF
+        disableSms: true,
       },
     };
 
-    // 강제 트레이싱: 최종 request payload (개인정보 마스킹)
-    const maskedMessage = {
-      ...message,
-      to: phoneNumber.substring(0, 3) + "****" + phoneNumber.substring(phoneNumber.length - 4),
-    };
-    logger.info("[ALIMTALK_TRACE] final request payload: " + JSON.stringify(maskedMessage));
-
-    // memberId 포함 여부 확인
-    const payloadString = JSON.stringify(message);
-    if (payloadString.includes('memberId')) {
-      logger.error("[ALIMTALK_TRACE] CRITICAL: memberId found in payload! payload=" + payloadString);
-    } else {
-      logger.info("[ALIMTALK_TRACE] memberId not found in payload - OK");
-    }
-
-    // 디버깅 로그 강화: 발송 직전 상세 정보
-    logger.info("[ALIMTALK] enabled=true templateId=" + templateId.substring(0, 6) + "... pfId=" + pfId.substring(0, 6) + "... to=010****#### variablesKeys=" + Object.keys(message.kakaoOptions.variables).join(','));
+    // SDK 호출 직전 로그
+    logger.info("[ALIMTALK] using SDK, templateId=" + templateId.substring(0, 6) + "... pfId=" + pfId.substring(0, 6) + "... to=010****#### variablesKeys=" + Object.keys(message.kakaoOptions.variables).join(','));
 
     logger.info("[알림톡] 메시지 구성 완료:", {
       to: maskedPhone,
@@ -180,38 +194,118 @@ export async function sendAdminAlimtalkSolapi(
     });
 
     logger.info("[ALIMTALK_TRACE] calling: SolapiMessageService.send() (Solapi SDK)");
-
     logger.info("[알림톡] 🔵 Solapi SDK를 통한 알림톡 발송 시작...");
 
-    // Solapi SDK를 사용한 메시지 발송
-    const response = await messageService.send(message);
+    let response: any;
+    let lastError: any;
 
-    // 강제 트레이싱: Solapi 응답 상세 정보
-    logger.info("[ALIMTALK_TRACE] solapi response: " + JSON.stringify(response));
+    try {
+      // 1차 시도: 국내 형식
+      response = await messageService.send(message);
+      
+      // 성공 응답 처리
+      const messageId = response.messageList?.[0]?.messageId || response.messageId || response.groupId;
 
-    // 성공 응답 처리
-    const messageId = response.messageList?.[0]?.messageId || response.messageId || response.groupId;
+      logger.info("[ALIMTALK_TRACE] solapi response: " + JSON.stringify(response));
+      logger.info("[알림톡] ✅ 발송 성공:", {
+        orderNo,
+        messageId: messageId || "N/A",
+        groupId: response.groupId || "N/A",
+        fullResponse: JSON.stringify(response, null, 2),
+      });
 
-    logger.info("[알림톡] ✅ 발송 성공:", {
-      orderNo,
-      messageId: messageId || "N/A",
-      groupId: response.groupId || "N/A",
-      fullResponse: JSON.stringify(response, null, 2),
-    });
+      if (messageId) {
+        logger.info("[ALIMTALK] success messageId=" + messageId);
+      }
+      logger.groupEnd();
 
-    // messageId 확인을 위한 추가 로그
-    if (messageId) {
-      logger.info("[ALIMTALK] success messageId=" + messageId);
+      return {
+        success: true,
+        message: "알림톡 발송 성공",
+        messageId: messageId,
+      };
+    } catch (firstError: any) {
+      lastError = firstError;
+      
+      // 400 ValidationError이고 memberId 관련이거나 전화번호 형식 문제인 경우 2차 시도
+      const isValidationError = firstError.response?.status === 400 || 
+                               firstError.response?.data?.errorCode === "ValidationError" ||
+                               firstError.message?.includes("memberId") ||
+                               firstError.message?.includes("전화번호") ||
+                               firstError.message?.includes("phone");
+
+      if (isValidationError) {
+        logger.warn("[알림톡] 1차 시도 실패, E.164 형식으로 2차 시도:", {
+          error: firstError.response?.data?.errorMessage || firstError.message,
+        });
+
+        // 2차 시도: E.164 형식 (8210XXXXXXXX)
+        const e164Phone = formatPhoneNumber(adminPhone, "e164");
+        const e164Message = {
+          ...message,
+          to: e164Phone,
+        };
+
+        logger.info("[알림톡] 전화번호 변환 (2차 시도):", {
+          마스킹: maskedPhone,
+          길이: e164Phone.length,
+          형식: "E.164 형식 (8210XXXXXXXX)",
+          번호: e164Phone.substring(0, 3) + "****" + e164Phone.substring(e164Phone.length - 4),
+        });
+
+        logger.info("[ALIMTALK] using SDK (2nd attempt), templateId=" + templateId.substring(0, 6) + "... pfId=" + pfId.substring(0, 6) + "... to=82****#### variablesKeys=" + Object.keys(e164Message.kakaoOptions.variables).join(','));
+
+        try {
+          response = await messageService.send(e164Message);
+          
+          // 성공 응답 처리
+          const messageId = response.messageList?.[0]?.messageId || response.messageId || response.groupId;
+
+          logger.info("[ALIMTALK_TRACE] solapi response (2nd attempt): " + JSON.stringify(response));
+          logger.info("[알림톡] ✅ 발송 성공 (2차 시도):", {
+            orderNo,
+            messageId: messageId || "N/A",
+            groupId: response.groupId || "N/A",
+            fullResponse: JSON.stringify(response, null, 2),
+          });
+
+          if (messageId) {
+            logger.info("[ALIMTALK] success messageId=" + messageId);
+          }
+          logger.groupEnd();
+
+          return {
+            success: true,
+            message: "알림톡 발송 성공 (2차 시도)",
+            messageId: messageId,
+          };
+        } catch (secondError: any) {
+          lastError = secondError;
+          logger.error("[알림톡] 2차 시도도 실패:", {
+            error: secondError.response?.data?.errorMessage || secondError.message,
+          });
+        }
+      }
     }
-    logger.groupEnd();
 
+    // 최종 실패 처리
+    const errorMessage = lastError.response?.data?.errorMessage || 
+                        lastError.response?.data?.message || 
+                        lastError.message || 
+                        "알 수 없는 오류가 발생했습니다.";
+
+    logger.error("[ALIMTALK] failed status=" + (lastError.response?.status || "N/A") + " body=" + JSON.stringify(lastError.response?.data || lastError));
+    logger.error("[알림톡] ❌ 발송 실패:", {
+      errorMessage: errorMessage,
+      errorResponse: lastError.response?.data || lastError.response || lastError,
+    });
+    logger.groupEnd();
     return {
-      success: true,
-      message: "알림톡 발송 성공",
-      messageId: messageId,
+      success: false,
+      error: `알림톡 발송 실패: ${errorMessage}`,
     };
   } catch (error: any) {
-    // 강제 트레이싱: 에러 상세 정보
+    // 예상치 못한 예외 처리
     logger.error("[ALIMTALK_TRACE] exception caught:", {
       errorMessage: error instanceof Error ? error.message : String(error),
       errorName: error instanceof Error ? error.name : "Unknown",
@@ -219,7 +313,6 @@ export async function sendAdminAlimtalkSolapi(
       errorResponse: error.response?.data || error.response || error,
     });
 
-    // Solapi SDK 에러 응답 처리
     const errorMessage = error.response?.data?.errorMessage || 
                         error.response?.data?.message || 
                         error.message || 
