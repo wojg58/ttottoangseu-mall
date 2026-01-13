@@ -32,7 +32,7 @@ interface AlimtalkSendResult {
 
 interface AlimtalkMessage {
   to: string;
-  type: "KAKAO_ALIMTALK";
+  type?: string; // 카카오 전용 엔드포인트에서는 자동 판별되므로 optional
   from?: string; // Solapi 발신번호 (필요시)
   kakaoOptions: {
     pfId: string;
@@ -126,8 +126,9 @@ export async function sendAdminAlimtalkSolapi(
   logger.info("[알림톡] ✅ 필수 환경변수 모두 확인 완료");
 
   try {
-    // Solapi API 엔드포인트
-    const apiUrl = "https://api.solapi.com/messages/v4/send";
+    // Solapi 카카오 알림톡 전용 API 엔드포인트
+    // messages/v4/send/kakao - 카카오 메시지 전용 엔드포인트
+    const apiUrl = "https://api.solapi.com/messages/v4/send/kakao";
 
     // Solapi 인증: "user apiKey:apiSecret" 형식
     const authHeader = `user ${apiKey}:${apiSecret}`;
@@ -141,11 +142,12 @@ export async function sendAdminAlimtalkSolapi(
       형식: phoneNumber.startsWith("010") ? "국내 형식" : "기타",
     });
 
-    // Solapi 알림톡 템플릿 발송 방식 (pfId + templateId + variables)
-    // memberId, groupId, appUserId 등 member 관련 필드 사용하지 않음
+    // Solapi 카카오 알림톡 템플릿 발송 방식
+    // pfId + templateId + variables로 알림톡 발송 (memberId 불필요)
+    // 카카오 전용 엔드포인트에서는 type 지정 불필요 (kakaoOptions로 자동 판별)
     const message: AlimtalkMessage = {
       to: phoneNumber,
-      type: "KAKAO_ALIMTALK",
+      // type: "KAKAO_ALIMTALK", // 카카오 전용 엔드포인트에서는 불필요
       // from: 필요하면 Solapi 발신번호 설정 (현재는 생략)
       kakaoOptions: {
         pfId: pfId,
@@ -155,16 +157,19 @@ export async function sendAdminAlimtalkSolapi(
           amount: amount.toLocaleString("ko-KR"),
           orderDate: orderDateKst,
         },
-        // disableSms: false, // 알림톡만 사용, SMS 폴백 OFF (기본값이므로 생략)
+        disableSms: true, // 알림톡 실패 시 SMS 폴백 OFF
       },
     };
 
+    // 디버깅 로그 강화: 발송 직전 상세 정보
+    logger.info("[ALIMTALK] enabled=true templateId=" + templateId.substring(0, 6) + "... pfId=" + pfId.substring(0, 6) + "... to=010****#### variablesKeys=" + Object.keys(message.kakaoOptions.variables).join(','));
+
     logger.info("[알림톡] 메시지 구성 완료:", {
       to: maskedPhone,
-      type: message.type,
       templateId: message.kakaoOptions.templateId,
       pfId: message.kakaoOptions.pfId,
       variables: Object.keys(message.kakaoOptions.variables),
+      disableSms: message.kakaoOptions.disableSms,
     });
 
     const requestBody = {
@@ -202,6 +207,7 @@ export async function sendAdminAlimtalkSolapi(
     const responseData = await response.json();
 
     if (!response.ok) {
+      logger.error("[ALIMTALK] failed status=" + response.status + " body=" + JSON.stringify(responseData));
       logger.error("[알림톡] ❌ 발송 실패:", {
         statusCode: response.status,
         statusText: response.statusText,
@@ -224,6 +230,11 @@ export async function sendAdminAlimtalkSolapi(
       groupId: responseData.groupId || "N/A",
       fullResponse: JSON.stringify(responseData, null, 2), // 전체 성공 응답 로그
     });
+
+    // messageId 확인을 위한 추가 로그
+    if (messageId) {
+      logger.info("[ALIMTALK] success messageId=" + messageId);
+    }
     logger.groupEnd();
 
     return {
