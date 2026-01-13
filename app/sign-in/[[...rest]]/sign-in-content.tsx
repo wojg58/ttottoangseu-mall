@@ -891,8 +891,6 @@ export default function SignInContent() {
           margin-top: 37.8px !important;
         `;
       }
-
-      console.groupEnd();
     };
 
     // 초기 실행 (지연 시간을 늘려 Clerk가 완전히 렌더링된 후 실행)
