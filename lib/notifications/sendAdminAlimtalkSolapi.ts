@@ -30,12 +30,15 @@ interface AlimtalkSendResult {
   error?: string;
 }
 
-interface AlimtalkRequestBody {
+interface AlimtalkMessage {
   to: string;
-  pfId: string;
-  templateId: string;
-  variables: Record<string, string>;
-  disableSms: boolean;
+  type: string;
+  kakaoOptions: {
+    pfId: string;
+    templateId: string;
+    variables: Record<string, string>;
+    disableSms: boolean;
+  };
 }
 
 /**
@@ -130,9 +133,9 @@ export async function sendAdminAlimtalkSolapi(
   logger.info("[알림톡] ✅ 필수 환경변수 모두 확인 완료");
 
   try {
-    // Solapi 카카오 알림톡 전용 API 엔드포인트
-    // kakao/v1/send/alimtalk - 카카오 알림톡 전용 엔드포인트
-    const apiUrl = "https://api.solapi.com/kakao/v1/send/alimtalk";
+    // Solapi 공식 메시지 발송 API 엔드포인트
+    // messages/v4/send - SMS, LMS, MMS, 알림톡 등 모든 메시지 타입 지원
+    const apiUrl = "https://api.solapi.com/messages/v4/send";
 
     // Solapi 인증: "user apiKey:apiSecret" 형식
     const authHeader = `user ${apiKey}:${apiSecret}`;
@@ -146,25 +149,35 @@ export async function sendAdminAlimtalkSolapi(
       형식: phoneNumber.startsWith("010") ? "국내 형식" : "기타",
     });
 
-    // Solapi 카카오 알림톡 전용 API payload 구조
-    // pfId + templateId + variables로 알림톡 발송 (memberId 불필요)
-    // 카카오 알림톡 전용 API에서는 messages 배열 없이 직접 객체 전송
-    const requestBody = {
+    // Solapi 공식 카카오 알림톡 payload 구조
+    // messages 배열 안에 type과 kakaoOptions를 포함한 메시지 객체
+    // memberId는 사용하지 않음 (pfId + templateId + variables만 사용)
+    const message: AlimtalkMessage = {
       to: phoneNumber,
-      pfId: pfId,
-      templateId: templateId,
-      variables: {
-        orderNo: orderNo,
-        amount: amount.toLocaleString("ko-KR"),
-        orderDate: orderDateKst,
+      type: "KAKAO_ALIMTALK", // 카카오 알림톡 타입 명시
+      kakaoOptions: {
+        pfId: pfId,
+        templateId: templateId,
+        variables: {
+          orderNo: orderNo,
+          amount: amount.toLocaleString("ko-KR"),
+          orderDate: orderDateKst,
+        },
+        disableSms: true, // 알림톡 실패 시 SMS 폴백 OFF
       },
-      disableSms: true, // 알림톡 실패 시 SMS 폴백 OFF
+    };
+
+    const requestBody = {
+      messages: [message],
     };
 
     // 강제 트레이싱: 최종 request payload (개인정보 마스킹)
-    const maskedPayload = {
-      ...requestBody,
+    const maskedMessage = {
+      ...message,
       to: phoneNumber.substring(0, 3) + "****" + phoneNumber.substring(phoneNumber.length - 4),
+    };
+    const maskedPayload = {
+      messages: [maskedMessage],
     };
     logger.info("[ALIMTALK_TRACE] final request payload: " + JSON.stringify(maskedPayload));
 
@@ -177,23 +190,24 @@ export async function sendAdminAlimtalkSolapi(
     }
 
     // 디버깅 로그 강화: 발송 직전 상세 정보
-    logger.info("[ALIMTALK] enabled=true templateId=" + templateId.substring(0, 6) + "... pfId=" + pfId.substring(0, 6) + "... to=010****#### variablesKeys=" + Object.keys(requestBody.variables).join(','));
+    logger.info("[ALIMTALK] enabled=true templateId=" + templateId.substring(0, 6) + "... pfId=" + pfId.substring(0, 6) + "... to=010****#### variablesKeys=" + Object.keys(message.kakaoOptions.variables).join(','));
 
     logger.info("[알림톡] 메시지 구성 완료:", {
       to: maskedPhone,
-      templateId: requestBody.templateId,
-      pfId: requestBody.pfId,
-      variables: Object.keys(requestBody.variables),
-      disableSms: requestBody.disableSms,
+      type: message.type,
+      templateId: message.kakaoOptions.templateId,
+      pfId: message.kakaoOptions.pfId,
+      variables: Object.keys(message.kakaoOptions.variables),
+      disableSms: message.kakaoOptions.disableSms,
     });
 
     logger.info("[알림톡] API 요청 준비:", {
       url: apiUrl,
       method: "POST",
       auth: "user apiKey:apiSecret",
-      templateId: requestBody.templateId,
-      pfId: requestBody.pfId.substring(0, 10) + "...",
-      variables: Object.keys(requestBody.variables),
+      templateId: message.kakaoOptions.templateId,
+      pfId: message.kakaoOptions.pfId.substring(0, 10) + "...",
+      variables: Object.keys(message.kakaoOptions.variables),
     });
 
     // 강제 트레이싱: 실제 호출되는 endpoint/메서드
