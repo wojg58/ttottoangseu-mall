@@ -146,25 +146,13 @@ async function getCurrentUserId(): Promise<string | null> {
 
 // 장바구니 ID 조회/생성
 async function getOrCreateCartId(userId: string): Promise<string> {
-  logger.group("[getOrCreateCartId] 장바구니 ID 조회/생성 시작");
-  logger.info("[getOrCreateCartId] 1단계: 함수 호출됨");
-  logger.info("입력 파라미터:", { userId });
-  logger.info("타임스탬프:", new Date().toISOString());
-
   // PGRST301 에러 방지를 위해 토큰 확인
-  logger.info("[getOrCreateCartId] 2단계: Clerk 토큰 확인");
   const authResult = await auth();
   const token = await authResult.getToken();
-  logger.info("[getOrCreateCartId] 토큰 상태:", {
-    hasToken: !!token,
-    tokenPreview: token ? token.substring(0, 20) + "..." : null,
-  });
   let supabase;
 
   if (!token) {
-    logger.warn(
-      "[getOrCreateCartId] Clerk 토큰이 없음 - service role 클라이언트 사용",
-    );
+    logger.debug("[getOrCreateCartId] 토큰 없음, service role 클라이언트 사용");
     const { getServiceRoleClient } = await import(
       "@/lib/supabase/service-role"
     );
@@ -173,144 +161,75 @@ async function getOrCreateCartId(userId: string): Promise<string> {
     supabase = await createClient();
   }
 
-  logger.info("[getOrCreateCartId] 3단계: 기존 장바구니 조회");
   let { data: existingCart, error: selectError } = await supabase
     .from("carts")
     .select("id")
     .eq("user_id", userId)
     .single();
 
-  logger.info("[getOrCreateCartId] 기존 장바구니 조회 결과:", {
-    hasCart: !!existingCart,
-    cartId: existingCart?.id || null,
-    error: selectError
-      ? {
-          code: selectError.code,
-          message: selectError.message,
-        }
-      : null,
-  });
-
   // PGRST301 에러 발생 시 service role 클라이언트로 재시도
   if (selectError && selectError.code === "PGRST301") {
-    logger.warn(
-      "[getOrCreateCartId] ⚠️ PGRST301 에러 발생 - service role 클라이언트로 재시도",
-    );
+    logger.debug("[getOrCreateCartId] PGRST301 에러, service role로 재시도");
     const { getServiceRoleClient } = await import(
       "@/lib/supabase/service-role"
     );
     supabase = getServiceRoleClient();
 
-    logger.info("[getOrCreateCartId] SELECT 재시도 (service role)");
     const { data: retryCart, error: retrySelectError } = await supabase
       .from("carts")
       .select("id")
       .eq("user_id", userId)
       .single();
 
-    logger.info("[getOrCreateCartId] SELECT 재시도 결과:", {
-      hasCart: !!retryCart,
-      cartId: retryCart?.id || null,
-      error: retrySelectError
-        ? {
-            code: retrySelectError.code,
-            message: retrySelectError.message,
-          }
-        : null,
-    });
-
     if (retrySelectError && retrySelectError.code !== "PGRST116") {
       // PGRST116은 "no rows returned" 에러이므로 정상
-      logger.error("[getOrCreateCartId] ❌ 재조회 실패:", retrySelectError);
+      logger.error("[getOrCreateCartId] 재조회 실패", retrySelectError);
     } else {
       existingCart = retryCart;
-      if (retryCart) {
-        logger.info("[getOrCreateCartId] ✅ SELECT 재시도 성공");
-      }
     }
   }
 
   if (existingCart) {
-    logger.info("[getOrCreateCartId] ✅ 기존 장바구니 발견 - ID 반환");
-    logger.info("반환할 cartId:", existingCart.id);
-    logger.groupEnd();
     return existingCart.id;
   }
 
   // 장바구니 생성
-  logger.info("[getOrCreateCartId] 4단계: 새 장바구니 생성");
-  logger.info("생성할 데이터:", { user_id: userId });
   let { data: newCart, error: insertError } = await supabase
     .from("carts")
     .insert({ user_id: userId })
     .select("id")
     .single();
 
-  logger.info("[getOrCreateCartId] 장바구니 생성 결과:", {
-    hasCart: !!newCart,
-    cartId: newCart?.id || null,
-    error: insertError
-      ? {
-          code: insertError.code,
-          message: insertError.message,
-        }
-      : null,
-  });
-
   // PGRST301 에러 발생 시 service role 클라이언트로 재시도
   if (insertError && insertError.code === "PGRST301") {
-    logger.warn(
-      "[getOrCreateCartId] ⚠️ INSERT 시 PGRST301 에러 - service role로 재시도",
-    );
+    logger.debug("[getOrCreateCartId] INSERT PGRST301 에러, service role로 재시도");
     const { getServiceRoleClient } = await import(
       "@/lib/supabase/service-role"
     );
     supabase = getServiceRoleClient();
 
-    logger.info("[getOrCreateCartId] INSERT 재시도 (service role)");
     const { data: retryNewCart, error: retryInsertError } = await supabase
       .from("carts")
       .insert({ user_id: userId })
       .select("id")
       .single();
 
-    logger.info("[getOrCreateCartId] INSERT 재시도 결과:", {
-      hasCart: !!retryNewCart,
-      cartId: retryNewCart?.id || null,
-      error: retryInsertError
-        ? {
-            code: retryInsertError.code,
-            message: retryInsertError.message,
-          }
-        : null,
-    });
-
     if (retryInsertError) {
-      logger.error(
-        "[getOrCreateCartId] ❌ 장바구니 생성 실패",
-        retryInsertError,
-      );
-      logger.groupEnd();
+      logger.error("[getOrCreateCartId] 장바구니 생성 실패", retryInsertError);
       throw new Error("장바구니 생성에 실패했습니다.");
     }
 
     newCart = retryNewCart;
-    logger.info("[getOrCreateCartId] ✅ INSERT 재시도 성공");
   } else if (insertError) {
-    logger.error("[getOrCreateCartId] ❌ 장바구니 생성 실패", insertError);
-    logger.groupEnd();
+    logger.error("[getOrCreateCartId] 장바구니 생성 실패", insertError);
     throw new Error("장바구니 생성에 실패했습니다.");
   }
 
   if (!newCart) {
-    logger.error("[getOrCreateCartId] ❌ 장바구니 생성 실패 - cartId 없음");
-    logger.groupEnd();
+    logger.error("[getOrCreateCartId] 장바구니 생성 실패 - cartId 없음");
     throw new Error("장바구니 생성에 실패했습니다.");
   }
 
-  logger.info("[getOrCreateCartId] ✅ 5단계: 장바구니 생성 완료");
-  logger.info("반환할 cartId:", newCart.id);
-  logger.groupEnd();
   return newCart.id;
 }
 
