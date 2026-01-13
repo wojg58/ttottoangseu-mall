@@ -138,7 +138,7 @@ export async function sendAdminAlimtalkSolapi(
 
     // 전화번호 포맷 변환 함수
     const formatPhoneNumber = (phone: string, format: "local" | "e164"): string => {
-      let cleaned = phone.replace(/-/g, "").replace(/\s/g, "");
+      const cleaned = phone.replace(/-/g, "").replace(/\s/g, "");
       
       if (format === "local") {
         // 국내 형식: 010XXXXXXXX
@@ -158,7 +158,7 @@ export async function sendAdminAlimtalkSolapi(
     };
 
     // 1차 시도: 국내 형식 (010XXXXXXXX)
-    let phoneNumber = formatPhoneNumber(adminPhone, "local");
+    const phoneNumber = formatPhoneNumber(adminPhone, "local");
     
     logger.info("[알림톡] 전화번호 변환 (1차 시도):", {
       마스킹: maskedPhone,

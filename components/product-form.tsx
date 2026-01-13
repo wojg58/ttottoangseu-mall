@@ -278,7 +278,7 @@ export default function ProductForm({
       setProductImages([]);
       setDeletedImageIds([]);
     }
-  }, [product?.id, product?.images?.length, product?.images, deletedImageIds]); // ⚠️ deletedImageIds를 의존성에 추가
+  }, [product, deletedImageIds]); // ⚠️ product 전체를 의존성에 추가하여 모든 변경 감지
 
   // 옵션별 재고 합산하여 총 재고 자동 계산
   useEffect(() => {

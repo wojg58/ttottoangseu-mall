@@ -86,7 +86,7 @@ export function validateEnv(): void {
   try {
     // 필수 환경 변수들이 모두 로드되었는지 확인
     // getEnvVar가 호출되면 자동으로 검증됨
-    const _ = env;
+    void env;
   } catch (error) {
     if (error instanceof Error) {
       console.error("❌ 환경 변수 검증 실패:", error.message);

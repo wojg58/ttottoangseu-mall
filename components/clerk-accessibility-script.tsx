@@ -67,7 +67,7 @@ export function ClerkAccessibilityScript() {
                     return JSON.parse(str);
                   }
                   return arg;
-                } catch (e) {
+                } catch {
                   return String(arg);
                 }
               })
@@ -91,7 +91,7 @@ export function ClerkAccessibilityScript() {
           logs = logs.slice(-Math.floor(MAX_LOGS / 2));
           try {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(logs));
-          } catch (e2) {
+          } catch {
             // 저장 실패 시 조용히 처리
           }
         }
