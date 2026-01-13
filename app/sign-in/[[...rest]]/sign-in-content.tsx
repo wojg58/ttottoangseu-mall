@@ -127,14 +127,24 @@ export default function SignInContent() {
           return container;
         };
 
-        // 순서대로 컨테이너 생성 및 추가: 구글, 카카오, 네이버
+        // 순서대로 컨테이너 생성 및 추가: 네이버를 맨 앞에 배치 (상단)
         const googleContainer = createButtonContainer(googleButton);
         const kakaoContainer = createButtonContainer(kakaoButton);
         const naverContainer = createButtonContainer(naverButton);
+        
+        // 네이버 버튼 컨테이너 크기를 322px로 고정
+        naverContainer.style.cssText = `
+          display: flex !important;
+          width: 322px !important;
+          min-width: 322px !important;
+          max-width: 322px !important;
+          flex: none !important;
+        `;
 
+        // 네이버 버튼을 맨 앞에 배치 (상단)
+        socialButtonsRoot.appendChild(naverContainer);
         socialButtonsRoot.appendChild(googleContainer);
         socialButtonsRoot.appendChild(kakaoContainer);
-        socialButtonsRoot.appendChild(naverContainer);
       };
 
       // 각 소셜 버튼 컨테이너도 flex로 설정 (한 줄에 배치, 동일한 크기)
@@ -146,15 +156,31 @@ export default function SignInContent() {
         const hasAnySocialButton = container.querySelector(
           ".cl-socialButtonsBlockButton, .cl-socialButtonsIconButton",
         );
+        // 네이버 버튼 컨테이너는 322px로 고정
+        const hasNaverButton = container.querySelector(
+          ".cl-socialButtonsBlockButton__custom_naver_auth, .cl-socialButtonsIconButton__custom_naver_auth",
+        );
         if (hasAnySocialButton) {
-          container.style.cssText = `
-            display: flex !important;
-            width: 0 !important;
-            min-width: 0 !important;
-            flex: 1 1 0% !important;
-            flex-shrink: 1 !important;
-            flex-basis: 0 !important;
-          `;
+          if (hasNaverButton) {
+            // 네이버 버튼 컨테이너는 322px 고정
+            container.style.cssText = `
+              display: flex !important;
+              width: 322px !important;
+              min-width: 322px !important;
+              max-width: 322px !important;
+              flex: none !important;
+            `;
+          } else {
+            // 다른 버튼들은 flex로 동일한 크기
+            container.style.cssText = `
+              display: flex !important;
+              width: 0 !important;
+              min-width: 0 !important;
+              flex: 1 1 0% !important;
+              flex-shrink: 1 !important;
+              flex-basis: 0 !important;
+            `;
+          }
         } else {
           // 완전히 빈 컨테이너만 숨기기
           container.style.cssText = `
@@ -182,6 +208,10 @@ export default function SignInContent() {
         ".cl-socialButtonsBlockButton",
       ) as NodeListOf<HTMLElement>;
       socialButtonsBlockButton.forEach((button) => {
+        // 네이버 버튼은 제외
+        if (button.classList.contains("cl-socialButtonsBlockButton__custom_naver_auth")) {
+          return;
+        }
         button.style.cssText += `
           width: 100% !important;
           min-width: 0 !important;
@@ -195,6 +225,10 @@ export default function SignInContent() {
         ".cl-socialButtonsIconButton",
       ) as NodeListOf<HTMLElement>;
       socialButtonsIconButton.forEach((button) => {
+        // 네이버 버튼은 제외
+        if (button.classList.contains("cl-socialButtonsIconButton__custom_naver_auth")) {
+          return;
+        }
         button.style.cssText += `
           width: 100% !important;
           min-width: 0 !important;
@@ -204,17 +238,18 @@ export default function SignInContent() {
         `;
       });
 
-      // 네이버 버튼도 IconButton처럼 동작하도록 스타일 적용 (동일한 높이)
+      // 네이버 버튼은 322px 고정 크기로 설정
       const naverButtons = document.querySelectorAll(
         ".cl-socialButtonsBlockButton__custom_naver_auth, .cl-socialButtonsIconButton__custom_naver_auth",
       ) as NodeListOf<HTMLElement>;
       naverButtons.forEach((button) => {
         button.style.cssText += `
-          width: 100% !important;
-          min-width: 0 !important;
+          width: 322px !important;
+          min-width: 322px !important;
+          max-width: 322px !important;
           height: 40px !important;
           min-height: 40px !important;
-          flex: 1 !important;
+          flex: none !important;
         `;
       });
 
@@ -288,12 +323,12 @@ export default function SignInContent() {
             ).style.cssText = `display: none !important;`;
           });
 
-          // 버튼 텍스트를 "NAVER"로 강제 변경 및 중앙 정렬
+          // 버튼 텍스트를 "NAVER 로그인"으로 강제 변경 및 중앙 정렬
           const naverButtonText = naverButton.querySelector(
             ".cl-socialButtonsBlockButtonText__custom_naver_auth, .cl-socialButtonsBlockButtonText",
           ) as HTMLElement;
           if (naverButtonText) {
-            naverButtonText.textContent = "NAVER";
+            naverButtonText.textContent = "NAVER 로그인";
             naverButtonText.style.cssText = `
               color: white !important;
               font-weight: bold !important;
