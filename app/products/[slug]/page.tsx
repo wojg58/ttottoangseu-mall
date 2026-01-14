@@ -135,6 +135,33 @@ export default async function ProductDetailPage({
   const primaryImage =
     sortedImages.find((img) => img.is_primary) || sortedImages[0];
   
+  // 이미지 URL 검증 및 로깅
+  if (primaryImage) {
+    console.log("[ProductDetailPage] 대표 이미지 정보:", {
+      productId: product.id,
+      productName: product.name,
+      imageId: primaryImage.id,
+      imageUrl: primaryImage.image_url,
+      isPrimary: primaryImage.is_primary,
+      hasUrl: !!primaryImage.image_url,
+      urlType: primaryImage.image_url?.startsWith('http') ? 'absolute' : 'relative',
+    });
+    
+    // 이미지 URL이 상대 경로이거나 잘못된 형식인 경우 경고
+    if (primaryImage.image_url && !primaryImage.image_url.startsWith('http')) {
+      console.warn("[ProductDetailPage] ⚠️ 이미지 URL이 절대 경로가 아닙니다:", {
+        productId: product.id,
+        imageUrl: primaryImage.image_url,
+      });
+    }
+  } else {
+    console.warn("[ProductDetailPage] ⚠️ 대표 이미지가 없습니다:", {
+      productId: product.id,
+      productName: product.name,
+      totalImages: sortedImages.length,
+    });
+  }
+  
   // 상세 이미지 (대표 이미지 제외한 모든 이미지)
   const detailImages = sortedImages.filter(
     (img) => img.id !== primaryImage?.id

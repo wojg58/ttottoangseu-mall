@@ -38,6 +38,7 @@ export default function ProductImageGallery({
 
   // 이미지가 없는 경우
   if (!sortedImages || sortedImages.length === 0) {
+    logger.warn("[ProductImageGallery] 이미지가 없습니다", { productName });
     return (
       <div className="aspect-square bg-[#f5f5f5] rounded-xl flex items-center justify-center">
         <div className="text-center">
@@ -49,9 +50,25 @@ export default function ProductImageGallery({
   }
 
   const currentImage = sortedImages[selectedIndex];
+  
+  // 이미지 URL 유효성 검사
+  if (currentImage && !currentImage.image_url) {
+    logger.warn("[ProductImageGallery] 이미지 URL이 없습니다", {
+      imageId: currentImage.id,
+      productName,
+    });
+  }
 
   const handleImageError = (index: number) => {
-    logger.warn("[ProductImageGallery] 이미지 로딩 실패", { index });
+    const failedImage = sortedImages[index];
+    logger.warn("[ProductImageGallery] 이미지 로딩 실패", {
+      index,
+      imageId: failedImage?.id,
+      imageUrl: failedImage?.image_url,
+      productName,
+    });
+    console.error("[ProductImageGallery] 이미지 URL:", failedImage?.image_url);
+    console.error("[ProductImageGallery] 이미지 ID:", failedImage?.id);
     setImageErrors((prev) => new Set(prev).add(index));
   };
 
@@ -68,12 +85,24 @@ export default function ProductImageGallery({
             sizes="(max-width: 1024px) 100vw, 50vw"
             priority
             onError={() => handleImageError(selectedIndex)}
+            onLoad={() => {
+              logger.info("[ProductImageGallery] 이미지 로딩 성공", {
+                imageUrl: currentImage.image_url,
+                productName,
+              });
+            }}
+            unoptimized={!currentImage.image_url.includes('supabase.co') && !currentImage.image_url.includes('naver.net')}
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
             <div className="text-center">
               <span className="text-4xl block mb-2">🎀</span>
               <p className="text-sm text-[#8b7d84]">이미지 준비 중</p>
+              {currentImage?.image_url && (
+                <p className="text-xs text-red-500 mt-2 break-all px-4">
+                  URL: {currentImage.image_url.substring(0, 50)}...
+                </p>
+              )}
             </div>
           </div>
         )}
