@@ -129,8 +129,8 @@ export default function PaymentWidget({
         const BASE_URL = window.location.origin;
         logger.info("[PaymentWidget] BASE_URL:", BASE_URL);
 
-        // successUrl과 failUrl - 토스페이먼츠는 {paymentKey}, {orderId}, {amount} 템플릿을 자동 치환
-        const successUrl = `${BASE_URL}/order/success?paymentKey={paymentKey}&orderId={orderId}&amount={amount}`;
+        // successUrl과 failUrl - 토스페이먼츠는 자동으로 쿼리 파라미터를 추가
+        const successUrl = `${BASE_URL}/order/success`;
         const failUrl = `${BASE_URL}/order/fail`;
         
         logger.info("[PaymentWidget] successUrl:", successUrl);
