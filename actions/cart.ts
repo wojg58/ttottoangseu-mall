@@ -284,15 +284,29 @@ async function getOrCreateCartId(userId: string): Promise<string> {
 
 // 장바구니 아이템 조회
 export async function getCartItems(): Promise<CartItemWithProduct[]> {
+  const authResult = await auth();
+  const { userId: clerkUserId } = authResult;
+  
+  logger.info("[getCartItems] 장바구니 아이템 조회 시작", {
+    clerkUserId,
+    timestamp: new Date().toISOString(),
+  });
+
   const userId = await getCurrentUserId();
 
   if (!userId) {
-    logger.debug("[getCartItems] 사용자 미인증");
+    logger.warn("[getCartItems] 사용자 ID 조회 실패 - 로그인 필요", {
+      clerkUserId,
+    });
     return [];
   }
 
+  logger.info("[getCartItems] Supabase user_id 조회 완료", {
+    clerkUserId,
+    supabaseUserId: userId,
+  });
+
   // PGRST301 에러 방지를 위해 토큰 확인
-  const authResult = await auth();
   const token = await authResult.getToken();
   let supabase;
 
@@ -311,6 +325,17 @@ export async function getCartItems(): Promise<CartItemWithProduct[]> {
     .select("id")
     .eq("user_id", userId)
     .single();
+
+  logger.info("[getCartItems] 장바구니 조회 결과", {
+    clerkUserId,
+    supabaseUserId: userId,
+    cartId: cart?.id || null,
+    error: cartError ? {
+      message: cartError.message,
+      code: cartError.code,
+      details: cartError.details,
+    } : null,
+  });
 
   // PGRST301 에러 발생 시 service role 클라이언트로 재시도
   if (cartError && cartError.code === "PGRST301") {
@@ -358,6 +383,18 @@ export async function getCartItems(): Promise<CartItemWithProduct[]> {
     )
     .eq("cart_id", cart.id)
     .order("created_at", { ascending: false });
+
+  logger.info("[getCartItems] 장바구니 아이템 조회 결과", {
+    clerkUserId,
+    supabaseUserId: userId,
+    cartId: cart.id,
+    itemsCount: items?.length || 0,
+    error: error ? {
+      message: error.message,
+      code: error.code,
+      details: error.details,
+    } : null,
+  });
 
   // PGRST301 에러 발생 시 service role 클라이언트로 재시도
   if (error && error.code === "PGRST301") {
@@ -530,6 +567,14 @@ export async function getCartItems(): Promise<CartItemWithProduct[]> {
           }
         : null,
     };
+  });
+
+  logger.info("[getCartItems] 최종 결과 반환", {
+    clerkUserId,
+    supabaseUserId: userId,
+    cartId: cart.id,
+    finalItemsCount: finalItems.length,
+    productIds: finalItems.map(item => item.product_id),
   });
 
   return finalItems;

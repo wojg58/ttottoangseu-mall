@@ -27,13 +27,29 @@ export default async function CheckoutPage({
     const orderId = params.orderId;
     const buyNow = params.buyNow === "true";
 
+    logger.info("[CheckoutPage] 체크아웃 페이지 로드 시작", {
+      clerkUserId: userId,
+      orderId: orderId || null,
+      buyNow,
+      timestamp: new Date().toISOString(),
+    });
+
     // 장바구니 조회 (PGRST301 에러 처리 포함)
     let cartItems: Awaited<ReturnType<typeof getCartItems>> = [];
     
     try {
       cartItems = await getCartItems();
+      logger.info("[CheckoutPage] 장바구니 조회 완료", {
+        clerkUserId: userId,
+        cartItemsCount: cartItems.length,
+        buyNow,
+      });
     } catch (error) {
-      logger.error("[CheckoutPage] getCartItems() 호출 실패", error);
+      logger.error("[CheckoutPage] getCartItems() 호출 실패", {
+        error,
+        clerkUserId: userId,
+        buyNow,
+      });
       // 에러 발생 시 빈 배열로 처리하고 계속 진행
       cartItems = [];
     }
@@ -66,8 +82,11 @@ export default async function CheckoutPage({
   // 주문이 생성된 후에는 장바구니가 비워지므로, orderId가 있으면 체크를 건너뜀
   if (!orderId && cartItems.length === 0) {
     logger.warn("[CheckoutPage] 장바구니 비어있음 - /cart로 리다이렉트", {
+      clerkUserId: userId,
       orderId: orderId || null,
       cartItemsCount: cartItems.length,
+      buyNow,
+      timestamp: new Date().toISOString(),
     });
     redirect("/cart");
   }
