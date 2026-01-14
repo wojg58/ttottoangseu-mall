@@ -302,7 +302,7 @@ export default async function HomePage() {
 
   return (
     <main className="relative min-h-screen">
-      {/* 배경 이미지 - LCP가 아니므로 priority 제거 */}
+      {/* 배경 이미지 - 첫 화면에 바로 표시되도록 priority 설정 */}
       <div className="fixed inset-0 -z-10">
         <Image
           src="/background.jpg"
@@ -311,8 +311,8 @@ export default async function HomePage() {
           className="object-cover"
           sizes="100vw"
           quality={75}
-          fetchPriority="low"
-          loading="lazy"
+          priority
+          fetchPriority="high"
           aria-hidden="true"
         />
       </div>
