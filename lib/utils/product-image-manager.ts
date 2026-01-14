@@ -167,13 +167,19 @@ export async function updateProductImages(
       .insert(imagesToInsert);
 
     if (insertImageError) {
-      logger.error("이미지 추가 에러:", insertImageError);
+      logger.error("[updateProductImages] ❌ 이미지 추가 에러", {
+        code: insertImageError.code,
+        message: insertImageError.message,
+        details: insertImageError.details,
+        hint: insertImageError.hint,
+      });
+      throw new Error(`이미지 추가 실패: ${insertImageError.message}`);
     } else {
-      logger.info(`새 이미지 ${imagesToInsert.length}개 추가 완료`);
+      logger.info(`[updateProductImages] ✅ 새 이미지 ${imagesToInsert.length}개 추가 완료`);
     }
   }
 
-  logger.info("[updateProductImages] 이미지 업데이트 완료");
+  logger.info("[updateProductImages] ✅ 이미지 업데이트 완료");
 }
 
 /**

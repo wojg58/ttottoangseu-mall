@@ -166,11 +166,23 @@ export async function updateProduct(
   }
 
   try {
-    const supabase = await createClient();
+    logger.group("[updateProduct] 상품 수정 시작");
+    logger.info("[updateProduct] 입력 데이터", {
+      productId: input.id,
+      hasImages: !!input.images,
+      imagesCount: input.images?.length || 0,
+      hasVariants: !!input.variants,
+      variantsCount: input.variants?.length || 0,
+      deletedImageIds: input.deletedImageIds?.length || 0,
+    });
+
+    // 관리자 작업이므로 service_role 클라이언트 사용
+    const { getServiceRoleClient } = await import("@/lib/supabase/service-role");
+    const supabase = getServiceRoleClient();
 
     // slug 중복 확인 (자기 자신 제외)
     if (input.slug) {
-      const { data: existing } = await supabase
+      const { data: existing, error: slugCheckError } = await supabase
         .from("products")
         .select("id")
         .eq("slug", input.slug)
@@ -178,8 +190,15 @@ export async function updateProduct(
         .is("deleted_at", null)
         .single();
 
+      if (slugCheckError && slugCheckError.code !== "PGRST116") {
+        logger.error("[updateProduct] slug 중복 확인 실패", slugCheckError);
+        logger.groupEnd();
+        return { success: false, message: "slug 확인 중 오류가 발생했습니다." };
+      }
+
       if (existing) {
         logger.warn("[updateProduct] slug 중복", { slug: input.slug });
+        logger.groupEnd();
         return { success: false, message: "이미 사용 중인 slug입니다." };
       }
     }
@@ -202,34 +221,66 @@ export async function updateProduct(
 
     updateData.updated_at = new Date().toISOString();
 
+    logger.info("[updateProduct] 상품 기본 정보 업데이트 중...");
     const { error } = await supabase
       .from("products")
       .update(updateData)
       .eq("id", input.id);
 
     if (error) {
-      logger.error("[updateProduct] 상품 수정 실패", error);
+      logger.error("[updateProduct] ❌ 상품 수정 실패", {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+      });
+      logger.groupEnd();
       return { success: false, message: "상품 수정에 실패했습니다." };
     }
+    logger.info("[updateProduct] ✅ 상품 기본 정보 업데이트 완료");
 
     // 다중 카테고리 업데이트 (category_ids가 제공된 경우)
     if (input.category_ids !== undefined) {
-      await updateProductCategories(supabase, input.id, input.category_ids);
+      logger.info("[updateProduct] 카테고리 업데이트 중...");
+      try {
+        await updateProductCategories(supabase, input.id, input.category_ids);
+        logger.info("[updateProduct] ✅ 카테고리 업데이트 완료");
+      } catch (error) {
+        logger.error("[updateProduct] ❌ 카테고리 업데이트 실패", error);
+        logger.groupEnd();
+        return { success: false, message: "카테고리 업데이트에 실패했습니다." };
+      }
     }
 
     // 이미지 업데이트 (images가 제공된 경우)
     if (input.images !== undefined) {
-      await updateProductImages(
-        supabase,
-        input.id,
-        input.images,
-        input.deletedImageIds,
-      );
+      logger.info("[updateProduct] 이미지 업데이트 중...");
+      try {
+        await updateProductImages(
+          supabase,
+          input.id,
+          input.images,
+          input.deletedImageIds,
+        );
+        logger.info("[updateProduct] ✅ 이미지 업데이트 완료");
+      } catch (error) {
+        logger.error("[updateProduct] ❌ 이미지 업데이트 실패", error);
+        logger.groupEnd();
+        return { success: false, message: "이미지 업데이트에 실패했습니다." };
+      }
     }
 
     // 옵션 업데이트 (variants가 제공된 경우)
     if (input.variants !== undefined) {
-      await updateProductVariants(supabase, input.id, input.variants);
+      logger.info("[updateProduct] 옵션 업데이트 중...");
+      try {
+        await updateProductVariants(supabase, input.id, input.variants);
+        logger.info("[updateProduct] ✅ 옵션 업데이트 완료");
+      } catch (error) {
+        logger.error("[updateProduct] ❌ 옵션 업데이트 실패", error);
+        logger.groupEnd();
+        return { success: false, message: "옵션 업데이트에 실패했습니다." };
+      }
     }
 
     revalidatePath("/admin/products");
@@ -237,11 +288,21 @@ export async function updateProduct(
     revalidatePath(`/products/${input.slug || ""}`);
     revalidatePath("/products");
 
-    logger.info("[updateProduct] 상품 수정 완료", { productId: input.id });
+    logger.info("[updateProduct] ✅ 상품 수정 완료", { productId: input.id });
+    logger.groupEnd();
     return { success: true, message: "상품이 수정되었습니다." };
   } catch (error) {
-    logger.error("[updateProduct] 예외 발생", error);
-    return { success: false, message: "상품 수정에 실패했습니다." };
+    logger.error("[updateProduct] ❌ 예외 발생", {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+    logger.groupEnd();
+    return { 
+      success: false, 
+      message: error instanceof Error 
+        ? `상품 수정에 실패했습니다: ${error.message}`
+        : "상품 수정에 실패했습니다." 
+    };
   }
 }
 
