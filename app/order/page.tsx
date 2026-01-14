@@ -85,13 +85,13 @@ export default function OrderPage() {
             const itemPrice = basePrice + adjustment;
             subtotal += itemPrice * item.quantity;
             
-            // 결제 테스트 상품(상품 금액이 1원인 경우) 체크
-            if (itemPrice === 1) {
+            // 결제 테스트 상품(상품 금액이 100원인 경우) 체크
+            if (itemPrice === 100) {
               hasTestProduct = true;
             }
           }
           
-          // 결제 테스트 상품(상품 금액이 1원인 경우)은 배송비 제외
+          // 결제 테스트 상품(상품 금액이 100원인 경우)은 배송비 제외
           const shippingFee = hasTestProduct ? 0 : subtotal >= 50000 ? 0 : 3000;
           const total = subtotal + shippingFee;
 
