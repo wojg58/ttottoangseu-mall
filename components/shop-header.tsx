@@ -85,13 +85,18 @@ export default function ShopHeader() {
 
       try {
         // users 테이블에서 clerk_user_id로 user_id 조회
-        const { data: user } = await supabase
+        const { data: user, error: userError } = await supabase
           .from("users")
           .select("id")
           .eq("clerk_user_id", userId)
           .single();
 
-        if (!user) {
+        // 401 에러나 사용자가 없으면 조용히 처리 (동기화 중일 수 있음)
+        if (userError || !user) {
+          logger.debug("[ShopHeader] 사용자 조회 실패 또는 없음", {
+            error: userError?.message,
+            code: userError?.code,
+          });
           setCartItemCount(0);
           return;
         }
