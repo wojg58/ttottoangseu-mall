@@ -44,7 +44,10 @@ export async function getCurrentUserId(): Promise<string | null> {
 
   // PGRST301 에러 발생 시 service role 클라이언트로 재시도
   if (error && error.code === "PGRST301") {
-    logger.debug("[getCurrentUserId] PGRST301 에러, service role로 재시도");
+    logger.warn("[getCurrentUserId] PGRST301 에러 발생, service role로 재시도", {
+      clerkUserId,
+      errorMessage: error.message,
+    });
     const { getServiceRoleClient } = await import(
       "@/lib/supabase/service-role"
     );
@@ -61,17 +64,21 @@ export async function getCurrentUserId(): Promise<string | null> {
       logger.error("[getCurrentUserId] service role로도 조회 실패", {
         error: retryError.message,
         code: retryError.code,
+        clerkUserId,
       });
-      return null;
-    }
-
-    if (retryUser) {
+      // service role로도 실패하면 동기화 시도
+    } else if (retryUser) {
+      logger.info("[getCurrentUserId] service role로 조회 성공", {
+        userId: retryUser.id,
+        clerkUserId,
+      });
       return retryUser.id;
     }
+    // service role로도 사용자를 찾지 못하면 동기화 시도 (아래 코드로 계속 진행)
   }
 
-  // 사용자가 없으면 동기화 시도
-  if (!user && !error) {
+  // 사용자가 없으면 동기화 시도 (PGRST301 에러가 발생했어도 동기화 시도)
+  if (!user) {
     logger.debug("[getCurrentUserId] 사용자 없음, 동기화 시도");
     try {
       const { clerkClient } = await import("@clerk/nextjs/server");
@@ -88,10 +95,7 @@ export async function getCurrentUserId(): Promise<string | null> {
         const userData = {
           clerk_user_id: clerkUser.id,
           name:
-            clerkUser.fullName ||
-            clerkUser.username ||
-            userEmail ||
-            "Unknown",
+            clerkUser.fullName || clerkUser.username || userEmail || "Unknown",
           email: userEmail,
           role: "customer",
         };
@@ -110,7 +114,9 @@ export async function getCurrentUserId(): Promise<string | null> {
 
         if (existingUser) {
           // 기존 사용자가 있으면 clerk_user_id만 업데이트
-          logger.debug("[getCurrentUserId] 기존 사용자 발견, clerk_user_id 업데이트");
+          logger.debug(
+            "[getCurrentUserId] 기존 사용자 발견, clerk_user_id 업데이트",
+          );
           const { error: updateError } = await serviceSupabase
             .from("users")
             .update({ clerk_user_id: clerkUser.id })
@@ -120,7 +126,10 @@ export async function getCurrentUserId(): Promise<string | null> {
             logger.debug("[getCurrentUserId] clerk_user_id 업데이트 성공");
             return existingUser.id;
           } else {
-            logger.error("[getCurrentUserId] clerk_user_id 업데이트 실패", updateError);
+            logger.error(
+              "[getCurrentUserId] clerk_user_id 업데이트 실패",
+              updateError,
+            );
           }
         } else {
           // 새 사용자 생성
@@ -136,14 +145,16 @@ export async function getCurrentUserId(): Promise<string | null> {
           } else {
             // 중복 에러 발생 시 이메일로 다시 조회
             if (insertError?.code === "23505" && userEmail) {
-              logger.debug("[getCurrentUserId] 중복 에러 발생, 이메일로 재조회");
+              logger.debug(
+                "[getCurrentUserId] 중복 에러 발생, 이메일로 재조회",
+              );
               const { data: userByEmail } = await serviceSupabase
                 .from("users")
                 .select("id")
                 .eq("email", userEmail)
                 .is("deleted_at", null)
                 .maybeSingle();
-              
+
               if (userByEmail) {
                 // clerk_user_id 업데이트 시도
                 await serviceSupabase
@@ -163,8 +174,13 @@ export async function getCurrentUserId(): Promise<string | null> {
       logger.error("[getCurrentUserId] 사용자 동기화 중 예외 발생", syncError);
     }
 
-    // 동기화 후 다시 조회 (동일한 클라이언트 사용)
-    const { data: retryUser, error: retryError } = await supabase
+    // 동기화 후 다시 조회 (service role 클라이언트 사용하여 PGRST301 방지)
+    const { getServiceRoleClient } = await import(
+      "@/lib/supabase/service-role"
+    );
+    const serviceSupabase = getServiceRoleClient();
+    
+    const { data: retryUser, error: retryError } = await serviceSupabase
       .from("users")
       .select("id")
       .eq("clerk_user_id", clerkUserId)
@@ -172,13 +188,21 @@ export async function getCurrentUserId(): Promise<string | null> {
       .maybeSingle();
 
     if (retryError) {
-      logger.error("[getCurrentUserId] 재조회 실패", {
+      logger.error("[getCurrentUserId] 동기화 후 재조회 실패", {
         error: retryError.message,
         code: retryError.code,
+        clerkUserId,
       });
+      return null;
     }
 
-    user = retryUser;
+    if (retryUser) {
+      logger.info("[getCurrentUserId] 동기화 후 재조회 성공", {
+        userId: retryUser.id,
+        clerkUserId,
+      });
+      return retryUser.id;
+    }
   }
 
   // 일반 에러 처리 (PGRST301이 아닌 경우)
@@ -186,6 +210,16 @@ export async function getCurrentUserId(): Promise<string | null> {
     logger.error("[getCurrentUserId] 사용자 조회 실패", {
       error: error.message,
       code: error.code,
+      clerkUserId,
+    });
+    return null;
+  }
+
+  // PGRST301 에러가 발생했지만 사용자를 찾지 못한 경우
+  if (error && error.code === "PGRST301" && !user) {
+    logger.error("[getCurrentUserId] PGRST301 에러 발생 후 사용자를 찾지 못함", {
+      clerkUserId,
+      errorMessage: error.message,
     });
     return null;
   }
@@ -506,14 +540,19 @@ export async function createOrder(input: CreateOrderInput): Promise<{
 
     // 배송비 계산
     // 결제 테스트 상품(상품 금액이 100원인 경우)은 배송비 제외
-    const hasTestProduct = orderItems.some(
-      (item) => item.price === 100
-    );
+    const hasTestProduct = orderItems.some((item) => item.price === 100);
     // 헬로키티 미니 마스코트 인형 키링 하트 카라비너 키홀더 상품은 배송비 무료
-    const hasFreeShippingProduct = orderItems.some(
-      (item) => item.product_name.includes("헬로키티 미니 마스코트 인형 키링 하트 카라비너 키홀더")
+    const hasFreeShippingProduct = orderItems.some((item) =>
+      item.product_name.includes(
+        "헬로키티 미니 마스코트 인형 키링 하트 카라비너 키홀더",
+      ),
     );
-    const shippingFee = hasTestProduct || hasFreeShippingProduct ? 0 : totalAmount >= 50000 ? 0 : 3000;
+    const shippingFee =
+      hasTestProduct || hasFreeShippingProduct
+        ? 0
+        : totalAmount >= 50000
+        ? 0
+        : 3000;
     const subtotal = totalAmount;
     totalAmount += shippingFee;
 
@@ -789,10 +828,10 @@ export async function createQuickOrder(input: CreateQuickOrderInput): Promise<{
 export async function getOrders(): Promise<Order[]> {
   const authResult = await auth();
   const { userId: clerkUserId } = authResult;
-  
-  logger.info("[getOrders] 주문 목록 조회 시작", { 
+
+  logger.info("[getOrders] 주문 목록 조회 시작", {
     clerkUserId,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   });
 
   const userId = await getCurrentUserId();
@@ -803,12 +842,25 @@ export async function getOrders(): Promise<Order[]> {
     return [];
   }
 
-  logger.info("[getOrders] Supabase user_id 조회 완료", { 
+  logger.info("[getOrders] Supabase user_id 조회 완료", {
     clerkUserId,
     supabaseUserId: userId,
   });
 
-  const supabase = await createClient();
+  // PGRST301 에러 방지를 위해 토큰 확인 후 적절한 클라이언트 선택
+  const authResultForSupabase = await auth();
+  const token = await authResultForSupabase.getToken();
+  let supabase;
+
+  if (!token) {
+    logger.debug("[getOrders] 토큰 없음, service role 클라이언트 사용");
+    const { getServiceRoleClient } = await import(
+      "@/lib/supabase/service-role"
+    );
+    supabase = getServiceRoleClient();
+  } else {
+    supabase = await createClient();
+  }
 
   // 먼저 모든 주문 수 확인 (디버깅용)
   const { count: totalOrdersCount } = await supabase
@@ -823,22 +875,26 @@ export async function getOrders(): Promise<Order[]> {
   // 🔍 디버깅: 최근 주문 10개 조회 (user_id 무시, 전체 조회)
   const { data: allOrders, error: allOrdersError } = await supabase
     .from("orders")
-    .select("id, order_number, user_id, created_at, payment_status, total_amount")
+    .select(
+      "id, order_number, user_id, created_at, payment_status, total_amount",
+    )
     .order("created_at", { ascending: false })
     .limit(10);
 
   logger.info("[getOrders] 🔍 최근 주문 10개 (디버깅용)", {
-    allOrders: allOrders?.map(o => ({
+    allOrders: allOrders?.map((o) => ({
       orderNumber: o.order_number,
       userId: o.user_id,
       paymentStatus: o.payment_status,
       totalAmount: o.total_amount,
       createdAt: o.created_at,
     })),
-    error: allOrdersError ? {
-      message: allOrdersError.message,
-      code: allOrdersError.code,
-    } : null,
+    error: allOrdersError
+      ? {
+          message: allOrdersError.message,
+          code: allOrdersError.code,
+        }
+      : null,
     currentUserId: userId,
     clerkUserId,
   });
@@ -852,18 +908,59 @@ export async function getOrders(): Promise<Order[]> {
   logger.info("[getOrders] 사용자 주문 수 확인", {
     userOrdersCount,
     userId,
-    countError: countError ? {
-      message: countError.message,
-      code: countError.code,
-      details: countError.details,
-    } : null,
+    countError: countError
+      ? {
+          message: countError.message,
+          code: countError.code,
+          details: countError.details,
+        }
+      : null,
   });
 
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from("orders")
     .select("*")
     .eq("user_id", userId)
     .order("created_at", { ascending: false });
+
+  // PGRST301 에러 발생 시 service role 클라이언트로 재시도
+  if (error && error.code === "PGRST301") {
+    logger.warn("[getOrders] PGRST301 에러 발생, service role로 재시도", {
+      userId,
+      clerkUserId,
+      errorMessage: error.message,
+    });
+    const { getServiceRoleClient } = await import(
+      "@/lib/supabase/service-role"
+    );
+    const serviceSupabase = getServiceRoleClient();
+
+    const { data: retryData, error: retryError } = await serviceSupabase
+      .from("orders")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false });
+
+    if (retryError) {
+      logger.error("[getOrders] service role로도 주문 목록 조회 실패", {
+        error: retryError.message,
+        code: retryError.code,
+        details: retryError.details,
+        hint: retryError.hint,
+        userId,
+        clerkUserId,
+      });
+      return [];
+    }
+
+    data = retryData;
+    error = null;
+    logger.info("[getOrders] service role로 주문 목록 조회 성공", {
+      userId,
+      clerkUserId,
+      orderCount: data?.length || 0,
+    });
+  }
 
   if (error) {
     logger.error("[getOrders] 주문 목록 조회 실패", {
@@ -881,7 +978,7 @@ export async function getOrders(): Promise<Order[]> {
     userId,
     clerkUserId,
     orderCount: data?.length || 0,
-    orderNumbers: data?.map(o => o.order_number) || [],
+    orderNumbers: data?.map((o) => o.order_number) || [],
   });
 
   return (data as Order[]) || [];
