@@ -21,9 +21,10 @@ import type {
 } from "@/types/database";
 
 // 관리자 이메일 목록 (환경 변수로 관리 권장)
-const ADMIN_EMAILS = process.env.ADMIN_EMAILS?.split(",") || [
+// 쉼표로 구분된 이메일을 배열로 변환하고, 공백 제거 및 소문자 변환
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS?.split(",") || [
   "admin@ttottoangs.com",
-];
+]).map((email) => email.trim().toLowerCase());
 
 // 관리자 권한 확인
 export async function isAdmin(): Promise<boolean> {
@@ -33,13 +34,22 @@ export async function isAdmin(): Promise<boolean> {
     return false;
   }
 
-  const email = user.emailAddresses[0]?.emailAddress;
-  const isAdminUser = ADMIN_EMAILS.includes(email || "");
+  // 모든 이메일 주소 확인 (primary email 우선, 그 다음 모든 이메일)
+  const allEmails = user.emailAddresses?.map((addr) => 
+    addr.emailAddress?.trim().toLowerCase()
+  ).filter((email): email is string => !!email) || [];
+  
+  // primary email 우선 확인
+  const primaryEmail = user.emailAddresses?.find((addr) => addr.id === user.primaryEmailAddressId)?.emailAddress?.trim().toLowerCase();
+  
+  // 모든 이메일 중 관리자 이메일이 있는지 확인
+  const isAdminUser = allEmails.some((email) => ADMIN_EMAILS.includes(email));
   
   logger.debug("[isAdmin] 권한 확인", {
-    email: email || "(이메일 없음)",
-    isAdmin: isAdminUser,
+    primaryEmail: primaryEmail || "(없음)",
+    allEmails: allEmails,
     adminEmails: ADMIN_EMAILS,
+    isAdmin: isAdminUser,
     hasEnvVar: !!process.env.ADMIN_EMAILS,
   });
   
