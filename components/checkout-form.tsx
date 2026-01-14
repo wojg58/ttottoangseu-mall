@@ -14,7 +14,7 @@ import * as z from "zod";
 import { useUser } from "@clerk/nextjs";
 import { X, Plus, Minus } from "lucide-react";
 import { getOrderById } from "@/actions/orders";
-import { removeFromCart, updateCartItemQuantity } from "@/actions/cart";
+import { removeFromCart, updateCartItemQuantity, getCartItems } from "@/actions/cart";
 import { getAvailableCoupons, type Coupon } from "@/actions/coupons";
 import { getMemberAdditionalInfo } from "@/actions/member-actions";
 import { calculateCouponDiscount } from "@/lib/coupon-utils";
@@ -260,6 +260,27 @@ export default function CheckoutForm({
 
   // 배송지 옵션 상태 (true: 회원 정보와 동일, false: 새로운 배송지)
   const [useMemberInfo, setUseMemberInfo] = useState(true);
+
+  // 바로 구매 모드일 때 장바구니 재조회 (배포 환경 DB 반영 지연 대응)
+  useEffect(() => {
+    const buyNow = searchParams.get("buyNow") === "true";
+    
+    if (buyNow && cartItems.length === 0) {
+      logger.info("[CheckoutForm] 바로 구매 모드 - 장바구니 재조회 시작", {
+        cartItemsCount: cartItems.length,
+      });
+      
+      // 2초 후 장바구니 재조회 (DB 반영 시간 확보)
+      const timeoutId = setTimeout(() => {
+        logger.info("[CheckoutForm] 바로 구매 모드 - 페이지 새로고침하여 장바구니 재조회");
+        router.refresh();
+      }, 2000);
+      
+      return () => {
+        clearTimeout(timeoutId);
+      };
+    }
+  }, [searchParams, cartItems.length, router]);
 
   // Daum Postcode API 스크립트 로드
   useEffect(() => {

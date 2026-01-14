@@ -57,17 +57,28 @@ export default async function CheckoutPage({
     // 바로 구매하기로 온 경우, 장바구니가 비어있을 수 있으므로 더 긴 대기 후 재시도
     if (!orderId && cartItems.length === 0) {
       // 바로구매인 경우 더 긴 대기 시간 (DB 반영 시간 확보)
-      const waitTime = buyNow ? 1500 : 500;
-      const maxRetries = buyNow ? 3 : 1;
+      const waitTime = buyNow ? 2000 : 500;
+      const maxRetries = buyNow ? 5 : 1;
       
       for (let retry = 1; retry <= maxRetries; retry++) {
+        logger.info(`[CheckoutPage] 장바구니 재시도 ${retry}/${maxRetries}`, {
+          buyNow,
+          waitTime,
+        });
+        
         // revalidatePath 후 데이터 반영을 위해 잠시 대기
         await new Promise((resolve) => setTimeout(resolve, waitTime));
         try {
           cartItems = await getCartItems();
           
+          logger.info(`[CheckoutPage] 재시도 ${retry} 결과`, {
+            cartItemsCount: cartItems.length,
+            buyNow,
+          });
+          
           // 장바구니에 아이템이 있으면 재시도 중단
           if (cartItems.length > 0) {
+            logger.info("[CheckoutPage] ✅ 장바구니 아이템 확인 완료");
             break;
           }
         } catch (error) {
@@ -80,7 +91,8 @@ export default async function CheckoutPage({
 
   // 주문이 생성된 상태(orderId가 있는 경우)가 아니고 장바구니가 비어있으면 장바구니 페이지로
   // 주문이 생성된 후에는 장바구니가 비워지므로, orderId가 있으면 체크를 건너뜀
-  if (!orderId && cartItems.length === 0) {
+  // 단, 바로 구매(buyNow=true)인 경우는 장바구니가 비어있어도 체크아웃 페이지를 표시 (DB 반영 지연 대응)
+  if (!orderId && cartItems.length === 0 && !buyNow) {
     logger.warn("[CheckoutPage] 장바구니 비어있음 - /cart로 리다이렉트", {
       clerkUserId: userId,
       orderId: orderId || null,
@@ -89,6 +101,17 @@ export default async function CheckoutPage({
       timestamp: new Date().toISOString(),
     });
     redirect("/cart");
+  }
+
+  // 바로 구매인데 장바구니가 비어있는 경우 경고 로그만 남기고 계속 진행
+  if (!orderId && cartItems.length === 0 && buyNow) {
+    logger.warn("[CheckoutPage] ⚠️ 바로 구매 모드인데 장바구니가 비어있음 - 체크아웃 페이지 표시 계속 진행", {
+      clerkUserId: userId,
+      cartItemsCount: cartItems.length,
+      buyNow,
+      timestamp: new Date().toISOString(),
+      note: "DB 반영 지연 가능성 - 클라이언트에서 재조회 예정",
+    });
   }
 
   // 금액 계산 (variant의 price_adjustment 고려하여 재계산)
