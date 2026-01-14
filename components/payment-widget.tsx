@@ -136,10 +136,10 @@ export default function PaymentWidget({
         const BASE_URL = window.location.origin;
         logger.info("[PaymentWidget] BASE_URL:", BASE_URL);
 
-        // successUrl과 failUrl - 토스페이먼츠는 {paymentKey}, {orderId}, {amount}, {message} 템플릿을 자동 치환
-        // failUrl에는 {message} 템플릿만 지원됨 (에러 코드는 message에 포함되어 전달됨)
-        const successUrl = `${BASE_URL}/order/success`;
-        const failUrl = `${BASE_URL}/order/fail?message={message}`;
+        // successUrl과 failUrl - 토스페이먼츠는 successUrl에만 {paymentKey}, {orderId}, {amount} 템플릿 지원
+        // failUrl에는 템플릿을 사용하지 않고 단순 URL만 사용 (에러 정보는 쿼리 파라미터로 전달되지 않음)
+        const successUrl = `${BASE_URL}/order/success?paymentKey={paymentKey}&orderId={orderId}&amount={amount}`;
+        const failUrl = `${BASE_URL}/order/fail`;
         
         logger.info("[PaymentWidget] successUrl:", successUrl);
         logger.info("[PaymentWidget] failUrl:", failUrl);
