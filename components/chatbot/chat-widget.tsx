@@ -16,7 +16,6 @@
 
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@clerk/nextjs";
@@ -264,29 +263,7 @@ export function ChatWidget() {
 
   return (
     <>
-      {/* Floating Button - 숨김 처리 (opacity:0 + pointer-events:none) */}
-      <button
-        type="button"
-        className="fixed bottom-0 right-0 md:bottom-6 md:right-6 z-50 w-[120px] h-[120px] md:w-[150px] md:h-[150px] transition-all duration-300 ease-out flex items-center justify-center bg-transparent hover:opacity-90 hover:scale-110 hover:rotate-12 active:scale-95 p-0 m-0"
-        onClick={() => {
-          setOpen(true);
-        }}
-        aria-label="또또앙스 챗봇 열기"
-        style={{
-          opacity: 0,
-          pointerEvents: "none",
-        }}
-      >
-        <Image 
-          src="/chatbot.png" 
-          alt="또또앙스 챗봇" 
-          width={150} 
-          height={150} 
-          priority 
-          sizes="(max-width: 768px) 120px, 150px"
-          className="w-full h-full transition-transform duration-300 object-contain"
-        />
-      </button>
+      {/* Floating Button - ChatbotLottieLauncher가 대신 처리하므로 제거됨 */}
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="w-[calc(100vw-32px)] md:w-[430px] h-[730px] max-w-none p-0 overflow-hidden fixed right-4 md:right-6 bottom-4 md:bottom-6 top-auto left-auto translate-x-0 translate-y-0 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95">
