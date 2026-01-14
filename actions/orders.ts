@@ -787,15 +787,54 @@ export async function createQuickOrder(input: CreateQuickOrderInput): Promise<{
 
 // 주문 목록 조회
 export async function getOrders(): Promise<Order[]> {
+  const authResult = await auth();
+  const { userId: clerkUserId } = authResult;
+  
+  logger.info("[getOrders] 주문 목록 조회 시작", { 
+    clerkUserId,
+    timestamp: new Date().toISOString()
+  });
+
   const userId = await getCurrentUserId();
   if (!userId) {
-    logger.warn("[getOrders] 사용자 ID 조회 실패 - 로그인 필요");
+    logger.warn("[getOrders] 사용자 ID 조회 실패 - 로그인 필요", {
+      clerkUserId,
+    });
     return [];
   }
 
-  logger.debug("[getOrders] 주문 목록 조회 시작", { userId });
+  logger.info("[getOrders] Supabase user_id 조회 완료", { 
+    clerkUserId,
+    supabaseUserId: userId,
+  });
 
   const supabase = await createClient();
+
+  // 먼저 모든 주문 수 확인 (디버깅용)
+  const { count: totalOrdersCount } = await supabase
+    .from("orders")
+    .select("*", { count: "exact", head: true });
+
+  logger.info("[getOrders] 전체 주문 수 확인", {
+    totalOrdersCount,
+    userId,
+  });
+
+  // 해당 사용자의 주문 수 확인 (RLS 정책 확인용)
+  const { count: userOrdersCount, error: countError } = await supabase
+    .from("orders")
+    .select("*", { count: "exact", head: true })
+    .eq("user_id", userId);
+
+  logger.info("[getOrders] 사용자 주문 수 확인", {
+    userOrdersCount,
+    userId,
+    countError: countError ? {
+      message: countError.message,
+      code: countError.code,
+      details: countError.details,
+    } : null,
+  });
 
   const { data, error } = await supabase
     .from("orders")
@@ -807,14 +846,19 @@ export async function getOrders(): Promise<Order[]> {
     logger.error("[getOrders] 주문 목록 조회 실패", {
       error: error.message,
       code: error.code,
+      details: error.details,
+      hint: error.hint,
       userId,
+      clerkUserId,
     });
     return [];
   }
 
-  logger.debug("[getOrders] 주문 목록 조회 완료", {
+  logger.info("[getOrders] 주문 목록 조회 완료", {
     userId,
+    clerkUserId,
     orderCount: data?.length || 0,
+    orderNumbers: data?.map(o => o.order_number) || [],
   });
 
   return (data as Order[]) || [];

@@ -328,6 +328,14 @@ export async function POST(request: NextRequest) {
 
     // 9. 주문 생성
     const orderNumber = generateOrderNumber();
+    
+    logger.info("주문 생성 시작:", {
+      clerkUserId,
+      supabaseUserId: user.id,
+      orderNumber,
+      totalAmount,
+    });
+
     const { data: order, error: orderError } = await supabase
       .from("orders")
       .insert({
@@ -348,11 +356,16 @@ export async function POST(request: NextRequest) {
         shipping_zip_code: shippingZipCode,
         shipping_memo: shippingMemo || null,
       })
-      .select("id")
+      .select("id, user_id, order_number")
       .single();
 
     if (orderError || !order) {
-      logger.error("주문 생성 실패:", orderError);
+      logger.error("주문 생성 실패:", {
+        error: orderError,
+        clerkUserId,
+        supabaseUserId: user.id,
+        orderNumber,
+      });
       logger.groupEnd();
       return NextResponse.json(
         { success: false, message: "주문 생성에 실패했습니다." },
@@ -362,7 +375,10 @@ export async function POST(request: NextRequest) {
 
     logger.info("✅ 주문 생성 완료:", {
       orderId: order.id,
-      orderNumber,
+      orderNumber: order.order_number,
+      userId: order.user_id,
+      clerkUserId,
+      supabaseUserId: user.id,
     });
 
     // 10. 주문 아이템 생성

@@ -27,8 +27,21 @@ export default async function MyPage() {
   }
 
   const user = await currentUser();
+  
+  logger.info("[MyPage] 마이페이지 로드 시작", {
+    clerkUserId: userId,
+    userEmail: user?.emailAddresses[0]?.emailAddress,
+    timestamp: new Date().toISOString(),
+  });
+  
   const orders = await getOrders();
   const memberInfoResult = await getMemberAdditionalInfo();
+
+  logger.info("[MyPage] 주문 조회 결과", {
+    clerkUserId: userId,
+    orderCount: orders.length,
+    orderNumbers: orders.map(o => o.order_number),
+  });
 
   // 최근 주문 3개만
   const recentOrders = orders.slice(0, 3);
