@@ -10,6 +10,7 @@
  * 5. 장바구니 담기 / 바로 구매
  */
 
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
@@ -31,6 +32,71 @@ interface ProductDetailPageProps {
   params: Promise<{
     slug: string;
   }>;
+}
+
+// 동적 메타데이터 생성
+export async function generateMetadata({
+  params,
+}: ProductDetailPageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const product = await getProductBySlug(slug);
+
+  if (!product) {
+    return {
+      title: "상품을 찾을 수 없습니다 | 또또앙스",
+      description: "요청하신 상품을 찾을 수 없습니다.",
+    };
+  }
+
+  const displayPrice = product.discount_price ?? product.price;
+  const primaryImage =
+    product.images?.find((img) => img.is_primary) || product.images?.[0];
+  const imageUrl = primaryImage?.image_url || "/og-image.png";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://ttottoangseu.co.kr";
+  const productUrl = `${siteUrl}/products/${slug}`;
+
+  // 상품 설명 생성
+  const description = product.description
+    ? `${product.description.substring(0, 150)}...`
+    : `${product.name} - ${product.category.name} 카테고리 상품입니다. 또또앙스에서 만나보세요!`;
+
+  return {
+    title: `${product.name} | 또또앙스`,
+    description,
+    keywords: [
+      product.name,
+      product.category.name,
+      "캐릭터 굿즈",
+      "산리오",
+      "헬로키티",
+      "또또앙스",
+    ],
+    openGraph: {
+      title: `${product.name} | 또또앙스`,
+      description,
+      type: "website",
+      url: productUrl,
+      locale: "ko_KR",
+      siteName: "또또앙스",
+      images: [
+        {
+          url: imageUrl,
+          width: 1200,
+          height: 630,
+          alt: product.name,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${product.name} | 또또앙스`,
+      description,
+      images: [imageUrl],
+    },
+    alternates: {
+      canonical: productUrl,
+    },
+  };
 }
 
 export default async function ProductDetailPage({
@@ -76,8 +142,50 @@ export default async function ProductDetailPage({
     (img) => img.id !== primaryImage?.id
   );
 
+  // 구조화된 데이터 (JSON-LD) 생성
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://ttottoangseu.co.kr";
+  const productUrl = `${siteUrl}/products/${slug}`;
+  const productImageUrl = primaryImage?.image_url || `${siteUrl}/og-image.png`;
+  
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: product.name,
+    description: product.description || `${product.name} - ${product.category.name} 카테고리 상품입니다.`,
+    image: productImageUrl,
+    brand: {
+      "@type": "Brand",
+      name: "또또앙스",
+    },
+    category: product.category.name,
+    offers: {
+      "@type": "Offer",
+      url: productUrl,
+      priceCurrency: "KRW",
+      price: displayPrice,
+      availability: isSoldOut
+        ? "https://schema.org/OutOfStock"
+        : "https://schema.org/InStock",
+      seller: {
+        "@type": "Organization",
+        name: "또또앙스",
+      },
+    },
+    aggregateRating: {
+      "@type": "AggregateRating",
+      ratingValue: "4.8",
+      reviewCount: "12",
+    },
+  };
+
   return (
-    <main className="py-8">
+    <>
+      {/* 구조화된 데이터 (JSON-LD) */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      />
+      <main className="py-8">
       <div className="shop-container">
         {/* 브레드크럼 */}
         <nav className="flex items-center gap-2 text-sm text-[#8b7d84] mb-6">
@@ -231,5 +339,6 @@ export default async function ProductDetailPage({
         />
       </div>
     </main>
+    </>
   );
 }

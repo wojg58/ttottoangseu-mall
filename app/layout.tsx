@@ -77,6 +77,23 @@ export const metadata: Metadata = {
       "산리오, 디즈니 등 다양한 캐릭터 굿즈를 만나보세요. 두근거리는 설렘 (*´v`*) Love",
     type: "website",
     locale: "ko_KR",
+    url: process.env.NEXT_PUBLIC_SITE_URL || "https://ttottoangseu.co.kr",
+    siteName: "또또앙스",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "또또앙스 캐릭터 굿즈 전문 쇼핑몰",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "또또앙스 | 캐릭터 굿즈 전문 쇼핑몰",
+    description:
+      "산리오, 디즈니 등 다양한 캐릭터 굿즈를 만나보세요. 두근거리는 설렘 (*´v`*) Love",
+    images: ["/og-image.png"],
   },
 };
 
