@@ -518,8 +518,8 @@ export async function createOrder(input: CreateOrderInput): Promise<{
       // 큐 적재 실패해도 주문은 성공했으므로 계속 진행
     }
 
-    // 장바구니 비우기
-    await supabase.from("cart_items").delete().eq("cart_id", cart.id);
+    // 장바구니 비우기는 결제 완료 후 웹훅에서 처리
+    // (결제가 완료되지 않으면 장바구니에 상품이 남아있어야 함)
 
     // 쿠폰 사용 처리
     if (input.couponId && couponDiscount > 0) {

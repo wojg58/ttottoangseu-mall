@@ -146,6 +146,150 @@ async function markEventProcessed(
 }
 
 /**
+ * 결제 완료 후 장바구니에서 주문 아이템 제거
+ * 주문된 수량만큼만 장바구니에서 차감 (부분 결제 고려)
+ */
+async function removeOrderItemsFromCart(
+  supabase: ReturnType<typeof getServiceRoleClient>,
+  orderId: string,
+): Promise<{ success: boolean; message?: string }> {
+  logger.group(`[removeOrderItemsFromCart] 장바구니에서 주문 아이템 제거: Order ID ${orderId}`);
+
+  try {
+    // 1. 주문 정보 조회 (user_id 포함)
+    const { data: order, error: orderError } = await supabase
+      .from("orders")
+      .select("id, user_id")
+      .eq("id", orderId)
+      .single();
+
+    if (orderError || !order) {
+      logger.error("주문 조회 실패:", orderError);
+      logger.groupEnd();
+      return { success: false, message: "주문을 찾을 수 없습니다." };
+    }
+
+    // 2. 주문 아이템 조회
+    const { data: orderItems, error: itemsError } = await supabase
+      .from("order_items")
+      .select("product_id, variant_id, quantity")
+      .eq("order_id", orderId);
+
+    if (itemsError) {
+      logger.error("주문 아이템 조회 실패:", itemsError);
+      logger.groupEnd();
+      return { success: false, message: "주문 아이템을 조회할 수 없습니다." };
+    }
+
+    if (!orderItems || orderItems.length === 0) {
+      logger.info("주문 아이템이 없습니다. 장바구니 제거 스킵");
+      logger.groupEnd();
+      return { success: true };
+    }
+
+    logger.info(`주문 아이템 ${orderItems.length}개 발견`);
+
+    // 3. 사용자의 장바구니 조회
+    const { data: cart, error: cartError } = await supabase
+      .from("carts")
+      .select("id")
+      .eq("user_id", order.user_id)
+      .single();
+
+    if (cartError || !cart) {
+      logger.warn("장바구니를 찾을 수 없습니다. (이미 비어있을 수 있음)");
+      logger.groupEnd();
+      return { success: true }; // 장바구니가 없어도 성공으로 처리
+    }
+
+    // 4. 각 주문 아이템에 대해 장바구니에서 제거
+    let removedCount = 0;
+    let updatedCount = 0;
+
+    for (const orderItem of orderItems) {
+      logger.info("장바구니 아이템 처리 시작", {
+        productId: orderItem.product_id,
+        variantId: orderItem.variant_id,
+        orderQuantity: orderItem.quantity,
+      });
+
+      // 장바구니에서 해당 상품 찾기
+      const { data: cartItem, error: cartItemError } = await supabase
+        .from("cart_items")
+        .select("id, quantity")
+        .eq("cart_id", cart.id)
+        .eq("product_id", orderItem.product_id)
+        .eq("variant_id", orderItem.variant_id ?? null)
+        .maybeSingle();
+
+      if (cartItemError) {
+        logger.warn("장바구니 아이템 조회 실패:", cartItemError);
+        continue;
+      }
+
+      if (!cartItem) {
+        logger.info("장바구니에 해당 상품이 없습니다. (이미 제거되었을 수 있음)");
+        continue;
+      }
+
+      // 주문 수량만큼 차감
+      const newQuantity = cartItem.quantity - orderItem.quantity;
+
+      if (newQuantity <= 0) {
+        // 수량이 0 이하가 되면 삭제
+        const { error: deleteError } = await supabase
+          .from("cart_items")
+          .delete()
+          .eq("id", cartItem.id);
+
+        if (deleteError) {
+          logger.error("장바구니 아이템 삭제 실패:", deleteError);
+        } else {
+          logger.info("장바구니 아이템 삭제 완료", {
+            cartItemId: cartItem.id,
+            removedQuantity: cartItem.quantity,
+          });
+          removedCount++;
+        }
+      } else {
+        // 수량 업데이트
+        const { error: updateError } = await supabase
+          .from("cart_items")
+          .update({
+            quantity: newQuantity,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", cartItem.id);
+
+        if (updateError) {
+          logger.error("장바구니 아이템 수량 업데이트 실패:", updateError);
+        } else {
+          logger.info("장바구니 아이템 수량 업데이트 완료", {
+            cartItemId: cartItem.id,
+            oldQuantity: cartItem.quantity,
+            newQuantity,
+            removedQuantity: orderItem.quantity,
+          });
+          updatedCount++;
+        }
+      }
+    }
+
+    logger.info("✅ 장바구니에서 주문 아이템 제거 완료", {
+      totalOrderItems: orderItems.length,
+      removedCount,
+      updatedCount,
+    });
+    logger.groupEnd();
+    return { success: true };
+  } catch (error) {
+    logger.error("장바구니에서 주문 아이템 제거 예외:", error);
+    logger.groupEnd();
+    return { success: false, message: "장바구니에서 주문 아이템 제거 중 오류가 발생했습니다." };
+  }
+}
+
+/**
  * 결제 상태에 따른 주문 상태 업데이트
  */
 async function updateOrderStatusFromWebhook(
@@ -199,6 +343,17 @@ async function updateOrderStatusFromWebhook(
             // 수동으로 재고를 확인하고 차감해야 함
           } else {
             logger.info("✅ 재고 차감 완료");
+          }
+
+          // 장바구니에서 주문 아이템 제거 (결제 완료 후)
+          logger.info("장바구니에서 주문 아이템 제거 시작...");
+          const cartResult = await removeOrderItemsFromCart(supabase, orderId);
+
+          if (!cartResult.success) {
+            logger.error("⚠️ 장바구니에서 주문 아이템 제거 실패:", cartResult.message);
+            // 장바구니 제거 실패 시에도 결제는 완료되었으므로 경고만 로그
+          } else {
+            logger.info("✅ 장바구니에서 주문 아이템 제거 완료");
           }
         } else {
           logger.info("이미 결제 완료된 주문입니다. 재고 차감은 이미 수행되었을 수 있습니다.");
