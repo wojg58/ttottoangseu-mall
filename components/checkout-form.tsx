@@ -14,7 +14,7 @@ import * as z from "zod";
 import { useUser } from "@clerk/nextjs";
 import { X, Plus, Minus } from "lucide-react";
 import { getOrderById } from "@/actions/orders";
-import { removeFromCart, updateCartItemQuantity, getCartItems } from "@/actions/cart";
+import { removeFromCart, updateCartItemQuantity } from "@/actions/cart";
 import { getAvailableCoupons, type Coupon } from "@/actions/coupons";
 import { getMemberAdditionalInfo } from "@/actions/member-actions";
 import { calculateCouponDiscount } from "@/lib/coupon-utils";
@@ -217,6 +217,7 @@ export default function CheckoutForm({
   total,
 }: CheckoutFormProps) {
   const [isPending, startTransition] = useTransition();
+  const router = useRouter();
   const searchParams = useSearchParams();
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_orderId, setOrderId] = useState<string | null>(null);
@@ -280,7 +281,7 @@ export default function CheckoutForm({
         clearTimeout(timeoutId);
       };
     }
-  }, [searchParams, cartItems.length, router]);
+  }, [searchParams, cartItems.length]);
 
   // Daum Postcode API 스크립트 로드
   useEffect(() => {
