@@ -563,10 +563,56 @@ export async function addToCart(
       return { success: false, message: "품절된 상품입니다." };
     }
 
-    if (product.stock < quantity) {
+    // variant 정보 조회 (price_adjustment 포함)
+    let variant: { price_adjustment: number; stock: number } | null = null;
+    if (variantId) {
+      let { data: variantData, error: variantError } = await supabase
+        .from("product_variants")
+        .select("price_adjustment, stock")
+        .eq("id", variantId)
+        .single();
+
+      // PGRST301 에러 발생 시 service role 클라이언트로 재시도
+      if (variantError && variantError.code === "PGRST301") {
+        logger.debug("[addToCart] variant PGRST301 에러, service role로 재시도");
+        const { getServiceRoleClient } = await import(
+          "@/lib/supabase/service-role"
+        );
+        const serviceSupabase = getServiceRoleClient();
+
+        const { data: retryVariant, error: retryVariantError } =
+          await serviceSupabase
+            .from("product_variants")
+            .select("price_adjustment, stock")
+            .eq("id", variantId)
+            .single();
+
+        if (retryVariantError) {
+          logger.error("[addToCart] variant 조회 실패", {
+            error: retryVariantError.message,
+            code: retryVariantError.code,
+          });
+          return { success: false, message: "옵션을 찾을 수 없습니다." };
+        }
+
+        variant = retryVariant;
+      } else if (variantError) {
+        logger.error("[addToCart] variant 조회 실패", {
+          error: variantError.message,
+          code: variantError.code,
+        });
+        return { success: false, message: "옵션을 찾을 수 없습니다." };
+      } else {
+        variant = variantData;
+      }
+    }
+
+    // 재고 확인 (variant가 있으면 variant 재고, 없으면 상품 재고)
+    const availableStock = variant ? variant.stock : product.stock;
+    if (availableStock < quantity) {
       return {
         success: false,
-        message: `재고가 부족합니다. (현재 재고: ${product.stock}개)`,
+        message: `재고가 부족합니다. (현재 재고: ${availableStock}개)`,
       };
     }
 
@@ -580,7 +626,17 @@ export async function addToCart(
       .eq("variant_id", variantId ?? null)
       .single();
 
-    const price = product.discount_price ?? product.price;
+    // 가격 계산 (variant의 price_adjustment 고려)
+    const basePrice = product.discount_price ?? product.price;
+    const adjustment = variant?.price_adjustment ?? 0;
+    const price = basePrice + adjustment;
+
+    logger.info("[addToCart] 가격 계산", {
+      basePrice,
+      adjustment,
+      finalPrice: price,
+      hasVariant: !!variant,
+    });
 
     if (existingItem) {
       const newQuantity = existingItem.quantity + quantity;

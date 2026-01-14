@@ -72,18 +72,44 @@ export default async function CheckoutPage({
     redirect("/cart");
   }
 
-  // 금액 계산
-  const subtotal = cartItems.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0,
-  );
+  // 금액 계산 (variant의 price_adjustment 고려하여 재계산)
+  const subtotal = cartItems.reduce((sum, item) => {
+    // 상품 기본 가격 (discount_price 우선, 없으면 price)
+    const basePrice = item.product.discount_price ?? item.product.price;
+    // variant의 price_adjustment 고려
+    const adjustment = item.variant?.price_adjustment ?? 0;
+    // 최종 가격 계산
+    const itemPrice = basePrice + adjustment;
+    
+    logger.info("[CheckoutPage] 가격 계산", {
+      productId: item.product_id,
+      basePrice,
+      adjustment,
+      itemPrice,
+      quantity: item.quantity,
+      storedPrice: item.price, // 저장된 가격 (디버깅용)
+    });
+    
+    return sum + itemPrice * item.quantity;
+  }, 0);
   
   // 결제 테스트 상품(상품 금액이 100원인 경우)은 배송비 제외
-  const hasTestProduct = cartItems.some(
-    (item) => item.price === 100
-  );
+  const hasTestProduct = cartItems.some((item) => {
+    const basePrice = item.product.discount_price ?? item.product.price;
+    const adjustment = item.variant?.price_adjustment ?? 0;
+    const itemPrice = basePrice + adjustment;
+    return itemPrice === 100;
+  });
   const shippingFee = hasTestProduct ? 0 : subtotal >= 50000 ? 0 : 3000;
   const total = subtotal + shippingFee;
+  
+  logger.info("[CheckoutPage] 최종 금액 계산", {
+    subtotal,
+    shippingFee,
+    total,
+    hasTestProduct,
+    itemsCount: cartItems.length,
+  });
 
     return (
       <main className="py-8">
