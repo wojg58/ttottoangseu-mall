@@ -671,33 +671,15 @@ export default function CheckoutForm({
           success: prepareData.success,
           orderId: prepareData.orderId,
           amount: prepareData.amount,
-          errorType: prepareData.errorType,
-          details: prepareData.details,
-          status: prepareResponse.status,
         });
         logger.groupEnd();
 
-        if (!prepareResponse.ok || !prepareData.success || !prepareData.orderId) {
+        if (!prepareData.success || !prepareData.orderId) {
           logger.error(
             "[CheckoutForm] ❌ 결제 준비 실패:",
-            {
-              message: prepareData.message,
-              errorType: prepareData.errorType,
-              details: prepareData.details,
-              status: prepareResponse.status,
-              fullResponse: prepareData,
-            },
+            prepareData.message,
           );
-          
-          // 에러 타입별 상세 메시지
-          let errorMessage = prepareData.message || "결제 준비에 실패했습니다.";
-          if (prepareData.errorType === "AMOUNT_MISMATCH" && prepareData.details) {
-            errorMessage = `결제 금액 오류: ${prepareData.details}`;
-          } else if (prepareData.errorType === "EMPTY_CART" || prepareData.errorType === "EMPTY_CART_ITEMS") {
-            errorMessage = "장바구니가 비어있습니다. 상품을 추가한 후 다시 시도해주세요.";
-          }
-          
-          alert(errorMessage);
+          alert(prepareData.message || "결제 준비에 실패했습니다.");
           return;
         }
 

@@ -53,19 +53,10 @@ export async function POST(request: NextRequest) {
     const validationResult = validateSchema(paymentPrepareSchema, body);
 
     if (validationResult.success === false) {
-      logger.error("[Validation] 결제 준비 요청 검증 실패:", {
-        error: validationResult.error,
-        body: JSON.stringify(body, null, 2),
-        nodeEnv: process.env.NODE_ENV,
-      });
+      logger.error("[Validation] 결제 준비 요청 검증 실패:", validationResult.error);
       logger.groupEnd();
       return NextResponse.json(
-        { 
-          success: false, 
-          message: validationResult.error,
-          errorType: "VALIDATION_ERROR",
-          details: "결제 준비 요청 파라미터 검증 실패",
-        },
+        { success: false, message: validationResult.error },
         { status: 400 }
       );
     }
@@ -201,20 +192,10 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (!cart) {
-      logger.error("장바구니가 비어있음", {
-        clerkUserId,
-        userExists: !!user,
-        userId: user?.id,
-        nodeEnv: process.env.NODE_ENV,
-      });
+      logger.error("장바구니가 비어있음");
       logger.groupEnd();
       return NextResponse.json(
-        { 
-          success: false, 
-          message: "장바구니가 비어있습니다.",
-          errorType: "EMPTY_CART",
-          details: "결제 준비 시 장바구니에 상품이 없습니다.",
-        },
+        { success: false, message: "장바구니가 비어있습니다." },
         { status: 400 },
       );
     }
@@ -232,19 +213,10 @@ export async function POST(request: NextRequest) {
       .eq("cart_id", cart.id);
 
     if (!cartItems || cartItems.length === 0) {
-      logger.error("장바구니 아이템이 없음", {
-        cartId: cart.id,
-        clerkUserId,
-        nodeEnv: process.env.NODE_ENV,
-      });
+      logger.error("장바구니 아이템이 없음");
       logger.groupEnd();
       return NextResponse.json(
-        { 
-          success: false, 
-          message: "장바구니가 비어있습니다.",
-          errorType: "EMPTY_CART_ITEMS",
-          details: "장바구니에 상품 아이템이 없습니다.",
-        },
+        { success: false, message: "장바구니가 비어있습니다." },
         { status: 400 },
       );
     }

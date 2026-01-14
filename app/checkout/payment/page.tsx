@@ -42,8 +42,39 @@ function PaymentContent() {
 
     // 필수 파라미터 검증
     if (!orderId || !amount || !orderName || !customerName || !customerEmail || !paymentMethod) {
-      logger.error("[PaymentPage] ❌ 필수 파라미터 누락");
+      logger.error("[PaymentPage] ❌ 필수 파라미터 누락", {
+        hasOrderId: !!orderId,
+        hasAmount: !!amount,
+        hasOrderName: !!orderName,
+        hasCustomerName: !!customerName,
+        hasCustomerEmail: !!customerEmail,
+        hasPaymentMethod: !!paymentMethod,
+      });
       alert("결제 정보가 올바르지 않습니다. 주문/결제 페이지로 돌아갑니다.");
+      router.push("/checkout");
+      logger.groupEnd();
+      return;
+    }
+
+    // 금액 검증
+    const amountNumber = Number(amount);
+    if (isNaN(amountNumber) || amountNumber <= 0) {
+      logger.error("[PaymentPage] ❌ 잘못된 금액:", {
+        amount,
+        amountNumber,
+        isNaN: isNaN(amountNumber),
+        isPositive: amountNumber > 0,
+      });
+      alert("결제 금액이 올바르지 않습니다. 주문/결제 페이지로 돌아갑니다.");
+      router.push("/checkout");
+      logger.groupEnd();
+      return;
+    }
+
+    // 이메일 검증
+    if (!customerEmail.includes('@')) {
+      logger.error("[PaymentPage] ❌ 잘못된 이메일:", customerEmail);
+      alert("고객 이메일이 올바르지 않습니다. 주문/결제 페이지로 돌아갑니다.");
       router.push("/checkout");
       logger.groupEnd();
       return;
@@ -58,7 +89,14 @@ function PaymentContent() {
       return;
     }
 
-    logger.info("[PaymentPage] ✅ 파라미터 검증 완료");
+    logger.info("[PaymentPage] ✅ 파라미터 검증 완료", {
+      orderId,
+      amount: amountNumber,
+      orderName,
+      customerName,
+      customerEmail,
+      paymentMethod,
+    });
     setIsReady(true);
     logger.groupEnd();
   }, [orderId, amount, orderName, customerName, customerEmail, paymentMethod, depositorName, useEscrow, router]);

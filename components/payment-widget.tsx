@@ -122,39 +122,79 @@ export default function PaymentWidget({
         });
 
         // Payment 인스턴스 생성 (customerKey는 이메일 사용)
-        // customerKey는 고유한 식별자여야 하며, 이메일 형식이어야 함
-        const customerKey = customerEmail;
-        logger.info("[PaymentWidget] customerKey 설정:", {
-          customerKey,
-          isValidEmail: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerKey),
-        });
-        
-        const payment = tossPayments.payment({ customerKey });
+        const payment = tossPayments.payment({ customerKey: customerEmail });
         logger.info("[PaymentWidget] ✅ Payment 인스턴스 생성 완료");
 
         // BASE_URL 설정
         const BASE_URL = window.location.origin;
         logger.info("[PaymentWidget] BASE_URL:", BASE_URL);
 
-        // successUrl과 failUrl - 토스페이먼츠는 successUrl에만 {paymentKey}, {orderId}, {amount} 템플릿 지원
-        // failUrl에는 템플릿을 사용하지 않고 단순 URL만 사용 (에러 정보는 쿼리 파라미터로 전달되지 않음)
-        const successUrl = `${BASE_URL}/order/success?paymentKey={paymentKey}&orderId={orderId}&amount={amount}`;
+        // successUrl과 failUrl - 토스페이먼츠는 {paymentKey}, {orderId}, {amount} 템플릿을 자동 치환
+        const successUrl = `${BASE_URL}/order/success`;
         const failUrl = `${BASE_URL}/order/fail`;
         
         logger.info("[PaymentWidget] successUrl:", successUrl);
         logger.info("[PaymentWidget] failUrl:", failUrl);
+
+        // 결제 요청 전 파라미터 검증
+        const amountNumber = typeof amount === 'number' ? amount : Number(amount);
+        if (isNaN(amountNumber) || amountNumber <= 0) {
+          const errorMsg = `결제 금액이 올바르지 않습니다. (금액: ${amount})`;
+          logger.error("[PaymentWidget] ❌ 결제 금액 검증 실패", {
+            amount,
+            amountNumber,
+            isNaN: isNaN(amountNumber),
+            isPositive: amountNumber > 0,
+          });
+          setError(errorMsg);
+          alert(errorMsg);
+          setTimeout(() => onClose?.(), 3000);
+          logger.groupEnd();
+          return;
+        }
+
+        if (!orderId || typeof orderId !== 'string' || orderId.trim() === '') {
+          const errorMsg = "주문 ID가 올바르지 않습니다.";
+          logger.error("[PaymentWidget] ❌ 주문 ID 검증 실패", { orderId });
+          setError(errorMsg);
+          alert(errorMsg);
+          setTimeout(() => onClose?.(), 3000);
+          logger.groupEnd();
+          return;
+        }
+
+        if (!customerEmail || !customerEmail.includes('@')) {
+          const errorMsg = "고객 이메일이 올바르지 않습니다.";
+          logger.error("[PaymentWidget] ❌ 고객 이메일 검증 실패", { customerEmail });
+          setError(errorMsg);
+          alert(errorMsg);
+          setTimeout(() => onClose?.(), 3000);
+          logger.groupEnd();
+          return;
+        }
+
+        logger.info("[PaymentWidget] 결제 요청 파라미터 검증 완료", {
+          amount: amountNumber,
+          orderId,
+          orderName,
+          customerName,
+          customerEmail,
+          paymentMethod,
+          isTestKey,
+          isLiveKey,
+        });
 
         // 결제 요청 객체 생성
         const paymentRequest: any = {
           method: paymentMethod === "CARD" ? "CARD" : "TRANSFER",
           amount: {
             currency: "KRW",
-            value: amount,
+            value: amountNumber, // 검증된 숫자 사용
           },
-          orderId: orderId,
+          orderId: orderId.trim(), // 공백 제거
           orderName: orderName,
           customerName: customerName,
-          customerEmail: customerEmail,
+          customerEmail: customerEmail.trim(), // 공백 제거
           successUrl: successUrl,
           failUrl: failUrl,
         };
@@ -164,6 +204,8 @@ export default function PaymentWidget({
           amount: paymentRequest.amount,
           hasOrderId: !!paymentRequest.orderId,
           hasOrderName: !!paymentRequest.orderName,
+          orderIdLength: paymentRequest.orderId?.length,
+          customerEmailLength: paymentRequest.customerEmail?.length,
         });
 
         // 결제수단별 추가 설정
@@ -199,79 +241,6 @@ export default function PaymentWidget({
           logger.info("[PaymentWidget] 은행 선택 → 계좌번호 입력 → 인증 화면이 순서대로 표시됩니다");
         }
 
-        // 결제 요청 파라미터 최종 검증
-        logger.group("[PaymentWidget] 결제 요청 파라미터 최종 검증");
-        logger.info("결제 요청 파라미터:", {
-          method: paymentRequest.method,
-          orderId: paymentRequest.orderId,
-          orderName: paymentRequest.orderName,
-          amount: paymentRequest.amount,
-          customerName: paymentRequest.customerName,
-          customerEmail: paymentRequest.customerEmail,
-          customerKey: customerEmail, // customerKey는 이메일 사용
-          successUrl: paymentRequest.successUrl,
-          failUrl: paymentRequest.failUrl,
-          hasCard: !!paymentRequest.card,
-          hasTransfer: !!paymentRequest.transfer,
-        });
-
-        // 결제 금액 검증 (토스페이먼츠 최소 금액: 100원)
-        if (!amount || amount < 100) {
-          const errorMsg = `결제 금액이 올바르지 않습니다. (최소 100원 이상 필요, 현재: ${amount}원)`;
-          logger.error("[PaymentWidget] ❌ 결제 금액 검증 실패:", errorMsg);
-          setError(errorMsg);
-          alert(errorMsg);
-          setTimeout(() => onClose?.(), 3000);
-          logger.groupEnd();
-          return;
-        }
-
-        // orderId 형식 검증 (UUID 형식이어야 함)
-        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-        if (!orderId || !uuidRegex.test(orderId)) {
-          const errorMsg = `주문 ID가 올바르지 않습니다. (UUID 형식 필요, 현재: ${orderId})`;
-          logger.error("[PaymentWidget] ❌ orderId 검증 실패:", errorMsg);
-          setError(errorMsg);
-          alert(errorMsg);
-          setTimeout(() => onClose?.(), 3000);
-          logger.groupEnd();
-          return;
-        }
-
-        // customerEmail 검증
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!customerEmail || !emailRegex.test(customerEmail)) {
-          const errorMsg = `고객 이메일이 올바르지 않습니다. (현재: ${customerEmail})`;
-          logger.error("[PaymentWidget] ❌ customerEmail 검증 실패:", errorMsg);
-          setError(errorMsg);
-          alert(errorMsg);
-          setTimeout(() => onClose?.(), 3000);
-          logger.groupEnd();
-          return;
-        }
-
-        logger.info("[PaymentWidget] ✅ 파라미터 검증 완료");
-        logger.groupEnd();
-
-        logger.group("[PaymentWidget] 결제 요청 최종 검증");
-        logger.info("결제 요청 파라미터:", {
-          method: paymentRequest.method,
-          orderId: paymentRequest.orderId,
-          orderName: paymentRequest.orderName,
-          amount: paymentRequest.amount,
-          customerName: paymentRequest.customerName,
-          customerEmail: paymentRequest.customerEmail,
-          customerKey: customerKey,
-          successUrl: paymentRequest.successUrl,
-          failUrl: paymentRequest.failUrl,
-          hasCard: !!paymentRequest.card,
-          hasTransfer: !!paymentRequest.transfer,
-          clientKeyPrefix: clientKey.substring(0, 15),
-          isLiveKey,
-          nodeEnv: process.env.NODE_ENV,
-        });
-        logger.groupEnd();
-
         logger.debug("[PaymentWidget] 결제창 호출 준비", {
           method: paymentRequest.method,
           hasOrderId: !!paymentRequest.orderId,
@@ -283,7 +252,14 @@ export default function PaymentWidget({
         // 결제창 호출 - 자동으로 오버레이 모달이 표시됨
         // CARD 모드: 카드사 선택 화면 → 약관 동의 → 카드 정보 입력 화면
         // TRANSFER 모드: 은행 선택 화면 → 계좌번호 입력 → 인증 화면
-        logger.debug("[PaymentWidget] payment.requestPayment() 호출 시작");
+        logger.info("[PaymentWidget] payment.requestPayment() 호출 시작", {
+          orderId: paymentRequest.orderId,
+          amount: paymentRequest.amount,
+          method: paymentRequest.method,
+          customerEmail: paymentRequest.customerEmail,
+          isTestKey,
+          isLiveKey,
+        });
         
         try {
           await payment.requestPayment(paymentRequest);
@@ -295,26 +271,26 @@ export default function PaymentWidget({
         } catch (paymentError) {
           // 결제창 호출 중 에러 발생
           logger.error("[PaymentWidget] ❌ payment.requestPayment() 에러:", paymentError);
-          
-          // 에러 상세 정보 로깅
-          if (paymentError && typeof paymentError === 'object') {
-            const errorObj = paymentError as any;
-            logger.error("[PaymentWidget] 에러 상세 정보:", {
-              name: errorObj.name,
-              message: errorObj.message,
-              code: errorObj.code,
-              stack: errorObj.stack,
-              allKeys: Object.keys(paymentError),
-              fullError: JSON.stringify(paymentError, null, 2),
-            });
-            
-            // 토스페이먼츠 에러 코드별 상세 로깅
-            if (errorObj.code) {
-              logger.error("[PaymentWidget] 토스페이먼츠 에러 코드:", errorObj.code);
-              logger.error("[PaymentWidget] 에러 메시지:", errorObj.message);
-            }
-          }
-          
+          logger.error("[PaymentWidget] 에러 상세 정보:", {
+            name: (paymentError as any)?.name,
+            message: (paymentError as any)?.message,
+            code: (paymentError as any)?.code,
+            cause: (paymentError as any)?.cause,
+            stack: (paymentError as any)?.stack,
+            allProperties: Object.keys(paymentError || {}),
+            paymentRequest: {
+              orderId: paymentRequest.orderId,
+              amount: paymentRequest.amount,
+              method: paymentRequest.method,
+              hasCard: !!paymentRequest.card,
+              hasTransfer: !!paymentRequest.transfer,
+            },
+            clientKey: {
+              prefix: clientKey?.substring(0, 20),
+              isTestKey,
+              isLiveKey,
+            },
+          });
           throw paymentError; // 상위 catch 블록에서 처리
         }
       } catch (err) {
