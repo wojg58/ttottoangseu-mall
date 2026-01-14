@@ -211,9 +211,9 @@ export default function ShopHeader() {
                   alt="또또앙스 로고"
                   width={100}
                   height={100}
-                  className="object-contain w-10 h-10 sm:w-16 sm:h-16 md:w-20 md:h-20 lg:w-[100px] lg:h-[100px] drop-shadow-md"
+                  className="object-contain w-[50px] h-[50px] sm:w-16 sm:h-16 md:w-20 md:h-20 lg:w-[100px] lg:h-[100px] drop-shadow-md"
                   priority
-                  sizes="(max-width: 640px) 40px, (max-width: 768px) 64px, (max-width: 1024px) 80px, 100px"
+                  sizes="(max-width: 640px) 50px, (max-width: 768px) 64px, (max-width: 1024px) 80px, 100px"
                 />
                 {/* 모바일에서도 타이틀 표시 (작게) */}
                 <div>
