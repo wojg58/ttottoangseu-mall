@@ -335,9 +335,9 @@ export default function CheckoutForm({
               (sum, item) => sum + item.price * item.quantity,
               0,
             );
-            // 결제 테스트 상품(상품명에 "1원" 포함)은 배송비 제외
+            // 결제 테스트 상품(상품 금액이 1원인 경우)은 배송비 제외
             const hasTestProduct = order.items.some(
-              (item) => item.product_name.includes("1원")
+              (item) => item.price === 1
             );
             const shipping = hasTestProduct ? 0 : itemsSubtotal >= 50000 ? 0 : 3000;
             const couponDisc = itemsSubtotal + shipping - order.total_amount;

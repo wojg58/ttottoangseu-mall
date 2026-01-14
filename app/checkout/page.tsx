@@ -78,9 +78,9 @@ export default async function CheckoutPage({
     0,
   );
   
-  // 결제 테스트 상품(상품명에 "1원" 포함)은 배송비 제외
+  // 결제 테스트 상품(상품 금액이 1원인 경우)은 배송비 제외
   const hasTestProduct = cartItems.some(
-    (item) => item.product.name.includes("1원")
+    (item) => item.price === 1
   );
   const shippingFee = hasTestProduct ? 0 : subtotal >= 50000 ? 0 : 3000;
   const total = subtotal + shippingFee;

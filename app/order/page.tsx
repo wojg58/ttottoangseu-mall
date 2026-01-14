@@ -76,6 +76,7 @@ export default function OrderPage() {
           
           // 서버와 동일한 로직으로 금액 계산
           let subtotal = 0;
+          let hasTestProduct = false;
           for (const item of cartItems) {
             // discount_price가 있으면 우선 사용, 없으면 price 사용
             const basePrice = item.product.discount_price ?? item.product.price;
@@ -83,12 +84,14 @@ export default function OrderPage() {
             const adjustment = item.variant?.price_adjustment ?? 0;
             const itemPrice = basePrice + adjustment;
             subtotal += itemPrice * item.quantity;
+            
+            // 결제 테스트 상품(상품 금액이 1원인 경우) 체크
+            if (itemPrice === 1) {
+              hasTestProduct = true;
+            }
           }
           
-          // 결제 테스트 상품(상품명에 "1원" 포함)은 배송비 제외
-          const hasTestProduct = cartItems.some(
-            (item) => item.product.name.includes("1원")
-          );
+          // 결제 테스트 상품(상품 금액이 1원인 경우)은 배송비 제외
           const shippingFee = hasTestProduct ? 0 : subtotal >= 50000 ? 0 : 3000;
           const total = subtotal + shippingFee;
 
