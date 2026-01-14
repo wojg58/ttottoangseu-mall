@@ -215,7 +215,7 @@ export default function OrderPage() {
           value: amount,
         },
         successUrl: `${successUrl}?paymentKey={paymentKey}&orderId=${orderId}&amount=${amount}`,
-        failUrl: `${failUrl}?message={message}`,
+        failUrl: failUrl,
         // 모달/오버레이 형태로 열리도록 설정
         windowTarget: "iframe", // PC 환경에서 iframe으로 열림 (모달 형태)
       };
