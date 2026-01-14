@@ -373,7 +373,9 @@ export async function addProductImage(
   }
 
   try {
-    const supabase = await createClient();
+    // 관리자 작업이므로 service_role 클라이언트 사용
+    const { getServiceRoleClient } = await import("@/lib/supabase/service-role");
+    const supabase = getServiceRoleClient();
 
     // 대표 이미지로 설정하는 경우, 기존 대표 이미지 해제
     if (imageData.is_primary) {
