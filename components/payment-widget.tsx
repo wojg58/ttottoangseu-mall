@@ -61,6 +61,25 @@ export default function PaymentWidget({
       return;
     }
 
+    // 클라이언트 키가 테스트 키인지 확인
+    const isTestKey = clientKey.startsWith("test_");
+    const isLiveKey = clientKey.startsWith("live_");
+    
+    logger.info("[PaymentWidget] 클라이언트 키 모드 확인", {
+      isTestKey,
+      isLiveKey,
+      keyPrefix: clientKey.substring(0, 10),
+    });
+
+    if (isTestKey) {
+      logger.warn("[PaymentWidget] ⚠️ 테스트 키 사용 중 - 실제 결제 불가능");
+      logger.warn("[PaymentWidget] 라이브 결제를 사용하려면 클라이언트 키를 live_ck_... 형식으로 변경하세요");
+    } else if (isLiveKey) {
+      logger.info("[PaymentWidget] ✅ 라이브 키 사용 중 - 실제 결제 가능");
+    } else {
+      logger.warn("[PaymentWidget] ⚠️ 알 수 없는 키 형식:", clientKey.substring(0, 10));
+    }
+
     logger.group("[PaymentWidget] 결제창 초기화 시작");
     logger.debug("[PaymentWidget] 주문 정보 확인", {
       hasOrderId: !!orderId,

@@ -47,13 +47,27 @@ export default function OrderPage() {
           process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY ||
           process.env.NEXT_PUBLIC_TOSS_PAYMENTS_CLIENT_KEY;
 
+        const isTestKey = clientKey?.startsWith("test_");
+        const isLiveKey = clientKey?.startsWith("live_");
+
         logger.info("클라이언트 키 확인:", {
           exists: !!clientKey,
-          startsWithTest: clientKey?.startsWith("test_"),
+          isTestKey,
+          isLiveKey,
+          keyPrefix: clientKey?.substring(0, 10),
         });
 
         if (!clientKey) {
           throw new Error("TossPayments 클라이언트 키가 설정되지 않았습니다.");
+        }
+
+        if (isTestKey) {
+          logger.warn("⚠️ 테스트 키 사용 중 - 실제 결제 불가능");
+          logger.warn("라이브 결제를 사용하려면 클라이언트 키를 live_ck_... 형식으로 변경하세요");
+        } else if (isLiveKey) {
+          logger.info("✅ 라이브 키 사용 중 - 실제 결제 가능");
+        } else {
+          logger.warn("⚠️ 알 수 없는 키 형식:", clientKey.substring(0, 10));
         }
 
         // customerKey 생성 (이메일 기반)
