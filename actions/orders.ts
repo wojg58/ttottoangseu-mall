@@ -419,9 +419,9 @@ export async function createOrder(input: CreateOrderInput): Promise<{
   try {
     const authResult = await auth();
     const { userId: clerkUserId } = authResult;
-    
+
     logger.info("[createOrder] clerkUserId=" + (clerkUserId || "null"));
-    
+
     const userId = await getCurrentUserId();
     if (!userId) {
       logger.warn("[createOrder] 사용자 미인증 또는 조회 실패", {
@@ -429,7 +429,7 @@ export async function createOrder(input: CreateOrderInput): Promise<{
       });
       return { success: false, message: "로그인이 필요합니다." };
     }
-    
+
     logger.info("[createOrder] dbUserId(users.id)=" + userId);
 
     const supabase = await createClient();
@@ -610,7 +610,7 @@ export async function createOrder(input: CreateOrderInput): Promise<{
       dbUserId: userId,
       orderNumber,
     });
-    
+
     const { data: order, error: orderError } = await supabase
       .from("orders")
       .insert({
@@ -638,7 +638,7 @@ export async function createOrder(input: CreateOrderInput): Promise<{
       });
       return { success: false, message: "주문 생성에 실패했습니다." };
     }
-    
+
     logger.info("[createOrder] inserted order.user_id=" + order.user_id);
     logger.info("[createOrder] ✅ 주문 생성 완료:", {
       orderId: order.id,
