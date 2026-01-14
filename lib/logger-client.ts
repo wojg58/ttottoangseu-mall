@@ -148,21 +148,34 @@ export const logger = {
     }
   },
 
-  /** 에러 로그 (개발 환경에서만, 민감 정보 마스킹) */
+  /** 에러 로그 (개발 환경에서는 출력, 프로덕션에서는 Sentry로 전송) */
   error: (message: string, error?: unknown) => {
-    // 에러는 개발 환경에서만 출력 (프로덕션에서는 Sentry로만 전송)
+    const masked = error !== undefined ? maskSensitiveData(error) : undefined;
+    
+    // 개발 환경에서는 콘솔에 출력
     if (isDev) {
-      if (error !== undefined) {
-        const masked = maskSensitiveData(error);
+      if (masked !== undefined) {
         console.error(`[ERROR] ${message}`, masked);
       } else {
         console.error(`[ERROR] ${message}`);
       }
     }
-    // TODO: 프로덕션에서는 Sentry로 전송 (민감 정보 제외)
-    // if (!isDev && error) {
-    //   Sentry.captureException(error, { contexts: { custom: { message } } });
-    // }
+    
+    // 프로덕션에서는 Sentry로 전송 (설정되어 있는 경우)
+    if (!isDev && error) {
+      // Sentry가 설정되어 있으면 전송
+      if (typeof window !== "undefined" && (window as any).Sentry) {
+        try {
+          (window as any).Sentry.captureException(error, {
+            contexts: { custom: { message } },
+            tags: { source: "logger-client" },
+          });
+        } catch (sentryError) {
+          // Sentry 전송 실패 시 조용히 처리
+          console.error("[Logger] Sentry 전송 실패:", sentryError);
+        }
+      }
+    }
   },
 
   /** 로그 그룹 시작 (개발 환경에서만) */
