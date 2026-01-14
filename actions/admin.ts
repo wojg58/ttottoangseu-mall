@@ -12,6 +12,7 @@
 
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { createClient } from "@/lib/supabase/server";
+import logger from "@/lib/logger";
 import type {
   Order,
   OrderItem,
@@ -27,10 +28,22 @@ const ADMIN_EMAILS = process.env.ADMIN_EMAILS?.split(",") || [
 // 관리자 권한 확인
 export async function isAdmin(): Promise<boolean> {
   const user = await currentUser();
-  if (!user) return false;
+  if (!user) {
+    logger.debug("[isAdmin] 사용자 미인증");
+    return false;
+  }
 
   const email = user.emailAddresses[0]?.emailAddress;
-  return ADMIN_EMAILS.includes(email || "");
+  const isAdminUser = ADMIN_EMAILS.includes(email || "");
+  
+  logger.debug("[isAdmin] 권한 확인", {
+    email: email || "(이메일 없음)",
+    isAdmin: isAdminUser,
+    adminEmails: ADMIN_EMAILS,
+    hasEnvVar: !!process.env.ADMIN_EMAILS,
+  });
+  
+  return isAdminUser;
 }
 
 // 대시보드 통계
