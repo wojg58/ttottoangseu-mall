@@ -122,7 +122,14 @@ export default function PaymentWidget({
         });
 
         // Payment 인스턴스 생성 (customerKey는 이메일 사용)
-        const payment = tossPayments.payment({ customerKey: customerEmail });
+        // customerKey는 고유한 식별자여야 하며, 이메일 형식이어야 함
+        const customerKey = customerEmail;
+        logger.info("[PaymentWidget] customerKey 설정:", {
+          customerKey,
+          isValidEmail: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerKey),
+        });
+        
+        const payment = tossPayments.payment({ customerKey });
         logger.info("[PaymentWidget] ✅ Payment 인스턴스 생성 완료");
 
         // BASE_URL 설정
@@ -130,8 +137,9 @@ export default function PaymentWidget({
         logger.info("[PaymentWidget] BASE_URL:", BASE_URL);
 
         // successUrl과 failUrl - 토스페이먼츠는 {paymentKey}, {orderId}, {amount} 템플릿을 자동 치환
+        // failUrl에 {code}와 {message} 템플릿도 사용 가능
         const successUrl = `${BASE_URL}/order/success`;
-        const failUrl = `${BASE_URL}/order/fail`;
+        const failUrl = `${BASE_URL}/order/fail?code={code}&message={message}`;
         
         logger.info("[PaymentWidget] successUrl:", successUrl);
         logger.info("[PaymentWidget] failUrl:", failUrl);
@@ -191,6 +199,60 @@ export default function PaymentWidget({
           logger.info("[PaymentWidget] 은행 선택 → 계좌번호 입력 → 인증 화면이 순서대로 표시됩니다");
         }
 
+        // 결제 요청 파라미터 최종 검증
+        logger.group("[PaymentWidget] 결제 요청 파라미터 최종 검증");
+        logger.info("결제 요청 파라미터:", {
+          method: paymentRequest.method,
+          orderId: paymentRequest.orderId,
+          orderName: paymentRequest.orderName,
+          amount: paymentRequest.amount,
+          customerName: paymentRequest.customerName,
+          customerEmail: paymentRequest.customerEmail,
+          customerKey: customerEmail, // customerKey는 이메일 사용
+          successUrl: paymentRequest.successUrl,
+          failUrl: paymentRequest.failUrl,
+          hasCard: !!paymentRequest.card,
+          hasTransfer: !!paymentRequest.transfer,
+        });
+
+        // 결제 금액 검증 (토스페이먼츠 최소 금액: 100원)
+        if (!amount || amount < 100) {
+          const errorMsg = `결제 금액이 올바르지 않습니다. (최소 100원 이상 필요, 현재: ${amount}원)`;
+          logger.error("[PaymentWidget] ❌ 결제 금액 검증 실패:", errorMsg);
+          setError(errorMsg);
+          alert(errorMsg);
+          setTimeout(() => onClose?.(), 3000);
+          logger.groupEnd();
+          return;
+        }
+
+        // orderId 형식 검증 (UUID 형식이어야 함)
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (!orderId || !uuidRegex.test(orderId)) {
+          const errorMsg = `주문 ID가 올바르지 않습니다. (UUID 형식 필요, 현재: ${orderId})`;
+          logger.error("[PaymentWidget] ❌ orderId 검증 실패:", errorMsg);
+          setError(errorMsg);
+          alert(errorMsg);
+          setTimeout(() => onClose?.(), 3000);
+          logger.groupEnd();
+          return;
+        }
+
+        // customerEmail 검증
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!customerEmail || !emailRegex.test(customerEmail)) {
+          const errorMsg = `고객 이메일이 올바르지 않습니다. (현재: ${customerEmail})`;
+          logger.error("[PaymentWidget] ❌ customerEmail 검증 실패:", errorMsg);
+          setError(errorMsg);
+          alert(errorMsg);
+          setTimeout(() => onClose?.(), 3000);
+          logger.groupEnd();
+          return;
+        }
+
+        logger.info("[PaymentWidget] ✅ 파라미터 검증 완료");
+        logger.groupEnd();
+
         logger.debug("[PaymentWidget] 결제창 호출 준비", {
           method: paymentRequest.method,
           hasOrderId: !!paymentRequest.orderId,
@@ -214,6 +276,19 @@ export default function PaymentWidget({
         } catch (paymentError) {
           // 결제창 호출 중 에러 발생
           logger.error("[PaymentWidget] ❌ payment.requestPayment() 에러:", paymentError);
+          
+          // 에러 상세 정보 로깅
+          if (paymentError && typeof paymentError === 'object') {
+            logger.error("[PaymentWidget] 에러 상세 정보:", {
+              name: (paymentError as any).name,
+              message: (paymentError as any).message,
+              code: (paymentError as any).code,
+              stack: (paymentError as any).stack,
+              allKeys: Object.keys(paymentError),
+              fullError: JSON.stringify(paymentError, null, 2),
+            });
+          }
+          
           throw paymentError; // 상위 catch 블록에서 처리
         }
       } catch (err) {
