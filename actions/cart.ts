@@ -84,28 +84,77 @@ async function getCurrentUserId(): Promise<string | null> {
 
       if (clerkUser) {
         const serviceSupabase = getServiceRoleClient();
+        const userEmail = clerkUser.emailAddresses[0]?.emailAddress || "";
         const userData = {
           clerk_user_id: clerkUser.id,
           name:
             clerkUser.fullName ||
             clerkUser.username ||
-            clerkUser.emailAddresses[0]?.emailAddress ||
+            userEmail ||
             "Unknown",
-          email: clerkUser.emailAddresses[0]?.emailAddress || "",
+          email: userEmail,
           role: "customer",
         };
 
-        const { data: newUser, error: insertError } = await serviceSupabase
-          .from("users")
-          .insert(userData)
-          .select("id")
-          .single();
+        // 먼저 이메일로 기존 사용자 조회 (중복 방지)
+        let existingUser = null;
+        if (userEmail) {
+          const { data: userByEmail } = await serviceSupabase
+            .from("users")
+            .select("id")
+            .eq("email", userEmail)
+            .is("deleted_at", null)
+            .maybeSingle();
+          existingUser = userByEmail;
+        }
 
-        if (!insertError && newUser) {
-          logger.debug("[getCurrentUserId] 사용자 동기화 성공");
-          return newUser.id;
+        if (existingUser) {
+          // 기존 사용자가 있으면 clerk_user_id만 업데이트
+          logger.debug("[getCurrentUserId] 기존 사용자 발견, clerk_user_id 업데이트");
+          const { error: updateError } = await serviceSupabase
+            .from("users")
+            .update({ clerk_user_id: clerkUser.id })
+            .eq("id", existingUser.id);
+
+          if (!updateError) {
+            logger.debug("[getCurrentUserId] clerk_user_id 업데이트 성공");
+            return existingUser.id;
+          } else {
+            logger.error("[getCurrentUserId] clerk_user_id 업데이트 실패", updateError);
+          }
         } else {
-          logger.error("[getCurrentUserId] 사용자 동기화 실패", insertError);
+          // 새 사용자 생성
+          const { data: newUser, error: insertError } = await serviceSupabase
+            .from("users")
+            .insert(userData)
+            .select("id")
+            .single();
+
+          if (!insertError && newUser) {
+            logger.debug("[getCurrentUserId] 사용자 동기화 성공");
+            return newUser.id;
+          } else {
+            // 중복 에러 발생 시 이메일로 다시 조회
+            if (insertError?.code === "23505" && userEmail) {
+              logger.debug("[getCurrentUserId] 중복 에러 발생, 이메일로 재조회");
+              const { data: userByEmail } = await serviceSupabase
+                .from("users")
+                .select("id")
+                .eq("email", userEmail)
+                .is("deleted_at", null)
+                .maybeSingle();
+              
+              if (userByEmail) {
+                // clerk_user_id 업데이트 시도
+                await serviceSupabase
+                  .from("users")
+                  .update({ clerk_user_id: clerkUser.id })
+                  .eq("id", userByEmail.id);
+                return userByEmail.id;
+              }
+            }
+            logger.error("[getCurrentUserId] 사용자 동기화 실패", insertError);
+          }
         }
       } else {
         logger.warn("[getCurrentUserId] Clerk 사용자 정보 조회 실패");
