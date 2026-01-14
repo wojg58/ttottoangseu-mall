@@ -91,20 +91,42 @@ export async function confirmPayment({
 
     console.log("[confirmPayment] ✅ 사용자 인증 완료:", userId);
 
-    // 2. Supabase 클라이언트 생성
+    // 2. Supabase user_id 조회
+    const { getCurrentUserId } = await import("@/actions/orders");
+    const supabaseUserId = await getCurrentUserId();
+    
+    if (!supabaseUserId) {
+      console.error("[confirmPayment] ❌ Supabase 사용자 ID 조회 실패");
+      return {
+        success: false,
+        message: "사용자 정보를 찾을 수 없습니다.",
+      };
+    }
+
+    console.log("[confirmPayment] ✅ Supabase user_id 조회 완료:", {
+      clerkUserId: userId,
+      supabaseUserId,
+    });
+
+    // 3. Supabase 클라이언트 생성
     const supabase = await createClient();
 
-    // 3. 주문 정보 조회 (검증용)
+    // 4. 주문 정보 조회 (검증용)
     console.log("[confirmPayment] 주문 정보 조회 중...");
     const { data: order, error: orderError } = await supabase
       .from("orders")
       .select("*")
       .eq("id", orderId)
-      .eq("clerk_user_id", userId)
+      .eq("user_id", supabaseUserId)
       .single();
 
     if (orderError || !order) {
-      console.error("[confirmPayment] ❌ 주문 조회 실패:", orderError);
+      console.error("[confirmPayment] ❌ 주문 조회 실패:", {
+        error: orderError,
+        orderId,
+        clerkUserId: userId,
+        supabaseUserId,
+      });
       return {
         success: false,
         message: "주문 정보를 찾을 수 없습니다.",
