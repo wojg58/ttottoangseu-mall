@@ -91,20 +91,60 @@ export async function getMemberAdditionalInfo(): Promise<{
   error?: string;
 }> {
   try {
-    const { userId } = await auth();
+    const authResult = await auth();
+    const { userId } = authResult;
 
     if (!userId) {
       logger.error("[getMemberAdditionalInfo] 로그인 필요");
       return { success: false, error: "로그인이 필요합니다." };
     }
 
-    const supabase = await createClient();
+    // Clerk 토큰 확인 (PGRST301 에러 방지)
+    const token = await authResult.getToken();
+    let supabase;
+
+    if (!token) {
+      logger.debug("[getMemberAdditionalInfo] 토큰 없음, service role 클라이언트 사용");
+      const { getServiceRoleClient } = await import(
+        "@/lib/supabase/service-role"
+      );
+      supabase = getServiceRoleClient();
+    } else {
+      supabase = await createClient();
+    }
 
     const { data, error } = await supabase
       .from("member_additional_info")
       .select("*")
       .eq("clerk_id", userId)
       .single();
+
+    // PGRST301 에러 발생 시 service role 클라이언트로 재시도
+    if (error && error.code === "PGRST301") {
+      logger.debug("[getMemberAdditionalInfo] PGRST301 에러, service role로 재시도");
+      const { getServiceRoleClient } = await import(
+        "@/lib/supabase/service-role"
+      );
+      const serviceSupabase = getServiceRoleClient();
+
+      const { data: retryData, error: retryError } = await serviceSupabase
+        .from("member_additional_info")
+        .select("*")
+        .eq("clerk_id", userId)
+        .single();
+
+      if (retryError) {
+        // PGRST116은 데이터가 없을 때 발생하는 에러
+        if (retryError.code === "PGRST116") {
+          logger.debug("[getMemberAdditionalInfo] 데이터 없음");
+        } else {
+          logger.error("[getMemberAdditionalInfo] service role로도 조회 실패", retryError);
+        }
+        return { success: false, error: "정보를 불러올 수 없습니다." };
+      }
+
+      return { success: true, data: retryData as MemberAdditionalInfo };
+    }
 
     if (error) {
       // PGRST116은 데이터가 없을 때 발생하는 에러

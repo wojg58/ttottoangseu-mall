@@ -27,7 +27,16 @@ export async function createClient() {
 
   return createSupabaseClient(supabaseUrl, supabaseKey, {
     async accessToken() {
-      return (await auth()).getToken();
+      const authResult = await auth();
+      const token = await authResult.getToken();
+      // 토큰이 null이면 빈 문자열 반환 (PGRST301 에러 방지)
+      return token ?? "";
+    },
+    // Realtime 연결 시 토큰 문제 방지
+    realtime: {
+      params: {
+        eventsPerSecond: 10,
+      },
     },
   });
 }

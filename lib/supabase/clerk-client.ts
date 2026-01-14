@@ -39,7 +39,15 @@ export function useClerkSupabaseClient() {
 
     return createClient(supabaseUrl, supabaseKey, {
       async accessToken() {
-        return (await getToken()) ?? null;
+        const token = await getToken();
+        // 토큰이 null이면 빈 문자열 반환 (PGRST301 에러 방지)
+        return token ?? "";
+      },
+      // Realtime 연결 시 토큰 문제 방지
+      realtime: {
+        params: {
+          eventsPerSecond: 10,
+        },
       },
     });
   }, [getToken]);
