@@ -111,10 +111,19 @@ export async function POST(request: NextRequest) {
     const validationResult = validateSchema(paymentConfirmSchema, body);
 
     if (validationResult.success === false) {
-      logger.error("[Validation] 결제 승인 요청 검증 실패:", validationResult.error);
+      logger.error("[Validation] 결제 승인 요청 검증 실패:", {
+        error: validationResult.error,
+        body: JSON.stringify(body, null, 2),
+        nodeEnv: process.env.NODE_ENV,
+      });
       logger.groupEnd();
       return NextResponse.json(
-        { success: false, message: validationResult.error },
+        { 
+          success: false, 
+          message: validationResult.error,
+          errorType: "VALIDATION_ERROR",
+          details: "결제 승인 요청 파라미터 검증 실패",
+        },
         { status: 400 }
       );
     }
