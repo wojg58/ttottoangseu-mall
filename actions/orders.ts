@@ -13,15 +13,133 @@ import type { Order, OrderWithItems } from "@/types/database";
 
 // 현재 사용자의 Supabase user ID 조회
 async function getCurrentUserId(): Promise<string | null> {
-  const { userId: clerkUserId } = await auth();
-  if (!clerkUserId) return null;
+  const authResult = await auth();
+  const { userId: clerkUserId } = authResult;
 
-  const supabase = await createClient();
-  const { data: user } = await supabase
+  if (!clerkUserId) {
+    logger.debug("[getCurrentUserId] 사용자 미인증");
+    return null;
+  }
+
+  // Clerk 토큰 확인 (PGRST301 에러 방지)
+  const token = await authResult.getToken();
+  let supabase;
+
+  if (!token) {
+    logger.debug("[getCurrentUserId] 토큰 없음, service role 클라이언트 사용");
+    const { getServiceRoleClient } = await import(
+      "@/lib/supabase/service-role"
+    );
+    supabase = getServiceRoleClient();
+  } else {
+    supabase = await createClient();
+  }
+
+  let { data: user, error } = await supabase
     .from("users")
     .select("id")
     .eq("clerk_user_id", clerkUserId)
-    .single();
+    .is("deleted_at", null)
+    .maybeSingle();
+
+  // PGRST301 에러 발생 시 service role 클라이언트로 재시도
+  if (error && error.code === "PGRST301") {
+    logger.debug("[getCurrentUserId] PGRST301 에러, service role로 재시도");
+    const { getServiceRoleClient } = await import(
+      "@/lib/supabase/service-role"
+    );
+    const serviceSupabase = getServiceRoleClient();
+
+    const { data: retryUser, error: retryError } = await serviceSupabase
+      .from("users")
+      .select("id")
+      .eq("clerk_user_id", clerkUserId)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (retryError) {
+      logger.error("[getCurrentUserId] service role로도 조회 실패", {
+        error: retryError.message,
+        code: retryError.code,
+      });
+      return null;
+    }
+
+    if (retryUser) {
+      return retryUser.id;
+    }
+  }
+
+  // 사용자가 없으면 동기화 시도
+  if (!user && !error) {
+    logger.debug("[getCurrentUserId] 사용자 없음, 동기화 시도");
+    try {
+      const { clerkClient } = await import("@clerk/nextjs/server");
+      const { getServiceRoleClient } = await import(
+        "@/lib/supabase/service-role"
+      );
+
+      const client = await clerkClient();
+      const clerkUser = await client.users.getUser(clerkUserId);
+
+      if (clerkUser) {
+        const serviceSupabase = getServiceRoleClient();
+        const userData = {
+          clerk_user_id: clerkUser.id,
+          name:
+            clerkUser.fullName ||
+            clerkUser.username ||
+            clerkUser.emailAddresses[0]?.emailAddress ||
+            "Unknown",
+          email: clerkUser.emailAddresses[0]?.emailAddress || "",
+          role: "customer",
+        };
+
+        const { data: newUser, error: insertError } = await serviceSupabase
+          .from("users")
+          .insert(userData)
+          .select("id")
+          .single();
+
+        if (!insertError && newUser) {
+          logger.debug("[getCurrentUserId] 사용자 동기화 성공");
+          return newUser.id;
+        } else {
+          logger.error("[getCurrentUserId] 사용자 동기화 실패", insertError);
+        }
+      } else {
+        logger.warn("[getCurrentUserId] Clerk 사용자 정보 조회 실패");
+      }
+    } catch (syncError) {
+      logger.error("[getCurrentUserId] 사용자 동기화 중 예외 발생", syncError);
+    }
+
+    // 동기화 후 다시 조회 (동일한 클라이언트 사용)
+    const { data: retryUser, error: retryError } = await supabase
+      .from("users")
+      .select("id")
+      .eq("clerk_user_id", clerkUserId)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (retryError) {
+      logger.error("[getCurrentUserId] 재조회 실패", {
+        error: retryError.message,
+        code: retryError.code,
+      });
+    }
+
+    user = retryUser;
+  }
+
+  // 일반 에러 처리 (PGRST301이 아닌 경우)
+  if (error && error.code !== "PGRST301") {
+    logger.error("[getCurrentUserId] 사용자 조회 실패", {
+      error: error.message,
+      code: error.code,
+    });
+    return null;
+  }
 
   return user?.id ?? null;
 }
@@ -621,7 +739,12 @@ export async function createQuickOrder(input: CreateQuickOrderInput): Promise<{
 // 주문 목록 조회
 export async function getOrders(): Promise<Order[]> {
   const userId = await getCurrentUserId();
-  if (!userId) return [];
+  if (!userId) {
+    logger.warn("[getOrders] 사용자 ID 조회 실패 - 로그인 필요");
+    return [];
+  }
+
+  logger.debug("[getOrders] 주문 목록 조회 시작", { userId });
 
   const supabase = await createClient();
 
@@ -632,11 +755,20 @@ export async function getOrders(): Promise<Order[]> {
     .order("created_at", { ascending: false });
 
   if (error) {
-    logger.error("주문 목록 조회 실패", error);
+    logger.error("[getOrders] 주문 목록 조회 실패", {
+      error: error.message,
+      code: error.code,
+      userId,
+    });
     return [];
   }
 
-  return data as Order[];
+  logger.debug("[getOrders] 주문 목록 조회 완료", {
+    userId,
+    orderCount: data?.length || 0,
+  });
+
+  return (data as Order[]) || [];
 }
 
 // 주문 상세 조회
