@@ -339,7 +339,11 @@ export default function CheckoutForm({
             const hasTestProduct = order.items.some(
               (item) => item.price === 100
             );
-            const shipping = hasTestProduct ? 0 : itemsSubtotal >= 50000 ? 0 : 3000;
+            // 헬로키티 미니 마스코트 인형 키링 하트 카라비너 키홀더 상품은 배송비 무료
+            const hasFreeShippingProduct = order.items.some(
+              (item) => item.product_name.includes("헬로키티 미니 마스코트 인형 키링 하트 카라비너 키홀더")
+            );
+            const shipping = hasTestProduct || hasFreeShippingProduct ? 0 : itemsSubtotal >= 50000 ? 0 : 3000;
             const couponDisc = itemsSubtotal + shipping - order.total_amount;
 
             logger.group("[CheckoutForm] 금액 계산");

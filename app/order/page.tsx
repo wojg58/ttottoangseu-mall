@@ -91,6 +91,7 @@ export default function OrderPage() {
           // 서버와 동일한 로직으로 금액 계산
           let subtotal = 0;
           let hasTestProduct = false;
+          let hasFreeShippingProduct = false;
           for (const item of cartItems) {
             // discount_price가 있으면 우선 사용, 없으면 price 사용
             const basePrice = item.product.discount_price ?? item.product.price;
@@ -103,10 +104,14 @@ export default function OrderPage() {
             if (itemPrice === 100) {
               hasTestProduct = true;
             }
+            // 헬로키티 미니 마스코트 인형 키링 하트 카라비너 키홀더 상품은 배송비 무료
+            if (item.product.name.includes("헬로키티 미니 마스코트 인형 키링 하트 카라비너 키홀더")) {
+              hasFreeShippingProduct = true;
+            }
           }
           
-          // 결제 테스트 상품(상품 금액이 100원인 경우)은 배송비 제외
-          const shippingFee = hasTestProduct ? 0 : subtotal >= 50000 ? 0 : 3000;
+          // 결제 테스트 상품(상품 금액이 100원인 경우) 또는 배송비 무료 상품은 배송비 제외
+          const shippingFee = hasTestProduct || hasFreeShippingProduct ? 0 : subtotal >= 50000 ? 0 : 3000;
           const total = subtotal + shippingFee;
 
           setTotalAmount(total);
