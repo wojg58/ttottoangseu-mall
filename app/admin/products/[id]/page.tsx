@@ -9,6 +9,7 @@ import { ChevronLeft } from "lucide-react";
 import { isAdmin, getProductById } from "@/actions/admin";
 import { getCategories } from "@/actions/products";
 import ProductForm from "@/components/product-form";
+import PrimaryImageUpload from "@/components/admin/PrimaryImageUpload";
 
 interface EditProductPageProps {
   params: Promise<{
@@ -56,6 +57,17 @@ export default async function EditProductPage({
             <ChevronLeft className="w-5 h-5" />
           </Link>
           <h1 className="text-2xl font-bold text-[#4a3f48]">상품 수정</h1>
+        </div>
+
+        {/* 대표 이미지 업로드 섹션 */}
+        <div className="mb-8">
+          <PrimaryImageUpload
+            productId={product.id}
+            productSlug={product.slug}
+            currentPrimaryImage={
+              product.images?.find((img) => img.is_primary) || null
+            }
+          />
         </div>
 
         <ProductForm 
