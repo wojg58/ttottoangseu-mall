@@ -338,7 +338,11 @@ export async function createOrder(input: CreateOrderInput): Promise<{
     }
 
     // 배송비 계산
-    const shippingFee = totalAmount >= 50000 ? 0 : 3000;
+    // 결제 테스트 상품(상품명에 "1원" 포함)은 배송비 제외
+    const hasTestProduct = orderItems.some(
+      (item) => item.product_name.includes("1원")
+    );
+    const shippingFee = hasTestProduct ? 0 : totalAmount >= 50000 ? 0 : 3000;
     const subtotal = totalAmount;
     totalAmount += shippingFee;
 
