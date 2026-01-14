@@ -57,18 +57,15 @@ export default function ShopFooter() {
                 <h2 className="text-2xl md:text-[45px] font-bold brand-text-logo text-[#4a3f48]">또또앙스</h2>
               </div>
             </div>
-            <div className="text-[#4a3f48] text-xs md:text-sm leading-relaxed whitespace-pre-line">
-              <p className="mb-2">
-                상호명 또또앙스{" "}
-                {"\u00A0".repeat(5)}
-                대표자명 우수정{" "}
-                {"\u00A0".repeat(5)}
-                유선전화번호 010-4112-6168
+            <div className="text-[#4a3f48] text-xs md:text-sm leading-relaxed">
+              <p className="mb-2 flex flex-wrap items-center" style={{ gap: "1.25rem" }}>
+                <span>상호명 또또앙스</span>
+                <span>대표자명 우수정</span>
+                <span>유선전화번호 010-4112-6168</span>
               </p>
-              <p className="mb-2">
-                사업자 등록번호 561-14-02359{" "}
-                {"\u00A0".repeat(3)}
-                통신판매업 신고번호 제 2023-경기안성-0595 호
+              <p className="mb-2 flex flex-wrap items-center" style={{ gap: "0.75rem" }}>
+                <span>사업자 등록번호 561-14-02359</span>
+                <span>통신판매업 신고번호 제 2023-경기안성-0595 호</span>
               </p>
               <p>
                 사업장 주소 경기도 안성시 공도읍 공도로 51-17, 104동 1502호(공도우미린더퍼스트)
