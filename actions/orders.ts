@@ -12,7 +12,7 @@ import logger from "@/lib/logger";
 import type { Order, OrderWithItems } from "@/types/database";
 
 // 현재 사용자의 Supabase user ID 조회
-async function getCurrentUserId(): Promise<string | null> {
+export async function getCurrentUserId(): Promise<string | null> {
   const authResult = await auth();
   const { userId: clerkUserId } = authResult;
 

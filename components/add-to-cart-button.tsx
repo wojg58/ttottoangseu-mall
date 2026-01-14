@@ -46,7 +46,7 @@ export default function AddToCartButton({
   const [quantity, setQuantity] = useState(1);
   const [isPending, startTransition] = useTransition();
   const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const { isLoaded, userId, isSignedIn } = useAuth();
+  const { isLoaded, userId } = useAuth();
   const router = useRouter();
 
   const handleQuantityChange = (delta: number) => {

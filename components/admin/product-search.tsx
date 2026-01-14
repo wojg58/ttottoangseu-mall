@@ -19,7 +19,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import logger from "@/lib/logger-client";
 
 export default function ProductSearch() {
   const router = useRouter();
