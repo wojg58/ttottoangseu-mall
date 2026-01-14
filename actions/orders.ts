@@ -820,6 +820,29 @@ export async function getOrders(): Promise<Order[]> {
     userId,
   });
 
+  // 🔍 디버깅: 최근 주문 10개 조회 (user_id 무시, 전체 조회)
+  const { data: allOrders, error: allOrdersError } = await supabase
+    .from("orders")
+    .select("id, order_number, user_id, created_at, payment_status, total_amount")
+    .order("created_at", { ascending: false })
+    .limit(10);
+
+  logger.info("[getOrders] 🔍 최근 주문 10개 (디버깅용)", {
+    allOrders: allOrders?.map(o => ({
+      orderNumber: o.order_number,
+      userId: o.user_id,
+      paymentStatus: o.payment_status,
+      totalAmount: o.total_amount,
+      createdAt: o.created_at,
+    })),
+    error: allOrdersError ? {
+      message: allOrdersError.message,
+      code: allOrdersError.code,
+    } : null,
+    currentUserId: userId,
+    clerkUserId,
+  });
+
   // 해당 사용자의 주문 수 확인 (RLS 정책 확인용)
   const { count: userOrdersCount, error: countError } = await supabase
     .from("orders")

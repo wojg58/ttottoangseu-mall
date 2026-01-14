@@ -381,6 +381,27 @@ export async function POST(request: NextRequest) {
       supabaseUserId: user.id,
     });
 
+    // 🔍 디버깅: 주문 생성 직후 조회하여 저장된 user_id 확인
+    const { data: verifyOrder, error: verifyError } = await supabase
+      .from("orders")
+      .select("id, order_number, user_id, created_at, payment_status")
+      .eq("id", order.id)
+      .single();
+
+    logger.info("🔍 주문 생성 직후 확인 (디버깅용):", {
+      orderId: verifyOrder?.id,
+      orderNumber: verifyOrder?.order_number,
+      savedUserId: verifyOrder?.user_id,
+      expectedUserId: user.id,
+      match: verifyOrder?.user_id === user.id,
+      createdAt: verifyOrder?.created_at,
+      paymentStatus: verifyOrder?.payment_status,
+      error: verifyError ? {
+        message: verifyError.message,
+        code: verifyError.code,
+      } : null,
+    });
+
     // 10. 주문 아이템 생성
     const orderItemsData = orderItems.map((item) => ({
       order_id: order.id,
