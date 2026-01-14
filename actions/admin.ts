@@ -148,7 +148,7 @@ export async function getDashboardStats(): Promise<DashboardStats | null> {
     });
   } else {
     const totalRevenue = revenueData?.reduce((sum, order) => sum + order.total_amount, 0) || 0;
-    logger.info("[getDashboardStats] ✅ 총 매출:", totalRevenue, "원");
+    logger.info(`[getDashboardStats] ✅ 총 매출: ${totalRevenue}원`);
   }
 
   const totalRevenue =
@@ -186,7 +186,7 @@ export async function getDashboardStats(): Promise<DashboardStats | null> {
       hint: recentOrdersError.hint,
     });
   } else {
-    logger.info("[getDashboardStats] ✅ 최근 주문:", recentOrders?.length ?? 0, "개");
+    logger.info(`[getDashboardStats] ✅ 최근 주문: ${recentOrders?.length ?? 0}개`);
   }
 
   const result = {
@@ -922,7 +922,7 @@ export async function getAdminOrderById(
       message: itemsError.message,
     });
   } else {
-    logger.info("[getAdminOrderById] ✅ 주문 상품:", items?.length ?? 0, "개");
+    logger.info(`[getAdminOrderById] ✅ 주문 상품: ${items?.length ?? 0}개`);
   }
 
   // 결제 정보 조회

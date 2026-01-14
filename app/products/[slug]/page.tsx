@@ -26,7 +26,6 @@ import { getProductBySlug } from "@/actions/products";
 import ProductImageGallery from "@/components/product-image-gallery";
 import ProductDetailOptions from "@/components/product-detail-options";
 import ProductDetailTabs from "@/components/product-detail-tabs";
-import { logger } from "@/lib/logger";
 
 interface ProductDetailPageProps {
   params: Promise<{
@@ -48,7 +47,6 @@ export async function generateMetadata({
     };
   }
 
-  const displayPrice = product.discount_price ?? product.price;
   const primaryImage =
     product.images?.find((img) => img.is_primary) || product.images?.[0];
   const imageUrl = primaryImage?.image_url || "/og-image.png";

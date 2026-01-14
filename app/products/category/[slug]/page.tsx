@@ -12,7 +12,6 @@ import {
 } from "@/actions/products";
 import ProductCard from "@/components/product-card";
 import ProductSortSelect from "@/components/product-sort-select";
-import { logger } from "@/lib/logger";
 
 interface CategoryPageProps {
   params: Promise<{
