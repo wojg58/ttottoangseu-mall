@@ -243,7 +243,7 @@ export async function updateProduct(
     if (input.category_ids !== undefined) {
       logger.info("[updateProduct] 카테고리 업데이트 중...");
       try {
-        await updateProductCategories(supabase, input.id, input.category_ids);
+      await updateProductCategories(supabase, input.id, input.category_ids);
         logger.info("[updateProduct] ✅ 카테고리 업데이트 완료");
       } catch (error) {
         logger.error("[updateProduct] ❌ 카테고리 업데이트 실패", error);
@@ -256,12 +256,12 @@ export async function updateProduct(
     if (input.images !== undefined) {
       logger.info("[updateProduct] 이미지 업데이트 중...");
       try {
-        await updateProductImages(
-          supabase,
-          input.id,
-          input.images,
-          input.deletedImageIds,
-        );
+      await updateProductImages(
+        supabase,
+        input.id,
+        input.images,
+        input.deletedImageIds,
+      );
         logger.info("[updateProduct] ✅ 이미지 업데이트 완료");
       } catch (error) {
         logger.error("[updateProduct] ❌ 이미지 업데이트 실패", error);
@@ -274,7 +274,7 @@ export async function updateProduct(
     if (input.variants !== undefined) {
       logger.info("[updateProduct] 옵션 업데이트 중...");
       try {
-        await updateProductVariants(supabase, input.id, input.variants);
+      await updateProductVariants(supabase, input.id, input.variants);
         logger.info("[updateProduct] ✅ 옵션 업데이트 완료");
       } catch (error) {
         logger.error("[updateProduct] ❌ 옵션 업데이트 실패", error);

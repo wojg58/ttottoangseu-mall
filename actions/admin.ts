@@ -177,7 +177,7 @@ export async function getDashboardStats(): Promise<DashboardStats | null> {
     .select("*")
     .order("created_at", { ascending: false })
     .limit(5);
-  
+
   if (recentOrdersError) {
     logger.error("[getDashboardStats] ❌ 최근 주문 조회 실패", {
       code: recentOrdersError.code,
@@ -971,7 +971,7 @@ export async function getProductById(
   }
 
   logger.info("[getProductById] ✅ 관리자 권한 확인됨 - Service Role 클라이언트 사용");
-  
+
   // 관리자 대시보드는 RLS를 우회하기 위해 service_role 클라이언트 사용
   const supabase = getServiceRoleClient();
 
