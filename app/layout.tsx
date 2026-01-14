@@ -56,18 +56,18 @@ export const metadata: Metadata = {
   ],
   icons: {
     icon: [
-      { url: "/hartfavicon1 (1).png", type: "image/png", sizes: "any" },
-      { url: "/hartfavicon1 (1).png", type: "image/png", sizes: "32x32" },
-      { url: "/hartfavicon1 (1).png", type: "image/png", sizes: "16x16" },
+      { url: "/hart-favicon.png", type: "image/png", sizes: "any" },
+      { url: "/hart-favicon.png", type: "image/png", sizes: "32x32" },
+      { url: "/hart-favicon.png", type: "image/png", sizes: "16x16" },
     ],
     apple: [
-      { url: "/hartfavicon1 (1).png", type: "image/png", sizes: "180x180" },
+      { url: "/hart-favicon.png", type: "image/png", sizes: "180x180" },
     ],
-    shortcut: "/hartfavicon1 (1).png",
+    shortcut: "/hart-favicon.png",
     other: [
       {
         rel: "apple-touch-icon-precomposed",
-        url: "/hartfavicon1 (1).png",
+        url: "/hart-favicon.png",
       },
     ],
   },
