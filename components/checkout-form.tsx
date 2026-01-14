@@ -271,17 +271,29 @@ export default function CheckoutForm({
         cartItemsCount: cartItems.length,
       });
       
-      // 2초 후 장바구니 재조회 (DB 반영 시간 확보)
-      const timeoutId = setTimeout(() => {
-        logger.info("[CheckoutForm] 바로 구매 모드 - 페이지 새로고침하여 장바구니 재조회");
+      // 배포 환경에서 DB 반영 지연을 고려하여 여러 번 재시도
+      let retryCount = 0;
+      const maxRetries = 5;
+      
+      const retryInterval = setInterval(() => {
+        retryCount++;
+        logger.info(`[CheckoutForm] 바로 구매 모드 - 장바구니 재조회 시도 ${retryCount}/${maxRetries}`);
+        
+        if (retryCount >= maxRetries) {
+          clearInterval(retryInterval);
+          logger.warn("[CheckoutForm] 장바구니 재조회 최대 시도 횟수 도달");
+          return;
+        }
+        
+        // 페이지 새로고침하여 장바구니 재조회
         router.refresh();
-      }, 2000);
+      }, 2000); // 2초마다 재시도
       
       return () => {
-        clearTimeout(timeoutId);
+        clearInterval(retryInterval);
       };
     }
-  }, [searchParams, cartItems.length]);
+  }, [searchParams, cartItems.length, router]);
 
   // Daum Postcode API 스크립트 로드
   useEffect(() => {

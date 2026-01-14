@@ -996,7 +996,8 @@ export async function buyNowAndRedirect(
     logger.info("[buyNowAndRedirect] verifyCartItemAdded() 호출");
     let isAdded = false;
     try {
-      isAdded = await verifyCartItemAdded(userId, productId, variantId);
+      // 배포 환경에서 DB 반영 지연을 고려하여 더 긴 재시도
+      isAdded = await verifyCartItemAdded(userId, productId, variantId, 15, 300);
       logger.info("[buyNowAndRedirect] verifyCartItemAdded() 결과:", {
         isAdded,
         verified: isAdded ? "✅ 확인됨" : "⚠️ 확인 실패",
@@ -1012,9 +1013,35 @@ export async function buyNowAndRedirect(
 
     if (!isAdded) {
       logger.warn(
-        "[buyNowAndRedirect] ⚠️ 장바구니 아이템 확인 실패했지만 계속 진행 (DB 지연 가능성)",
+        "[buyNowAndRedirect] ⚠️ 장바구니 아이템 확인 실패 - 최종 확인 시도",
       );
-      // 확인 실패해도 계속 진행 (DB 지연일 수 있으므로)
+      
+      // 최종 확인: getCartItems로 직접 조회
+      try {
+        const finalCartItems = await getCartItems();
+        const itemExists = finalCartItems.some((item) => {
+          if (variantId) {
+            return item.product_id === productId && item.variant_id === variantId;
+          }
+          return item.product_id === productId && !item.variant_id;
+        });
+        
+        if (itemExists) {
+          logger.info("[buyNowAndRedirect] ✅ 최종 확인 성공 - 장바구니에 아이템 존재");
+          isAdded = true;
+        } else {
+          logger.error("[buyNowAndRedirect] ❌ 최종 확인 실패 - 장바구니에 아이템 없음", {
+            cartItemsCount: finalCartItems.length,
+            productId,
+            variantId,
+          });
+          // 장바구니에 실제로 추가되지 않았으므로 에러 반환
+          throw new Error("장바구니에 상품이 추가되지 않았습니다. 다시 시도해주세요.");
+        }
+      } catch (finalCheckError) {
+        logger.error("[buyNowAndRedirect] ❌ 최종 확인 중 에러:", finalCheckError);
+        throw finalCheckError;
+      }
     }
 
     logger.info("[buyNowAndRedirect] ✅ 5단계: 모든 검증 완료");

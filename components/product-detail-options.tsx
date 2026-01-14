@@ -225,17 +225,17 @@ export default function ProductDetailOptions({
         
         if (result.success) {
           logger.debug("[ProductDetailOptions] 바로 구매 성공");
-          // 장바구니 DB 반영을 위해 잠시 대기 (바로구매 플래그 포함)
-          await new Promise((resolve) => setTimeout(resolve, 800));
+          // 배포 환경에서 DB 반영 지연을 고려하여 더 긴 대기
+          await new Promise((resolve) => setTimeout(resolve, 1500));
           // 바로구매 플래그를 쿼리 파라미터로 전달
           router.push("/checkout?buyNow=true");
           return;
         } else {
-          // 실패한 경우에도 체크아웃 페이지로 이동 (장바구니 추가 실패해도 주문 진행 가능)
-          logger.warn("[ProductDetailOptions] 장바구니 추가 실패했지만 체크아웃 페이지로 이동", {
+          // 실패한 경우 에러 메시지 표시
+          logger.error("[ProductDetailOptions] 장바구니 추가 실패", {
             message: result.message,
           });
-          router.push("/checkout?buyNow=true");
+          alert(result.message || "장바구니 추가에 실패했습니다. 다시 시도해주세요.");
           return;
         }
       } catch (error: any) {
