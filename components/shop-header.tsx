@@ -32,7 +32,7 @@ import { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { useClerkSupabaseClient } from "@/lib/supabase/clerk-client";
+import { getCartItemCount } from "@/actions/cart";
 import logger from "@/lib/logger-client";
 
 // 카테고리 데이터 (DB에서 가져올 예정이지만 일단 하드코딩)
@@ -56,8 +56,7 @@ export default function ShopHeader() {
   const [kakaoChannelUrl, setKakaoChannelUrl] = useState<string | null>(null);
   const router = useRouter();
   const pathname = usePathname();
-  const { isSignedIn, userId, getToken } = useAuth();
-  const supabase = useClerkSupabaseClient();
+  const { isSignedIn, userId } = useAuth();
 
   // 카카오톡 채널 URL 가져오기
   useEffect(() => {
@@ -75,7 +74,7 @@ export default function ShopHeader() {
     }
   }, []);
 
-  // 장바구니 아이템 수량 조회
+  // 장바구니 아이템 수량 조회 (Server Action 사용)
   useEffect(() => {
     async function fetchCartItemCount() {
       if (!isSignedIn || !userId) {
@@ -84,67 +83,10 @@ export default function ShopHeader() {
       }
 
       try {
-        // Clerk 토큰 확인
-        const token = await getToken();
-        
-        if (!token) {
-          logger.debug("[ShopHeader] Clerk 토큰 없음 - 장바구니 조회 건너뜀");
-          setCartItemCount(0);
-          return;
-        }
-
-        // users 테이블에서 clerk_user_id로 user_id 조회
-        const { data: user, error: userError } = await supabase
-          .from("users")
-          .select("id")
-          .eq("clerk_user_id", userId)
-          .single();
-
-        // 401 에러나 사용자가 없으면 조용히 처리 (동기화 중일 수 있음)
-        if (userError) {
-          // 401 에러는 인증 문제이므로 로그만 남기고 조용히 처리
-          if (userError.code === "PGRST301" || userError.message?.includes("401")) {
-            logger.debug("[ShopHeader] 인증 에러 (401) - 토큰 문제 가능성", {
-              error: userError.message,
-              code: userError.code,
-              hasToken: !!token,
-            });
-          } else {
-            logger.debug("[ShopHeader] 사용자 조회 실패", {
-              error: userError.message,
-              code: userError.code,
-            });
-          }
-          setCartItemCount(0);
-          return;
-        }
-
-        if (!user) {
-          logger.debug("[ShopHeader] 사용자 없음 - 동기화 중일 수 있음");
-          setCartItemCount(0);
-          return;
-        }
-
-        // 장바구니 조회
-        const { data: cart } = await supabase
-          .from("carts")
-          .select("id")
-          .eq("user_id", user.id)
-          .single();
-
-        if (!cart) {
-          setCartItemCount(0);
-          return;
-        }
-
-        // 장바구니 아이템 개수 조회
-        const { count } = await supabase
-          .from("cart_items")
-          .select("*", { count: "exact", head: true })
-          .eq("cart_id", cart.id);
-
-        const newCount = count ?? 0;
-        setCartItemCount(newCount);
+        // Server Action을 사용하여 장바구니 수량 조회 (클라이언트에서 users 테이블 직접 조회 제거)
+        const count = await getCartItemCount();
+        setCartItemCount(count);
+        logger.debug("[ShopHeader] 장바구니 수량 조회 완료", { count });
       } catch (error) {
         logger.error("[ShopHeader] 장바구니 수량 조회 실패", error);
         setCartItemCount(0);
@@ -167,7 +109,7 @@ export default function ShopHeader() {
       clearInterval(interval);
       window.removeEventListener("cart:update", handleCartUpdate);
     };
-  }, [isSignedIn, userId, supabase, pathname]); // pathname을 의존성에 추가하여 경로 변경 시 즉시 조회
+  }, [isSignedIn, userId, pathname]); // pathname을 의존성에 추가하여 경로 변경 시 즉시 조회
 
   const handleSearch = (e?: React.FormEvent) => {
     if (e) {
