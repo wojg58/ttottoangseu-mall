@@ -36,6 +36,10 @@ function OrderSuccessContent() {
       dueDate: string;
       refundStatus: string;
     };
+    transfer?: {
+      bankCode: string;
+      settlementStatus: string;
+    };
   } | null>(null);
 
   useEffect(() => {
@@ -189,39 +193,70 @@ function OrderSuccessContent() {
     );
   }
 
+  // 실시간 계좌이체 여부 확인
+  const isTransfer = result.method === "TRANSFER" || result.method === "transfer";
+
   return (
     <>
       {/* 결제 성공 시 장바구니 개수 즉시 갱신 */}
       {result.success && <CartUpdateTrigger />}
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center max-w-md mx-auto p-8">
-          <div className="text-green-600 mb-4">
-            <CheckCircle2 className="w-16 h-16 mx-auto" />
+      <div className="flex items-center justify-center min-h-screen bg-[#fef8fb]">
+        <div className="text-center max-w-md mx-auto p-8 bg-white rounded-2xl shadow-sm">
+          {/* 성공 아이콘 */}
+          <div className="w-20 h-20 bg-[#ffeef5] rounded-full flex items-center justify-center mx-auto mb-6">
+            <CheckCircle2 className="w-10 h-10 text-[#ff6b9d]" />
           </div>
-          <h1 className="text-2xl font-bold text-[#4a3f48] mb-4">
+
+          <h1 className="text-2xl font-bold text-[#4a3f48] mb-2">
             결제가 완료되었습니다
           </h1>
-          <p className="text-[#8b7d84] mb-2">{result.message}</p>
-          {result.orderId && (
-            <p className="text-sm text-[#8b7d84] mb-8">
-              주문번호: {result.orderId}
-            </p>
+          
+          {/* 실시간 계좌이체 안내 */}
+          {isTransfer && (
+            <div className="bg-[#ffeef5] rounded-lg p-4 mb-4 text-left">
+              <p className="text-sm font-medium text-[#4a3f48] mb-2">
+                💳 결제 수단: 실시간 계좌이체
+              </p>
+              <p className="text-xs text-[#8b7d84] mb-1">
+                ✓ 에스크로(구매안전서비스)가 적용되었습니다.
+              </p>
+              <p className="text-xs text-[#8b7d84]">
+                ✓ 결제가 즉시 완료되었습니다.
+              </p>
+            </div>
           )}
+
+          <p className="text-[#8b7d84] mb-4">{result.message}</p>
+          
+          {result.orderId && (
+            <div className="bg-[#fef8fb] rounded-lg p-4 mb-6">
+              <p className="text-sm text-[#8b7d84] mb-1">주문번호</p>
+              <p className="text-base font-semibold text-[#4a3f48]">
+                {result.orderId}
+              </p>
+            </div>
+          )}
+
           <div className="space-y-2">
             <Button
               onClick={() => router.push("/mypage/orders")}
-              className="w-full bg-[#ff6b9d] hover:bg-[#ff5088] text-white"
+              className="w-full bg-[#ff6b9d] hover:bg-[#ff5088] text-white h-12 text-base font-medium"
             >
               주문 내역 보기
             </Button>
             <Button
               onClick={() => router.push("/")}
               variant="outline"
-              className="w-full border-[#f5d5e3] text-[#4a3f48] hover:bg-[#fef8fb]"
+              className="w-full border-[#f5d5e3] text-[#4a3f48] hover:bg-[#fef8fb] h-12 text-base"
             >
               홈으로 가기
             </Button>
           </div>
+
+          {/* 안내 문구 */}
+          <p className="text-xs text-[#8b7d84] mt-6">
+            주문 내역은 마이페이지에서 확인하실 수 있습니다.
+          </p>
         </div>
       </div>
     </>

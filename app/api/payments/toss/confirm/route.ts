@@ -535,6 +535,7 @@ export async function POST(request: NextRequest) {
       orderId: order.order_number,
       method: paymentData.method,
       virtualAccount: paymentData.virtualAccount,
+      transfer: paymentData.transfer, // 실시간 계좌이체 정보 추가
     });
   } catch (error) {
     logError(error, { api: "/api/payments/toss/confirm", step: "unexpected_error" });
