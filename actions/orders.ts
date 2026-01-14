@@ -44,10 +44,13 @@ export async function getCurrentUserId(): Promise<string | null> {
 
   // PGRST301 에러 발생 시 service role 클라이언트로 재시도
   if (error && error.code === "PGRST301") {
-    logger.warn("[getCurrentUserId] PGRST301 에러 발생, service role로 재시도", {
-      clerkUserId,
-      errorMessage: error.message,
-    });
+    logger.warn(
+      "[getCurrentUserId] PGRST301 에러 발생, service role로 재시도",
+      {
+        clerkUserId,
+        errorMessage: error.message,
+      },
+    );
     const { getServiceRoleClient } = await import(
       "@/lib/supabase/service-role"
     );
@@ -179,7 +182,7 @@ export async function getCurrentUserId(): Promise<string | null> {
       "@/lib/supabase/service-role"
     );
     const serviceSupabase = getServiceRoleClient();
-    
+
     const { data: retryUser, error: retryError } = await serviceSupabase
       .from("users")
       .select("id")
@@ -217,10 +220,13 @@ export async function getCurrentUserId(): Promise<string | null> {
 
   // PGRST301 에러가 발생했지만 사용자를 찾지 못한 경우
   if (error && error.code === "PGRST301" && !user) {
-    logger.error("[getCurrentUserId] PGRST301 에러 발생 후 사용자를 찾지 못함", {
-      clerkUserId,
-      errorMessage: error.message,
-    });
+    logger.error(
+      "[getCurrentUserId] PGRST301 에러 발생 후 사용자를 찾지 못함",
+      {
+        clerkUserId,
+        errorMessage: error.message,
+      },
+    );
     return null;
   }
 
@@ -411,11 +417,20 @@ export async function createOrder(input: CreateOrderInput): Promise<{
   orderNumber?: string;
 }> {
   try {
+    const authResult = await auth();
+    const { userId: clerkUserId } = authResult;
+    
+    logger.info("[createOrder] clerkUserId=" + (clerkUserId || "null"));
+    
     const userId = await getCurrentUserId();
     if (!userId) {
-      logger.debug("[createOrder] 사용자 미인증");
+      logger.warn("[createOrder] 사용자 미인증 또는 조회 실패", {
+        clerkUserId,
+      });
       return { success: false, message: "로그인이 필요합니다." };
     }
+    
+    logger.info("[createOrder] dbUserId(users.id)=" + userId);
 
     const supabase = await createClient();
 
@@ -590,10 +605,16 @@ export async function createOrder(input: CreateOrderInput): Promise<{
 
     // 주문 생성
     const orderNumber = generateOrderNumber();
+    logger.info("[createOrder] 주문 생성 시도:", {
+      clerkUserId,
+      dbUserId: userId,
+      orderNumber,
+    });
+    
     const { data: order, error: orderError } = await supabase
       .from("orders")
       .insert({
-        user_id: userId,
+        user_id: userId, // users.id (UUID) 저장
         order_number: orderNumber,
         payment_status: "PENDING",
         fulfillment_status: "UNFULFILLED",
@@ -606,13 +627,27 @@ export async function createOrder(input: CreateOrderInput): Promise<{
         shipping_memo: input.shippingMemo ?? null,
         coupon_id: input.couponId || null,
       })
-      .select("id")
+      .select("id, user_id, order_number")
       .single();
 
     if (orderError || !order) {
-      logger.error("[createOrder] 주문 생성 실패", orderError);
+      logger.error("[createOrder] 주문 생성 실패", {
+        error: orderError,
+        clerkUserId,
+        dbUserId: userId,
+      });
       return { success: false, message: "주문 생성에 실패했습니다." };
     }
+    
+    logger.info("[createOrder] inserted order.user_id=" + order.user_id);
+    logger.info("[createOrder] ✅ 주문 생성 완료:", {
+      orderId: order.id,
+      orderNumber: order.order_number,
+      insertedOrderUserId: order.user_id,
+      clerkUserId,
+      dbUserId: userId,
+      match: order.user_id === userId,
+    });
 
     // 주문 아이템 생성
     const orderItemsWithOrderId = orderItems.map((item) => ({
@@ -829,6 +864,7 @@ export async function getOrders(): Promise<Order[]> {
   const authResult = await auth();
   const { userId: clerkUserId } = authResult;
 
+  logger.info("[getOrders] clerkUserId=" + (clerkUserId || "null"));
   logger.info("[getOrders] 주문 목록 조회 시작", {
     clerkUserId,
     timestamp: new Date().toISOString(),
@@ -842,10 +878,8 @@ export async function getOrders(): Promise<Order[]> {
     return [];
   }
 
-  logger.info("[getOrders] Supabase user_id 조회 완료", {
-    clerkUserId,
-    supabaseUserId: userId,
-  });
+  logger.info("[getOrders] dbUserId(users.id)=" + userId);
+  logger.info("[getOrders] query filter = (order.user_id == " + userId + ")");
 
   // PGRST301 에러 방지를 위해 토큰 확인 후 적절한 클라이언트 선택
   const authResultForSupabase = await auth();
@@ -974,6 +1008,7 @@ export async function getOrders(): Promise<Order[]> {
     return [];
   }
 
+  logger.info("[getOrders] results count=" + (data?.length || 0));
   logger.info("[getOrders] 주문 목록 조회 완료", {
     userId,
     clerkUserId,

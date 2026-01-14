@@ -130,7 +130,8 @@ export async function POST(request: NextRequest) {
     // 4. Supabase 서비스 롤 클라이언트 생성 (RLS 우회)
     const supabase = getServiceRoleClient();
 
-    // 5. 사용자 ID 조회
+    // 5. 사용자 ID 조회 (Clerk userId -> users.id UUID 변환)
+    logger.info("[confirmPayment] clerkUserId=" + clerkUserId);
     const { data: user } = await supabase
       .from("users")
       .select("id")
@@ -138,21 +139,29 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (!user) {
-      logger.error("사용자를 찾을 수 없음");
+      logger.error("[confirmPayment] 사용자를 찾을 수 없음", {
+        clerkUserId,
+      });
       logger.groupEnd();
       return NextResponse.json(
         { success: false, message: "사용자를 찾을 수 없습니다." },
         { status: 404 }
       );
     }
+    
+    logger.info("[confirmPayment] dbUserId(users.id)=" + user.id);
 
     // 6. 주문 정보 조회 및 검증
-    logger.info("주문 정보 조회 중...");
+    logger.info("[confirmPayment] 주문 정보 조회 중...", {
+      orderId,
+      dbUserId: user.id,
+      queryFilter: "order.user_id == " + user.id,
+    });
     const { data: order, error: orderError } = await supabase
       .from("orders")
       .select("id, user_id, total_amount, payment_status, fulfillment_status, status, order_number, created_at")
       .eq("id", orderId)
-      .eq("user_id", user.id)
+      .eq("user_id", user.id) // users.id (UUID)로 조회
       .single();
 
     if (orderError || !order) {

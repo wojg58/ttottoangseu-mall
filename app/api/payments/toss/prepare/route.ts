@@ -90,7 +90,8 @@ export async function POST(request: NextRequest) {
     // 3. Supabase 서비스 롤 클라이언트 생성 (RLS 우회)
     const supabase = getServiceRoleClient();
 
-    // 4. 사용자 ID 조회
+    // 4. 사용자 ID 조회 (Clerk userId -> users.id UUID 변환)
+    logger.info("[createOrder] clerkUserId=" + clerkUserId);
     const { data: initialUser, error: userError } = await supabase
       .from("users")
       .select("id, name, email")
@@ -99,6 +100,18 @@ export async function POST(request: NextRequest) {
       .maybeSingle();
 
     let user = initialUser;
+    
+    if (user) {
+      logger.info("[createOrder] dbUserId(users.id)=" + user.id);
+    } else {
+      logger.warn("[createOrder] 사용자 조회 실패 또는 없음", {
+        clerkUserId,
+        userError: userError ? {
+          message: userError.message,
+          code: userError.code,
+        } : null,
+      });
+    }
 
     // 사용자가 없으면 동기화 시도
     if (!user && !userError) {
@@ -329,9 +342,9 @@ export async function POST(request: NextRequest) {
     // 9. 주문 생성
     const orderNumber = generateOrderNumber();
     
-    logger.info("주문 생성 시작:", {
+    logger.info("[createOrder] 주문 생성 시작:", {
       clerkUserId,
-      supabaseUserId: user.id,
+      dbUserId: user.id,
       orderNumber,
       totalAmount,
     });
@@ -339,7 +352,7 @@ export async function POST(request: NextRequest) {
     const { data: order, error: orderError } = await supabase
       .from("orders")
       .insert({
-        user_id: user.id,
+        user_id: user.id, // users.id (UUID) 저장
         order_number: orderNumber,
         payment_status: "PENDING",
         fulfillment_status: "UNFULFILLED",
@@ -373,13 +386,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    logger.info("✅ 주문 생성 완료:", {
+    logger.info("[createOrder] ✅ 주문 생성 완료:", {
       orderId: order.id,
       orderNumber: order.order_number,
-      userId: order.user_id,
+      insertedOrderUserId: order.user_id,
       clerkUserId,
-      supabaseUserId: user.id,
+      dbUserId: user.id,
+      match: order.user_id === user.id,
     });
+    logger.info("[createOrder] inserted order.user_id=" + order.user_id);
 
     // 🔍 디버깅: 주문 생성 직후 조회하여 저장된 user_id 확인
     const { data: verifyOrder, error: verifyError } = await supabase
