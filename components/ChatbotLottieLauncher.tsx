@@ -5,51 +5,60 @@ import Lottie from "lottie-react";
 import { openChatWidget } from "@/lib/chat-widget-utils";
 import logger from "@/lib/logger-client";
 
-// Lottie 애니메이션 데이터를 정적으로 import하여 빌드 시 번들에 포함
-// 이렇게 하면 404 에러를 완전히 방지할 수 있습니다
-import chatbotAnimationData from "@/../public/lottie/chatbot-button.json";
-
 export default function ChatbotLottieLauncher() {
   const [animationData, setAnimationData] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // 정적으로 import된 데이터 사용 (404 에러 방지)
-    try {
-      if (chatbotAnimationData && typeof chatbotAnimationData === "object") {
-        setAnimationData(chatbotAnimationData);
-        logger.debug("[ChatbotLottieLauncher] 애니메이션 데이터 정적 로드 성공");
-      } else {
-        throw new Error("Invalid animation data format");
-      }
-    } catch (error) {
-      // 정적 로드 실패 시 fetch로 대체 시도
-      logger.debug("[ChatbotLottieLauncher] 정적 로드 실패, fetch로 대체 시도", {
-        error: error instanceof Error ? error.message : String(error),
-      });
+    const loadAnimation = async () => {
+      setIsLoading(true);
+      
+      // 여러 경로를 시도하여 파일 로드 (404 에러 방지)
+      const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
+      const paths = [
+        "/lottie/chatbot-button.json", // 상대 경로 (기본)
+        `${baseUrl}/lottie/chatbot-button.json`, // 절대 경로
+      ];
 
-      fetch("/lottie/chatbot-button.json")
-        .then((r) => {
-          if (!r.ok) {
-            throw new Error(`HTTP error! status: ${r.status}`);
-          }
-          return r.json();
-        })
-        .then((data) => {
-          if (data && typeof data === "object") {
-            setAnimationData(data);
-            logger.debug("[ChatbotLottieLauncher] 애니메이션 데이터 fetch 로드 성공");
-          } else {
-            throw new Error("Invalid animation data format");
-          }
-        })
-        .catch((fetchError) => {
-          // 에러를 조용히 처리하고 컴포넌트는 정상적으로 작동하도록 함
-          logger.debug("[ChatbotLottieLauncher] 애니메이션 데이터 로드 실패 (무시됨)", {
-            error: fetchError instanceof Error ? fetchError.message : String(fetchError),
+      for (const path of paths) {
+        try {
+          logger.debug("[ChatbotLottieLauncher] 애니메이션 로드 시도", { path });
+          
+          const response = await fetch(path, {
+            cache: "force-cache", // 캐시 사용으로 성능 개선
           });
-          // animationData는 null로 유지되어 버튼은 표시되지만 애니메이션 없이 작동
-        });
-    }
+
+          if (response.ok) {
+            const data = await response.json();
+            if (data && typeof data === "object" && data.v && data.fr) {
+              // Lottie JSON 형식 검증 (v: version, fr: frameRate 필수)
+              setAnimationData(data);
+              logger.debug("[ChatbotLottieLauncher] ✅ 애니메이션 데이터 로드 성공", { path });
+              setIsLoading(false);
+              return; // 성공하면 종료
+            } else {
+              throw new Error("Invalid Lottie animation format");
+            }
+          } else {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+        } catch (error) {
+          logger.debug("[ChatbotLottieLauncher] 경로 시도 실패", {
+            path,
+            error: error instanceof Error ? error.message : String(error),
+          });
+          continue; // 다음 경로 시도
+        }
+      }
+
+      // 모든 경로 실패
+      logger.debug("[ChatbotLottieLauncher] ⚠️ 모든 경로에서 애니메이션 데이터 로드 실패");
+      logger.debug("[ChatbotLottieLauncher] 버튼은 표시되지만 애니메이션 없이 작동합니다");
+      setIsLoading(false);
+      // animationData는 null로 유지되어 버튼은 표시되지만 애니메이션 없이 작동
+    };
+
+    loadAnimation();
   }, []);
 
   // 기존 런처 버튼 숨기기 (opacity:0 + pointer-events:none)
@@ -122,14 +131,31 @@ export default function ChatbotLottieLauncher() {
         height: 72,
         borderRadius: 9999,
         border: "none",
-        background: "transparent",
+        background: isLoading || !animationData ? "rgba(255, 107, 157, 0.9)" : "transparent",
         cursor: "pointer",
         zIndex: 99999,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+        transition: "all 0.3s ease",
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.transform = "scale(1.1)";
+        e.currentTarget.style.boxShadow = "0 6px 16px rgba(0, 0, 0, 0.2)";
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.transform = "scale(1)";
+        e.currentTarget.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.15)";
       }}
     >
-      {animationData ? (
+      {isLoading ? (
+        <span style={{ color: "white", fontSize: "24px" }}>💬</span>
+      ) : animationData ? (
         <Lottie animationData={animationData} loop autoplay />
-      ) : null}
+      ) : (
+        <span style={{ color: "white", fontSize: "24px" }}>💬</span>
+      )}
     </button>
   );
 }
