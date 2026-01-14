@@ -8,7 +8,6 @@
 import Link from "next/link";
 import { Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import logger from "@/lib/logger-client";
 
 interface CartSummaryProps {
   subtotal: number;

@@ -55,7 +55,7 @@ export default function ProductDetailOptions({
   const [quantity, setQuantity] = useState(1); // 옵션이 없는 상품의 수량
   const [isPending, startTransition] = useTransition();
   const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const { isLoaded, userId, isSignedIn } = useAuth();
+  const { isLoaded, userId } = useAuth();
   const router = useRouter();
 
   // 옵션이 있고 필수인 경우 선택 여부 확인

@@ -151,19 +151,19 @@ export const logger = {
     // 프로덕션에서는 Sentry로 전송 (설정되어 있는 경우)
     const isProduction = process.env.NODE_ENV === "production";
     if (isProduction && error) {
-      // Sentry가 설정되어 있으면 전송
-      try {
-        // @sentry/nextjs가 설치되어 있으면 사용
-        const Sentry = require("@sentry/nextjs");
-        if (Sentry && Sentry.captureException) {
-          Sentry.captureException(error, {
-            contexts: { custom: { message } },
-            tags: { source: "logger-server" },
-          });
-        }
-      } catch {
-        // Sentry가 없거나 전송 실패 시 조용히 처리
-      }
+      // Sentry가 설정되어 있으면 전송 (비동기로 처리, await하지 않음)
+      import("@sentry/nextjs")
+        .then((Sentry) => {
+          if (Sentry && Sentry.captureException) {
+            Sentry.captureException(error, {
+              contexts: { custom: { message } },
+              tags: { source: "logger-server" },
+            });
+          }
+        })
+        .catch(() => {
+          // Sentry가 없거나 전송 실패 시 조용히 처리
+        });
     }
   },
 

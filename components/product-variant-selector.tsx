@@ -13,7 +13,6 @@
 
 import { useState, useEffect } from "react";
 import type { ProductVariant } from "@/types/database";
-import logger from "@/lib/logger-client";
 
 interface ProductVariantSelectorProps {
   variants: ProductVariant[];

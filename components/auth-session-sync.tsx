@@ -63,7 +63,7 @@ export function AuthSessionSync() {
         hasUser: !!user,
       });
       
-      let userInfo = null;
+      const userInfo = null;
       let externalAccounts: any[] = [];
       let hasToken = false;
       let tokenLength = 0;

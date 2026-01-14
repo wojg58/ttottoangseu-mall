@@ -619,10 +619,6 @@ export default function CheckoutForm({
     }
 
     const formData = form.getValues();
-    // 기본 주소와 상세 주소를 합쳐서 최종 배송지 주소 생성
-    const fullShippingAddress = formData.shippingAddressDetail
-      ? `${formData.shippingAddress} ${formData.shippingAddressDetail}`.trim()
-      : formData.shippingAddress;
 
     // 민감 정보는 로깅하지 않음 (주문자 정보, 배송 정보)
     logger.debug("[CheckoutForm] 결제 정보 확인", {
