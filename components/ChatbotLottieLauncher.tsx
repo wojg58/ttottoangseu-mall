@@ -7,7 +7,7 @@ import logger from "@/lib/logger-client";
 
 // Lottie 애니메이션 데이터를 정적으로 import하여 빌드 시 번들에 포함
 // 이렇게 하면 404 에러를 완전히 방지하고 원래 애니메이션이 표시됩니다
-import chatbotAnimationData from "@/../public/lottie/chatbot-button.json";
+import chatbotAnimationData from "@/lib/lottie/chatbot-button.json";
 
 export default function ChatbotLottieLauncher() {
   const [animationData, setAnimationData] = useState<any>(null);
