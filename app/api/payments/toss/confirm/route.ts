@@ -271,10 +271,34 @@ export async function POST(request: NextRequest) {
       process.env.TOSS_SECRET_KEY || process.env.TOSS_PAYMENTS_SECRET_KEY;
 
     if (!secretKey) {
-      logger.error("토스페이먼츠 시크릿 키가 설정되지 않음");
+      logger.error("토스페이먼츠 시크릿 키가 설정되지 않음", {
+        hasTossSecretKey: !!process.env.TOSS_SECRET_KEY,
+        hasTossPaymentsSecretKey: !!process.env.TOSS_PAYMENTS_SECRET_KEY,
+        nodeEnv: process.env.NODE_ENV,
+      });
       logger.groupEnd();
       return NextResponse.json(
         { success: false, message: "결제 설정 오류가 발생했습니다." },
+        { status: 500 }
+      );
+    }
+
+    // 시크릿 키 형식 검증
+    const isTestSecretKey = secretKey.startsWith("test_");
+    const isLiveSecretKey = secretKey.startsWith("live_");
+    
+    logger.info("토스페이먼츠 시크릿 키 확인:", {
+      isTestSecretKey,
+      isLiveSecretKey,
+      keyPrefix: secretKey.substring(0, 10),
+      nodeEnv: process.env.NODE_ENV,
+    });
+
+    if (process.env.NODE_ENV === "production" && isTestSecretKey) {
+      logger.error("⚠️ 프로덕션 환경에서 테스트 시크릿 키 사용 중 - 실제 결제 불가능");
+      logger.groupEnd();
+      return NextResponse.json(
+        { success: false, message: "결제 설정 오류가 발생했습니다. (테스트 키 사용)" },
         { status: 500 }
       );
     }

@@ -253,6 +253,25 @@ export default function PaymentWidget({
         logger.info("[PaymentWidget] ✅ 파라미터 검증 완료");
         logger.groupEnd();
 
+        logger.group("[PaymentWidget] 결제 요청 최종 검증");
+        logger.info("결제 요청 파라미터:", {
+          method: paymentRequest.method,
+          orderId: paymentRequest.orderId,
+          orderName: paymentRequest.orderName,
+          amount: paymentRequest.amount,
+          customerName: paymentRequest.customerName,
+          customerEmail: paymentRequest.customerEmail,
+          customerKey: customerKey,
+          successUrl: paymentRequest.successUrl,
+          failUrl: paymentRequest.failUrl,
+          hasCard: !!paymentRequest.card,
+          hasTransfer: !!paymentRequest.transfer,
+          clientKeyPrefix: clientKey.substring(0, 15),
+          isLiveKey,
+          nodeEnv: process.env.NODE_ENV,
+        });
+        logger.groupEnd();
+
         logger.debug("[PaymentWidget] 결제창 호출 준비", {
           method: paymentRequest.method,
           hasOrderId: !!paymentRequest.orderId,
@@ -279,14 +298,21 @@ export default function PaymentWidget({
           
           // 에러 상세 정보 로깅
           if (paymentError && typeof paymentError === 'object') {
+            const errorObj = paymentError as any;
             logger.error("[PaymentWidget] 에러 상세 정보:", {
-              name: (paymentError as any).name,
-              message: (paymentError as any).message,
-              code: (paymentError as any).code,
-              stack: (paymentError as any).stack,
+              name: errorObj.name,
+              message: errorObj.message,
+              code: errorObj.code,
+              stack: errorObj.stack,
               allKeys: Object.keys(paymentError),
               fullError: JSON.stringify(paymentError, null, 2),
             });
+            
+            // 토스페이먼츠 에러 코드별 상세 로깅
+            if (errorObj.code) {
+              logger.error("[PaymentWidget] 토스페이먼츠 에러 코드:", errorObj.code);
+              logger.error("[PaymentWidget] 에러 메시지:", errorObj.message);
+            }
           }
           
           throw paymentError; // 상위 catch 블록에서 처리
