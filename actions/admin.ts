@@ -78,6 +78,15 @@ export interface DashboardStats {
   totalRevenue: number;
   totalProducts: number;
   recentOrders: Order[];
+  // 확장된 KPI
+  canceledRefundedOrders: number; // 취소/환불 건수
+  lowStockProducts: number; // 재고부족 상품 수
+  newMembersToday: number; // 오늘 신규 회원
+  newMembers7Days: number; // 7일 신규 회원
+  newMembers30Days: number; // 30일 신규 회원
+  // 알림/할일
+  unprocessedOrders: number; // 미처리 주문 (결제완료 + 배송대기)
+  unansweredInquiries: number; // 미답변 문의 (추후)
 }
 
 // 대시보드 통계 조회
@@ -189,12 +198,111 @@ export async function getDashboardStats(): Promise<DashboardStats | null> {
     logger.info(`[getDashboardStats] ✅ 최근 주문: ${recentOrders?.length ?? 0}개`);
   }
 
+  // 취소/환불 건수
+  logger.info("[getDashboardStats] 취소/환불 건수 조회 중...");
+  const { count: canceledRefundedOrders, error: canceledError } = await supabase
+    .from("orders")
+    .select("*", { count: "exact", head: true })
+    .in("payment_status", ["CANCELED", "REFUNDED"]);
+
+  if (canceledError) {
+    logger.error("[getDashboardStats] ❌ 취소/환불 건수 조회 실패", {
+      code: canceledError.code,
+      message: canceledError.message,
+    });
+  } else {
+    logger.info("[getDashboardStats] ✅ 취소/환불 건수:", canceledRefundedOrders ?? 0);
+  }
+
+  // 재고부족 상품 수 (재고 10개 이하)
+  logger.info("[getDashboardStats] 재고부족 상품 수 조회 중...");
+  const { count: lowStockProducts, error: lowStockError } = await supabase
+    .from("products")
+    .select("*", { count: "exact", head: true })
+    .is("deleted_at", null)
+    .lte("stock", 10);
+
+  if (lowStockError) {
+    logger.error("[getDashboardStats] ❌ 재고부족 상품 수 조회 실패", {
+      code: lowStockError.code,
+      message: lowStockError.message,
+    });
+  } else {
+    logger.info("[getDashboardStats] ✅ 재고부족 상품 수:", lowStockProducts ?? 0);
+  }
+
+  // 신규 회원 수 (오늘/7일/30일)
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const sevenDaysAgo = new Date(todayStart);
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  const thirtyDaysAgo = new Date(todayStart);
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+  logger.info("[getDashboardStats] 신규 회원 수 조회 중...");
+  
+  const { count: newMembersToday, error: newMembersTodayError } = await supabase
+    .from("users")
+    .select("*", { count: "exact", head: true })
+    .gte("created_at", todayStart.toISOString());
+
+  const { count: newMembers7Days, error: newMembers7DaysError } = await supabase
+    .from("users")
+    .select("*", { count: "exact", head: true })
+    .gte("created_at", sevenDaysAgo.toISOString());
+
+  const { count: newMembers30Days, error: newMembers30DaysError } = await supabase
+    .from("users")
+    .select("*", { count: "exact", head: true })
+    .gte("created_at", thirtyDaysAgo.toISOString());
+
+  if (newMembersTodayError || newMembers7DaysError || newMembers30DaysError) {
+    logger.error("[getDashboardStats] ❌ 신규 회원 수 조회 실패", {
+      todayError: newMembersTodayError?.message,
+      sevenDaysError: newMembers7DaysError?.message,
+      thirtyDaysError: newMembers30DaysError?.message,
+    });
+  } else {
+    logger.info("[getDashboardStats] ✅ 신규 회원 수:", {
+      today: newMembersToday ?? 0,
+      sevenDays: newMembers7Days ?? 0,
+      thirtyDays: newMembers30Days ?? 0,
+    });
+  }
+
+  // 미처리 주문 수 (결제완료 + 배송대기)
+  logger.info("[getDashboardStats] 미처리 주문 수 조회 중...");
+  const { count: unprocessedOrders, error: unprocessedError } = await supabase
+    .from("orders")
+    .select("*", { count: "exact", head: true })
+    .eq("payment_status", "PAID")
+    .in("fulfillment_status", ["UNFULFILLED", "PREPARING"]);
+
+  if (unprocessedError) {
+    logger.error("[getDashboardStats] ❌ 미처리 주문 수 조회 실패", {
+      code: unprocessedError.code,
+      message: unprocessedError.message,
+    });
+  } else {
+    logger.info("[getDashboardStats] ✅ 미처리 주문 수:", unprocessedOrders ?? 0);
+  }
+
+  // 미답변 문의 수 (추후 구현)
+  const unansweredInquiries = 0;
+
   const result = {
     totalOrders: totalOrders ?? 0,
     pendingOrders: pendingOrders ?? 0,
     totalRevenue,
     totalProducts: totalProducts ?? 0,
     recentOrders: (recentOrders as Order[]) || [],
+    canceledRefundedOrders: canceledRefundedOrders ?? 0,
+    lowStockProducts: lowStockProducts ?? 0,
+    newMembersToday: newMembersToday ?? 0,
+    newMembers7Days: newMembers7Days ?? 0,
+    newMembers30Days: newMembers30Days ?? 0,
+    unprocessedOrders: unprocessedOrders ?? 0,
+    unansweredInquiries,
   };
   
   logger.info("[getDashboardStats] ✅ 통계 조회 완료", {
@@ -203,6 +311,10 @@ export async function getDashboardStats(): Promise<DashboardStats | null> {
     totalRevenue: result.totalRevenue,
     totalProducts: result.totalProducts,
     recentOrdersCount: result.recentOrders.length,
+    canceledRefundedOrders: result.canceledRefundedOrders,
+    lowStockProducts: result.lowStockProducts,
+    newMembersToday: result.newMembersToday,
+    unprocessedOrders: result.unprocessedOrders,
   });
   logger.groupEnd();
 

@@ -54,9 +54,8 @@ export default async function AdminOrdersPage({
   ];
 
   return (
-    <main className="py-8 bg-gray-50 min-h-screen">
-      <div className="shop-container">
-        <div className="flex items-center gap-4 mb-8">
+    <>
+      <div className="flex items-center gap-4 mb-8">
           <Link
             href="/admin"
             className="text-[#8b7d84] hover:text-[#ff6b9d] transition-colors"
@@ -158,7 +157,6 @@ export default async function AdminOrdersPage({
             )}
           </div>
         )}
-      </div>
-    </main>
+    </>
   );
 }

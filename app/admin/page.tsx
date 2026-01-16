@@ -11,6 +11,11 @@ import {
   DollarSign,
   ChevronRight,
   AlertCircle,
+  XCircle,
+  TrendingDown,
+  Users,
+  Bell,
+  CheckCircle2,
 } from "lucide-react";
 import { isAdmin, getDashboardStats } from "@/actions/admin";
 import DateDisplay from "@/components/date-display";
@@ -30,14 +35,13 @@ export default async function AdminDashboardPage() {
   }
 
   return (
-    <main className="py-8 bg-gray-50 min-h-screen">
-      <div className="shop-container">
-        <h1 className="text-2xl font-bold text-[#4a3f48] mb-8">
-          관리자 대시보드
-        </h1>
+    <>
+      <h1 className="text-2xl font-bold text-[#4a3f48] mb-8">
+        관리자 대시보드
+      </h1>
 
         {/* 통계 카드 */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
           <div className="bg-white rounded-xl shadow-sm p-6">
             <div className="flex items-center justify-between mb-4">
               <div className="w-12 h-12 bg-[#ffeef5] rounded-xl flex items-center justify-center">
@@ -96,7 +100,168 @@ export default async function AdminDashboardPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* 확장된 KPI 카드 */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="bg-white rounded-xl shadow-sm p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-12 h-12 bg-red-50 rounded-xl flex items-center justify-center">
+                <XCircle className="w-6 h-6 text-red-500" />
+              </div>
+              <span className="text-xs text-red-500">취소/환불</span>
+            </div>
+            <NumberDisplay
+              value={stats.canceledRefundedOrders}
+              className="text-2xl font-bold text-[#4a3f48]"
+            />
+            <p className="text-sm text-[#8b7d84]">취소/환불 건수</p>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-sm p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-12 h-12 bg-yellow-50 rounded-xl flex items-center justify-center">
+                <TrendingDown className="w-6 h-6 text-yellow-500" />
+              </div>
+              <span className="text-xs text-yellow-500">재고부족</span>
+            </div>
+            <NumberDisplay
+              value={stats.lowStockProducts}
+              className="text-2xl font-bold text-[#4a3f48]"
+            />
+            <p className="text-sm text-[#8b7d84]">재고부족 상품</p>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-sm p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center">
+                <Users className="w-6 h-6 text-purple-500" />
+              </div>
+              <span className="text-xs text-purple-500">신규</span>
+            </div>
+            <div className="space-y-1">
+              <div className="flex items-baseline gap-2">
+                <NumberDisplay
+                  value={stats.newMembersToday}
+                  className="text-xl font-bold text-[#4a3f48]"
+                />
+                <span className="text-xs text-[#8b7d84]">오늘</span>
+              </div>
+              <div className="flex items-baseline gap-2 text-sm">
+                <span className="text-[#8b7d84]">7일:</span>
+                <NumberDisplay
+                  value={stats.newMembers7Days}
+                  className="text-[#4a3f48] font-medium"
+                />
+              </div>
+              <div className="flex items-baseline gap-2 text-sm">
+                <span className="text-[#8b7d84]">30일:</span>
+                <NumberDisplay
+                  value={stats.newMembers30Days}
+                  className="text-[#4a3f48] font-medium"
+                />
+              </div>
+            </div>
+            <p className="text-sm text-[#8b7d84] mt-2">신규 회원</p>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-sm p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center">
+                <Bell className="w-6 h-6 text-indigo-500" />
+              </div>
+              <span className="text-xs text-indigo-500">알림</span>
+            </div>
+            <NumberDisplay
+              value={stats.unprocessedOrders}
+              className="text-2xl font-bold text-[#4a3f48]"
+            />
+            <p className="text-sm text-[#8b7d84]">미처리 주문</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+          {/* 알림/할일 */}
+          <div className="lg:col-span-1">
+            <div className="bg-white rounded-xl shadow-sm p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <Bell className="w-5 h-5 text-[#ff6b9d]" />
+                <h2 className="font-bold text-[#4a3f48]">알림/할일</h2>
+              </div>
+              <div className="space-y-3">
+                {stats.unprocessedOrders > 0 ? (
+                  <Link
+                    href="/admin/orders?status=paid"
+                    className="flex items-center justify-between p-3 rounded-lg bg-orange-50 hover:bg-orange-100 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <AlertCircle className="w-5 h-5 text-orange-500" />
+                      <span className="text-[#4a3f48] font-medium">
+                        미처리 주문
+                      </span>
+                    </div>
+                    <span className="text-sm font-bold text-orange-600">
+                      {stats.unprocessedOrders}건
+                    </span>
+                  </Link>
+                ) : (
+                  <div className="flex items-center gap-3 p-3 rounded-lg bg-green-50">
+                    <CheckCircle2 className="w-5 h-5 text-green-500" />
+                    <span className="text-sm text-[#4a3f48]">
+                      미처리 주문 없음
+                    </span>
+                  </div>
+                )}
+
+                {stats.lowStockProducts > 0 ? (
+                  <Link
+                    href="/admin/inventory"
+                    className="flex items-center justify-between p-3 rounded-lg bg-yellow-50 hover:bg-yellow-100 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <TrendingDown className="w-5 h-5 text-yellow-500" />
+                      <span className="text-[#4a3f48] font-medium">
+                        재고부족 상품
+                      </span>
+                    </div>
+                    <span className="text-sm font-bold text-yellow-600">
+                      {stats.lowStockProducts}개
+                    </span>
+                  </Link>
+                ) : (
+                  <div className="flex items-center gap-3 p-3 rounded-lg bg-green-50">
+                    <CheckCircle2 className="w-5 h-5 text-green-500" />
+                    <span className="text-sm text-[#4a3f48]">
+                      재고부족 상품 없음
+                    </span>
+                  </div>
+                )}
+
+                {stats.unansweredInquiries > 0 ? (
+                  <Link
+                    href="/admin/support"
+                    className="flex items-center justify-between p-3 rounded-lg bg-blue-50 hover:bg-blue-100 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Bell className="w-5 h-5 text-blue-500" />
+                      <span className="text-[#4a3f48] font-medium">
+                        미답변 문의
+                      </span>
+                    </div>
+                    <span className="text-sm font-bold text-blue-600">
+                      {stats.unansweredInquiries}건
+                    </span>
+                  </Link>
+                ) : (
+                  <div className="flex items-center gap-3 p-3 rounded-lg bg-green-50">
+                    <CheckCircle2 className="w-5 h-5 text-green-500" />
+                    <span className="text-sm text-[#4a3f48]">
+                      미답변 문의 없음
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
           {/* 빠른 메뉴 */}
           <div className="lg:col-span-1">
             <div className="bg-white rounded-xl shadow-sm p-6">
@@ -232,7 +397,6 @@ export default async function AdminDashboardPage() {
             </div>
           </div>
         </div>
-      </div>
-    </main>
+    </>
   );
 }

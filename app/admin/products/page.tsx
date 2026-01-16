@@ -43,9 +43,8 @@ export default async function AdminProductsPage({
   );
 
   return (
-    <main className="py-8 bg-gray-50 min-h-screen">
-      <div className="shop-container">
-        <div className="flex items-center justify-between mb-8">
+    <>
+      <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
             <Link
               href="/admin"
@@ -128,7 +127,6 @@ export default async function AdminProductsPage({
             )}
           </div>
         )}
-      </div>
-    </main>
+    </>
   );
 }
