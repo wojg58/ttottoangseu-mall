@@ -1877,7 +1877,9 @@ export async function answerInquiry(
   answer: string,
 ): Promise<{ success: boolean; message: string }> {
   logger.group("[answerInquiry] 문의 답변 등록 시작");
-  logger.info("[answerInquiry] 문의 ID:", inquiryId, "답변 길이:", answer.length);
+  logger.info(
+    `[answerInquiry] 문의 ID: ${inquiryId}, 답변 길이: ${answer.length}`
+  );
 
   const isAdminUser = await isAdmin();
   if (!isAdminUser) {
