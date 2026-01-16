@@ -136,7 +136,30 @@ export function useSyncUser() {
         syncedRef.current = true;
         logger.groupEnd();
       } catch (error) {
-        logger.error("[useSyncUser] 동기화 중 에러", error);
+        // 에러 객체를 더 명확하게 로깅
+        let errorInfo: Record<string, any> = {};
+        
+        if (error instanceof Error) {
+          errorInfo = {
+            name: error.name,
+            message: error.message,
+            stack: error.stack?.substring(0, 300), // 스택 일부만
+          };
+        } else if (error && typeof error === "object") {
+          // 일반 객체인 경우
+          errorInfo = {
+            type: "object",
+            keys: Object.keys(error),
+            stringified: JSON.stringify(error).substring(0, 200),
+          };
+        } else {
+          errorInfo = {
+            type: typeof error,
+            value: String(error),
+          };
+        }
+        
+        logger.error("[useSyncUser] 동기화 중 에러", errorInfo);
         logger.groupEnd();
       }
     };

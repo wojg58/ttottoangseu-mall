@@ -254,9 +254,28 @@ export async function POST(request: Request) {
       user: result,
     });
   } catch (error) {
-    logger.error("[POST /api/sync-user] 예외 발생", error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorName = error instanceof Error ? error.name : "UnknownError";
+    
+    logger.error("[POST /api/sync-user] 예외 발생", {
+      name: errorName,
+      message: errorMessage,
+      type: error instanceof Error ? "Error" : typeof error,
+    });
+    
+    // Sentry에 에러 전송
+    Sentry.captureException(error, {
+      tags: {
+        api: "sync-user",
+        error_type: errorName,
+      },
+    });
+    
     return NextResponse.json(
-      { error: "Internal server error" },
+      { 
+        error: "Internal server error",
+        message: process.env.NODE_ENV === "development" ? errorMessage : undefined,
+      },
       { status: 500 },
     );
   }

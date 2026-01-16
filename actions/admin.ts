@@ -1734,6 +1734,45 @@ export async function answerInquiry(
   return { success: true, message: "답변이 등록되었습니다." };
 }
 
+// 문의 삭제 (관리자용, 소프트 삭제)
+export async function deleteInquiry(
+  inquiryId: string,
+): Promise<{ success: boolean; message: string }> {
+  logger.group("[deleteInquiry] 문의 삭제 시작");
+  logger.info("[deleteInquiry] 문의 ID:", inquiryId);
+
+  const isAdminUser = await isAdmin();
+  if (!isAdminUser) {
+    logger.warn("[deleteInquiry] ❌ 관리자 권한 없음 - 삭제 중단");
+    logger.groupEnd();
+    return { success: false, message: "관리자 권한이 필요합니다." };
+  }
+
+  logger.info("[deleteInquiry] ✅ 관리자 권한 확인됨 - Service Role 클라이언트 사용");
+  const supabase = getServiceRoleClient();
+
+  const { error } = await supabase
+    .from("inquiries")
+    .update({
+      deleted_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", inquiryId);
+
+  if (error) {
+    logger.error("[deleteInquiry] ❌ 문의 삭제 실패", {
+      code: error.code,
+      message: error.message,
+    });
+    logger.groupEnd();
+    return { success: false, message: "문의 삭제에 실패했습니다." };
+  }
+
+  logger.info("[deleteInquiry] ✅ 문의 삭제 성공");
+  logger.groupEnd();
+  return { success: true, message: "문의가 삭제되었습니다." };
+}
+
 // 미답변 문의 수 조회 (대시보드용)
 export async function getUnansweredInquiriesCount(): Promise<number> {
   const isAdminUser = await isAdmin();
@@ -1758,6 +1797,45 @@ export async function getUnansweredInquiriesCount(): Promise<number> {
   }
 
   return count ?? 0;
+}
+
+// 리뷰 삭제 (관리자용, 소프트 삭제)
+export async function deleteReview(
+  reviewId: string,
+): Promise<{ success: boolean; message: string }> {
+  logger.group("[deleteReview] 리뷰 삭제 시작");
+  logger.info("[deleteReview] 리뷰 ID:", reviewId);
+
+  const isAdminUser = await isAdmin();
+  if (!isAdminUser) {
+    logger.warn("[deleteReview] ❌ 관리자 권한 없음 - 삭제 중단");
+    logger.groupEnd();
+    return { success: false, message: "관리자 권한이 필요합니다." };
+  }
+
+  logger.info("[deleteReview] ✅ 관리자 권한 확인됨 - Service Role 클라이언트 사용");
+  const supabase = getServiceRoleClient();
+
+  const { error } = await supabase
+    .from("reviews")
+    .update({
+      deleted_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", reviewId);
+
+  if (error) {
+    logger.error("[deleteReview] ❌ 리뷰 삭제 실패", {
+      code: error.code,
+      message: error.message,
+    });
+    logger.groupEnd();
+    return { success: false, message: "리뷰 삭제에 실패했습니다." };
+  }
+
+  logger.info("[deleteReview] ✅ 리뷰 삭제 성공");
+  logger.groupEnd();
+  return { success: true, message: "리뷰가 삭제되었습니다." };
 }
 
 // 쿠폰 목록 조회 (관리자용)

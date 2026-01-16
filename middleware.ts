@@ -56,9 +56,7 @@ async function isAdmin(
 
   // 1. metadata.isAdmin 체크 (가장 우선)
   if (sessionClaims?.metadata?.isAdmin === true) {
-    console.log(
-      "[middleware] ✅ 관리자 권한 확인: metadata.isAdmin=true",
-    );
+    console.log("[middleware] ✅ 관리자 권한 확인: metadata.isAdmin=true");
     return true;
   }
 

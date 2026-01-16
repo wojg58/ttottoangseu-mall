@@ -22,9 +22,10 @@ import {
   CheckCircle2,
   Clock,
   Lock,
+  Trash2,
 } from "lucide-react";
 import type { AdminInquiry, AdminReview } from "@/actions/admin";
-import { answerInquiry } from "@/actions/admin";
+import { answerInquiry, deleteInquiry, deleteReview } from "@/actions/admin";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -131,6 +132,50 @@ export default function SupportTabs({
         router.refresh();
       } else {
         logger.error("[SupportTabs] ❌ 답변 등록 실패:", result.message);
+        alert(result.message);
+      }
+      logger.groupEnd();
+    });
+  };
+
+  const handleDeleteInquiry = (inquiryId: string) => {
+    if (!confirm("이 문의를 삭제할까요? 삭제 후 복구할 수 없습니다.")) {
+      return;
+    }
+
+    logger.group("[SupportTabs] 문의 삭제");
+    logger.info("[SupportTabs] 문의 ID:", inquiryId);
+
+    startTransition(async () => {
+      const result = await deleteInquiry(inquiryId);
+
+      if (result.success) {
+        logger.info("[SupportTabs] ✅ 문의 삭제 성공");
+        router.refresh();
+      } else {
+        logger.error("[SupportTabs] ❌ 문의 삭제 실패:", result.message);
+        alert(result.message);
+      }
+      logger.groupEnd();
+    });
+  };
+
+  const handleDeleteReview = (reviewId: string) => {
+    if (!confirm("이 리뷰를 삭제할까요? 삭제 후 복구할 수 없습니다.")) {
+      return;
+    }
+
+    logger.group("[SupportTabs] 리뷰 삭제");
+    logger.info("[SupportTabs] 리뷰 ID:", reviewId);
+
+    startTransition(async () => {
+      const result = await deleteReview(reviewId);
+
+      if (result.success) {
+        logger.info("[SupportTabs] ✅ 리뷰 삭제 성공");
+        router.refresh();
+      } else {
+        logger.error("[SupportTabs] ❌ 리뷰 삭제 실패:", result.message);
         alert(result.message);
       }
       logger.groupEnd();
@@ -265,6 +310,15 @@ export default function SupportTabs({
                         >
                           {inquiry.status === "answered" ? "답변완료" : "미답변"}
                         </span>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteInquiry(inquiry.id)}
+                          disabled={isPending}
+                          className="ml-auto inline-flex items-center gap-1 px-2 py-1 text-xs text-red-600 hover:bg-red-50 rounded-md transition-colors disabled:opacity-50"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          삭제
+                        </button>
                       </div>
                       <div className="text-sm text-[#8b7d84] mb-2">
                         <Link
@@ -429,6 +483,15 @@ export default function SupportTabs({
                         <span className="text-sm text-[#8b7d84]">
                           {review.user_name || "익명"}
                         </span>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteReview(review.id)}
+                          disabled={isPending}
+                          className="ml-auto inline-flex items-center gap-1 px-2 py-1 text-xs text-red-600 hover:bg-red-50 rounded-md transition-colors disabled:opacity-50"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          삭제
+                        </button>
                       </div>
                       <div className="text-sm text-[#8b7d84] mb-2">
                         <Link
