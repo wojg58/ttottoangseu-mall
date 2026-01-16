@@ -27,6 +27,7 @@ const isAdminRoute = createRouteMatcher(["/admin(.*)"]);
 // 관리자 이메일 목록 (하위 호환성)
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS?.split(",") || [
   "admin@ttottoangs.com",
+  "wojg58@gmail.com", // 관리자 계정
 ]).map((email) => email.trim().toLowerCase());
 
 /**
@@ -35,27 +36,46 @@ const ADMIN_EMAILS = (process.env.ADMIN_EMAILS?.split(",") || [
  * 우선순위:
  * 1. sessionClaims.metadata.role === 'admin'
  * 2. sessionClaims.metadata.isAdmin === true
- * 3. 이메일 기반 체크 (하위 호환성)
+ * 3. sessionClaims.publicMetadata.isAdmin === true (직접 접근)
+ * 4. 이메일 기반 체크 (하위 호환성)
  * 
  * @param sessionClaims Clerk session claims
  * @returns 관리자 여부
  */
 function isAdminFromClaims(sessionClaims: any): boolean {
-  // 1. role 체크
+  // 디버깅: sessionClaims 구조 확인
+  if (process.env.NODE_ENV === "development") {
+    console.log("[middleware] sessionClaims 구조:", {
+      hasMetadata: !!sessionClaims?.metadata,
+      hasPublicMetadata: !!sessionClaims?.publicMetadata,
+      metadataKeys: sessionClaims?.metadata ? Object.keys(sessionClaims.metadata) : [],
+      publicMetadataKeys: sessionClaims?.publicMetadata ? Object.keys(sessionClaims.publicMetadata) : [],
+      email: sessionClaims?.email,
+    });
+  }
+
+  // 1. role 체크 (metadata.role)
   if (sessionClaims?.metadata?.role === "admin") {
     return true;
   }
 
-  // 2. isAdmin 체크
+  // 2. isAdmin 체크 (metadata.isAdmin)
   if (sessionClaims?.metadata?.isAdmin === true) {
     return true;
   }
 
-  // 3. 이메일 기반 체크 (하위 호환성)
+  // 3. publicMetadata 직접 접근 (Session Token Claims에 포함된 경우)
+  if (sessionClaims?.publicMetadata?.isAdmin === true) {
+    return true;
+  }
+
+  // 4. 이메일 기반 체크 (하위 호환성)
   const email = sessionClaims?.email as string | undefined;
   if (email) {
     const normalizedEmail = email.trim().toLowerCase();
-    return ADMIN_EMAILS.includes(normalizedEmail);
+    if (ADMIN_EMAILS.includes(normalizedEmail)) {
+      return true;
+    }
   }
 
   return false;
@@ -80,8 +100,10 @@ const clerkMiddlewareHandler = hasClerkKeys
           console.log("[middleware] ❌ 관리자 경로 접근 시도 - 권한 없음", {
             userId,
             role: sessionClaims?.metadata?.role,
-            isAdmin: sessionClaims?.metadata?.isAdmin,
+            isAdminFromMetadata: sessionClaims?.metadata?.isAdmin,
+            isAdminFromPublicMetadata: sessionClaims?.publicMetadata?.isAdmin,
             email: sessionClaims?.email,
+            fullSessionClaims: JSON.stringify(sessionClaims, null, 2),
           });
           // 비관리자는 홈으로 리다이렉트
           return NextResponse.redirect(new URL("/", request.url));
@@ -90,7 +112,9 @@ const clerkMiddlewareHandler = hasClerkKeys
         console.log("[middleware] ✅ 관리자 경로 접근 허용", {
           userId,
           role: sessionClaims?.metadata?.role,
-          isAdmin: sessionClaims?.metadata?.isAdmin,
+          isAdminFromMetadata: sessionClaims?.metadata?.isAdmin,
+          isAdminFromPublicMetadata: sessionClaims?.publicMetadata?.isAdmin,
+          email: sessionClaims?.email,
         });
       }
 
