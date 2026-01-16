@@ -31,7 +31,7 @@ export interface AuditLogData {
 export async function createAuditLog(data: AuditLogData): Promise<void> {
   logger.group("[createAuditLog] 관리자 활동 로그 기록 시작");
   logger.info("[createAuditLog] 액션:", data.action);
-  logger.info("[createAuditLog] 엔티티:", data.entityType, data.entityId);
+  logger.info("[createAuditLog] 엔티티:", { entityType: data.entityType, entityId: data.entityId });
 
   try {
     const user = await currentUser();
