@@ -65,7 +65,9 @@ export default function InventoryList({
     }
 
     logger.group("[InventoryList] 재고 업데이트");
-    logger.info("[InventoryList] 상품:", item.product_name, "재고:", newStock, "옵션:", item.variant_id || "없음");
+    logger.info(
+      `[InventoryList] 상품: ${item.product_name}, 재고: ${newStock}, 옵션: ${item.variant_id || "없음"}`
+    );
 
     startTransition(async () => {
       const result = await updateInventory(
