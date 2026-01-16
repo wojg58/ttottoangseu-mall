@@ -513,7 +513,6 @@ export default function SupportTabs({
                       </div>
                     </div>
                   </div>
-                </div>
               ))}
             </div>
           ) : (
