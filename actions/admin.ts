@@ -1773,6 +1773,78 @@ export async function deleteInquiry(
   return { success: true, message: "문의가 삭제되었습니다." };
 }
 
+// 문의 일괄 삭제 (관리자용)
+export async function deleteInquiries(
+  inquiryIds: string[],
+): Promise<{ success: boolean; message: string; deletedCount: number }> {
+  logger.group("[deleteInquiries] 문의 일괄 삭제 시작");
+  logger.info("[deleteInquiries] 삭제할 문의 ID 개수:", inquiryIds.length);
+
+  const isAdminUser = await isAdmin();
+  if (!isAdminUser) {
+    logger.warn("[deleteInquiries] ❌ 관리자 권한 없음 - 삭제 중단");
+    logger.groupEnd();
+    return { success: false, message: "관리자 권한이 필요합니다.", deletedCount: 0 };
+  }
+
+  if (!inquiryIds || inquiryIds.length === 0) {
+    logger.warn("[deleteInquiries] ❌ 삭제할 문의 ID가 없습니다");
+    logger.groupEnd();
+    return { success: false, message: "삭제할 문의를 선택해주세요.", deletedCount: 0 };
+  }
+
+  logger.info("[deleteInquiries] ✅ 관리자 권한 확인됨 - Service Role 클라이언트 사용");
+  const supabase = getServiceRoleClient();
+
+  let deletedCount = 0;
+  const errors: string[] = [];
+
+  for (const inquiryId of inquiryIds) {
+    const { error } = await supabase
+      .from("inquiries")
+      .update({
+        deleted_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", inquiryId);
+
+    if (error) {
+      logger.error("[deleteInquiries] ❌ 문의 삭제 실패", {
+        inquiryId,
+        code: error.code,
+        message: error.message,
+      });
+      errors.push(`${inquiryId}: ${error.message}`);
+    } else {
+      deletedCount++;
+    }
+  }
+
+  if (errors.length > 0) {
+    logger.warn("[deleteInquiries] ⚠️ 일부 문의 삭제 실패", {
+      deletedCount,
+      errorCount: errors.length,
+      errors,
+    });
+    logger.groupEnd();
+    return {
+      success: deletedCount > 0,
+      message: `${deletedCount}개 삭제 완료. ${errors.length}개 실패.`,
+      deletedCount,
+    };
+  }
+
+  logger.info("[deleteInquiries] ✅ 문의 일괄 삭제 성공", {
+    deletedCount,
+  });
+  logger.groupEnd();
+  return {
+    success: true,
+    message: `${deletedCount}개의 문의가 삭제되었습니다.`,
+    deletedCount,
+  };
+}
+
 // 미답변 문의 수 조회 (대시보드용)
 export async function getUnansweredInquiriesCount(): Promise<number> {
   const isAdminUser = await isAdmin();

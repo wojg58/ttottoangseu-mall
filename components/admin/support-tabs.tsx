@@ -25,7 +25,7 @@ import {
   Trash2,
 } from "lucide-react";
 import type { AdminInquiry, AdminReview } from "@/actions/admin";
-import { answerInquiry, deleteInquiry, deleteReview } from "@/actions/admin";
+import { answerInquiry, deleteInquiry, deleteReview, deleteInquiries } from "@/actions/admin";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -63,6 +63,7 @@ export default function SupportTabs({
   const [searchQuery, setSearchQuery] = useState(initialSearchQuery || "");
   const [answerTexts, setAnswerTexts] = useState<Record<string, string>>({});
   const [expandedInquiry, setExpandedInquiry] = useState<string | null>(null);
+  const [selectedInquiries, setSelectedInquiries] = useState<Set<string>>(new Set());
 
   const handleTabChange = (tab: string) => {
     const params = new URLSearchParams();
@@ -182,6 +183,61 @@ export default function SupportTabs({
     });
   };
 
+  const handleToggleInquirySelection = (inquiryId: string) => {
+    setSelectedInquiries((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(inquiryId)) {
+        newSet.delete(inquiryId);
+      } else {
+        newSet.add(inquiryId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleSelectAllInquiries = () => {
+    if (selectedInquiries.size === inquiries.length) {
+      setSelectedInquiries(new Set());
+    } else {
+      setSelectedInquiries(new Set(inquiries.map((i) => i.id)));
+    }
+  };
+
+  const handleBulkDeleteInquiries = () => {
+    if (selectedInquiries.size === 0) {
+      alert("삭제할 문의를 선택해주세요.");
+      return;
+    }
+
+    if (
+      !confirm(
+        `선택한 ${selectedInquiries.size}개의 문의를 삭제할까요? 삭제 후 복구할 수 없습니다.`
+      )
+    ) {
+      return;
+    }
+
+    logger.group("[SupportTabs] 문의 일괄 삭제");
+    logger.info("[SupportTabs] 삭제할 문의 개수:", selectedInquiries.size);
+
+    startTransition(async () => {
+      const result = await deleteInquiries(Array.from(selectedInquiries));
+
+      if (result.success) {
+        logger.info("[SupportTabs] ✅ 문의 일괄 삭제 성공", {
+          deletedCount: result.deletedCount,
+        });
+        setSelectedInquiries(new Set());
+        router.refresh();
+        alert(result.message);
+      } else {
+        logger.error("[SupportTabs] ❌ 문의 일괄 삭제 실패:", result.message);
+        alert(result.message);
+      }
+      logger.groupEnd();
+    });
+  };
+
   return (
     <div className="space-y-6">
       {/* 탭 */}
@@ -277,6 +333,18 @@ export default function SupportTabs({
                   답변완료
                 </div>
               </button>
+              {selectedInquiries.size > 0 && (
+                <button
+                  onClick={handleBulkDeleteInquiries}
+                  disabled={isPending}
+                  className="ml-2 px-4 py-2 rounded-lg text-sm transition-colors bg-red-500 text-white hover:bg-red-600 disabled:opacity-50"
+                >
+                  <div className="flex items-center gap-1">
+                    <Trash2 className="w-4 h-4" />
+                    선택 삭제 ({selectedInquiries.size})
+                  </div>
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -286,18 +354,55 @@ export default function SupportTabs({
       {activeTab === "inquiries" && (
         <div className="bg-white rounded-xl shadow-sm overflow-hidden">
           {inquiries.length > 0 ? (
-            <div className="divide-y divide-gray-100">
-              {inquiries.map((inquiry) => (
-                <div
-                  key={inquiry.id}
-                  className="p-6 hover:bg-gray-50 transition-colors"
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <h3 className="font-medium text-[#4a3f48]">
-                          {inquiry.title}
-                        </h3>
+            <>
+              {/* 전체 선택 및 일괄 삭제 헤더 */}
+              <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={
+                      inquiries.length > 0 &&
+                      selectedInquiries.size === inquiries.length
+                    }
+                    onChange={handleSelectAllInquiries}
+                    className="w-4 h-4 text-[#ff6b9d] border-gray-300 rounded focus:ring-[#ff6b9d]"
+                  />
+                  <span className="text-sm text-[#4a3f48]">
+                    전체 선택 ({selectedInquiries.size}/{inquiries.length})
+                  </span>
+                </label>
+                {selectedInquiries.size > 0 && (
+                  <button
+                    onClick={handleBulkDeleteInquiries}
+                    disabled={isPending}
+                    className="px-4 py-2 rounded-lg text-sm transition-colors bg-red-500 text-white hover:bg-red-600 disabled:opacity-50"
+                  >
+                    <div className="flex items-center gap-1">
+                      <Trash2 className="w-4 h-4" />
+                      선택 삭제 ({selectedInquiries.size})
+                    </div>
+                  </button>
+                )}
+              </div>
+              <div className="divide-y divide-gray-100">
+                {inquiries.map((inquiry) => (
+                  <div
+                    key={inquiry.id}
+                    className="p-6 hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="flex items-start gap-4">
+                      {/* 체크박스 */}
+                      <input
+                        type="checkbox"
+                        checked={selectedInquiries.has(inquiry.id)}
+                        onChange={() => handleToggleInquirySelection(inquiry.id)}
+                        className="mt-1 w-4 h-4 text-[#ff6b9d] border-gray-300 rounded focus:ring-[#ff6b9d]"
+                      />
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <h3 className="font-medium text-[#4a3f48]">
+                            {inquiry.title}
+                          </h3>
                         {inquiry.is_secret && (
                           <Lock className="w-4 h-4 text-[#8b7d84]" />
                         )}
