@@ -35,7 +35,6 @@ interface InventoryListProps {
 
 export default function InventoryList({
   items,
-  total,
   totalPages,
   currentPage,
   lowStockOnly,

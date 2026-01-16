@@ -16,7 +16,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Search, Tag, User, Calendar, CheckCircle2, XCircle, Clock } from "lucide-react";
+import { Search, Tag, User, Calendar, CheckCircle2, XCircle } from "lucide-react";
 import type { AdminCoupon } from "@/actions/admin";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -34,7 +34,6 @@ interface CouponListProps {
 
 export default function CouponList({
   coupons,
-  total,
   totalPages,
   currentPage,
   status: initialStatus,

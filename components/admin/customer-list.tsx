@@ -35,7 +35,6 @@ interface CustomerListProps {
 
 export default function CustomerList({
   customers,
-  total,
   totalPages,
   currentPage,
   searchQuery: initialSearchQuery,

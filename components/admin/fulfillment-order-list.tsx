@@ -16,7 +16,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Truck, Package, CheckCircle2, X } from "lucide-react";
+import { Truck, Package, CheckCircle2 } from "lucide-react";
 import type { Order } from "@/types/database";
 import { updateOrderStatus, bulkUpdateTrackingNumbers } from "@/actions/admin";
 import NumberDisplay from "@/components/number-display";
@@ -34,7 +34,6 @@ interface FulfillmentOrderListProps {
 
 export default function FulfillmentOrderList({
   orders,
-  total,
   totalPages,
   currentPage,
 }: FulfillmentOrderListProps) {
