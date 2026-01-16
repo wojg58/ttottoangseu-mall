@@ -58,7 +58,9 @@ export default function FulfillmentOrderList({
     }
 
     logger.group("[FulfillmentOrderList] 단건 송장번호 등록");
-    logger.info("[FulfillmentOrderList] 주문 ID:", orderId, "송장번호:", trackingNumber);
+    logger.info(
+      `[FulfillmentOrderList] 주문 ID: ${orderId}, 송장번호: ${trackingNumber}`
+    );
 
     startTransition(async () => {
       const result = await updateOrderStatus(
