@@ -769,6 +769,7 @@ export async function exportOrdersToExcel(
 }
 
 // 주문 상태 업데이트 (payment_status, fulfillment_status 분리)
+// Server Action용 - Request 객체가 없을 때 사용
 export async function updateOrderStatus(
   orderId: string,
   paymentStatus?: Order["payment_status"],
@@ -793,6 +794,22 @@ export async function updateOrderStatus(
   // 관리자 대시보드는 RLS를 우회하기 위해 service_role 클라이언트 사용
   const supabase = getServiceRoleClient();
 
+  // 변경 전 주문 정보 조회 (before)
+  const { data: oldOrder, error: oldOrderError } = await supabase
+    .from("orders")
+    .select("order_number, payment_status, fulfillment_status, tracking_number, shipped_at, delivered_at")
+    .eq("id", orderId)
+    .single();
+
+  if (oldOrderError || !oldOrder) {
+    logger.error("[updateOrderStatus] ❌ 주문 조회 실패", {
+      code: oldOrderError?.code,
+      message: oldOrderError?.message,
+    });
+    console.groupEnd();
+    return { success: false, message: "주문을 찾을 수 없습니다." };
+  }
+
   const updateData: {
     payment_status?: Order["payment_status"];
     fulfillment_status?: Order["fulfillment_status"];
@@ -804,13 +821,20 @@ export async function updateOrderStatus(
     updated_at: new Date().toISOString(),
   };
 
+  const changes: Array<{ field: string; oldValue: any; newValue: any }> = [];
+
   // payment_status 업데이트
-  if (paymentStatus) {
+  if (paymentStatus && oldOrder?.payment_status !== paymentStatus) {
     updateData.payment_status = paymentStatus;
+    changes.push({
+      field: "payment_status",
+      oldValue: oldOrder?.payment_status,
+      newValue: paymentStatus,
+    });
   }
 
   // fulfillment_status 업데이트
-  if (fulfillmentStatus) {
+  if (fulfillmentStatus && oldOrder?.fulfillment_status !== fulfillmentStatus) {
     updateData.fulfillment_status = fulfillmentStatus;
 
     // 배송 상태에 따른 자동 처리
@@ -820,22 +844,97 @@ export async function updateOrderStatus(
     } else if (fulfillmentStatus === "DELIVERED") {
       updateData.delivered_at = new Date().toISOString();
     }
+
+    changes.push({
+      field: "fulfillment_status",
+      oldValue: oldOrder?.fulfillment_status,
+      newValue: fulfillmentStatus,
+    });
   }
 
   // trackingNumber만 별도로 업데이트하는 경우
-  if (trackingNumber && !updateData.tracking_number) {
+  if (trackingNumber && oldOrder?.tracking_number !== trackingNumber) {
     updateData.tracking_number = trackingNumber;
+    changes.push({
+      field: "tracking_number",
+      oldValue: oldOrder?.tracking_number || null,
+      newValue: trackingNumber,
+    });
   }
 
-  const { error } = await supabase
+  // 변경사항이 없으면 에러 반환
+  if (Object.keys(updateData).length === 1) {
+    // updated_at만 있는 경우
+    logger.warn("[updateOrderStatus] ⚠️ 변경사항 없음");
+    console.groupEnd();
+    return { success: false, message: "변경할 내용이 없습니다." };
+  }
+
+  // 주문 상태 업데이트
+  const { data: newOrder, error: updateError } = await supabase
     .from("orders")
     .update(updateData)
-    .eq("id", orderId);
+    .eq("id", orderId)
+    .select("order_number, payment_status, fulfillment_status, tracking_number, shipped_at, delivered_at")
+    .single();
 
-  if (error) {
-    console.error("에러:", error);
+  if (updateError || !newOrder) {
+    logger.error("[updateOrderStatus] ❌ 주문 상태 업데이트 실패", {
+      code: updateError?.code,
+      message: updateError?.message,
+    });
+    console.error("에러:", updateError);
     console.groupEnd();
     return { success: false, message: "주문 상태 업데이트에 실패했습니다." };
+  }
+
+  // 관리자 활동 로그 기록 (Server Action에서는 Request 객체 생성)
+  try {
+    const { headers } = await import("next/headers");
+    const headersList = await headers();
+    const request = new Request("http://localhost", {
+      headers: Object.fromEntries(headersList.entries()),
+    });
+
+    const beforeData: Record<string, any> = {};
+    const afterData: Record<string, any> = {};
+
+    if (paymentStatus && paymentStatus !== oldOrder.payment_status) {
+      beforeData.payment_status = oldOrder.payment_status;
+      afterData.payment_status = newOrder.payment_status;
+    }
+
+    if (fulfillmentStatus && fulfillmentStatus !== oldOrder.fulfillment_status) {
+      beforeData.fulfillment_status = oldOrder.fulfillment_status;
+      afterData.fulfillment_status = newOrder.fulfillment_status;
+    }
+
+    if (trackingNumber && trackingNumber !== oldOrder.tracking_number) {
+      beforeData.tracking_number = oldOrder.tracking_number || null;
+      afterData.tracking_number = newOrder.tracking_number || null;
+    }
+
+    // 로그 기록 (변경사항이 있는 경우만)
+    if (Object.keys(beforeData).length > 0) {
+      const { logAdminAction } = await import("@/lib/admin-activity-log");
+      const logResult = await logAdminAction({
+        action: "order_status_changed",
+        entity_type: "order",
+        entity_id: orderId,
+        before: beforeData,
+        after: afterData,
+        req: request,
+      });
+
+      if (!logResult) {
+        logger.warn("[updateOrderStatus] ⚠️ 로그 기록 실패 (주문 상태는 업데이트됨)");
+      } else {
+        logger.info("[updateOrderStatus] ✅ 로그 기록 성공");
+      }
+    }
+  } catch (logError) {
+    logger.error("[updateOrderStatus] ❌ 로그 기록 예외 발생", logError);
+    // 로그 기록 실패해도 주문 상태 업데이트는 성공했으므로 계속 진행
   }
 
   console.log("성공");
@@ -1175,6 +1274,8 @@ export async function updateInventory(
   productId: string,
   stock: number,
   variantId?: string,
+  ipAddress?: string,
+  userAgent?: string,
 ): Promise<{ success: boolean; message: string }> {
   logger.group("[updateInventory] 재고 업데이트 시작");
   logger.info("[updateInventory] 상품 ID:", productId, "재고:", stock, "옵션 ID:", variantId || "(없음)");
@@ -1196,8 +1297,24 @@ export async function updateInventory(
   
   const supabase = getServiceRoleClient();
 
+  let oldStock: number | null = null;
+  let productName: string = "";
+  let variantName: string | null = null;
+
   if (variantId) {
     // 옵션 재고 업데이트
+    const { data: variant } = await supabase
+      .from("product_variants")
+      .select("stock, variant_name, product:products(name)")
+      .eq("id", variantId)
+      .single();
+
+    if (variant) {
+      oldStock = variant.stock;
+      variantName = variant.variant_name;
+      productName = (variant.product as any)?.name || "";
+    }
+
     const { error } = await supabase
       .from("product_variants")
       .update({
@@ -1216,6 +1333,17 @@ export async function updateInventory(
     }
   } else {
     // 상품 재고 업데이트
+    const { data: product } = await supabase
+      .from("products")
+      .select("stock, name")
+      .eq("id", productId)
+      .single();
+
+    if (product) {
+      oldStock = product.stock;
+      productName = product.name;
+    }
+
     const { error } = await supabase
       .from("products")
       .update({
@@ -1232,6 +1360,21 @@ export async function updateInventory(
       logger.groupEnd();
       return { success: false, message: "재고 업데이트에 실패했습니다." };
     }
+  }
+
+  // Audit log 기록
+  if (oldStock !== null && oldStock !== stock) {
+    const { logInventoryChange } = await import("@/lib/audit-log");
+    await logInventoryChange(
+      productId,
+      productName,
+      variantId || null,
+      variantName,
+      oldStock,
+      stock,
+      ipAddress,
+      userAgent
+    );
   }
 
   logger.info("[updateInventory] ✅ 재고 업데이트 성공");
