@@ -101,16 +101,17 @@ const clerkMiddlewareHandler = hasClerkKeys
 
         // 로그인 안했거나 admin 아니면 차단
         if (!userId || !adminUser) {
+          const claims = sessionClaims as any;
           console.log("[middleware] ❌ 관리자 경로 접근 차단", {
             userId: userId || "없음",
             hasSessionClaims: !!sessionClaims,
-            metadata: sessionClaims?.metadata,
-            publicMetadata: sessionClaims?.publicMetadata,
-            email: sessionClaims?.email,
-            metadataIsAdmin: sessionClaims?.metadata?.isAdmin,
-            metadataRole: sessionClaims?.metadata?.role,
-            publicMetadataIsAdmin: sessionClaims?.publicMetadata?.isAdmin,
-            publicMetadataRole: sessionClaims?.publicMetadata?.role,
+            metadata: claims?.metadata,
+            publicMetadata: claims?.publicMetadata,
+            email: claims?.email,
+            metadataIsAdmin: claims?.metadata?.isAdmin,
+            metadataRole: claims?.metadata?.role,
+            publicMetadataIsAdmin: claims?.publicMetadata?.isAdmin,
+            publicMetadataRole: claims?.publicMetadata?.role,
             ADMIN_EMAILS,
           });
           return redirectToSignIn({ returnBackUrl: request.url });
