@@ -1018,8 +1018,9 @@ export async function getInventoryList(
   
   const supabase = getServiceRoleClient();
 
-  // 상품 조회
-  let productQuery = supabase
+  // 성능 최적화: N+1 쿼리 문제 해결
+  // 1. 모든 상품을 한 번에 조회 (필터링 적용)
+  let productsQuery = supabase
     .from("products")
     .select(
       `
@@ -1029,19 +1030,18 @@ export async function getInventoryList(
       category_id,
       category:categories!fk_products_category_id(name)
     `,
-      { count: "exact" },
     )
     .is("deleted_at", null);
 
   if (searchQuery && searchQuery.trim()) {
-    productQuery = productQuery.ilike("name", `%${searchQuery.trim()}%`);
+    productsQuery = productsQuery.ilike("name", `%${searchQuery.trim()}%`);
   }
 
   if (lowStockOnly) {
-    productQuery = productQuery.lte("stock", 10);
+    productsQuery = productsQuery.lte("stock", 10);
   }
 
-  const { data: products, error: productsError, count } = await productQuery;
+  const { data: products, error: productsError } = await productsQuery;
 
   if (productsError) {
     logger.error("[getInventoryList] ❌ 상품 조회 실패", {
@@ -1052,54 +1052,82 @@ export async function getInventoryList(
     return { items: [], total: 0, totalPages: 0 };
   }
 
-  // 각 상품의 옵션 조회
+  if (!products || products.length === 0) {
+    logger.info("[getInventoryList] 조회된 상품 없음");
+    logger.groupEnd();
+    return { items: [], total: 0, totalPages: 0 };
+  }
+
+  // 2. 모든 옵션을 한 번에 조회 (해당 상품들의 옵션만)
+  const productIds = products.map((p) => p.id);
+  let variantsQuery = supabase
+    .from("product_variants")
+    .select("id, variant_name, variant_value, stock, sku, product_id")
+    .in("product_id", productIds)
+    .is("deleted_at", null);
+
+  if (lowStockOnly) {
+    variantsQuery = variantsQuery.lte("stock", 10);
+  }
+
+  const { data: variants, error: variantsError } = await variantsQuery;
+
+  if (variantsError) {
+    logger.error("[getInventoryList] ❌ 옵션 조회 실패", {
+      code: variantsError.code,
+      message: variantsError.message,
+    });
+    logger.groupEnd();
+    return { items: [], total: 0, totalPages: 0 };
+  }
+
+  // 3. 메모리에서 조인하여 인벤토리 아이템 구성
   const inventoryItems: InventoryItem[] = [];
+  const variantsByProductId = new Map<string, typeof variants>();
 
-  for (const product of products || []) {
-    const p = product as {
-      id: string;
-      name: string;
-      stock: number;
-      category_id: string | null;
-      category: { name: string } | null;
-    };
+  // 옵션을 상품 ID별로 그룹화
+  if (variants) {
+    for (const variant of variants) {
+      if (!variantsByProductId.has(variant.product_id)) {
+        variantsByProductId.set(variant.product_id, []);
+      }
+      variantsByProductId.get(variant.product_id)!.push(variant);
+    }
+  }
 
-    // 옵션 조회
-    const { data: variants } = await supabase
-      .from("product_variants")
-      .select("id, variant_name, variant_value, stock, sku")
-      .eq("product_id", p.id)
-      .is("deleted_at", null);
+  // 각 상품에 대해 인벤토리 아이템 생성
+  for (const product of products) {
+    const productVariants = variantsByProductId.get(product.id) || [];
 
-    if (variants && variants.length > 0) {
+    if (productVariants.length > 0) {
       // 옵션이 있는 경우: 옵션별로 표시
-      for (const variant of variants) {
+      for (const variant of productVariants) {
         inventoryItems.push({
-          product_id: p.id,
-          product_name: p.name,
-          product_stock: p.stock,
+          product_id: product.id,
+          product_name: product.name,
+          product_stock: product.stock,
           variant_id: variant.id,
           variant_name: variant.variant_name,
           variant_value: variant.variant_value,
           variant_stock: variant.stock,
           sku: variant.sku,
-          category_name: p.category?.name || null,
+          category_name: product.category?.name || null,
           is_low_stock: variant.stock <= 10,
         });
       }
     } else {
       // 옵션이 없는 경우: 상품 재고만 표시
       inventoryItems.push({
-        product_id: p.id,
-        product_name: p.name,
-        product_stock: p.stock,
+        product_id: product.id,
+        product_name: product.name,
+        product_stock: product.stock,
         variant_id: null,
         variant_name: null,
         variant_value: null,
         variant_stock: null,
         sku: null,
-        category_name: p.category?.name || null,
-        is_low_stock: p.stock <= 10,
+        category_name: product.category?.name || null,
+        is_low_stock: product.stock <= 10,
       });
     }
   }
@@ -1111,6 +1139,17 @@ export async function getInventoryList(
         return stock <= 10;
       })
     : inventoryItems;
+
+  // 정렬: 상품명 기준
+  filteredItems.sort((a, b) => {
+    if (a.product_name < b.product_name) return -1;
+    if (a.product_name > b.product_name) return 1;
+    // 같은 상품인 경우 옵션명으로 정렬
+    if (a.variant_name && b.variant_name) {
+      return a.variant_name.localeCompare(b.variant_name);
+    }
+    return 0;
+  });
 
   const total = filteredItems.length;
   const totalPages = Math.ceil(total / pageSize);
@@ -1124,6 +1163,7 @@ export async function getInventoryList(
     itemsCount: paginatedItems.length,
     total,
     totalPages,
+    queriesUsed: 2, // 옵션 있는 상품 + 옵션 없는 상품
   });
   logger.groupEnd();
 
