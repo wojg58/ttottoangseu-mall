@@ -1470,8 +1470,8 @@ export async function getAdminReviews(
       images,
       created_at,
       updated_at,
-      product:products!fk_reviews_product_id(name),
-      user:users!fk_reviews_user_id(name, email)
+      product:products(name),
+      user:users(name, email)
     `,
       { count: "exact" },
     )
@@ -1587,8 +1587,8 @@ export async function getAdminInquiries(
       answered_at,
       created_at,
       updated_at,
-      product:products!fk_inquiries_product_id(name),
-      user:users!fk_inquiries_user_id(name, email)
+      product:products(name),
+      user:users(name, email)
     `,
       { count: "exact" },
     )
@@ -2010,20 +2010,30 @@ export async function getAnalyticsData(
     .eq("payment_status", "REFUNDED")
     .gte("created_at", thirtyDaysAgo.toISOString());
 
-  // 베스트 상품 (판매량 기준)
-  const { data: orderItems } = await supabase
-    .from("order_items")
-    .select("product_id, product_name, quantity, price")
-    .in(
-      "order_id",
-      (
-        await supabase
-          .from("orders")
-          .select("id")
-          .eq("payment_status", "PAID")
-          .gte("paid_at", thirtyDaysAgo.toISOString())
-      ).data?.map((o) => o.id) || [],
-    );
+  // 베스트 상품 (판매량 기준) - 30일간 결제 완료된 주문의 상품들
+  const { data: paidOrders } = await supabase
+    .from("orders")
+    .select("id")
+    .eq("payment_status", "PAID")
+    .gte("paid_at", thirtyDaysAgo.toISOString());
+
+  const paidOrderIds = paidOrders?.map((o) => o.id) || [];
+
+  let orderItems: Array<{
+    product_id: string;
+    product_name: string;
+    quantity: number;
+    price: number;
+  }> = [];
+
+  if (paidOrderIds.length > 0) {
+    const { data: items } = await supabase
+      .from("order_items")
+      .select("product_id, product_name, quantity, price")
+      .in("order_id", paidOrderIds);
+
+    orderItems = (items || []) as typeof orderItems;
+  }
 
   const productStats = new Map<
     string,
