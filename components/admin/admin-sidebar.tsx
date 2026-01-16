@@ -99,10 +99,8 @@ export default function AdminSidebar() {
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  // P0 + P1 메뉴 필터링 (현재 구현된 메뉴)
-  const visibleMenuItems = menuItems.filter(
-    (item) => item.priority === "P0" || item.priority === "P1"
-  );
+  // 모든 메뉴 표시 (P0, P1, P2 모두)
+  const visibleMenuItems = menuItems;
 
   return (
     <>

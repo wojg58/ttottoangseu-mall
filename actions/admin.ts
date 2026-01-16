@@ -287,8 +287,8 @@ export async function getDashboardStats(): Promise<DashboardStats | null> {
     logger.info("[getDashboardStats] ✅ 미처리 주문 수:", unprocessedOrders ?? 0);
   }
 
-  // 미답변 문의 수 (추후 구현)
-  const unansweredInquiries = 0;
+  // 미답변 문의 수
+  const unansweredInquiries = await getUnansweredInquiriesCount();
 
   const result = {
     totalOrders: totalOrders ?? 0,
@@ -1416,6 +1416,694 @@ export async function getCustomerById(
   logger.groupEnd();
 
   return customer;
+}
+
+// 리뷰 목록 조회 (관리자용)
+export interface AdminReview {
+  id: string;
+  product_id: string;
+  product_name: string;
+  user_id: string;
+  user_name: string | null;
+  user_email: string;
+  order_id: string | null;
+  rating: number;
+  content: string;
+  images: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+export async function getAdminReviews(
+  page: number = 1,
+  pageSize: number = 20,
+  searchQuery?: string,
+): Promise<{ reviews: AdminReview[]; total: number; totalPages: number }> {
+  logger.group("[getAdminReviews] 관리자 리뷰 목록 조회 시작");
+  logger.info("[getAdminReviews] 필터 조건", {
+    page,
+    pageSize,
+    searchQuery: searchQuery || "(없음)",
+  });
+
+  const isAdminUser = await isAdmin();
+  if (!isAdminUser) {
+    logger.warn("[getAdminReviews] ❌ 관리자 권한 없음 - 조회 중단");
+    logger.groupEnd();
+    return { reviews: [], total: 0, totalPages: 0 };
+  }
+
+  logger.info("[getAdminReviews] ✅ 관리자 권한 확인됨 - Service Role 클라이언트 사용");
+  
+  const supabase = getServiceRoleClient();
+
+  let query = supabase
+    .from("reviews")
+    .select(
+      `
+      id,
+      product_id,
+      user_id,
+      order_id,
+      rating,
+      content,
+      images,
+      created_at,
+      updated_at,
+      product:products!fk_reviews_product_id(name),
+      user:users!fk_reviews_user_id(name, email)
+    `,
+      { count: "exact" },
+    )
+    .is("deleted_at", null);
+
+  if (searchQuery && searchQuery.trim()) {
+    query = query.or(
+      `content.ilike.%${searchQuery.trim()}%,product:products.name.ilike.%${searchQuery.trim()}%`
+    );
+  }
+
+  query = query.order("created_at", { ascending: false });
+
+  // 페이지네이션
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+  query = query.range(from, to);
+
+  const { data, error, count } = await query;
+
+  if (error) {
+    logger.error("[getAdminReviews] ❌ 리뷰 조회 실패", {
+      code: error.code,
+      message: error.message,
+    });
+    logger.groupEnd();
+    return { reviews: [], total: 0, totalPages: 0 };
+  }
+
+  const total = count ?? 0;
+  const totalPages = Math.ceil(total / pageSize);
+
+  const reviews: AdminReview[] = (data || []).map((item: any) => ({
+    id: item.id,
+    product_id: item.product_id,
+    product_name: item.product?.name || "상품 없음",
+    user_id: item.user_id,
+    user_name: item.user?.name || null,
+    user_email: item.user?.email || "",
+    order_id: item.order_id,
+    rating: item.rating,
+    content: item.content,
+    images: (item.images as string[]) || [],
+    created_at: item.created_at,
+    updated_at: item.updated_at,
+  }));
+
+  logger.info("[getAdminReviews] ✅ 리뷰 목록 조회 성공", {
+    reviewsCount: reviews.length,
+    total,
+    totalPages,
+  });
+  logger.groupEnd();
+
+  return { reviews, total, totalPages };
+}
+
+// 문의 목록 조회 (관리자용)
+export interface AdminInquiry {
+  id: string;
+  product_id: string;
+  product_name: string;
+  user_id: string | null;
+  user_name: string | null;
+  user_email: string | null;
+  title: string;
+  content: string;
+  is_secret: boolean;
+  status: "pending" | "answered";
+  answer: string | null;
+  answered_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function getAdminInquiries(
+  page: number = 1,
+  pageSize: number = 20,
+  status?: string,
+  searchQuery?: string,
+): Promise<{ inquiries: AdminInquiry[]; total: number; totalPages: number }> {
+  logger.group("[getAdminInquiries] 관리자 문의 목록 조회 시작");
+  logger.info("[getAdminInquiries] 필터 조건", {
+    page,
+    pageSize,
+    status: status || "(전체)",
+    searchQuery: searchQuery || "(없음)",
+  });
+
+  const isAdminUser = await isAdmin();
+  if (!isAdminUser) {
+    logger.warn("[getAdminInquiries] ❌ 관리자 권한 없음 - 조회 중단");
+    logger.groupEnd();
+    return { inquiries: [], total: 0, totalPages: 0 };
+  }
+
+  logger.info("[getAdminInquiries] ✅ 관리자 권한 확인됨 - Service Role 클라이언트 사용");
+  
+  const supabase = getServiceRoleClient();
+
+  let query = supabase
+    .from("inquiries")
+    .select(
+      `
+      id,
+      product_id,
+      user_id,
+      title,
+      content,
+      is_secret,
+      status,
+      answer,
+      answered_at,
+      created_at,
+      updated_at,
+      product:products!fk_inquiries_product_id(name),
+      user:users!fk_inquiries_user_id(name, email)
+    `,
+      { count: "exact" },
+    )
+    .is("deleted_at", null);
+
+  if (status) {
+    query = query.eq("status", status);
+  }
+
+  if (searchQuery && searchQuery.trim()) {
+    query = query.or(
+      `title.ilike.%${searchQuery.trim()}%,content.ilike.%${searchQuery.trim()}%,product:products.name.ilike.%${searchQuery.trim()}%`
+    );
+  }
+
+  query = query.order("created_at", { ascending: false });
+
+  // 페이지네이션
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+  query = query.range(from, to);
+
+  const { data, error, count } = await query;
+
+  if (error) {
+    logger.error("[getAdminInquiries] ❌ 문의 조회 실패", {
+      code: error.code,
+      message: error.message,
+    });
+    logger.groupEnd();
+    return { inquiries: [], total: 0, totalPages: 0 };
+  }
+
+  const total = count ?? 0;
+  const totalPages = Math.ceil(total / pageSize);
+
+  const inquiries: AdminInquiry[] = (data || []).map((item: any) => ({
+    id: item.id,
+    product_id: item.product_id,
+    product_name: item.product?.name || "상품 없음",
+    user_id: item.user_id,
+    user_name: item.user?.name || null,
+    user_email: item.user?.email || null,
+    title: item.title,
+    content: item.content,
+    is_secret: item.is_secret,
+    status: item.status,
+    answer: item.answer,
+    answered_at: item.answered_at,
+    created_at: item.created_at,
+    updated_at: item.updated_at,
+  }));
+
+  logger.info("[getAdminInquiries] ✅ 문의 목록 조회 성공", {
+    inquiriesCount: inquiries.length,
+    total,
+    totalPages,
+  });
+  logger.groupEnd();
+
+  return { inquiries, total, totalPages };
+}
+
+// 문의 답변 등록/수정
+export async function answerInquiry(
+  inquiryId: string,
+  answer: string,
+): Promise<{ success: boolean; message: string }> {
+  logger.group("[answerInquiry] 문의 답변 등록 시작");
+  logger.info("[answerInquiry] 문의 ID:", inquiryId, "답변 길이:", answer.length);
+
+  const isAdminUser = await isAdmin();
+  if (!isAdminUser) {
+    logger.warn("[answerInquiry] ❌ 관리자 권한 없음 - 답변 등록 중단");
+    logger.groupEnd();
+    return { success: false, message: "관리자 권한이 필요합니다." };
+  }
+
+  if (!answer.trim()) {
+    logger.warn("[answerInquiry] ❌ 답변 내용이 없습니다");
+    logger.groupEnd();
+    return { success: false, message: "답변 내용을 입력해주세요." };
+  }
+
+  logger.info("[answerInquiry] ✅ 관리자 권한 확인됨 - Service Role 클라이언트 사용");
+  
+  const supabase = getServiceRoleClient();
+
+  const { error } = await supabase
+    .from("inquiries")
+    .update({
+      answer: answer.trim(),
+      status: "answered",
+      answered_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", inquiryId);
+
+  if (error) {
+    logger.error("[answerInquiry] ❌ 문의 답변 등록 실패", {
+      code: error.code,
+      message: error.message,
+    });
+    logger.groupEnd();
+    return { success: false, message: "답변 등록에 실패했습니다." };
+  }
+
+  logger.info("[answerInquiry] ✅ 문의 답변 등록 성공");
+  logger.groupEnd();
+  return { success: true, message: "답변이 등록되었습니다." };
+}
+
+// 미답변 문의 수 조회 (대시보드용)
+export async function getUnansweredInquiriesCount(): Promise<number> {
+  const isAdminUser = await isAdmin();
+  if (!isAdminUser) {
+    return 0;
+  }
+
+  const supabase = getServiceRoleClient();
+
+  const { count, error } = await supabase
+    .from("inquiries")
+    .select("*", { count: "exact", head: true })
+    .eq("status", "pending")
+    .is("deleted_at", null);
+
+  if (error) {
+    logger.error("[getUnansweredInquiriesCount] ❌ 미답변 문의 수 조회 실패", {
+      code: error.code,
+      message: error.message,
+    });
+    return 0;
+  }
+
+  return count ?? 0;
+}
+
+// 쿠폰 목록 조회 (관리자용)
+export interface AdminCoupon {
+  id: string;
+  code: string;
+  name: string;
+  user_id: string;
+  user_name: string | null;
+  user_email: string;
+  discount_type: "fixed" | "percentage";
+  discount_amount: number;
+  min_order_amount: number | null;
+  max_discount_amount: number | null;
+  status: "active" | "used" | "expired";
+  used_at: string | null;
+  expires_at: string;
+  order_id: string | null;
+  created_at: string;
+}
+
+export async function getAdminCoupons(
+  page: number = 1,
+  pageSize: number = 20,
+  status?: string,
+  searchQuery?: string,
+): Promise<{ coupons: AdminCoupon[]; total: number; totalPages: number }> {
+  logger.group("[getAdminCoupons] 관리자 쿠폰 목록 조회 시작");
+  logger.info("[getAdminCoupons] 필터 조건", {
+    page,
+    pageSize,
+    status: status || "(전체)",
+    searchQuery: searchQuery || "(없음)",
+  });
+
+  const isAdminUser = await isAdmin();
+  if (!isAdminUser) {
+    logger.warn("[getAdminCoupons] ❌ 관리자 권한 없음 - 조회 중단");
+    logger.groupEnd();
+    return { coupons: [], total: 0, totalPages: 0 };
+  }
+
+  logger.info("[getAdminCoupons] ✅ 관리자 권한 확인됨 - Service Role 클라이언트 사용");
+  
+  const supabase = getServiceRoleClient();
+
+  let query = supabase
+    .from("coupons")
+    .select(
+      `
+      *,
+      user:users!fk_coupons_user_id(name, email)
+    `,
+      { count: "exact" },
+    );
+
+  if (status) {
+    query = query.eq("status", status);
+  }
+
+  if (searchQuery && searchQuery.trim()) {
+    query = query.or(
+      `code.ilike.%${searchQuery.trim()}%,name.ilike.%${searchQuery.trim()}%`
+    );
+  }
+
+  query = query.order("created_at", { ascending: false });
+
+  // 페이지네이션
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+  query = query.range(from, to);
+
+  const { data, error, count } = await query;
+
+  if (error) {
+    logger.error("[getAdminCoupons] ❌ 쿠폰 조회 실패", {
+      code: error.code,
+      message: error.message,
+    });
+    logger.groupEnd();
+    return { coupons: [], total: 0, totalPages: 0 };
+  }
+
+  const total = count ?? 0;
+  const totalPages = Math.ceil(total / pageSize);
+
+  const coupons: AdminCoupon[] = (data || []).map((item: any) => ({
+    id: item.id,
+    code: item.code,
+    name: item.name,
+    user_id: item.user_id,
+    user_name: item.user?.name || null,
+    user_email: item.user?.email || "",
+    discount_type: item.discount_type,
+    discount_amount: item.discount_amount,
+    min_order_amount: item.min_order_amount,
+    max_discount_amount: item.max_discount_amount,
+    status: item.status,
+    used_at: item.used_at,
+    expires_at: item.expires_at,
+    order_id: item.order_id,
+    created_at: item.created_at,
+  }));
+
+  logger.info("[getAdminCoupons] ✅ 쿠폰 목록 조회 성공", {
+    couponsCount: coupons.length,
+    total,
+    totalPages,
+  });
+  logger.groupEnd();
+
+  return { coupons, total, totalPages };
+}
+
+// 통계 데이터 조회
+export interface AnalyticsData {
+  // 기간별 매출
+  revenueToday: number;
+  revenue7Days: number;
+  revenue30Days: number;
+  revenueThisMonth: number;
+  revenueLastMonth: number;
+  
+  // 주문 통계
+  ordersToday: number;
+  orders7Days: number;
+  orders30Days: number;
+  
+  // 취소/환불 통계
+  canceledToday: number;
+  canceled7Days: number;
+  canceled30Days: number;
+  refundedToday: number;
+  refunded7Days: number;
+  refunded30Days: number;
+  
+  // 베스트 상품 (판매량 기준)
+  bestProducts: Array<{
+    product_id: string;
+    product_name: string;
+    total_quantity: number;
+    total_revenue: number;
+  }>;
+  
+  // 취소율
+  cancelRate7Days: number;
+  cancelRate30Days: number;
+}
+
+export async function getAnalyticsData(
+  startDate?: string,
+  endDate?: string,
+): Promise<AnalyticsData | null> {
+  logger.group("[getAnalyticsData] 통계 데이터 조회 시작");
+  logger.info("[getAnalyticsData] 기간:", {
+    startDate: startDate || "(전체)",
+    endDate: endDate || "(전체)",
+  });
+
+  const isAdminUser = await isAdmin();
+  if (!isAdminUser) {
+    logger.warn("[getAnalyticsData] ❌ 관리자 권한 없음 - 조회 중단");
+    logger.groupEnd();
+    return null;
+  }
+
+  logger.info("[getAnalyticsData] ✅ 관리자 권한 확인됨 - Service Role 클라이언트 사용");
+  
+  const supabase = getServiceRoleClient();
+
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const sevenDaysAgo = new Date(todayStart);
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  const thirtyDaysAgo = new Date(todayStart);
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+
+  // 오늘 매출
+  const { data: revenueTodayData } = await supabase
+    .from("orders")
+    .select("total_amount")
+    .eq("payment_status", "PAID")
+    .gte("paid_at", todayStart.toISOString());
+
+  const revenueToday =
+    revenueTodayData?.reduce((sum, order) => sum + order.total_amount, 0) || 0;
+
+  // 7일 매출
+  const { data: revenue7DaysData } = await supabase
+    .from("orders")
+    .select("total_amount")
+    .eq("payment_status", "PAID")
+    .gte("paid_at", sevenDaysAgo.toISOString());
+
+  const revenue7Days =
+    revenue7DaysData?.reduce((sum, order) => sum + order.total_amount, 0) || 0;
+
+  // 30일 매출
+  const { data: revenue30DaysData } = await supabase
+    .from("orders")
+    .select("total_amount")
+    .eq("payment_status", "PAID")
+    .gte("paid_at", thirtyDaysAgo.toISOString());
+
+  const revenue30Days =
+    revenue30DaysData?.reduce((sum, order) => sum + order.total_amount, 0) || 0;
+
+  // 이번 달 매출
+  const { data: revenueThisMonthData } = await supabase
+    .from("orders")
+    .select("total_amount")
+    .eq("payment_status", "PAID")
+    .gte("paid_at", thisMonthStart.toISOString());
+
+  const revenueThisMonth =
+    revenueThisMonthData?.reduce((sum, order) => sum + order.total_amount, 0) || 0;
+
+  // 지난 달 매출
+  const { data: revenueLastMonthData } = await supabase
+    .from("orders")
+    .select("total_amount")
+    .eq("payment_status", "PAID")
+    .gte("paid_at", lastMonthStart.toISOString())
+    .lte("paid_at", lastMonthEnd.toISOString());
+
+  const revenueLastMonth =
+    revenueLastMonthData?.reduce((sum, order) => sum + order.total_amount, 0) || 0;
+
+  // 주문 통계
+  const { count: ordersToday } = await supabase
+    .from("orders")
+    .select("*", { count: "exact", head: true })
+    .gte("created_at", todayStart.toISOString());
+
+  const { count: orders7Days } = await supabase
+    .from("orders")
+    .select("*", { count: "exact", head: true })
+    .gte("created_at", sevenDaysAgo.toISOString());
+
+  const { count: orders30Days } = await supabase
+    .from("orders")
+    .select("*", { count: "exact", head: true })
+    .gte("created_at", thirtyDaysAgo.toISOString());
+
+  // 취소/환불 통계
+  const { count: canceledToday } = await supabase
+    .from("orders")
+    .select("*", { count: "exact", head: true })
+    .eq("payment_status", "CANCELED")
+    .gte("created_at", todayStart.toISOString());
+
+  const { count: canceled7Days } = await supabase
+    .from("orders")
+    .select("*", { count: "exact", head: true })
+    .eq("payment_status", "CANCELED")
+    .gte("created_at", sevenDaysAgo.toISOString());
+
+  const { count: canceled30Days } = await supabase
+    .from("orders")
+    .select("*", { count: "exact", head: true })
+    .eq("payment_status", "CANCELED")
+    .gte("created_at", thirtyDaysAgo.toISOString());
+
+  const { count: refundedToday } = await supabase
+    .from("orders")
+    .select("*", { count: "exact", head: true })
+    .eq("payment_status", "REFUNDED")
+    .gte("created_at", todayStart.toISOString());
+
+  const { count: refunded7Days } = await supabase
+    .from("orders")
+    .select("*", { count: "exact", head: true })
+    .eq("payment_status", "REFUNDED")
+    .gte("created_at", sevenDaysAgo.toISOString());
+
+  const { count: refunded30Days } = await supabase
+    .from("orders")
+    .select("*", { count: "exact", head: true })
+    .eq("payment_status", "REFUNDED")
+    .gte("created_at", thirtyDaysAgo.toISOString());
+
+  // 베스트 상품 (판매량 기준)
+  const { data: orderItems } = await supabase
+    .from("order_items")
+    .select("product_id, product_name, quantity, price")
+    .in(
+      "order_id",
+      (
+        await supabase
+          .from("orders")
+          .select("id")
+          .eq("payment_status", "PAID")
+          .gte("paid_at", thirtyDaysAgo.toISOString())
+      ).data?.map((o) => o.id) || [],
+    );
+
+  const productStats = new Map<
+    string,
+    { name: string; quantity: number; revenue: number }
+  >();
+
+  orderItems?.forEach((item) => {
+    const existing = productStats.get(item.product_id);
+    if (existing) {
+      existing.quantity += item.quantity;
+      existing.revenue += item.price * item.quantity;
+    } else {
+      productStats.set(item.product_id, {
+        name: item.product_name,
+        quantity: item.quantity,
+        revenue: item.price * item.quantity,
+      });
+    }
+  });
+
+  const bestProducts = Array.from(productStats.entries())
+    .map(([product_id, stats]) => ({
+      product_id,
+      product_name: stats.name,
+      total_quantity: stats.quantity,
+      total_revenue: stats.revenue,
+    }))
+    .sort((a, b) => b.total_quantity - a.total_quantity)
+    .slice(0, 10);
+
+  // 취소율 계산
+  const { count: totalOrders7Days } = await supabase
+    .from("orders")
+    .select("*", { count: "exact", head: true })
+    .gte("created_at", sevenDaysAgo.toISOString());
+
+  const { count: totalOrders30Days } = await supabase
+    .from("orders")
+    .select("*", { count: "exact", head: true })
+    .gte("created_at", thirtyDaysAgo.toISOString());
+
+  const cancelRate7Days =
+    totalOrders7Days && totalOrders7Days > 0
+      ? ((canceled7Days || 0) / totalOrders7Days) * 100
+      : 0;
+
+  const cancelRate30Days =
+    totalOrders30Days && totalOrders30Days > 0
+      ? ((canceled30Days || 0) / totalOrders30Days) * 100
+      : 0;
+
+  const result: AnalyticsData = {
+    revenueToday,
+    revenue7Days,
+    revenue30Days,
+    revenueThisMonth,
+    revenueLastMonth,
+    ordersToday: ordersToday || 0,
+    orders7Days: orders7Days || 0,
+    orders30Days: orders30Days || 0,
+    canceledToday: canceledToday || 0,
+    canceled7Days: canceled7Days || 0,
+    canceled30Days: canceled30Days || 0,
+    refundedToday: refundedToday || 0,
+    refunded7Days: refunded7Days || 0,
+    refunded30Days: refunded30Days || 0,
+    bestProducts,
+    cancelRate7Days: Math.round(cancelRate7Days * 10) / 10,
+    cancelRate30Days: Math.round(cancelRate30Days * 10) / 10,
+  };
+
+  logger.info("[getAnalyticsData] ✅ 통계 데이터 조회 성공", {
+    revenueToday: result.revenueToday,
+    revenue7Days: result.revenue7Days,
+    revenue30Days: result.revenue30Days,
+    bestProductsCount: result.bestProducts.length,
+  });
+  logger.groupEnd();
+
+  return result;
 }
 
 // 상품 목록 조회 (관리자용)
