@@ -1197,6 +1197,9 @@ export async function getInventoryList(
   // 각 상품에 대해 인벤토리 아이템 생성
   for (const product of products) {
     const productVariants = variantsByProductId.get(product.id) || [];
+    const categoryName = Array.isArray(product.category)
+      ? product.category[0]?.name || null
+      : product.category?.name || null;
 
     if (productVariants.length > 0) {
       // 옵션이 있는 경우: 옵션별로 표시
@@ -1210,7 +1213,7 @@ export async function getInventoryList(
           variant_value: variant.variant_value,
           variant_stock: variant.stock,
           sku: variant.sku,
-          category_name: product.category?.name || null,
+          category_name: categoryName,
           is_low_stock: variant.stock <= 10,
         });
       }
@@ -1225,7 +1228,7 @@ export async function getInventoryList(
         variant_value: null,
         variant_stock: null,
         sku: null,
-        category_name: product.category?.name || null,
+        category_name: categoryName,
         is_low_stock: product.stock <= 10,
       });
     }
