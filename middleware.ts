@@ -40,8 +40,8 @@ const ADMIN_EMAILS = (
  * 관리자 권한 확인 (middleware용)
  *
  * 우선순위:
- * 1. sessionClaims.publicMetadata.isAdmin === true
- * 2. sessionClaims.publicMetadata.role === 'admin'
+ * 1. sessionClaims.metadata.isAdmin === true
+ * 2. sessionClaims.metadata.role === 'admin'
  * 3. 이메일 기반 체크 (하위 호환성)
  *
  * @param sessionClaims Clerk session claims
@@ -54,17 +54,17 @@ async function isAdmin(
 ): Promise<boolean> {
   if (!userId) return false;
 
-  // 1. publicMetadata.isAdmin 체크 (가장 우선)
-  if (sessionClaims?.publicMetadata?.isAdmin === true) {
+  // 1. metadata.isAdmin 체크 (가장 우선)
+  if (sessionClaims?.metadata?.isAdmin === true) {
     console.log(
-      "[middleware] ✅ 관리자 권한 확인: publicMetadata.isAdmin=true",
+      "[middleware] ✅ 관리자 권한 확인: metadata.isAdmin=true",
     );
     return true;
   }
 
-  // 2. publicMetadata.role 체크
-  if (sessionClaims?.publicMetadata?.role === "admin") {
-    console.log("[middleware] ✅ 관리자 권한 확인: publicMetadata.role=admin");
+  // 2. metadata.role 체크
+  if (sessionClaims?.metadata?.role === "admin") {
+    console.log("[middleware] ✅ 관리자 권한 확인: metadata.role=admin");
     return true;
   }
 
@@ -92,36 +92,14 @@ async function isAdmin(
 // Clerk 미들웨어 생성 (환경 변수가 있을 때만)
 const clerkMiddlewareHandler = hasClerkKeys
   ? clerkMiddleware(async (auth, request) => {
-      // 관리자 경로 체크
+      // 관리자 경로 체크: 로그인만 요구 (관리자 여부는 서버에서 검증)
       if (isAdminRoute(request)) {
-        const { userId, sessionClaims, redirectToSignIn } = await auth();
+        const { userId, redirectToSignIn } = await auth();
 
-        // 관리자 권한 확인
-        const adminUser = await isAdmin(sessionClaims, userId);
-
-        // 로그인 안했거나 admin 아니면 차단
-        if (!userId || !adminUser) {
-          const claims = sessionClaims as Record<string, any> | null | undefined;
-          console.log("[middleware] ❌ 관리자 경로 접근 차단", {
-            userId: userId || "없음",
-            hasSessionClaims: !!sessionClaims,
-            metadata: claims?.metadata,
-            publicMetadata: claims?.publicMetadata,
-            email: claims?.email,
-            metadataIsAdmin: (claims?.metadata as any)?.isAdmin,
-            metadataRole: (claims?.metadata as any)?.role,
-            publicMetadataIsAdmin: (claims?.publicMetadata as any)?.isAdmin,
-            publicMetadataRole: (claims?.publicMetadata as any)?.role,
-            ADMIN_EMAILS,
-          });
+        // 로그인하지 않은 사용자는 로그인 페이지로 리다이렉트
+        if (!userId) {
+          console.log("[middleware] ❌ 관리자 경로 접근 차단 - 미인증");
           return redirectToSignIn({ returnBackUrl: request.url });
-        }
-
-        if (process.env.NODE_ENV === "development") {
-          console.log("[middleware] ✅ 관리자 경로 접근 허용", {
-            userId,
-            metadata: sessionClaims?.metadata,
-          });
         }
       }
 
