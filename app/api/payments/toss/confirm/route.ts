@@ -27,7 +27,6 @@ import {
 } from "@/lib/validation";
 import {
   sanitizeError,
-  sanitizeDatabaseError,
   logError,
 } from "@/lib/error-handler";
 import { normalizePaymentMethod } from "@/lib/utils/payment-method";

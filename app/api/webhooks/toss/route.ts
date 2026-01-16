@@ -296,7 +296,6 @@ async function updateOrderStatusFromWebhook(
   supabase: ReturnType<typeof getServiceRoleClient>,
   orderId: string,
   paymentStatus: string,
-  paymentKey: string,
 ): Promise<{ success: boolean; message?: string }> {
   logger.group(`[updateOrderStatusFromWebhook] 주문 상태 업데이트: Order ID ${orderId}, Status ${paymentStatus}`);
 
@@ -315,7 +314,7 @@ async function updateOrderStatusFromWebhook(
     }
 
     // 결제 상태에 따른 주문 상태 업데이트
-    let updateData: {
+    const updateData: {
       payment_status?: string;
       fulfillment_status?: string;
       status?: string;
@@ -476,7 +475,6 @@ export async function POST(request: NextRequest) {
         supabase,
         orderId,
         status,
-        paymentKey || "",
       );
 
       if (!updateResult.success) {

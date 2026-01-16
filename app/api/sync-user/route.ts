@@ -4,7 +4,6 @@ import { getServiceRoleClient } from "@/lib/supabase/service-role";
 import * as Sentry from "@sentry/nextjs";
 import {
   sanitizeDatabaseError,
-  sanitizeAuthError,
   logError,
 } from "@/lib/error-handler";
 import {

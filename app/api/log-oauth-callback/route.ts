@@ -11,20 +11,11 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const {
-      timestamp,
-      url,
       isSignedIn,
       userId,
       sessionId,
-      userLoaded,
       hasUser,
-      userInfo,
       externalAccounts,
-      clerkStatus,
-      clerkRedirectUrl,
-      hasToken,
-      tokenLength,
-      verificationResult,
     } = body;
 
     // 검증 판정
