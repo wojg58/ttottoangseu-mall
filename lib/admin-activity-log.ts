@@ -66,11 +66,9 @@ export async function logAdminAction(
   params: LogAdminActionParams
 ): Promise<boolean> {
   logger.group("[logAdminAction] 관리자 활동 로그 기록 시작");
-  logger.info("[logAdminAction] 액션:", params.action);
+  logger.info(`[logAdminAction] 액션: ${params.action}`);
   logger.info(
-    "[logAdminAction] 엔티티:",
-    params.entity_type,
-    params.entity_id
+    `[logAdminAction] 엔티티: ${params.entity_type}, ID: ${params.entity_id}`
   );
 
   try {
