@@ -21,11 +21,77 @@ const isPublicRoute = createRouteMatcher([
   "/guide",
 ]);
 
+// 관리자 전용 경로 정의
+const isAdminRoute = createRouteMatcher(["/admin(.*)"]);
+
+/**
+ * 관리자 권한 확인 (middleware용)
+ * 
+ * 우선순위:
+ * 1. sessionClaims.metadata.role === 'admin'
+ * 2. sessionClaims.metadata.isAdmin === true
+ * 3. 이메일 기반 체크 (하위 호환성)
+ */
+function isAdminFromClaims(sessionClaims: any): boolean {
+  // 1. role 체크
+  if (sessionClaims?.metadata?.role === "admin") {
+    return true;
+  }
+
+  // 2. isAdmin 체크
+  if (sessionClaims?.metadata?.isAdmin === true) {
+    return true;
+  }
+
+  // 3. 이메일 기반 체크 (하위 호환성)
+  const ADMIN_EMAILS = (process.env.ADMIN_EMAILS?.split(",") || [
+    "admin@ttottoangs.com",
+  ]).map((email) => email.trim().toLowerCase());
+
+  const email = sessionClaims?.email as string | undefined;
+  if (email) {
+    const normalizedEmail = email.trim().toLowerCase();
+    return ADMIN_EMAILS.includes(normalizedEmail);
+  }
+
+  return false;
+}
+
 // Clerk 미들웨어 생성 (환경 변수가 있을 때만)
 const clerkMiddlewareHandler = hasClerkKeys
   ? clerkMiddleware(async (auth, request) => {
+      // 관리자 경로 체크
+      if (isAdminRoute(request)) {
+        const { sessionClaims, userId, redirectToSignIn } = await auth();
+
+        // 인증되지 않은 사용자는 로그인 페이지로 리다이렉트
+        if (!userId) {
+          console.log("[middleware] ❌ 관리자 경로 접근 시도 - 미인증 사용자");
+          return redirectToSignIn({ returnBackUrl: request.url });
+        }
+
+        // 관리자 권한 확인
+        const isAdmin = isAdminFromClaims(sessionClaims);
+        if (!isAdmin) {
+          console.log("[middleware] ❌ 관리자 경로 접근 시도 - 권한 없음", {
+            userId,
+            role: sessionClaims?.metadata?.role,
+            isAdmin: sessionClaims?.metadata?.isAdmin,
+            email: sessionClaims?.email,
+          });
+          // 비관리자는 홈으로 리다이렉트
+          return NextResponse.redirect(new URL("/", request.url));
+        }
+
+        console.log("[middleware] ✅ 관리자 경로 접근 허용", {
+          userId,
+          role: sessionClaims?.metadata?.role,
+          isAdmin: sessionClaims?.metadata?.isAdmin,
+        });
+      }
+
       // 공개 경로가 아니면 인증 요구
-      if (!isPublicRoute(request)) {
+      if (!isPublicRoute(request) && !isAdminRoute(request)) {
         await auth.protect();
       }
     })

@@ -20,13 +20,22 @@ import type {
   ProductWithDetails,
 } from "@/types/database";
 
-// 관리자 이메일 목록 (환경 변수로 관리 권장)
+// 관리자 이메일 목록 (환경 변수로 관리 권장, 하위 호환성 유지)
 // 쉼표로 구분된 이메일을 배열로 변환하고, 공백 제거 및 소문자 변환
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS?.split(",") || [
   "admin@ttottoangs.com",
 ]).map((email) => email.trim().toLowerCase());
 
-// 관리자 권한 확인
+/**
+ * 관리자 권한 확인
+ * 
+ * 우선순위:
+ * 1. Clerk role === 'admin' 체크
+ * 2. publicMetadata.isAdmin === true 체크
+ * 3. 이메일 기반 체크 (하위 호환성)
+ * 
+ * @returns 관리자 여부
+ */
 export async function isAdmin(): Promise<boolean> {
   logger.group("[isAdmin] 관리자 권한 확인 시작");
   
@@ -37,18 +46,38 @@ export async function isAdmin(): Promise<boolean> {
     return false;
   }
 
-  // 모든 이메일 주소 확인 (primary email 우선, 그 다음 모든 이메일)
+  const clerkUserId = user.id;
+  
+  // 1. Clerk role 체크 (가장 우선)
+  // Clerk Dashboard에서 사용자에게 'admin' role을 부여한 경우
+  const userRole = user.publicMetadata?.role as string | undefined;
+  if (userRole === "admin") {
+    logger.info("[isAdmin] ✅ 관리자 권한 확인됨 (role=admin)", {
+      clerkUserId,
+      role: userRole,
+    });
+    logger.groupEnd();
+    return true;
+  }
+
+  // 2. publicMetadata.isAdmin 체크
+  const isAdminFromMetadata = user.publicMetadata?.isAdmin === true;
+  if (isAdminFromMetadata) {
+    logger.info("[isAdmin] ✅ 관리자 권한 확인됨 (publicMetadata.isAdmin=true)", {
+      clerkUserId,
+      isAdmin: isAdminFromMetadata,
+    });
+    logger.groupEnd();
+    return true;
+  }
+
+  // 3. 이메일 기반 체크 (하위 호환성)
   const allEmails = user.emailAddresses?.map((addr) => 
     addr.emailAddress?.trim().toLowerCase()
   ).filter((email): email is string => !!email) || [];
   
-  // primary email 우선 확인
   const primaryEmail = user.emailAddresses?.find((addr) => addr.id === user.primaryEmailAddressId)?.emailAddress?.trim().toLowerCase();
   
-  // Clerk User ID 확인
-  const clerkUserId = user.id;
-  
-  // 모든 이메일 중 관리자 이메일이 있는지 확인
   const isAdminUser = allEmails.some((email) => ADMIN_EMAILS.includes(email));
   
   logger.info("[isAdmin] 권한 확인 결과", {
@@ -56,19 +85,51 @@ export async function isAdmin(): Promise<boolean> {
     primaryEmail: primaryEmail || "(없음)",
     allEmails: allEmails,
     adminEmails: ADMIN_EMAILS,
-    isAdmin: isAdminUser,
+    role: userRole || "(없음)",
+    isAdminFromMetadata: isAdminFromMetadata || false,
+    isAdminFromEmail: isAdminUser,
+    finalResult: isAdminUser,
     hasEnvVar: !!process.env.ADMIN_EMAILS,
     envVarValue: process.env.ADMIN_EMAILS ? "설정됨" : "설정 안됨",
   });
   
   if (!isAdminUser) {
-    logger.warn("[isAdmin] ❌ 관리자 권한 없음 - 이메일이 관리자 목록에 없습니다");
+    logger.warn("[isAdmin] ❌ 관리자 권한 없음 - role, publicMetadata.isAdmin, 이메일 모두 확인 실패");
   } else {
-    logger.info("[isAdmin] ✅ 관리자 권한 확인됨");
+    logger.info("[isAdmin] ✅ 관리자 권한 확인됨 (이메일 기반)");
   }
   
   logger.groupEnd();
   return isAdminUser;
+}
+
+/**
+ * 관리자 권한 확인 (middleware용)
+ * 
+ * middleware에서는 sessionClaims를 직접 사용하여 빠르게 체크
+ * 
+ * @param sessionClaims Clerk session claims
+ * @returns 관리자 여부
+ */
+export function isAdminFromClaims(sessionClaims: any): boolean {
+  // 1. role 체크
+  if (sessionClaims?.metadata?.role === "admin") {
+    return true;
+  }
+
+  // 2. isAdmin 체크
+  if (sessionClaims?.metadata?.isAdmin === true) {
+    return true;
+  }
+
+  // 3. 이메일 기반 체크 (하위 호환성)
+  const email = sessionClaims?.email as string | undefined;
+  if (email) {
+    const normalizedEmail = email.trim().toLowerCase();
+    return ADMIN_EMAILS.includes(normalizedEmail);
+  }
+
+  return false;
 }
 
 // 대시보드 통계
