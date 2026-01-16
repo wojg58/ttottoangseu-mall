@@ -14,12 +14,17 @@ import {
 import { isAdmin, getAdminProducts } from "@/actions/admin";
 import BulkActionButton from "@/components/bulk-action-button";
 import ProductSearch from "@/components/admin/product-search";
+import ProductFilters from "@/components/admin/product-filters";
 import ProductListWithSelection from "@/components/admin/product-list-with-selection";
 
 interface AdminProductsPageProps {
   searchParams: Promise<{
     page?: string;
     search?: string;
+    category?: string;
+    status?: string;
+    stock?: string;
+    sort?: string;
   }>;
 }
 
@@ -35,11 +40,19 @@ export default async function AdminProductsPage({
   const params = await searchParams;
   const page = parseInt(params.page || "1", 10);
   const searchQuery = params.search || undefined;
+  const categoryId = params.category || undefined;
+  const status = params.status || undefined;
+  const stockFilter = params.stock || undefined;
+  const sortBy = params.sort || "created_at";
 
   const { products, total, totalPages } = await getAdminProducts(
     page,
     20,
     searchQuery,
+    categoryId,
+    status,
+    stockFilter,
+    sortBy,
   );
 
   return (
@@ -82,6 +95,9 @@ export default async function AdminProductsPage({
         {/* 검색창 */}
         <ProductSearch />
 
+        {/* 필터 */}
+        <ProductFilters />
+
         {/* 상품 목록 */}
         {products.length > 0 ? (
           <ProductListWithSelection 
@@ -109,6 +125,18 @@ export default async function AdminProductsPage({
                 params.set("page", pageNum.toString());
                 if (searchQuery) {
                   params.set("search", searchQuery);
+                }
+                if (categoryId) {
+                  params.set("category", categoryId);
+                }
+                if (status) {
+                  params.set("status", status);
+                }
+                if (stockFilter) {
+                  params.set("stock", stockFilter);
+                }
+                if (sortBy && sortBy !== "created_at") {
+                  params.set("sort", sortBy);
                 }
                 return (
                   <Link

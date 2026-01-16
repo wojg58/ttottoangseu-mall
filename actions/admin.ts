@@ -329,6 +329,7 @@ export async function getAllOrders(
   pageSize: number = 20,
   startDate?: string,
   endDate?: string,
+  searchQuery?: string,
 ): Promise<{ orders: Order[]; total: number; totalPages: number }> {
   logger.group("[getAllOrders] 전체 주문 조회 시작");
   logger.info("[getAllOrders] 필터 조건", {
@@ -336,6 +337,7 @@ export async function getAllOrders(
     fulfillmentStatus: fulfillmentStatus || "(전체)",
     startDate: startDate || "(전체)",
     endDate: endDate || "(전체)",
+    searchQuery: searchQuery || "(없음)",
     page,
     pageSize,
   });
@@ -381,6 +383,15 @@ export async function getAllOrders(
     // 종료일 23:59:59까지
     const endDateTime = `${endDate}T23:59:59.999Z`;
     query = query.lte("paid_at", endDateTime);
+  }
+
+  // 검색어 필터 (주문번호, 고객명, 전화번호)
+  if (searchQuery && searchQuery.trim()) {
+    const searchTerm = searchQuery.trim();
+    query = query.or(
+      `order_number.ilike.%${searchTerm}%,shipping_name.ilike.%${searchTerm}%,shipping_phone.ilike.%${searchTerm}%,orderer_name.ilike.%${searchTerm}%,orderer_phone.ilike.%${searchTerm}%`
+    );
+    logger.info("[getAllOrders] 검색 필터 적용:", searchTerm);
   }
 
   query = query.order("created_at", { ascending: false });
@@ -804,9 +815,21 @@ export async function getAdminProducts(
   page: number = 1,
   pageSize: number = 20,
   searchQuery?: string,
+  categoryId?: string,
+  status?: string,
+  stockFilter?: string,
+  sortBy?: string,
 ): Promise<{ products: ProductListItem[]; total: number; totalPages: number }> {
-  console.group("[getAdminProducts] 관리자 상품 조회");
-  console.log("페이지:", page, "페이지 크기:", pageSize, "검색어:", searchQuery || "(없음)");
+  logger.group("[getAdminProducts] 관리자 상품 조회 시작");
+  logger.info("[getAdminProducts] 필터 조건", {
+    page,
+    pageSize,
+    searchQuery: searchQuery || "(없음)",
+    categoryId: categoryId || "(전체)",
+    status: status || "(전체)",
+    stockFilter: stockFilter || "(전체)",
+    sortBy: sortBy || "created_at",
+  });
 
   const isAdminUser = await isAdmin();
   if (!isAdminUser) {
@@ -835,8 +858,45 @@ export async function getAdminProducts(
 
   // 검색어가 있으면 상품명으로 필터링
   if (searchQuery && searchQuery.trim()) {
-    console.log("[getAdminProducts] 검색 필터 적용:", searchQuery.trim());
+    logger.info("[getAdminProducts] 검색 필터 적용:", searchQuery.trim());
     query = query.ilike("name", `%${searchQuery.trim()}%`);
+  }
+
+  // 카테고리 필터
+  if (categoryId) {
+    logger.info("[getAdminProducts] 카테고리 필터 적용:", categoryId);
+    query = query.eq("category_id", categoryId);
+  }
+
+  // 노출 상태 필터
+  if (status) {
+    logger.info("[getAdminProducts] 노출 상태 필터 적용:", status);
+    query = query.eq("status", status);
+  }
+
+  // 재고 필터
+  if (stockFilter === "low") {
+    logger.info("[getAdminProducts] 재고부족 필터 적용 (10개 이하)");
+    query = query.lte("stock", 10);
+  } else if (stockFilter === "out") {
+    logger.info("[getAdminProducts] 품절 필터 적용");
+    query = query.eq("stock", 0);
+  }
+
+  // 정렬 적용
+  if (sortBy === "name") {
+    query = query.order("name", { ascending: true });
+  } else if (sortBy === "price_asc") {
+    query = query.order("price", { ascending: true });
+  } else if (sortBy === "price_desc") {
+    query = query.order("price", { ascending: false });
+  } else if (sortBy === "stock_asc") {
+    query = query.order("stock", { ascending: true });
+  } else if (sortBy === "stock_desc") {
+    query = query.order("stock", { ascending: false });
+  } else {
+    // 기본: 등록일 최신순
+    query = query.order("created_at", { ascending: false });
   }
 
   // 전체 데이터 가져오기 (정렬을 위해)
@@ -856,33 +916,38 @@ export async function getAdminProducts(
   const total = count ?? 0;
   const totalPages = Math.ceil(total / pageSize);
 
-  // 정렬 로직: ttotto_pr_001을 맨 앞으로, ttotto_pr_316을 맨 뒤로
-  const sortedData = (allData || []).sort((a, b) => {
-    const idA = a.id as string;
-    const idB = b.id as string;
+  // 정렬 로직: sortBy가 "id"인 경우에만 특별 정렬 적용
+  let sortedData = allData || [];
+  
+  if (sortBy === "id") {
+    // ttotto_pr_001을 맨 앞으로, ttotto_pr_316을 맨 뒤로
+    sortedData = sortedData.sort((a, b) => {
+      const idA = a.id as string;
+      const idB = b.id as string;
 
-    // ttotto_pr_001을 항상 맨 앞으로
-    if (idA === "ttotto_pr_001") return -1;
-    if (idB === "ttotto_pr_001") return 1;
+      // ttotto_pr_001을 항상 맨 앞으로
+      if (idA === "ttotto_pr_001") return -1;
+      if (idB === "ttotto_pr_001") return 1;
 
-    // ttotto_pr_316을 항상 맨 뒤로
-    if (idA === "ttotto_pr_316") return 1;
-    if (idB === "ttotto_pr_316") return -1;
+      // ttotto_pr_316을 항상 맨 뒤로
+      if (idA === "ttotto_pr_316") return 1;
+      if (idB === "ttotto_pr_316") return -1;
 
-    // 나머지는 id 기준으로 정렬 (숫자 부분 추출하여 비교)
-    const extractNumber = (id: string): number => {
-      const match = id.match(/(\d+)$/);
-      return match ? parseInt(match[1], 10) : 0;
-    };
+      // 나머지는 id 기준으로 정렬 (숫자 부분 추출하여 비교)
+      const extractNumber = (id: string): number => {
+        const match = id.match(/(\d+)$/);
+        return match ? parseInt(match[1], 10) : 0;
+      };
 
-    const numA = extractNumber(idA);
-    const numB = extractNumber(idB);
+      const numA = extractNumber(idA);
+      const numB = extractNumber(idB);
 
-    return numA - numB;
-  });
+      return numA - numB;
+    });
+  }
 
   logger.info(
-    `[getAdminProducts] 정렬 완료: 총 ${sortedData.length}개${sortedData.length > 0 ? `, 첫 번째: ${sortedData[0]?.id}, 마지막: ${sortedData[sortedData.length - 1]?.id}` : ""}`,
+    `[getAdminProducts] 정렬 완료: 총 ${sortedData.length}개`,
   );
 
   // 페이지네이션 적용

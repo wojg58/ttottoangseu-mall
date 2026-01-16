@@ -9,6 +9,7 @@ import { ChevronLeft } from "lucide-react";
 import { isAdmin, getAllOrders } from "@/actions/admin";
 import AdminOrderRow from "@/components/admin-order-row";
 import AdminOrderDateFilter from "@/components/admin-order-date-filter";
+import OrderSearch from "@/components/admin/order-search";
 
 interface AdminOrdersPageProps {
   searchParams: Promise<{
@@ -16,6 +17,7 @@ interface AdminOrdersPageProps {
     page?: string;
     startDate?: string;
     endDate?: string;
+    search?: string;
   }>;
 }
 
@@ -33,24 +35,49 @@ export default async function AdminOrdersPage({
   const page = parseInt(params.page || "1", 10);
   const startDate = params.startDate;
   const endDate = params.endDate;
+  const searchQuery = params.search;
+
+  // status를 payment_status와 fulfillment_status로 매핑
+  let paymentStatus: string | undefined;
+  let fulfillmentStatus: string | undefined;
+
+  if (status === "pending") {
+    paymentStatus = "PENDING";
+  } else if (status === "confirmed" || status === "paid") {
+    paymentStatus = "PAID";
+  } else if (status === "cancelled") {
+    paymentStatus = "CANCELED";
+  } else if (status === "refunded") {
+    paymentStatus = "REFUNDED";
+  }
+
+  if (status === "preparing") {
+    fulfillmentStatus = "PREPARING";
+  } else if (status === "shipped") {
+    fulfillmentStatus = "SHIPPED";
+  } else if (status === "delivered") {
+    fulfillmentStatus = "DELIVERED";
+  }
 
   const { orders, total, totalPages } = await getAllOrders(
-    status,
-    undefined,
+    paymentStatus,
+    fulfillmentStatus,
     page,
     20,
     startDate,
     endDate,
+    searchQuery,
   );
 
   const statusFilters = [
     { value: "", label: "전체" },
     { value: "pending", label: "결제 대기" },
-    { value: "confirmed", label: "결제 완료" },
+    { value: "paid", label: "결제 완료" },
     { value: "preparing", label: "상품 준비중" },
     { value: "shipped", label: "배송중" },
     { value: "delivered", label: "배송 완료" },
     { value: "cancelled", label: "주문 취소" },
+    { value: "refunded", label: "환불 완료" },
   ];
 
   return (
@@ -65,6 +92,9 @@ export default async function AdminOrdersPage({
           <h1 className="text-2xl font-bold text-[#4a3f48]">주문 관리</h1>
           <span className="text-sm text-[#8b7d84]">총 {total}건</span>
         </div>
+
+        {/* 검색 */}
+        <OrderSearch />
 
         {/* 날짜 필터 */}
         <AdminOrderDateFilter />
@@ -143,6 +173,7 @@ export default async function AdminOrdersPage({
                     ...(status ? { status } : {}),
                     ...(startDate ? { startDate } : {}),
                     ...(endDate ? { endDate } : {}),
+                    ...(searchQuery ? { search: searchQuery } : {}),
                     page: pageNum.toString(),
                   }).toString()}`}
                   className={`w-10 h-10 rounded-full flex items-center justify-center text-sm transition-colors ${
