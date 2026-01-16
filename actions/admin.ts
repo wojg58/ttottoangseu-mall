@@ -948,7 +948,7 @@ export async function getPendingFulfillmentOrders(
   pageSize: number = 20,
 ): Promise<{ orders: Order[]; total: number; totalPages: number }> {
   logger.group("[getPendingFulfillmentOrders] 배송 대기 주문 조회 시작");
-  logger.info("[getPendingFulfillmentOrders] 페이지:", page, "페이지 크기:", pageSize);
+  logger.info(`[getPendingFulfillmentOrders] 페이지: ${page}, 페이지 크기: ${pageSize}`);
 
   const isAdminUser = await isAdmin();
   if (!isAdminUser) {
