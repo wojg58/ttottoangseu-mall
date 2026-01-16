@@ -99,7 +99,9 @@ export default function FulfillmentOrderList({
     }
 
     logger.group("[FulfillmentOrderList] 일괄 송장번호 등록");
-    logger.info("[FulfillmentOrderList] 선택된 주문 수:", selectedOrders.size, "송장번호:", bulkTrackingNumber);
+    logger.info(
+      `[FulfillmentOrderList] 선택된 주문 수: ${selectedOrders.size}, 송장번호: ${bulkTrackingNumber}`
+    );
 
     startTransition(async () => {
       const updates = Array.from(selectedOrders).map((orderId) => ({
@@ -110,7 +112,9 @@ export default function FulfillmentOrderList({
       const result = await bulkUpdateTrackingNumbers(updates);
 
       if (result.success) {
-        logger.info("[FulfillmentOrderList] ✅ 일괄 송장번호 등록 성공:", result.updated, "개");
+        logger.info(
+          `[FulfillmentOrderList] ✅ 일괄 송장번호 등록 성공: ${result.updated}개`
+        );
         setSelectedOrders(new Set());
         setBulkTrackingNumber("");
         router.refresh();
