@@ -403,113 +403,114 @@ export default function SupportTabs({
                           <h3 className="font-medium text-[#4a3f48]">
                             {inquiry.title}
                           </h3>
-                        {inquiry.is_secret && (
-                          <Lock className="w-4 h-4 text-[#8b7d84]" />
-                        )}
-                        <span
-                          className={`px-2 py-1 rounded-full text-xs ${
-                            inquiry.status === "answered"
-                              ? "bg-green-100 text-green-600"
-                              : "bg-orange-100 text-orange-600"
-                          }`}
-                        >
-                          {inquiry.status === "answered" ? "답변완료" : "미답변"}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteInquiry(inquiry.id)}
-                          disabled={isPending}
-                          className="ml-auto inline-flex items-center gap-1 px-2 py-1 text-xs text-red-600 hover:bg-red-50 rounded-md transition-colors disabled:opacity-50"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                          삭제
-                        </button>
-                      </div>
-                      <div className="text-sm text-[#8b7d84] mb-2">
-                        <Link
-                          href={`/products/${inquiry.product_id}`}
-                          className="text-[#ff6b9d] hover:underline"
-                        >
-                          {inquiry.product_name}
-                        </Link>
-                        {" · "}
-                        {inquiry.user_name || "비회원"}
-                        {" · "}
-                        <DateDisplay date={inquiry.created_at} format="date" />
-                      </div>
-                      <p className="text-[#4a3f48] mb-3 whitespace-pre-wrap">
-                        {inquiry.content}
-                      </p>
-                      {inquiry.answer && (
-                        <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-3">
-                          <div className="flex items-center gap-2 mb-2">
-                            <CheckCircle2 className="w-4 h-4 text-green-600" />
-                            <span className="text-sm font-medium text-green-600">
-                              답변
-                            </span>
-                            {inquiry.answered_at && (
-                              <span className="text-xs text-[#8b7d84]">
-                                <DateDisplay
-                                  date={inquiry.answered_at}
-                                  format="datetime"
-                                />
+                          {inquiry.is_secret && (
+                            <Lock className="w-4 h-4 text-[#8b7d84]" />
+                          )}
+                          <span
+                            className={`px-2 py-1 rounded-full text-xs ${
+                              inquiry.status === "answered"
+                                ? "bg-green-100 text-green-600"
+                                : "bg-orange-100 text-orange-600"
+                            }`}
+                          >
+                            {inquiry.status === "answered" ? "답변완료" : "미답변"}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteInquiry(inquiry.id)}
+                            disabled={isPending}
+                            className="ml-auto inline-flex items-center gap-1 px-2 py-1 text-xs text-red-600 hover:bg-red-50 rounded-md transition-colors disabled:opacity-50"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                            삭제
+                          </button>
+                        </div>
+                        <div className="text-sm text-[#8b7d84] mb-2">
+                          <Link
+                            href={`/products/${inquiry.product_id}`}
+                            className="text-[#ff6b9d] hover:underline"
+                          >
+                            {inquiry.product_name}
+                          </Link>
+                          {" · "}
+                          {inquiry.user_name || "비회원"}
+                          {" · "}
+                          <DateDisplay date={inquiry.created_at} format="date" />
+                        </div>
+                        <p className="text-[#4a3f48] mb-3 whitespace-pre-wrap">
+                          {inquiry.content}
+                        </p>
+                        {inquiry.answer && (
+                          <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-3">
+                            <div className="flex items-center gap-2 mb-2">
+                              <CheckCircle2 className="w-4 h-4 text-green-600" />
+                              <span className="text-sm font-medium text-green-600">
+                                답변
                               </span>
+                              {inquiry.answered_at && (
+                                <span className="text-xs text-[#8b7d84]">
+                                  <DateDisplay
+                                    date={inquiry.answered_at}
+                                    format="datetime"
+                                  />
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-[#4a3f48] whitespace-pre-wrap">
+                              {inquiry.answer}
+                            </p>
+                          </div>
+                        )}
+                        {inquiry.status === "pending" && (
+                          <div className="mt-4">
+                            {expandedInquiry === inquiry.id ? (
+                              <div className="space-y-3">
+                                <Textarea
+                                  placeholder="답변 내용을 입력하세요..."
+                                  value={answerTexts[inquiry.id] || ""}
+                                  onChange={(e) =>
+                                    handleAnswerChange(inquiry.id, e.target.value)
+                                  }
+                                  className="min-h-[100px] bg-white border-gray-200"
+                                />
+                                <div className="flex items-center gap-2">
+                                  <Button
+                                    onClick={() => handleSubmitAnswer(inquiry.id)}
+                                    disabled={
+                                      isPending ||
+                                      !answerTexts[inquiry.id]?.trim()
+                                    }
+                                    className="bg-[#ff6b9d] hover:bg-[#ff5088] text-white"
+                                  >
+                                    답변 등록
+                                  </Button>
+                                  <Button
+                                    onClick={() => {
+                                      setExpandedInquiry(null);
+                                      setAnswerTexts((prev) => {
+                                        const newState = { ...prev };
+                                        delete newState[inquiry.id];
+                                        return newState;
+                                      });
+                                    }}
+                                    variant="outline"
+                                    className="border-gray-300"
+                                  >
+                                    취소
+                                  </Button>
+                                </div>
+                              </div>
+                            ) : (
+                              <Button
+                                onClick={() => setExpandedInquiry(inquiry.id)}
+                                className="bg-[#ff6b9d] hover:bg-[#ff5088] text-white"
+                              >
+                                답변 작성
+                              </Button>
                             )}
                           </div>
-                          <p className="text-[#4a3f48] whitespace-pre-wrap">
-                            {inquiry.answer}
-                          </p>
-                        </div>
-                      )}
-                      {inquiry.status === "pending" && (
-                        <div className="mt-4">
-                          {expandedInquiry === inquiry.id ? (
-                            <div className="space-y-3">
-                              <Textarea
-                                placeholder="답변 내용을 입력하세요..."
-                                value={answerTexts[inquiry.id] || ""}
-                                onChange={(e) =>
-                                  handleAnswerChange(inquiry.id, e.target.value)
-                                }
-                                className="min-h-[100px] bg-white border-gray-200"
-                              />
-                              <div className="flex items-center gap-2">
-                                <Button
-                                  onClick={() => handleSubmitAnswer(inquiry.id)}
-                                  disabled={
-                                    isPending ||
-                                    !answerTexts[inquiry.id]?.trim()
-                                  }
-                                  className="bg-[#ff6b9d] hover:bg-[#ff5088] text-white"
-                                >
-                                  답변 등록
-                                </Button>
-                                <Button
-                                  onClick={() => {
-                                    setExpandedInquiry(null);
-                                    setAnswerTexts((prev) => {
-                                      const newState = { ...prev };
-                                      delete newState[inquiry.id];
-                                      return newState;
-                                    });
-                                  }}
-                                  variant="outline"
-                                  className="border-gray-300"
-                                >
-                                  취소
-                                </Button>
-                              </div>
-                            </div>
-                          ) : (
-                            <Button
-                              onClick={() => setExpandedInquiry(inquiry.id)}
-                              className="bg-[#ff6b9d] hover:bg-[#ff5088] text-white"
-                            >
-                              답변 작성
-                            </Button>
-                          )}
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
