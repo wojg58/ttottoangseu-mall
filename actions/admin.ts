@@ -23,8 +23,8 @@ import type {
 // 관리자 이메일 목록 (환경 변수로 관리 권장, 하위 호환성 유지)
 // 쉼표로 구분된 이메일을 배열로 변환하고, 공백 제거 및 소문자 변환
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS?.split(",") || [
-  "admin@ttottoangs.com",
   "wojg58@gmail.com", // 관리자 계정
+  "ttottoangseu@naver.com", // 관리자 계정
 ]).map((email) => email.trim().toLowerCase());
 
 /**

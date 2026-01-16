@@ -1,4 +1,8 @@
-import { clerkMiddleware, createRouteMatcher, clerkClient } from "@clerk/nextjs/server";
+import {
+  clerkMiddleware,
+  createRouteMatcher,
+  clerkClient,
+} from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import type { NextRequest, NextFetchEvent } from "next/server";
 
@@ -25,29 +29,36 @@ const isPublicRoute = createRouteMatcher([
 const isAdminRoute = createRouteMatcher(["/admin(.*)"]);
 
 // 관리자 이메일 목록 (하위 호환성)
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS?.split(",") || [
-  "admin@ttottoangs.com",
-  "wojg58@gmail.com", // 관리자 계정
-]).map((email) => email.trim().toLowerCase());
+const ADMIN_EMAILS = (
+  process.env.ADMIN_EMAILS?.split(",") || [
+    "wojg58@gmail.com", // 관리자 계정
+    "ttottoangseu@naver.com", // 관리자 계정
+  ]
+).map((email) => email.trim().toLowerCase());
 
 /**
  * 관리자 권한 확인 (middleware용)
- * 
+ *
  * 우선순위:
  * 1. sessionClaims.publicMetadata.isAdmin === true
  * 2. sessionClaims.publicMetadata.role === 'admin'
  * 3. 이메일 기반 체크 (하위 호환성)
- * 
+ *
  * @param sessionClaims Clerk session claims
  * @param userId Clerk user ID
  * @returns 관리자 여부
  */
-async function isAdmin(sessionClaims: any, userId: string | null): Promise<boolean> {
+async function isAdmin(
+  sessionClaims: any,
+  userId: string | null,
+): Promise<boolean> {
   if (!userId) return false;
 
   // 1. publicMetadata.isAdmin 체크 (가장 우선)
   if (sessionClaims?.publicMetadata?.isAdmin === true) {
-    console.log("[middleware] ✅ 관리자 권한 확인: publicMetadata.isAdmin=true");
+    console.log(
+      "[middleware] ✅ 관리자 권한 확인: publicMetadata.isAdmin=true",
+    );
     return true;
   }
 
@@ -163,7 +174,7 @@ const getCorsHeaders = (origin: string | null): HeadersInit => {
 // 에러 핸들링이 포함된 미들웨어
 export default async function middleware(
   req: NextRequest,
-  event: NextFetchEvent
+  event: NextFetchEvent,
 ) {
   try {
     // OPTIONS 요청 처리 (CORS preflight)
@@ -180,23 +191,24 @@ export default async function middleware(
     // 환경 변수가 없으면 경고만 출력하고 계속 진행
     if (!hasClerkKeys) {
       console.warn(
-        "⚠️ Clerk 환경 변수가 설정되지 않았습니다. 미들웨어가 비활성화됩니다."
+        "⚠️ Clerk 환경 변수가 설정되지 않았습니다. 미들웨어가 비활성화됩니다.",
       );
       response = NextResponse.next();
     } else if (clerkMiddlewareHandler) {
       // Clerk 미들웨어 실행
       const clerkResponse = await clerkMiddlewareHandler(req, event);
       // clerkMiddleware는 NextResponse | void | undefined를 반환할 수 있음
-      response = clerkResponse instanceof NextResponse 
-        ? clerkResponse 
-        : NextResponse.next();
+      response =
+        clerkResponse instanceof NextResponse
+          ? clerkResponse
+          : NextResponse.next();
     } else {
       response = NextResponse.next();
     }
 
     // 보안 헤더 추가 (Chrome DevTools Issues 패널 문제 해결)
     const headers = new Headers(response.headers);
-    
+
     // Content Security Policy - 서드 파티 스크립트 허용 (필요한 도메인만)
     // Clerk Production 도메인 추가: https://clerk.ttottoangseu.co.kr, https://*.clerk.services
     const csp = [
@@ -217,13 +229,16 @@ export default async function middleware(
     ].join("; ");
 
     headers.set("Content-Security-Policy", csp);
-    
+
     // 기타 보안 헤더
     headers.set("X-Content-Type-Options", "nosniff");
     headers.set("X-Frame-Options", "DENY");
     headers.set("X-XSS-Protection", "1; mode=block");
     headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
-    headers.set("Permissions-Policy", "geolocation=(), microphone=(), camera=()");
+    headers.set(
+      "Permissions-Policy",
+      "geolocation=(), microphone=(), camera=()",
+    );
 
     // CORS 헤더 추가 (API 라우트에만)
     const origin = req.headers.get("origin");
@@ -242,7 +257,7 @@ export default async function middleware(
     });
   } catch (error) {
     console.error("❌ 미들웨어 실행 중 에러 발생:", error);
-    
+
     // 에러 발생 시에도 요청은 계속 진행 (사이트가 완전히 다운되지 않도록)
     return NextResponse.next();
   }
