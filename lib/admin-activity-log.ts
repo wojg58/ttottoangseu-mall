@@ -118,9 +118,6 @@ export async function logAdminAction(
         ip = realIp;
       } else if (cfConnectingIp) {
         ip = cfConnectingIp;
-      } else if (params.req instanceof NextRequest) {
-        // NextRequest의 경우 ip 속성 사용
-        ip = params.req.ip || null;
       }
 
       // User Agent 추출
