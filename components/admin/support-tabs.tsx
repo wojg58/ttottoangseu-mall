@@ -515,6 +515,7 @@ export default function SupportTabs({
                   </div>
               ))}
             </div>
+            </>
           ) : (
             <div className="p-16 text-center">
               <MessageSquare className="w-16 h-16 text-[#8b7d84] mx-auto mb-4 opacity-50" />
