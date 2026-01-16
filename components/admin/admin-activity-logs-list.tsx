@@ -61,7 +61,9 @@ export default function AdminActivityLogsList({
   const [adminEmailFilter, setAdminEmailFilter] = useState(
     filters.admin_email || ""
   );
-  const [periodFilter, setPeriodFilter] = useState(filters.period || "all");
+  const [periodFilter, setPeriodFilter] = useState(
+    filters.period && filters.period !== "" ? filters.period : "all"
+  );
 
   const handleFilter = () => {
     const params = new URLSearchParams();
@@ -133,7 +135,12 @@ export default function AdminActivityLogsList({
         </div>
         <div>
           <Label htmlFor="period">기간</Label>
-          <Select value={periodFilter || "all"} onValueChange={setPeriodFilter}>
+          <Select
+            value={periodFilter && periodFilter !== "" ? periodFilter : "all"}
+            onValueChange={(value) => {
+              setPeriodFilter(value && value !== "" ? value : "all");
+            }}
+          >
             <SelectTrigger id="period">
               <SelectValue placeholder="전체 기간" />
             </SelectTrigger>
