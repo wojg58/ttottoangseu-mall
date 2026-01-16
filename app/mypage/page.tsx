@@ -4,6 +4,7 @@
  */
 
 import Link from "next/link";
+import Image from "next/image";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import {
@@ -93,10 +94,13 @@ export default async function MyPage() {
           <div className="flex items-center gap-4">
             <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm">
               {user?.imageUrl ? (
-                <img
+                <Image
                   src={user.imageUrl}
                   alt={user.firstName || "사용자"}
+                  width={64}
+                  height={64}
                   className="w-full h-full rounded-full object-cover"
+                  unoptimized
                 />
               ) : (
                 <User className="w-8 h-8 text-[#ff6b9d]" />

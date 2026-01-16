@@ -17,7 +17,6 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Home } from "lucide-react";
 import QuickPaymentForm from "@/components/quick-payment-form";
-import { logger } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 

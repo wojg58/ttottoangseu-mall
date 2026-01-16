@@ -14,7 +14,7 @@
 
 "use client";
 
-import { DollarSign, ShoppingBag, TrendingUp, TrendingDown, Package, XCircle } from "lucide-react";
+import { DollarSign, ShoppingBag, TrendingUp, TrendingDown, Package } from "lucide-react";
 import type { AnalyticsData } from "@/actions/admin";
 import NumberDisplay from "@/components/number-display";
 import Link from "next/link";

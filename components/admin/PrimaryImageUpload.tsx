@@ -19,7 +19,6 @@ import logger from "@/lib/logger-client";
 
 interface PrimaryImageUploadProps {
   productId: string;
-  productSlug: string;
   currentPrimaryImage?: {
     id: string;
     image_url: string;
@@ -30,7 +29,6 @@ interface PrimaryImageUploadProps {
 
 export default function PrimaryImageUpload({
   productId,
-  productSlug,
   currentPrimaryImage,
   onSuccess,
 }: PrimaryImageUploadProps) {

@@ -63,7 +63,6 @@ export default async function EditProductPage({
         <div className="mb-8">
           <PrimaryImageUpload
             productId={product.id}
-            productSlug={product.slug}
             currentPrimaryImage={
               product.images?.find((img) => img.is_primary) || null
             }

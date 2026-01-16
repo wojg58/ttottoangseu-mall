@@ -10,7 +10,6 @@ import { redirect } from "next/navigation";
 import { getCartItems } from "@/actions/cart";
 import CartItemList from "@/components/cart-item-list";
 import CartSummary from "@/components/cart-summary";
-import { logger } from "@/lib/logger";
 
 export const viewport = {
   width: "device-width",
