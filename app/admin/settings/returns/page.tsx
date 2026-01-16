@@ -9,7 +9,7 @@
 
 import { redirect } from "next/navigation";
 import { isAdmin } from "@/actions/admin";
-import { RotateCcw, Plus } from "lucide-react";
+import { RotateCcw } from "lucide-react";
 import Link from "next/link";
 import { getServiceRoleClient } from "@/lib/supabase/service-role";
 import ReturnPolicyForm from "@/components/admin/return-policy-form";

@@ -9,7 +9,7 @@
 
 import { redirect } from "next/navigation";
 import { isAdmin } from "@/actions/admin";
-import { Truck, Plus, Edit, Trash2 } from "lucide-react";
+import { Truck } from "lucide-react";
 import Link from "next/link";
 import { getServiceRoleClient } from "@/lib/supabase/service-role";
 import ShippingSettingsForm from "@/components/admin/shipping-settings-form";

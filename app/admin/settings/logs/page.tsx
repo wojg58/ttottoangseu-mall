@@ -9,7 +9,7 @@
 
 import { redirect } from "next/navigation";
 import { isAdmin } from "@/actions/admin";
-import { FileText, Search } from "lucide-react";
+import { FileText } from "lucide-react";
 import Link from "next/link";
 import { getServiceRoleClient } from "@/lib/supabase/service-role";
 import SystemLogsList from "@/components/admin/system-logs-list";

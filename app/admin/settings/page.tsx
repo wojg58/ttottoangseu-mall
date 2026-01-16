@@ -12,7 +12,7 @@
 
 import { redirect } from "next/navigation";
 import { isAdmin } from "@/actions/admin";
-import { Settings, Info, ArrowRight, Star } from "lucide-react";
+import { Settings, ArrowRight, Star } from "lucide-react";
 import Link from "next/link";
 
 export default async function SettingsPage() {
@@ -78,7 +78,7 @@ export default async function SettingsPage() {
         </div>
 
         <div className="space-y-4">
-          {settingsItems.map((item, index) => {
+          {settingsItems.map((item) => {
             const Icon = item.icon;
             return (
               <Link

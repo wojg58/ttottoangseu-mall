@@ -124,7 +124,7 @@ export default async function AdminAccountsPage() {
               </h3>
               <p className="text-sm text-[#8b7d84]">
                 관리자 계정은 Clerk 대시보드에서 관리할 수 있습니다. Clerk
-                대시보드에서 사용자에게 'admin' role을 부여하면 자동으로 관리자
+                대시보드에서 사용자에게 &apos;admin&apos; role을 부여하면 자동으로 관리자
                 권한이 부여됩니다.
               </p>
             </div>
