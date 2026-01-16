@@ -96,16 +96,34 @@ export function useSyncUser() {
         });
 
         if (!response.ok) {
-          const errorText = await response.text();
           // 401 Unauthorized는 로그인하지 않은 상태에서 정상적인 응답이므로 조용히 처리
           if (response.status === 401) {
             logger.debug("[useSyncUser] 로그인하지 않은 상태, 동기화 건너뜀");
             logger.groupEnd();
             return;
           }
+
+          // 에러 응답 파싱 시도
+          let errorMessage = `HTTP ${response.status}`;
+          try {
+            const contentType = response.headers.get("content-type");
+            if (contentType?.includes("application/json")) {
+              const errorData = await response.json();
+              errorMessage = errorData.error || errorData.message || errorMessage;
+            } else {
+              const errorText = await response.text();
+              errorMessage = errorText || errorMessage;
+            }
+          } catch (parseError) {
+            // 파싱 실패 시 상태 코드만 사용
+            logger.debug("[useSyncUser] 에러 응답 파싱 실패", parseError);
+          }
+
           logger.error("[useSyncUser] 동기화 실패", {
             status: response.status,
-            error: errorText,
+            statusText: response.statusText,
+            error: errorMessage,
+            url: response.url,
           });
           logger.groupEnd();
           return;
