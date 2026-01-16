@@ -94,7 +94,7 @@ const clerkMiddlewareHandler = hasClerkKeys
             console.log("[middleware] ❌ 관리자 경로 접근 차단", {
               userId: userId || "없음",
               hasSessionClaims: !!sessionClaims,
-              publicMetadata: sessionClaims?.publicMetadata,
+              metadata: sessionClaims?.metadata,
               email: sessionClaims?.email,
             });
           }
@@ -104,7 +104,7 @@ const clerkMiddlewareHandler = hasClerkKeys
         if (process.env.NODE_ENV === "development") {
           console.log("[middleware] ✅ 관리자 경로 접근 허용", {
             userId,
-            publicMetadata: sessionClaims?.publicMetadata,
+            metadata: sessionClaims?.metadata,
           });
         }
       }
