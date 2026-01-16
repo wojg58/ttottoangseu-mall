@@ -1279,7 +1279,9 @@ export async function updateInventory(
   userAgent?: string,
 ): Promise<{ success: boolean; message: string }> {
   logger.group("[updateInventory] 재고 업데이트 시작");
-  logger.info("[updateInventory] 상품 ID:", productId, "재고:", stock, "옵션 ID:", variantId || "(없음)");
+  logger.info(
+    `[updateInventory] 상품 ID: ${productId}, 재고: ${stock}, 옵션 ID: ${variantId || "(없음)"}`
+  );
 
   const isAdminUser = await isAdmin();
   if (!isAdminUser) {
