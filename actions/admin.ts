@@ -1197,9 +1197,7 @@ export async function getInventoryList(
   // 각 상품에 대해 인벤토리 아이템 생성
   for (const product of products) {
     const productVariants = variantsByProductId.get(product.id) || [];
-    const categoryName = Array.isArray(product.category)
-      ? product.category[0]?.name || null
-      : product.category?.name || null;
+    const categoryName = product.category?.[0]?.name ?? null;
 
     if (productVariants.length > 0) {
       // 옵션이 있는 경우: 옵션별로 표시
