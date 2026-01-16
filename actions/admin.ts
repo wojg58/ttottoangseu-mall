@@ -810,6 +810,614 @@ export async function updateOrderStatus(
   return { success: true, message: "주문 상태가 업데이트되었습니다." };
 }
 
+// 배송 대기 주문 조회 (결제완료 + 배송대기)
+export async function getPendingFulfillmentOrders(
+  page: number = 1,
+  pageSize: number = 20,
+): Promise<{ orders: Order[]; total: number; totalPages: number }> {
+  logger.group("[getPendingFulfillmentOrders] 배송 대기 주문 조회 시작");
+  logger.info("[getPendingFulfillmentOrders] 페이지:", page, "페이지 크기:", pageSize);
+
+  const isAdminUser = await isAdmin();
+  if (!isAdminUser) {
+    logger.warn("[getPendingFulfillmentOrders] ❌ 관리자 권한 없음 - 조회 중단");
+    logger.groupEnd();
+    return { orders: [], total: 0, totalPages: 0 };
+  }
+
+  logger.info("[getPendingFulfillmentOrders] ✅ 관리자 권한 확인됨 - Service Role 클라이언트 사용");
+  
+  const supabase = getServiceRoleClient();
+
+  // 결제완료 + 배송대기 주문 조회
+  let query = supabase
+    .from("orders")
+    .select("*", { count: "exact" })
+    .eq("payment_status", "PAID")
+    .in("fulfillment_status", ["UNFULFILLED", "PREPARING"]);
+
+  query = query.order("created_at", { ascending: false });
+
+  // 페이지네이션
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+  query = query.range(from, to);
+
+  const { data, error, count } = await query;
+
+  if (error) {
+    logger.error("[getPendingFulfillmentOrders] ❌ 주문 조회 실패", {
+      code: error.code,
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+    });
+    logger.groupEnd();
+    return { orders: [], total: 0, totalPages: 0 };
+  }
+
+  const total = count ?? 0;
+  const totalPages = Math.ceil(total / pageSize);
+
+  logger.info("[getPendingFulfillmentOrders] ✅ 주문 조회 성공", {
+    ordersCount: data?.length ?? 0,
+    total,
+    totalPages,
+  });
+  logger.groupEnd();
+
+  return { orders: (data as Order[]) || [], total, totalPages };
+}
+
+// 일괄 송장번호 등록
+export async function bulkUpdateTrackingNumbers(
+  updates: Array<{ orderId: string; trackingNumber: string }>,
+): Promise<{ success: boolean; message: string; updated: number }> {
+  logger.group("[bulkUpdateTrackingNumbers] 일괄 송장번호 등록 시작");
+  logger.info("[bulkUpdateTrackingNumbers] 업데이트할 주문 수:", updates.length);
+
+  const isAdminUser = await isAdmin();
+  if (!isAdminUser) {
+    logger.warn("[bulkUpdateTrackingNumbers] ❌ 관리자 권한 없음 - 업데이트 중단");
+    logger.groupEnd();
+    return { success: false, message: "관리자 권한이 필요합니다.", updated: 0 };
+  }
+
+  logger.info("[bulkUpdateTrackingNumbers] ✅ 관리자 권한 확인됨 - Service Role 클라이언트 사용");
+  
+  const supabase = getServiceRoleClient();
+
+  let updatedCount = 0;
+  const errors: string[] = [];
+
+  // 각 주문에 대해 송장번호 업데이트
+  for (const update of updates) {
+    const { error } = await supabase
+      .from("orders")
+      .update({
+        tracking_number: update.trackingNumber,
+        fulfillment_status: "SHIPPED",
+        shipped_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", update.orderId);
+
+    if (error) {
+      logger.error(`[bulkUpdateTrackingNumbers] 주문 ${update.orderId} 업데이트 실패`, {
+        code: error.code,
+        message: error.message,
+      });
+      errors.push(`주문 ${update.orderId}: ${error.message}`);
+    } else {
+      updatedCount++;
+    }
+  }
+
+  if (errors.length > 0) {
+    logger.warn("[bulkUpdateTrackingNumbers] 일부 주문 업데이트 실패", {
+      updated: updatedCount,
+      failed: errors.length,
+      errors: errors.slice(0, 5), // 처음 5개만 로그
+    });
+  }
+
+  logger.info("[bulkUpdateTrackingNumbers] ✅ 일괄 업데이트 완료", {
+    updated: updatedCount,
+    total: updates.length,
+  });
+  logger.groupEnd();
+
+  if (updatedCount === 0) {
+    return {
+      success: false,
+      message: "송장번호 등록에 실패했습니다.",
+      updated: 0,
+    };
+  }
+
+  return {
+    success: true,
+    message: `${updatedCount}개의 주문에 송장번호가 등록되었습니다.`,
+    updated: updatedCount,
+  };
+}
+
+// 재고 목록 조회 (상품 + 옵션)
+export interface InventoryItem {
+  product_id: string;
+  product_name: string;
+  product_stock: number;
+  variant_id: string | null;
+  variant_name: string | null;
+  variant_value: string | null;
+  variant_stock: number | null;
+  sku: string | null;
+  category_name: string | null;
+  is_low_stock: boolean;
+}
+
+export async function getInventoryList(
+  page: number = 1,
+  pageSize: number = 20,
+  lowStockOnly: boolean = false,
+  searchQuery?: string,
+): Promise<{
+  items: InventoryItem[];
+  total: number;
+  totalPages: number;
+}> {
+  logger.group("[getInventoryList] 재고 목록 조회 시작");
+  logger.info("[getInventoryList] 필터 조건", {
+    page,
+    pageSize,
+    lowStockOnly,
+    searchQuery: searchQuery || "(없음)",
+  });
+
+  const isAdminUser = await isAdmin();
+  if (!isAdminUser) {
+    logger.warn("[getInventoryList] ❌ 관리자 권한 없음 - 조회 중단");
+    logger.groupEnd();
+    return { items: [], total: 0, totalPages: 0 };
+  }
+
+  logger.info("[getInventoryList] ✅ 관리자 권한 확인됨 - Service Role 클라이언트 사용");
+  
+  const supabase = getServiceRoleClient();
+
+  // 상품 조회
+  let productQuery = supabase
+    .from("products")
+    .select(
+      `
+      id,
+      name,
+      stock,
+      category_id,
+      category:categories!fk_products_category_id(name)
+    `,
+      { count: "exact" },
+    )
+    .is("deleted_at", null);
+
+  if (searchQuery && searchQuery.trim()) {
+    productQuery = productQuery.ilike("name", `%${searchQuery.trim()}%`);
+  }
+
+  if (lowStockOnly) {
+    productQuery = productQuery.lte("stock", 10);
+  }
+
+  const { data: products, error: productsError, count } = await productQuery;
+
+  if (productsError) {
+    logger.error("[getInventoryList] ❌ 상품 조회 실패", {
+      code: productsError.code,
+      message: productsError.message,
+    });
+    logger.groupEnd();
+    return { items: [], total: 0, totalPages: 0 };
+  }
+
+  // 각 상품의 옵션 조회
+  const inventoryItems: InventoryItem[] = [];
+
+  for (const product of products || []) {
+    const p = product as {
+      id: string;
+      name: string;
+      stock: number;
+      category_id: string | null;
+      category: { name: string } | null;
+    };
+
+    // 옵션 조회
+    const { data: variants } = await supabase
+      .from("product_variants")
+      .select("id, variant_name, variant_value, stock, sku")
+      .eq("product_id", p.id)
+      .is("deleted_at", null);
+
+    if (variants && variants.length > 0) {
+      // 옵션이 있는 경우: 옵션별로 표시
+      for (const variant of variants) {
+        inventoryItems.push({
+          product_id: p.id,
+          product_name: p.name,
+          product_stock: p.stock,
+          variant_id: variant.id,
+          variant_name: variant.variant_name,
+          variant_value: variant.variant_value,
+          variant_stock: variant.stock,
+          sku: variant.sku,
+          category_name: p.category?.name || null,
+          is_low_stock: variant.stock <= 10,
+        });
+      }
+    } else {
+      // 옵션이 없는 경우: 상품 재고만 표시
+      inventoryItems.push({
+        product_id: p.id,
+        product_name: p.name,
+        product_stock: p.stock,
+        variant_id: null,
+        variant_name: null,
+        variant_value: null,
+        variant_stock: null,
+        sku: null,
+        category_name: p.category?.name || null,
+        is_low_stock: p.stock <= 10,
+      });
+    }
+  }
+
+  // 재고부족 필터 적용 (옵션 재고 기준)
+  const filteredItems = lowStockOnly
+    ? inventoryItems.filter((item) => {
+        const stock = item.variant_stock ?? item.product_stock;
+        return stock <= 10;
+      })
+    : inventoryItems;
+
+  const total = filteredItems.length;
+  const totalPages = Math.ceil(total / pageSize);
+
+  // 페이지네이션
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize;
+  const paginatedItems = filteredItems.slice(from, to);
+
+  logger.info("[getInventoryList] ✅ 재고 목록 조회 성공", {
+    itemsCount: paginatedItems.length,
+    total,
+    totalPages,
+  });
+  logger.groupEnd();
+
+  return { items: paginatedItems, total, totalPages };
+}
+
+// 재고 업데이트 (상품 또는 옵션)
+export async function updateInventory(
+  productId: string,
+  stock: number,
+  variantId?: string,
+): Promise<{ success: boolean; message: string }> {
+  logger.group("[updateInventory] 재고 업데이트 시작");
+  logger.info("[updateInventory] 상품 ID:", productId, "재고:", stock, "옵션 ID:", variantId || "(없음)");
+
+  const isAdminUser = await isAdmin();
+  if (!isAdminUser) {
+    logger.warn("[updateInventory] ❌ 관리자 권한 없음 - 업데이트 중단");
+    logger.groupEnd();
+    return { success: false, message: "관리자 권한이 필요합니다." };
+  }
+
+  if (stock < 0) {
+    logger.warn("[updateInventory] ❌ 재고는 0 이상이어야 합니다");
+    logger.groupEnd();
+    return { success: false, message: "재고는 0 이상이어야 합니다." };
+  }
+
+  logger.info("[updateInventory] ✅ 관리자 권한 확인됨 - Service Role 클라이언트 사용");
+  
+  const supabase = getServiceRoleClient();
+
+  if (variantId) {
+    // 옵션 재고 업데이트
+    const { error } = await supabase
+      .from("product_variants")
+      .update({
+        stock,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", variantId);
+
+    if (error) {
+      logger.error("[updateInventory] ❌ 옵션 재고 업데이트 실패", {
+        code: error.code,
+        message: error.message,
+      });
+      logger.groupEnd();
+      return { success: false, message: "재고 업데이트에 실패했습니다." };
+    }
+  } else {
+    // 상품 재고 업데이트
+    const { error } = await supabase
+      .from("products")
+      .update({
+        stock,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", productId);
+
+    if (error) {
+      logger.error("[updateInventory] ❌ 상품 재고 업데이트 실패", {
+        code: error.code,
+        message: error.message,
+      });
+      logger.groupEnd();
+      return { success: false, message: "재고 업데이트에 실패했습니다." };
+    }
+  }
+
+  logger.info("[updateInventory] ✅ 재고 업데이트 성공");
+  logger.groupEnd();
+  return { success: true, message: "재고가 업데이트되었습니다." };
+}
+
+// 회원 목록 조회
+export interface CustomerListItem {
+  id: string;
+  clerk_user_id: string;
+  email: string;
+  name: string | null;
+  phone: string | null;
+  role: string;
+  created_at: string;
+  order_count: number;
+  total_spent: number;
+  last_order_at: string | null;
+}
+
+export async function getCustomers(
+  page: number = 1,
+  pageSize: number = 20,
+  searchQuery?: string,
+  sortBy: string = "created_at",
+): Promise<{
+  customers: CustomerListItem[];
+  total: number;
+  totalPages: number;
+}> {
+  logger.group("[getCustomers] 회원 목록 조회 시작");
+  logger.info("[getCustomers] 필터 조건", {
+    page,
+    pageSize,
+    searchQuery: searchQuery || "(없음)",
+    sortBy,
+  });
+
+  const isAdminUser = await isAdmin();
+  if (!isAdminUser) {
+    logger.warn("[getCustomers] ❌ 관리자 권한 없음 - 조회 중단");
+    logger.groupEnd();
+    return { customers: [], total: 0, totalPages: 0 };
+  }
+
+  logger.info("[getCustomers] ✅ 관리자 권한 확인됨 - Service Role 클라이언트 사용");
+  
+  const supabase = getServiceRoleClient();
+
+  // 회원 조회
+  let userQuery = supabase
+    .from("users")
+    .select("*", { count: "exact" })
+    .is("deleted_at", null);
+
+  if (searchQuery && searchQuery.trim()) {
+    userQuery = userQuery.or(
+      `name.ilike.%${searchQuery.trim()}%,email.ilike.%${searchQuery.trim()}%,phone.ilike.%${searchQuery.trim()}%`
+    );
+  }
+
+  // 정렬
+  if (sortBy === "name") {
+    userQuery = userQuery.order("name", { ascending: true });
+  } else if (sortBy === "email") {
+    userQuery = userQuery.order("email", { ascending: true });
+  } else {
+    userQuery = userQuery.order("created_at", { ascending: false });
+  }
+
+  const { data: users, error: usersError, count } = await userQuery;
+
+  if (usersError) {
+    logger.error("[getCustomers] ❌ 회원 조회 실패", {
+      code: usersError.code,
+      message: usersError.message,
+    });
+    logger.groupEnd();
+    return { customers: [], total: 0, totalPages: 0 };
+  }
+
+  // 각 회원의 주문 통계 조회
+  const customers: CustomerListItem[] = [];
+
+  for (const user of users || []) {
+    const u = user as {
+      id: string;
+      clerk_user_id: string;
+      email: string;
+      name: string | null;
+      phone: string | null;
+      role: string;
+      created_at: string;
+    };
+
+    // 주문 통계 조회
+    const { data: orders } = await supabase
+      .from("orders")
+      .select("id, total_amount, created_at, paid_at")
+      .eq("user_id", u.id)
+      .eq("payment_status", "PAID");
+
+    const orderCount = orders?.length || 0;
+    const totalSpent =
+      orders?.reduce((sum, order) => sum + order.total_amount, 0) || 0;
+    const lastOrderAt =
+      orders && orders.length > 0
+        ? orders.sort(
+            (a, b) =>
+              new Date(b.paid_at || b.created_at).getTime() -
+              new Date(a.paid_at || a.created_at).getTime(),
+          )[0]?.paid_at || orders[0]?.created_at
+        : null;
+
+    customers.push({
+      id: u.id,
+      clerk_user_id: u.clerk_user_id,
+      email: u.email,
+      name: u.name,
+      phone: u.phone,
+      role: u.role,
+      created_at: u.created_at,
+      order_count: orderCount,
+      total_spent: totalSpent,
+      last_order_at: lastOrderAt,
+    });
+  }
+
+  // 정렬 (주문 통계 기준)
+  if (sortBy === "order_count") {
+    customers.sort((a, b) => b.order_count - a.order_count);
+  } else if (sortBy === "total_spent") {
+    customers.sort((a, b) => b.total_spent - a.total_spent);
+  } else if (sortBy === "last_order") {
+    customers.sort((a, b) => {
+      if (!a.last_order_at && !b.last_order_at) return 0;
+      if (!a.last_order_at) return 1;
+      if (!b.last_order_at) return -1;
+      return (
+        new Date(b.last_order_at).getTime() -
+        new Date(a.last_order_at).getTime()
+      );
+    });
+  }
+
+  const total = count ?? 0;
+  const totalPages = Math.ceil(total / pageSize);
+
+  // 페이지네이션
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize;
+  const paginatedCustomers = customers.slice(from, to);
+
+  logger.info("[getCustomers] ✅ 회원 목록 조회 성공", {
+    customersCount: paginatedCustomers.length,
+    total,
+    totalPages,
+  });
+  logger.groupEnd();
+
+  return { customers: paginatedCustomers, total, totalPages };
+}
+
+// 회원 상세 조회 (주문 이력 포함)
+export interface CustomerDetail extends CustomerListItem {
+  orders: Array<{
+    id: string;
+    order_number: string;
+    total_amount: number;
+    payment_status: string;
+    fulfillment_status: string;
+    created_at: string;
+    paid_at: string | null;
+  }>;
+}
+
+export async function getCustomerById(
+  customerId: string,
+): Promise<CustomerDetail | null> {
+  logger.group("[getCustomerById] 회원 상세 조회 시작");
+  logger.info("[getCustomerById] 회원 ID:", customerId);
+
+  const isAdminUser = await isAdmin();
+  if (!isAdminUser) {
+    logger.warn("[getCustomerById] ❌ 관리자 권한 없음 - 조회 중단");
+    logger.groupEnd();
+    return null;
+  }
+
+  logger.info("[getCustomerById] ✅ 관리자 권한 확인됨 - Service Role 클라이언트 사용");
+  
+  const supabase = getServiceRoleClient();
+
+  // 회원 정보 조회
+  const { data: user, error: userError } = await supabase
+    .from("users")
+    .select("*")
+    .eq("id", customerId)
+    .is("deleted_at", null)
+    .single();
+
+  if (userError || !user) {
+    logger.error("[getCustomerById] ❌ 회원 조회 실패", {
+      code: userError?.code,
+      message: userError?.message,
+    });
+    logger.groupEnd();
+    return null;
+  }
+
+  // 주문 이력 조회
+  const { data: orders } = await supabase
+    .from("orders")
+    .select("id, order_number, total_amount, payment_status, fulfillment_status, created_at, paid_at")
+    .eq("user_id", customerId)
+    .order("created_at", { ascending: false });
+
+  // 주문 통계 계산
+  const paidOrders = orders?.filter((o) => o.payment_status === "PAID") || [];
+  const orderCount = paidOrders.length;
+  const totalSpent = paidOrders.reduce((sum, order) => sum + order.total_amount, 0);
+  const lastOrderAt =
+    paidOrders.length > 0
+      ? paidOrders.sort(
+          (a, b) =>
+            new Date(b.paid_at || b.created_at).getTime() -
+            new Date(a.paid_at || a.created_at).getTime(),
+        )[0]?.paid_at || paidOrders[0]?.created_at
+      : null;
+
+  const customer: CustomerDetail = {
+    id: user.id,
+    clerk_user_id: user.clerk_user_id,
+    email: user.email,
+    name: user.name,
+    phone: user.phone,
+    role: user.role,
+    created_at: user.created_at,
+    order_count: orderCount,
+    total_spent: totalSpent,
+    last_order_at: lastOrderAt,
+    orders: (orders || []).map((o) => ({
+      id: o.id,
+      order_number: o.order_number,
+      total_amount: o.total_amount,
+      payment_status: o.payment_status,
+      fulfillment_status: o.fulfillment_status,
+      created_at: o.created_at,
+      paid_at: o.paid_at,
+    })),
+  };
+
+  logger.info("[getCustomerById] ✅ 회원 상세 조회 성공:", user.email);
+  logger.groupEnd();
+
+  return customer;
+}
+
 // 상품 목록 조회 (관리자용)
 export async function getAdminProducts(
   page: number = 1,
