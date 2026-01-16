@@ -19,7 +19,7 @@ import { currentUser } from "@clerk/nextjs/server";
 import { isAdmin } from "@/actions/admin";
 import { createClient } from "@/lib/supabase/server";
 import logger from "@/lib/logger";
-import type { NextRequest } from "next/server";
+import { NextRequest } from "next/server";
 
 export interface LogAdminActionParams {
   /** 액션 (예: "order_status_changed", "product_price_updated") */
