@@ -1,4 +1,4 @@
-import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+import { clerkMiddleware, createRouteMatcher, clerkClient } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import type { NextRequest, NextFetchEvent } from "next/server";
 
@@ -37,43 +37,48 @@ const ADMIN_EMAILS = (process.env.ADMIN_EMAILS?.split(",") || [
  * 1. sessionClaims.metadata.role === 'admin'
  * 2. sessionClaims.metadata.isAdmin === true
  * 3. sessionClaims.publicMetadata.isAdmin === true (직접 접근)
- * 4. 이메일 기반 체크 (하위 호환성)
+ * 4. 이메일 기반 체크 (하위 호환성) - 여러 경로 시도
  * 
  * @param sessionClaims Clerk session claims
  * @returns 관리자 여부
  */
 function isAdminFromClaims(sessionClaims: any): boolean {
-  // 디버깅: sessionClaims 구조 확인
-  if (process.env.NODE_ENV === "development") {
-    console.log("[middleware] sessionClaims 구조:", {
-      hasMetadata: !!sessionClaims?.metadata,
-      hasPublicMetadata: !!sessionClaims?.publicMetadata,
-      metadataKeys: sessionClaims?.metadata ? Object.keys(sessionClaims.metadata) : [],
-      publicMetadataKeys: sessionClaims?.publicMetadata ? Object.keys(sessionClaims.publicMetadata) : [],
-      email: sessionClaims?.email,
-    });
-  }
-
   // 1. role 체크 (metadata.role)
   if (sessionClaims?.metadata?.role === "admin") {
+    console.log("[middleware] ✅ 관리자 권한 확인: role=admin");
     return true;
   }
 
   // 2. isAdmin 체크 (metadata.isAdmin)
   if (sessionClaims?.metadata?.isAdmin === true) {
+    console.log("[middleware] ✅ 관리자 권한 확인: metadata.isAdmin=true");
     return true;
   }
 
   // 3. publicMetadata 직접 접근 (Session Token Claims에 포함된 경우)
   if (sessionClaims?.publicMetadata?.isAdmin === true) {
+    console.log("[middleware] ✅ 관리자 권한 확인: publicMetadata.isAdmin=true");
     return true;
   }
 
-  // 4. 이메일 기반 체크 (하위 호환성)
-  const email = sessionClaims?.email as string | undefined;
-  if (email) {
+  // 4. 이메일 기반 체크 (하위 호환성) - 여러 경로 시도
+  const possibleEmails = [
+    sessionClaims?.email,
+    sessionClaims?.primary_email,
+    sessionClaims?.email_addresses?.[0]?.email_address,
+    sessionClaims?.email_addresses?.[0]?.emailAddress,
+  ].filter((email): email is string => !!email && typeof email === "string");
+
+  for (const email of possibleEmails) {
     const normalizedEmail = email.trim().toLowerCase();
     if (ADMIN_EMAILS.includes(normalizedEmail)) {
+      console.log("[middleware] ✅ 관리자 권한 확인: 이메일 기반", {
+        email: normalizedEmail,
+        matched: true,
+        source: email === sessionClaims?.email ? "email" : 
+                email === sessionClaims?.primary_email ? "primary_email" : 
+                "email_addresses",
+      });
       return true;
     }
   }
@@ -94,8 +99,58 @@ const clerkMiddlewareHandler = hasClerkKeys
           return redirectToSignIn({ returnBackUrl: request.url });
         }
 
+        // sessionClaims 구조 상세 로깅 (개발 환경)
+        if (process.env.NODE_ENV === "development") {
+          console.log("[middleware] 🔍 sessionClaims 상세 정보:", {
+            userId,
+            hasSessionClaims: !!sessionClaims,
+            email: sessionClaims?.email,
+            metadata: sessionClaims?.metadata,
+            publicMetadata: sessionClaims?.publicMetadata,
+            allKeys: sessionClaims ? Object.keys(sessionClaims) : [],
+            ADMIN_EMAILS,
+          });
+        }
+
         // 관리자 권한 확인
-        const isAdmin = isAdminFromClaims(sessionClaims);
+        let isAdmin = isAdminFromClaims(sessionClaims);
+        
+        // sessionClaims에서 이메일을 찾지 못한 경우, Clerk API로 직접 조회
+        if (!isAdmin && userId) {
+          try {
+            const client = await clerkClient();
+            const clerkUser = await client.users.getUser(userId);
+            
+            if (clerkUser) {
+              // 이메일 목록에서 관리자 이메일 확인
+              const userEmails = clerkUser.emailAddresses?.map(
+                (addr) => addr.emailAddress?.trim().toLowerCase()
+              ).filter((email): email is string => !!email) || [];
+              
+              const isAdminByEmail = userEmails.some((email) => 
+                ADMIN_EMAILS.includes(email)
+              );
+              
+              // publicMetadata 확인
+              const isAdminByMetadata = 
+                clerkUser.publicMetadata?.isAdmin === true ||
+                clerkUser.publicMetadata?.role === "admin";
+              
+              if (isAdminByEmail || isAdminByMetadata) {
+                console.log("[middleware] ✅ 관리자 권한 확인: Clerk API 조회 결과", {
+                  userId,
+                  isAdminByEmail,
+                  isAdminByMetadata,
+                  userEmails,
+                });
+                isAdmin = true;
+              }
+            }
+          } catch (error) {
+            console.error("[middleware] Clerk API 조회 실패:", error);
+          }
+        }
+        
         if (!isAdmin) {
           console.log("[middleware] ❌ 관리자 경로 접근 시도 - 권한 없음", {
             userId,
@@ -103,7 +158,9 @@ const clerkMiddlewareHandler = hasClerkKeys
             isAdminFromMetadata: sessionClaims?.metadata?.isAdmin,
             isAdminFromPublicMetadata: sessionClaims?.publicMetadata?.isAdmin,
             email: sessionClaims?.email,
-            fullSessionClaims: JSON.stringify(sessionClaims, null, 2),
+            primary_email: sessionClaims?.primary_email,
+            email_addresses: sessionClaims?.email_addresses,
+            ADMIN_EMAILS,
           });
           // 비관리자는 홈으로 리다이렉트
           return NextResponse.redirect(new URL("/", request.url));
