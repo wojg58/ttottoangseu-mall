@@ -24,6 +24,11 @@ const isPublicRoute = createRouteMatcher([
 // 관리자 전용 경로 정의
 const isAdminRoute = createRouteMatcher(["/admin(.*)"]);
 
+// 관리자 이메일 목록 (하위 호환성)
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS?.split(",") || [
+  "admin@ttottoangs.com",
+]).map((email) => email.trim().toLowerCase());
+
 /**
  * 관리자 권한 확인 (middleware용)
  * 
@@ -31,6 +36,9 @@ const isAdminRoute = createRouteMatcher(["/admin(.*)"]);
  * 1. sessionClaims.metadata.role === 'admin'
  * 2. sessionClaims.metadata.isAdmin === true
  * 3. 이메일 기반 체크 (하위 호환성)
+ * 
+ * @param sessionClaims Clerk session claims
+ * @returns 관리자 여부
  */
 function isAdminFromClaims(sessionClaims: any): boolean {
   // 1. role 체크
@@ -44,10 +52,6 @@ function isAdminFromClaims(sessionClaims: any): boolean {
   }
 
   // 3. 이메일 기반 체크 (하위 호환성)
-  const ADMIN_EMAILS = (process.env.ADMIN_EMAILS?.split(",") || [
-    "admin@ttottoangs.com",
-  ]).map((email) => email.trim().toLowerCase());
-
   const email = sessionClaims?.email as string | undefined;
   if (email) {
     const normalizedEmail = email.trim().toLowerCase();

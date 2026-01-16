@@ -103,35 +103,6 @@ export async function isAdmin(): Promise<boolean> {
   return isAdminUser;
 }
 
-/**
- * 관리자 권한 확인 (middleware용)
- * 
- * middleware에서는 sessionClaims를 직접 사용하여 빠르게 체크
- * 
- * @param sessionClaims Clerk session claims
- * @returns 관리자 여부
- */
-export function isAdminFromClaims(sessionClaims: any): boolean {
-  // 1. role 체크
-  if (sessionClaims?.metadata?.role === "admin") {
-    return true;
-  }
-
-  // 2. isAdmin 체크
-  if (sessionClaims?.metadata?.isAdmin === true) {
-    return true;
-  }
-
-  // 3. 이메일 기반 체크 (하위 호환성)
-  const email = sessionClaims?.email as string | undefined;
-  if (email) {
-    const normalizedEmail = email.trim().toLowerCase();
-    return ADMIN_EMAILS.includes(normalizedEmail);
-  }
-
-  return false;
-}
-
 // 대시보드 통계
 export interface DashboardStats {
   totalOrders: number;
