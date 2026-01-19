@@ -17,6 +17,7 @@ interface InventoryPageProps {
     page?: string;
     lowStock?: string;
     search?: string;
+    status?: string;
   }>;
 }
 
@@ -33,12 +34,14 @@ export default async function InventoryPage({
   const page = parseInt(params.page || "1", 10);
   const lowStockOnly = params.lowStock === "true";
   const searchQuery = params.search || undefined;
+  const status = params.status as "active" | "hidden" | "sold_out" | undefined;
 
   const { items, total, totalPages } = await getInventoryList(
     page,
     20,
     lowStockOnly,
     searchQuery,
+    status,
   );
 
   return (
@@ -62,6 +65,7 @@ export default async function InventoryPage({
         currentPage={page}
         lowStockOnly={lowStockOnly}
         searchQuery={searchQuery}
+        status={status}
       />
     </>
   );

@@ -1093,6 +1093,7 @@ export async function getInventoryList(
   pageSize: number = 20,
   lowStockOnly: boolean = false,
   searchQuery?: string,
+  status?: "active" | "hidden" | "sold_out",
 ): Promise<{
   items: InventoryItem[];
   total: number;
@@ -1104,6 +1105,7 @@ export async function getInventoryList(
     pageSize,
     lowStockOnly,
     searchQuery: searchQuery || "(없음)",
+    status: status || "(전체)",
   });
 
   const isAdminUser = await isAdmin();
@@ -1134,6 +1136,11 @@ export async function getInventoryList(
 
   if (searchQuery && searchQuery.trim()) {
     productsQuery = productsQuery.ilike("name", `%${searchQuery.trim()}%`);
+  }
+
+  // 상태 필터 적용
+  if (status) {
+    productsQuery = productsQuery.eq("status", status);
   }
 
   if (lowStockOnly) {

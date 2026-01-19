@@ -31,6 +31,7 @@ interface InventoryListProps {
   currentPage: number;
   lowStockOnly: boolean;
   searchQuery?: string;
+  status?: "active" | "hidden" | "sold_out";
 }
 
 export default function InventoryList({
@@ -39,6 +40,7 @@ export default function InventoryList({
   currentPage,
   lowStockOnly,
   searchQuery: initialSearchQuery,
+  status: initialStatus,
 }: InventoryListProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -104,6 +106,9 @@ export default function InventoryList({
     if (lowStockOnly) {
       params.set("lowStock", "true");
     }
+    if (initialStatus) {
+      params.set("status", initialStatus);
+    }
     params.set("page", "1");
     router.push(`/admin/inventory?${params.toString()}`);
   };
@@ -115,6 +120,24 @@ export default function InventoryList({
     }
     if (!lowStockOnly) {
       params.set("lowStock", "true");
+    }
+    if (initialStatus) {
+      params.set("status", initialStatus);
+    }
+    params.set("page", "1");
+    router.push(`/admin/inventory?${params.toString()}`);
+  };
+
+  const handleStatusFilter = (status: "active" | "hidden" | undefined) => {
+    const params = new URLSearchParams();
+    if (searchQuery.trim()) {
+      params.set("search", searchQuery.trim());
+    }
+    if (lowStockOnly) {
+      params.set("lowStock", "true");
+    }
+    if (status) {
+      params.set("status", status);
     }
     params.set("page", "1");
     router.push(`/admin/inventory?${params.toString()}`);
@@ -199,6 +222,27 @@ export default function InventoryList({
               검색
             </Button>
           </form>
+          <Button
+            onClick={() => handleStatusFilter(undefined)}
+            variant={!initialStatus ? "default" : "outline"}
+            className={!initialStatus ? "bg-[#4a3f48] hover:bg-[#3a3338] text-white" : ""}
+          >
+            전체
+          </Button>
+          <Button
+            onClick={() => handleStatusFilter("active")}
+            variant={initialStatus === "active" ? "default" : "outline"}
+            className={initialStatus === "active" ? "bg-green-500 hover:bg-green-600 text-white" : ""}
+          >
+            판매중 상품
+          </Button>
+          <Button
+            onClick={() => handleStatusFilter("hidden")}
+            variant={initialStatus === "hidden" ? "default" : "outline"}
+            className={initialStatus === "hidden" ? "bg-gray-500 hover:bg-gray-600 text-white" : ""}
+          >
+            숨김 상품
+          </Button>
           <Button
             onClick={handleFilterToggle}
             variant={lowStockOnly ? "default" : "outline"}
@@ -343,6 +387,9 @@ export default function InventoryList({
             }
             if (lowStockOnly) {
               params.set("lowStock", "true");
+            }
+            if (initialStatus) {
+              params.set("status", initialStatus);
             }
             params.set("page", pageNum.toString());
             return (
