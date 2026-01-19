@@ -95,6 +95,13 @@ export function useSyncUser() {
           },
         });
 
+        logger.debug("[useSyncUser] API 응답 받음", {
+          status: response.status,
+          statusText: response.statusText,
+          ok: response.ok,
+          url: response.url,
+        });
+
         if (!response.ok) {
           // 401 Unauthorized는 로그인하지 않은 상태에서 정상적인 응답이므로 조용히 처리
           if (response.status === 401) {
@@ -105,10 +112,16 @@ export function useSyncUser() {
 
           // 에러 응답 파싱 시도
           let errorMessage = `HTTP ${response.status}`;
+          let errorData: any = null;
           try {
             const contentType = response.headers.get("content-type");
+            logger.debug("[useSyncUser] 에러 응답 파싱 시도", {
+              contentType,
+              status: response.status,
+            });
+            
             if (contentType?.includes("application/json")) {
-              const errorData = await response.json();
+              errorData = await response.json();
               errorMessage = errorData.error || errorData.message || errorMessage;
             } else {
               const errorText = await response.text();
@@ -116,14 +129,18 @@ export function useSyncUser() {
             }
           } catch (parseError) {
             // 파싱 실패 시 상태 코드만 사용
-            logger.debug("[useSyncUser] 에러 응답 파싱 실패", parseError);
+            logger.debug("[useSyncUser] 에러 응답 파싱 실패", {
+              parseError: parseError instanceof Error ? parseError.message : String(parseError),
+            });
           }
 
           logger.error("[useSyncUser] 동기화 실패", {
             status: response.status,
             statusText: response.statusText,
             error: errorMessage,
+            errorData: errorData,
             url: response.url,
+            headers: Object.fromEntries(response.headers.entries()),
           });
           logger.groupEnd();
           return;
@@ -139,18 +156,31 @@ export function useSyncUser() {
         // 에러 객체를 더 명확하게 로깅
         let errorInfo: Record<string, any> = {};
         
-        if (error instanceof Error) {
+        if (error instanceof TypeError && error.message === "Failed to fetch") {
+          // 네트워크 오류 (서버가 응답하지 않음, CORS 오류 등)
+          errorInfo = {
+            name: "NetworkError",
+            message: "네트워크 오류: 서버에 연결할 수 없습니다",
+            type: "Failed to fetch",
+            possibleCauses: [
+              "서버가 실행 중이지 않음",
+              "CORS 설정 문제",
+              "네트워크 연결 문제",
+              "API 경로가 잘못됨 (/api/sync-user)",
+            ],
+          };
+        } else if (error instanceof Error) {
           errorInfo = {
             name: error.name,
             message: error.message,
-            stack: error.stack?.substring(0, 300), // 스택 일부만
+            stack: error.stack?.substring(0, 500), // 스택 일부만
           };
         } else if (error && typeof error === "object") {
           // 일반 객체인 경우
           errorInfo = {
             type: "object",
             keys: Object.keys(error),
-            stringified: JSON.stringify(error).substring(0, 200),
+            stringified: JSON.stringify(error).substring(0, 300),
           };
         } else {
           errorInfo = {
@@ -159,7 +189,7 @@ export function useSyncUser() {
           };
         }
         
-        logger.error("[useSyncUser] 동기화 중 에러", errorInfo);
+        logger.error("[useSyncUser] 동기화 중 예외 발생", errorInfo);
         logger.groupEnd();
       }
     };
