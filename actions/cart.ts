@@ -1432,23 +1432,56 @@ export async function clearCart(): Promise<{
 
 // 장바구니 아이템 개수 조회
 export async function getCartItemCount(): Promise<number> {
-  const userId = await getCurrentUserId();
-  if (!userId) return 0;
+  try {
+    logger.debug("[getCartItemCount] 장바구니 수량 조회 시작");
+    
+    const userId = await getCurrentUserId();
+    if (!userId) {
+      logger.debug("[getCartItemCount] 사용자 ID 없음, 0 반환");
+      return 0;
+    }
 
-  const supabase = await createClient();
+    const supabase = await createClient();
 
-  const { data: cart } = await supabase
-    .from("carts")
-    .select("id")
-    .eq("user_id", userId)
-    .single();
+    const { data: cart, error: cartError } = await supabase
+      .from("carts")
+      .select("id")
+      .eq("user_id", userId)
+      .single();
 
-  if (!cart) return 0;
+    if (cartError) {
+      logger.warn("[getCartItemCount] 장바구니 조회 실패", {
+        error: cartError.message,
+        code: cartError.code,
+      });
+      return 0;
+    }
 
-  const { count } = await supabase
-    .from("cart_items")
-    .select("*", { count: "exact", head: true })
-    .eq("cart_id", cart.id);
+    if (!cart) {
+      logger.debug("[getCartItemCount] 장바구니 없음, 0 반환");
+      return 0;
+    }
 
-  return count ?? 0;
+    const { count, error: countError } = await supabase
+      .from("cart_items")
+      .select("*", { count: "exact", head: true })
+      .eq("cart_id", cart.id);
+
+    if (countError) {
+      logger.warn("[getCartItemCount] 장바구니 아이템 수량 조회 실패", {
+        error: countError.message,
+        code: countError.code,
+      });
+      return 0;
+    }
+
+    logger.debug("[getCartItemCount] 장바구니 수량 조회 성공", { count: count ?? 0 });
+    return count ?? 0;
+  } catch (error) {
+    logger.error("[getCartItemCount] 예외 발생", {
+      error: error instanceof Error ? error.message : String(error),
+      name: error instanceof Error ? error.name : "UnknownError",
+    });
+    return 0;
+  }
 }
