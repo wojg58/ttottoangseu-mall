@@ -22,24 +22,26 @@ import type {
 
 // 관리자 이메일 목록 (환경 변수로 관리 권장, 하위 호환성 유지)
 // 쉼표로 구분된 이메일을 배열로 변환하고, 공백 제거 및 소문자 변환
-const ADMIN_EMAILS = (process.env.ADMIN_EMAILS?.split(",") || [
-  "wojg58@gmail.com", // 관리자 계정
-  "ttottoangseu@naver.com", // 관리자 계정
-]).map((email) => email.trim().toLowerCase());
+const ADMIN_EMAILS = (
+  process.env.ADMIN_EMAILS?.split(",") || [
+    "wojg58@gmail.com", // 관리자 계정
+    "ttottoangseu@naver.com", // 관리자 계정
+  ]
+).map((email) => email.trim().toLowerCase());
 
 /**
  * 관리자 권한 확인
- * 
+ *
  * 우선순위:
  * 1. Clerk role === 'admin' 체크
  * 2. publicMetadata.isAdmin === true 체크
  * 3. 이메일 기반 체크 (하위 호환성)
- * 
+ *
  * @returns 관리자 여부
  */
 export async function isAdmin(): Promise<boolean> {
   logger.group("[isAdmin] 관리자 권한 확인 시작");
-  
+
   const user = await currentUser();
   if (!user) {
     logger.warn("[isAdmin] ❌ 사용자 미인증");
@@ -48,7 +50,7 @@ export async function isAdmin(): Promise<boolean> {
   }
 
   const clerkUserId = user.id;
-  
+
   // 1. Clerk role 체크 (가장 우선)
   // Clerk Dashboard에서 사용자에게 'admin' role을 부여한 경우
   const userRole = user.publicMetadata?.role as string | undefined;
@@ -64,23 +66,30 @@ export async function isAdmin(): Promise<boolean> {
   // 2. publicMetadata.isAdmin 체크
   const isAdminFromMetadata = user.publicMetadata?.isAdmin === true;
   if (isAdminFromMetadata) {
-    logger.info("[isAdmin] ✅ 관리자 권한 확인됨 (publicMetadata.isAdmin=true)", {
-      clerkUserId,
-      isAdmin: isAdminFromMetadata,
-    });
+    logger.info(
+      "[isAdmin] ✅ 관리자 권한 확인됨 (publicMetadata.isAdmin=true)",
+      {
+        clerkUserId,
+        isAdmin: isAdminFromMetadata,
+      },
+    );
     logger.groupEnd();
     return true;
   }
 
   // 3. 이메일 기반 체크 (하위 호환성)
-  const allEmails = user.emailAddresses?.map((addr) => 
-    addr.emailAddress?.trim().toLowerCase()
-  ).filter((email): email is string => !!email) || [];
-  
-  const primaryEmail = user.emailAddresses?.find((addr) => addr.id === user.primaryEmailAddressId)?.emailAddress?.trim().toLowerCase();
-  
+  const allEmails =
+    user.emailAddresses
+      ?.map((addr) => addr.emailAddress?.trim().toLowerCase())
+      .filter((email): email is string => !!email) || [];
+
+  const primaryEmail = user.emailAddresses
+    ?.find((addr) => addr.id === user.primaryEmailAddressId)
+    ?.emailAddress?.trim()
+    .toLowerCase();
+
   const isAdminUser = allEmails.some((email) => ADMIN_EMAILS.includes(email));
-  
+
   logger.info("[isAdmin] 권한 확인 결과", {
     clerkUserId,
     primaryEmail: primaryEmail || "(없음)",
@@ -93,13 +102,15 @@ export async function isAdmin(): Promise<boolean> {
     hasEnvVar: !!process.env.ADMIN_EMAILS,
     envVarValue: process.env.ADMIN_EMAILS ? "설정됨" : "설정 안됨",
   });
-  
+
   if (!isAdminUser) {
-    logger.warn("[isAdmin] ❌ 관리자 권한 없음 - role, publicMetadata.isAdmin, 이메일 모두 확인 실패");
+    logger.warn(
+      "[isAdmin] ❌ 관리자 권한 없음 - role, publicMetadata.isAdmin, 이메일 모두 확인 실패",
+    );
   } else {
     logger.info("[isAdmin] ✅ 관리자 권한 확인됨 (이메일 기반)");
   }
-  
+
   logger.groupEnd();
   return isAdminUser;
 }
@@ -128,7 +139,8 @@ export async function getDashboardStats(): Promise<DashboardStats | null> {
   logger.info("[getDashboardStats] 환경 변수 확인", {
     hasSupabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
     hasServiceRoleKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
-    supabaseUrlPrefix: process.env.NEXT_PUBLIC_SUPABASE_URL?.substring(0, 30) + "...",
+    supabaseUrlPrefix:
+      process.env.NEXT_PUBLIC_SUPABASE_URL?.substring(0, 30) + "...",
   });
 
   const isAdminUser = await isAdmin();
@@ -138,8 +150,10 @@ export async function getDashboardStats(): Promise<DashboardStats | null> {
     return null;
   }
 
-  logger.info("[getDashboardStats] ✅ 관리자 권한 확인됨 - Service Role 클라이언트 사용");
-  
+  logger.info(
+    "[getDashboardStats] ✅ 관리자 권한 확인됨 - Service Role 클라이언트 사용",
+  );
+
   // 관리자 대시보드는 RLS를 우회하기 위해 service_role 클라이언트 사용
   const supabase = getServiceRoleClient();
 
@@ -148,7 +162,7 @@ export async function getDashboardStats(): Promise<DashboardStats | null> {
   const { count: totalOrders, error: ordersCountError } = await supabase
     .from("orders")
     .select("*", { count: "exact", head: true });
-  
+
   if (ordersCountError) {
     logger.error("[getDashboardStats] ❌ 전체 주문 수 조회 실패", {
       code: ordersCountError.code,
@@ -166,14 +180,17 @@ export async function getDashboardStats(): Promise<DashboardStats | null> {
     .from("orders")
     .select("*", { count: "exact", head: true })
     .in("payment_status", ["PENDING", "PAID"]);
-  
+
   if (pendingError) {
     logger.error("[getDashboardStats] ❌ 대기 중인 주문 수 조회 실패", {
       code: pendingError.code,
       message: pendingError.message,
     });
   } else {
-    logger.info("[getDashboardStats] ✅ 대기 중인 주문 수:", pendingOrders ?? 0);
+    logger.info(
+      "[getDashboardStats] ✅ 대기 중인 주문 수:",
+      pendingOrders ?? 0,
+    );
   }
 
   // 총 매출 (payment_status = PAID 기준)
@@ -182,14 +199,15 @@ export async function getDashboardStats(): Promise<DashboardStats | null> {
     .from("orders")
     .select("total_amount")
     .eq("payment_status", "PAID");
-  
+
   if (revenueError) {
     logger.error("[getDashboardStats] ❌ 총 매출 조회 실패", {
       code: revenueError.code,
       message: revenueError.message,
     });
   } else {
-    const totalRevenue = revenueData?.reduce((sum, order) => sum + order.total_amount, 0) || 0;
+    const totalRevenue =
+      revenueData?.reduce((sum, order) => sum + order.total_amount, 0) || 0;
     logger.info(`[getDashboardStats] ✅ 총 매출: ${totalRevenue}원`);
   }
 
@@ -202,7 +220,7 @@ export async function getDashboardStats(): Promise<DashboardStats | null> {
     .from("products")
     .select("*", { count: "exact", head: true })
     .is("deleted_at", null);
-  
+
   if (productsError) {
     logger.error("[getDashboardStats] ❌ 상품 수 조회 실패", {
       code: productsError.code,
@@ -228,7 +246,9 @@ export async function getDashboardStats(): Promise<DashboardStats | null> {
       hint: recentOrdersError.hint,
     });
   } else {
-    logger.info(`[getDashboardStats] ✅ 최근 주문: ${recentOrders?.length ?? 0}개`);
+    logger.info(
+      `[getDashboardStats] ✅ 최근 주문: ${recentOrders?.length ?? 0}개`,
+    );
   }
 
   // 취소/환불 건수
@@ -244,7 +264,10 @@ export async function getDashboardStats(): Promise<DashboardStats | null> {
       message: canceledError.message,
     });
   } else {
-    logger.info("[getDashboardStats] ✅ 취소/환불 건수:", canceledRefundedOrders ?? 0);
+    logger.info(
+      "[getDashboardStats] ✅ 취소/환불 건수:",
+      canceledRefundedOrders ?? 0,
+    );
   }
 
   // 재고부족 상품 수 (재고 10개 이하)
@@ -261,7 +284,10 @@ export async function getDashboardStats(): Promise<DashboardStats | null> {
       message: lowStockError.message,
     });
   } else {
-    logger.info("[getDashboardStats] ✅ 재고부족 상품 수:", lowStockProducts ?? 0);
+    logger.info(
+      "[getDashboardStats] ✅ 재고부족 상품 수:",
+      lowStockProducts ?? 0,
+    );
   }
 
   // 신규 회원 수 (오늘/7일/30일)
@@ -273,7 +299,7 @@ export async function getDashboardStats(): Promise<DashboardStats | null> {
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
   logger.info("[getDashboardStats] 신규 회원 수 조회 중...");
-  
+
   const { count: newMembersToday, error: newMembersTodayError } = await supabase
     .from("users")
     .select("*", { count: "exact", head: true })
@@ -284,10 +310,11 @@ export async function getDashboardStats(): Promise<DashboardStats | null> {
     .select("*", { count: "exact", head: true })
     .gte("created_at", sevenDaysAgo.toISOString());
 
-  const { count: newMembers30Days, error: newMembers30DaysError } = await supabase
-    .from("users")
-    .select("*", { count: "exact", head: true })
-    .gte("created_at", thirtyDaysAgo.toISOString());
+  const { count: newMembers30Days, error: newMembers30DaysError } =
+    await supabase
+      .from("users")
+      .select("*", { count: "exact", head: true })
+      .gte("created_at", thirtyDaysAgo.toISOString());
 
   if (newMembersTodayError || newMembers7DaysError || newMembers30DaysError) {
     logger.error("[getDashboardStats] ❌ 신규 회원 수 조회 실패", {
@@ -317,7 +344,10 @@ export async function getDashboardStats(): Promise<DashboardStats | null> {
       message: unprocessedError.message,
     });
   } else {
-    logger.info("[getDashboardStats] ✅ 미처리 주문 수:", unprocessedOrders ?? 0);
+    logger.info(
+      "[getDashboardStats] ✅ 미처리 주문 수:",
+      unprocessedOrders ?? 0,
+    );
   }
 
   // 미답변 문의 수
@@ -337,7 +367,7 @@ export async function getDashboardStats(): Promise<DashboardStats | null> {
     unprocessedOrders: unprocessedOrders ?? 0,
     unansweredInquiries,
   };
-  
+
   logger.info("[getDashboardStats] ✅ 통계 조회 완료", {
     totalOrders: result.totalOrders,
     pendingOrders: result.pendingOrders,
@@ -382,8 +412,10 @@ export async function getAllOrders(
     return { orders: [], total: 0, totalPages: 0 };
   }
 
-  logger.info("[getAllOrders] ✅ 관리자 권한 확인됨 - Service Role 클라이언트 사용");
-  
+  logger.info(
+    "[getAllOrders] ✅ 관리자 권한 확인됨 - Service Role 클라이언트 사용",
+  );
+
   // 관리자 대시보드는 RLS를 우회하기 위해 service_role 클라이언트 사용
   const supabase = getServiceRoleClient();
 
@@ -422,7 +454,7 @@ export async function getAllOrders(
   if (searchQuery && searchQuery.trim()) {
     const searchTerm = searchQuery.trim();
     query = query.or(
-      `order_number.ilike.%${searchTerm}%,shipping_name.ilike.%${searchTerm}%,shipping_phone.ilike.%${searchTerm}%,orderer_name.ilike.%${searchTerm}%,orderer_phone.ilike.%${searchTerm}%`
+      `order_number.ilike.%${searchTerm}%,shipping_name.ilike.%${searchTerm}%,shipping_phone.ilike.%${searchTerm}%,orderer_name.ilike.%${searchTerm}%,orderer_phone.ilike.%${searchTerm}%`,
     );
     logger.info("[getAllOrders] 검색 필터 적용:", searchTerm);
   }
@@ -466,7 +498,19 @@ export async function getAllOrdersForExport(
   fulfillmentStatus?: string,
   startDate?: string,
   endDate?: string,
-): Promise<Array<Order & { items: Array<{ product_name: string; variant_info: string | null; quantity: number; price: number }>; user_email: string | null }>> {
+): Promise<
+  Array<
+    Order & {
+      items: Array<{
+        product_name: string;
+        variant_info: string | null;
+        quantity: number;
+        price: number;
+      }>;
+      user_email: string | null;
+    }
+  >
+> {
   console.group("[getAllOrdersForExport] 엑셀 다운로드용 주문 조회");
   console.log("paymentStatus:", paymentStatus || "(전체)");
   console.log("fulfillmentStatus:", fulfillmentStatus || "(전체)");
@@ -480,16 +524,16 @@ export async function getAllOrdersForExport(
     return [];
   }
 
-  logger.info("[getAllOrdersForExport] ✅ 관리자 권한 확인됨 - Service Role 클라이언트 사용");
-  
+  logger.info(
+    "[getAllOrdersForExport] ✅ 관리자 권한 확인됨 - Service Role 클라이언트 사용",
+  );
+
   // 관리자 대시보드는 RLS를 우회하기 위해 service_role 클라이언트 사용
   const supabase = getServiceRoleClient();
 
   // 주문 조회 (users 테이블과 조인하여 이메일 포함)
   // 명시적으로 모든 필드를 나열하여 누락 방지
-  let query = supabase
-    .from("orders")
-    .select(`
+  let query = supabase.from("orders").select(`
       id,
       user_id,
       order_number,
@@ -553,7 +597,7 @@ export async function getAllOrdersForExport(
   }
 
   console.log("주문 조회 성공:", orders.length, "개");
-  
+
   // 첫 번째 주문 데이터 구조 확인 (디버깅)
   if (orders.length > 0) {
     const firstOrder = orders[0] as any;
@@ -572,7 +616,9 @@ export async function getAllOrdersForExport(
 
   // 각 주문의 상품 정보 조회
   const ordersWithItems = await Promise.all(
-    (orders as unknown as Array<Order & { user: { email: string } | null }>).map(async (order) => {
+    (
+      orders as unknown as Array<Order & { user: { email: string } | null }>
+    ).map(async (order) => {
       const { data: items } = await supabase
         .from("order_items")
         .select("product_name, variant_info, quantity, price")
@@ -580,7 +626,9 @@ export async function getAllOrdersForExport(
 
       // 배송지 정보 확인 (디버깅)
       if (!order.shipping_address) {
-        console.warn(`[getAllOrdersForExport] 배송지 주소 누락: 주문 ${order.order_number} (ID: ${order.id})`);
+        console.warn(
+          `[getAllOrdersForExport] 배송지 주소 누락: 주문 ${order.order_number} (ID: ${order.id})`,
+        );
       }
 
       return {
@@ -605,7 +653,12 @@ export async function exportOrdersToExcel(
   endDate?: string,
 ): Promise<{ success: boolean; message: string; buffer?: Buffer }> {
   console.group("[exportOrdersToExcel] 주문 데이터 엑셀 다운로드");
-  console.log("필터:", { paymentStatus, fulfillmentStatus, startDate, endDate });
+  console.log("필터:", {
+    paymentStatus,
+    fulfillmentStatus,
+    startDate,
+    endDate,
+  });
 
   try {
     const isAdminUser = await isAdmin();
@@ -702,13 +755,17 @@ export async function exportOrdersToExcel(
       const itemsText = order.items
         .map(
           (item) =>
-            `${item.product_name}${item.variant_info ? ` (${item.variant_info})` : ""} × ${item.quantity}개`,
+            `${item.product_name}${
+              item.variant_info ? ` (${item.variant_info})` : ""
+            } × ${item.quantity}개`,
         )
         .join(", ");
 
       // 데이터 검증 및 디버깅
       if (!order.shipping_address) {
-        console.warn(`[exportOrdersToExcel] 배송지 주소 누락: 주문 ${order.order_number} (인덱스: ${index})`);
+        console.warn(
+          `[exportOrdersToExcel] 배송지 주소 누락: 주문 ${order.order_number} (인덱스: ${index})`,
+        );
       }
 
       const rowData = {
@@ -789,15 +846,19 @@ export async function updateOrderStatus(
     return { success: false, message: "관리자 권한이 필요합니다." };
   }
 
-  logger.info("[updateOrderStatus] ✅ 관리자 권한 확인됨 - Service Role 클라이언트 사용");
-  
+  logger.info(
+    "[updateOrderStatus] ✅ 관리자 권한 확인됨 - Service Role 클라이언트 사용",
+  );
+
   // 관리자 대시보드는 RLS를 우회하기 위해 service_role 클라이언트 사용
   const supabase = getServiceRoleClient();
 
   // 변경 전 주문 정보 조회 (before)
   const { data: oldOrder, error: oldOrderError } = await supabase
     .from("orders")
-    .select("order_number, payment_status, fulfillment_status, tracking_number, shipped_at, delivered_at")
+    .select(
+      "order_number, payment_status, fulfillment_status, tracking_number, shipped_at, delivered_at",
+    )
     .eq("id", orderId)
     .single();
 
@@ -875,7 +936,9 @@ export async function updateOrderStatus(
     .from("orders")
     .update(updateData)
     .eq("id", orderId)
-    .select("order_number, payment_status, fulfillment_status, tracking_number, shipped_at, delivered_at")
+    .select(
+      "order_number, payment_status, fulfillment_status, tracking_number, shipped_at, delivered_at",
+    )
     .single();
 
   if (updateError || !newOrder) {
@@ -904,7 +967,10 @@ export async function updateOrderStatus(
       afterData.payment_status = newOrder.payment_status;
     }
 
-    if (fulfillmentStatus && fulfillmentStatus !== oldOrder.fulfillment_status) {
+    if (
+      fulfillmentStatus &&
+      fulfillmentStatus !== oldOrder.fulfillment_status
+    ) {
       beforeData.fulfillment_status = oldOrder.fulfillment_status;
       afterData.fulfillment_status = newOrder.fulfillment_status;
     }
@@ -927,7 +993,9 @@ export async function updateOrderStatus(
       });
 
       if (!logResult) {
-        logger.warn("[updateOrderStatus] ⚠️ 로그 기록 실패 (주문 상태는 업데이트됨)");
+        logger.warn(
+          "[updateOrderStatus] ⚠️ 로그 기록 실패 (주문 상태는 업데이트됨)",
+        );
       } else {
         logger.info("[updateOrderStatus] ✅ 로그 기록 성공");
       }
@@ -948,17 +1016,23 @@ export async function getPendingFulfillmentOrders(
   pageSize: number = 20,
 ): Promise<{ orders: Order[]; total: number; totalPages: number }> {
   logger.group("[getPendingFulfillmentOrders] 배송 대기 주문 조회 시작");
-  logger.info(`[getPendingFulfillmentOrders] 페이지: ${page}, 페이지 크기: ${pageSize}`);
+  logger.info(
+    `[getPendingFulfillmentOrders] 페이지: ${page}, 페이지 크기: ${pageSize}`,
+  );
 
   const isAdminUser = await isAdmin();
   if (!isAdminUser) {
-    logger.warn("[getPendingFulfillmentOrders] ❌ 관리자 권한 없음 - 조회 중단");
+    logger.warn(
+      "[getPendingFulfillmentOrders] ❌ 관리자 권한 없음 - 조회 중단",
+    );
     logger.groupEnd();
     return { orders: [], total: 0, totalPages: 0 };
   }
 
-  logger.info("[getPendingFulfillmentOrders] ✅ 관리자 권한 확인됨 - Service Role 클라이언트 사용");
-  
+  logger.info(
+    "[getPendingFulfillmentOrders] ✅ 관리자 권한 확인됨 - Service Role 클라이언트 사용",
+  );
+
   const supabase = getServiceRoleClient();
 
   // 결제완료 + 배송대기 주문 조회
@@ -1006,17 +1080,24 @@ export async function bulkUpdateTrackingNumbers(
   updates: Array<{ orderId: string; trackingNumber: string }>,
 ): Promise<{ success: boolean; message: string; updated: number }> {
   logger.group("[bulkUpdateTrackingNumbers] 일괄 송장번호 등록 시작");
-  logger.info("[bulkUpdateTrackingNumbers] 업데이트할 주문 수:", updates.length);
+  logger.info(
+    "[bulkUpdateTrackingNumbers] 업데이트할 주문 수:",
+    updates.length,
+  );
 
   const isAdminUser = await isAdmin();
   if (!isAdminUser) {
-    logger.warn("[bulkUpdateTrackingNumbers] ❌ 관리자 권한 없음 - 업데이트 중단");
+    logger.warn(
+      "[bulkUpdateTrackingNumbers] ❌ 관리자 권한 없음 - 업데이트 중단",
+    );
     logger.groupEnd();
     return { success: false, message: "관리자 권한이 필요합니다.", updated: 0 };
   }
 
-  logger.info("[bulkUpdateTrackingNumbers] ✅ 관리자 권한 확인됨 - Service Role 클라이언트 사용");
-  
+  logger.info(
+    "[bulkUpdateTrackingNumbers] ✅ 관리자 권한 확인됨 - Service Role 클라이언트 사용",
+  );
+
   const supabase = getServiceRoleClient();
 
   let updatedCount = 0;
@@ -1035,10 +1116,13 @@ export async function bulkUpdateTrackingNumbers(
       .eq("id", update.orderId);
 
     if (error) {
-      logger.error(`[bulkUpdateTrackingNumbers] 주문 ${update.orderId} 업데이트 실패`, {
-        code: error.code,
-        message: error.message,
-      });
+      logger.error(
+        `[bulkUpdateTrackingNumbers] 주문 ${update.orderId} 업데이트 실패`,
+        {
+          code: error.code,
+          message: error.message,
+        },
+      );
       errors.push(`주문 ${update.orderId}: ${error.message}`);
     } else {
       updatedCount++;
@@ -1115,8 +1199,10 @@ export async function getInventoryList(
     return { items: [], total: 0, totalPages: 0 };
   }
 
-  logger.info("[getInventoryList] ✅ 관리자 권한 확인됨 - Service Role 클라이언트 사용");
-  
+  logger.info(
+    "[getInventoryList] ✅ 관리자 권한 확인됨 - Service Role 클라이언트 사용",
+  );
+
   const supabase = getServiceRoleClient();
 
   // 성능 최적화: N+1 쿼리 문제 해결
@@ -1287,7 +1373,9 @@ export async function updateInventory(
 ): Promise<{ success: boolean; message: string }> {
   logger.group("[updateInventory] 재고 업데이트 시작");
   logger.info(
-    `[updateInventory] 상품 ID: ${productId}, 재고: ${stock}, 옵션 ID: ${variantId || "(없음)"}`
+    `[updateInventory] 상품 ID: ${productId}, 재고: ${stock}, 옵션 ID: ${
+      variantId || "(없음)"
+    }`,
   );
 
   const isAdminUser = await isAdmin();
@@ -1303,8 +1391,10 @@ export async function updateInventory(
     return { success: false, message: "재고는 0 이상이어야 합니다." };
   }
 
-  logger.info("[updateInventory] ✅ 관리자 권한 확인됨 - Service Role 클라이언트 사용");
-  
+  logger.info(
+    "[updateInventory] ✅ 관리자 권한 확인됨 - Service Role 클라이언트 사용",
+  );
+
   const supabase = getServiceRoleClient();
 
   let oldStock: number | null = null;
@@ -1383,7 +1473,7 @@ export async function updateInventory(
       oldStock,
       stock,
       ipAddress,
-      userAgent
+      userAgent,
     );
   }
 
@@ -1431,8 +1521,10 @@ export async function getCustomers(
     return { customers: [], total: 0, totalPages: 0 };
   }
 
-  logger.info("[getCustomers] ✅ 관리자 권한 확인됨 - Service Role 클라이언트 사용");
-  
+  logger.info(
+    "[getCustomers] ✅ 관리자 권한 확인됨 - Service Role 클라이언트 사용",
+  );
+
   const supabase = getServiceRoleClient();
 
   // 회원 조회
@@ -1443,7 +1535,7 @@ export async function getCustomers(
 
   if (searchQuery && searchQuery.trim()) {
     userQuery = userQuery.or(
-      `name.ilike.%${searchQuery.trim()}%,email.ilike.%${searchQuery.trim()}%,phone.ilike.%${searchQuery.trim()}%`
+      `name.ilike.%${searchQuery.trim()}%,email.ilike.%${searchQuery.trim()}%,phone.ilike.%${searchQuery.trim()}%`,
     );
   }
 
@@ -1575,8 +1667,10 @@ export async function getCustomerById(
     return null;
   }
 
-  logger.info("[getCustomerById] ✅ 관리자 권한 확인됨 - Service Role 클라이언트 사용");
-  
+  logger.info(
+    "[getCustomerById] ✅ 관리자 권한 확인됨 - Service Role 클라이언트 사용",
+  );
+
   const supabase = getServiceRoleClient();
 
   // 회원 정보 조회
@@ -1599,14 +1693,19 @@ export async function getCustomerById(
   // 주문 이력 조회
   const { data: orders } = await supabase
     .from("orders")
-    .select("id, order_number, total_amount, payment_status, fulfillment_status, created_at, paid_at")
+    .select(
+      "id, order_number, total_amount, payment_status, fulfillment_status, created_at, paid_at",
+    )
     .eq("user_id", customerId)
     .order("created_at", { ascending: false });
 
   // 주문 통계 계산
   const paidOrders = orders?.filter((o) => o.payment_status === "PAID") || [];
   const orderCount = paidOrders.length;
-  const totalSpent = paidOrders.reduce((sum, order) => sum + order.total_amount, 0);
+  const totalSpent = paidOrders.reduce(
+    (sum, order) => sum + order.total_amount,
+    0,
+  );
   const lastOrderAt =
     paidOrders.length > 0
       ? paidOrders.sort(
@@ -1679,8 +1778,10 @@ export async function getAdminReviews(
     return { reviews: [], total: 0, totalPages: 0 };
   }
 
-  logger.info("[getAdminReviews] ✅ 관리자 권한 확인됨 - Service Role 클라이언트 사용");
-  
+  logger.info(
+    "[getAdminReviews] ✅ 관리자 권한 확인됨 - Service Role 클라이언트 사용",
+  );
+
   const supabase = getServiceRoleClient();
 
   let query = supabase
@@ -1705,7 +1806,7 @@ export async function getAdminReviews(
 
   if (searchQuery && searchQuery.trim()) {
     query = query.or(
-      `content.ilike.%${searchQuery.trim()}%,product:products.name.ilike.%${searchQuery.trim()}%`
+      `content.ilike.%${searchQuery.trim()}%,product:products.name.ilike.%${searchQuery.trim()}%`,
     );
   }
 
@@ -1794,8 +1895,10 @@ export async function getAdminInquiries(
     return { inquiries: [], total: 0, totalPages: 0 };
   }
 
-  logger.info("[getAdminInquiries] ✅ 관리자 권한 확인됨 - Service Role 클라이언트 사용");
-  
+  logger.info(
+    "[getAdminInquiries] ✅ 관리자 권한 확인됨 - Service Role 클라이언트 사용",
+  );
+
   const supabase = getServiceRoleClient();
 
   let query = supabase
@@ -1826,7 +1929,7 @@ export async function getAdminInquiries(
 
   if (searchQuery && searchQuery.trim()) {
     query = query.or(
-      `title.ilike.%${searchQuery.trim()}%,content.ilike.%${searchQuery.trim()}%,product:products.name.ilike.%${searchQuery.trim()}%`
+      `title.ilike.%${searchQuery.trim()}%,content.ilike.%${searchQuery.trim()}%,product:products.name.ilike.%${searchQuery.trim()}%`,
     );
   }
 
@@ -1885,7 +1988,7 @@ export async function answerInquiry(
 ): Promise<{ success: boolean; message: string }> {
   logger.group("[answerInquiry] 문의 답변 등록 시작");
   logger.info(
-    `[answerInquiry] 문의 ID: ${inquiryId}, 답변 길이: ${answer.length}`
+    `[answerInquiry] 문의 ID: ${inquiryId}, 답변 길이: ${answer.length}`,
   );
 
   const isAdminUser = await isAdmin();
@@ -1901,8 +2004,10 @@ export async function answerInquiry(
     return { success: false, message: "답변 내용을 입력해주세요." };
   }
 
-  logger.info("[answerInquiry] ✅ 관리자 권한 확인됨 - Service Role 클라이언트 사용");
-  
+  logger.info(
+    "[answerInquiry] ✅ 관리자 권한 확인됨 - Service Role 클라이언트 사용",
+  );
+
   const supabase = getServiceRoleClient();
 
   const { error } = await supabase
@@ -1943,7 +2048,9 @@ export async function deleteInquiry(
     return { success: false, message: "관리자 권한이 필요합니다." };
   }
 
-  logger.info("[deleteInquiry] ✅ 관리자 권한 확인됨 - Service Role 클라이언트 사용");
+  logger.info(
+    "[deleteInquiry] ✅ 관리자 권한 확인됨 - Service Role 클라이언트 사용",
+  );
   const supabase = getServiceRoleClient();
 
   const { error } = await supabase
@@ -1979,16 +2086,26 @@ export async function deleteInquiries(
   if (!isAdminUser) {
     logger.warn("[deleteInquiries] ❌ 관리자 권한 없음 - 삭제 중단");
     logger.groupEnd();
-    return { success: false, message: "관리자 권한이 필요합니다.", deletedCount: 0 };
+    return {
+      success: false,
+      message: "관리자 권한이 필요합니다.",
+      deletedCount: 0,
+    };
   }
 
   if (!inquiryIds || inquiryIds.length === 0) {
     logger.warn("[deleteInquiries] ❌ 삭제할 문의 ID가 없습니다");
     logger.groupEnd();
-    return { success: false, message: "삭제할 문의를 선택해주세요.", deletedCount: 0 };
+    return {
+      success: false,
+      message: "삭제할 문의를 선택해주세요.",
+      deletedCount: 0,
+    };
   }
 
-  logger.info("[deleteInquiries] ✅ 관리자 권한 확인됨 - Service Role 클라이언트 사용");
+  logger.info(
+    "[deleteInquiries] ✅ 관리자 권한 확인됨 - Service Role 클라이언트 사용",
+  );
   const supabase = getServiceRoleClient();
 
   let deletedCount = 0;
@@ -2080,7 +2197,9 @@ export async function deleteReview(
     return { success: false, message: "관리자 권한이 필요합니다." };
   }
 
-  logger.info("[deleteReview] ✅ 관리자 권한 확인됨 - Service Role 클라이언트 사용");
+  logger.info(
+    "[deleteReview] ✅ 관리자 권한 확인됨 - Service Role 클라이언트 사용",
+  );
   const supabase = getServiceRoleClient();
 
   const { error } = await supabase
@@ -2145,19 +2264,19 @@ export async function getAdminCoupons(
     return { coupons: [], total: 0, totalPages: 0 };
   }
 
-  logger.info("[getAdminCoupons] ✅ 관리자 권한 확인됨 - Service Role 클라이언트 사용");
-  
+  logger.info(
+    "[getAdminCoupons] ✅ 관리자 권한 확인됨 - Service Role 클라이언트 사용",
+  );
+
   const supabase = getServiceRoleClient();
 
-  let query = supabase
-    .from("coupons")
-    .select(
-      `
+  let query = supabase.from("coupons").select(
+    `
       *,
       user:users!fk_coupons_user_id(name, email)
     `,
-      { count: "exact" },
-    );
+    { count: "exact" },
+  );
 
   if (status) {
     query = query.eq("status", status);
@@ -2165,7 +2284,7 @@ export async function getAdminCoupons(
 
   if (searchQuery && searchQuery.trim()) {
     query = query.or(
-      `code.ilike.%${searchQuery.trim()}%,name.ilike.%${searchQuery.trim()}%`
+      `code.ilike.%${searchQuery.trim()}%,name.ilike.%${searchQuery.trim()}%`,
     );
   }
 
@@ -2226,12 +2345,12 @@ export interface AnalyticsData {
   revenue30Days: number;
   revenueThisMonth: number;
   revenueLastMonth: number;
-  
+
   // 주문 통계
   ordersToday: number;
   orders7Days: number;
   orders30Days: number;
-  
+
   // 취소/환불 통계
   canceledToday: number;
   canceled7Days: number;
@@ -2239,7 +2358,7 @@ export interface AnalyticsData {
   refundedToday: number;
   refunded7Days: number;
   refunded30Days: number;
-  
+
   // 베스트 상품 (판매량 기준)
   bestProducts: Array<{
     product_id: string;
@@ -2247,7 +2366,7 @@ export interface AnalyticsData {
     total_quantity: number;
     total_revenue: number;
   }>;
-  
+
   // 취소율
   cancelRate7Days: number;
   cancelRate30Days: number;
@@ -2270,8 +2389,10 @@ export async function getAnalyticsData(
     return null;
   }
 
-  logger.info("[getAnalyticsData] ✅ 관리자 권한 확인됨 - Service Role 클라이언트 사용");
-  
+  logger.info(
+    "[getAnalyticsData] ✅ 관리자 권한 확인됨 - Service Role 클라이언트 사용",
+  );
+
   const supabase = getServiceRoleClient();
 
   const now = new Date();
@@ -2322,7 +2443,8 @@ export async function getAnalyticsData(
     .gte("paid_at", thisMonthStart.toISOString());
 
   const revenueThisMonth =
-    revenueThisMonthData?.reduce((sum, order) => sum + order.total_amount, 0) || 0;
+    revenueThisMonthData?.reduce((sum, order) => sum + order.total_amount, 0) ||
+    0;
 
   // 지난 달 매출
   const { data: revenueLastMonthData } = await supabase
@@ -2333,7 +2455,8 @@ export async function getAnalyticsData(
     .lte("paid_at", lastMonthEnd.toISOString());
 
   const revenueLastMonth =
-    revenueLastMonthData?.reduce((sum, order) => sum + order.total_amount, 0) || 0;
+    revenueLastMonthData?.reduce((sum, order) => sum + order.total_amount, 0) ||
+    0;
 
   // 주문 통계
   const { count: ordersToday } = await supabase
@@ -2522,8 +2645,10 @@ export async function getAdminProducts(
     return { products: [], total: 0, totalPages: 0 };
   }
 
-  logger.info("[getAdminProducts] ✅ 관리자 권한 확인됨 - Service Role 클라이언트 사용");
-  
+  logger.info(
+    "[getAdminProducts] ✅ 관리자 권한 확인됨 - Service Role 클라이언트 사용",
+  );
+
   // 관리자 대시보드는 RLS를 우회하기 위해 service_role 클라이언트 사용
   const supabase = getServiceRoleClient();
 
@@ -2602,7 +2727,7 @@ export async function getAdminProducts(
 
   // 정렬 로직: sortBy가 "id"인 경우에만 특별 정렬 적용
   let sortedData = allData || [];
-  
+
   if (sortBy === "id") {
     // ttotto_pr_001을 맨 앞으로, ttotto_pr_316을 맨 뒤로
     sortedData = sortedData.sort((a, b) => {
@@ -2630,9 +2755,7 @@ export async function getAdminProducts(
     });
   }
 
-  logger.info(
-    `[getAdminProducts] 정렬 완료: 총 ${sortedData.length}개`,
-  );
+  logger.info(`[getAdminProducts] 정렬 완료: 총 ${sortedData.length}개`);
 
   // 페이지네이션 적용
   const from = (page - 1) * pageSize;
@@ -2709,9 +2832,18 @@ export async function getAdminProducts(
 }
 
 // 관리자용 주문 상세 조회
-export async function getAdminOrderById(
-  orderId: string,
-): Promise<(Order & { items: OrderItem[]; user_email: string | null; payment?: { method: string; amount: number; approved_at: string | null } | null }) | null> {
+export async function getAdminOrderById(orderId: string): Promise<
+  | (Order & {
+      items: OrderItem[];
+      user_email: string | null;
+      payment?: {
+        method: string;
+        amount: number;
+        approved_at: string | null;
+      } | null;
+    })
+  | null
+> {
   logger.group("[getAdminOrderById] 관리자 주문 상세 조회 시작");
   logger.info("[getAdminOrderById] 주문 ID:", orderId);
 
@@ -2722,15 +2854,18 @@ export async function getAdminOrderById(
     return null;
   }
 
-  logger.info("[getAdminOrderById] ✅ 관리자 권한 확인됨 - Service Role 클라이언트 사용");
-  
+  logger.info(
+    "[getAdminOrderById] ✅ 관리자 권한 확인됨 - Service Role 클라이언트 사용",
+  );
+
   // 관리자 대시보드는 RLS를 우회하기 위해 service_role 클라이언트 사용
   const supabase = getServiceRoleClient();
 
   // 주문 조회 (users 테이블과 조인하여 이메일 포함)
   const { data: order, error: orderError } = await supabase
     .from("orders")
-    .select(`
+    .select(
+      `
       id,
       user_id,
       order_number,
@@ -2755,7 +2890,8 @@ export async function getAdminOrderById(
       orderer_phone,
       orderer_email,
       user:users!fk_orders_user_id(email)
-    `)
+    `,
+    )
     .eq("id", orderId)
     .single();
 
@@ -2809,7 +2945,15 @@ export async function getAdminOrderById(
     items: (items as OrderItem[]) || [],
     user_email: (order as any).user?.email || null,
     payment: payment || null,
-  } as Order & { items: OrderItem[]; user_email: string | null; payment?: { method: string; amount: number; approved_at: string | null } | null };
+  } as Order & {
+    items: OrderItem[];
+    user_email: string | null;
+    payment?: {
+      method: string;
+      amount: number;
+      approved_at: string | null;
+    } | null;
+  };
 
   logger.info("[getAdminOrderById] ✅ 주문 조회 성공:", order.order_number);
   logger.groupEnd();
@@ -2831,7 +2975,9 @@ export async function getProductById(
     return null;
   }
 
-  logger.info("[getProductById] ✅ 관리자 권한 확인됨 - Service Role 클라이언트 사용");
+  logger.info(
+    "[getProductById] ✅ 관리자 권한 확인됨 - Service Role 클라이언트 사용",
+  );
 
   // 관리자 대시보드는 RLS를 우회하기 위해 service_role 클라이언트 사용
   const supabase = getServiceRoleClient();
