@@ -140,7 +140,7 @@ export async function syncProductStock(
 }
 
 /**
- * 모든 상품 재고 동기화 (smartstore_product_id가 있는 상품만)
+ * 모든 상품 재고 동기화 (판매중인 상품만, smartstore_product_id가 있는 상품만)
  */
 export async function syncAllStocks(): Promise<SyncStockResult> {
   const result: SyncStockResult = {
@@ -152,13 +152,14 @@ export async function syncAllStocks(): Promise<SyncStockResult> {
   };
 
   try {
-    // 1. Supabase에서 동기화 대상 상품 조회
+    // 1. Supabase에서 동기화 대상 상품 조회 (판매중인 상품만)
     const supabase = getServiceRoleClient();
     const { data: products, error: findError } = await supabase
       .from("products")
       .select("id, name, smartstore_product_id")
       .not("smartstore_product_id", "is", null)
-      .eq("deleted_at", null);
+      .is("deleted_at", null)
+      .eq("status", "active"); // 판매중인 상품만 동기화
 
     if (findError) {
       logger.error("[syncAllStocks] 상품 조회 실패", findError);
@@ -405,7 +406,7 @@ export async function syncVariantStocks(
 }
 
 /**
- * 전체 상품 옵션 재고 동기화
+ * 전체 상품 옵션 재고 동기화 (판매중인 상품만)
  */
 export async function syncAllVariantStocks(): Promise<SyncVariantStockResult> {
   const totalResult: SyncVariantStockResult = {
@@ -419,12 +420,13 @@ export async function syncAllVariantStocks(): Promise<SyncVariantStockResult> {
   try {
     const supabase = getServiceRoleClient();
 
-    // 스마트스토어 연동된 상품 조회
+    // 스마트스토어 연동된 상품 조회 (판매중인 상품만)
     const { data: products, error: findError } = await supabase
       .from("products")
       .select("smartstore_product_id")
       .not("smartstore_product_id", "is", null)
-      .is("deleted_at", null);
+      .is("deleted_at", null)
+      .eq("status", "active"); // 판매중인 상품만 동기화
 
     if (findError) {
       logger.error("[syncAllVariantStocks] 상품 조회 실패", findError);

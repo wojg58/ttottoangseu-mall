@@ -17,7 +17,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Search, TrendingDown, Package, Filter } from "lucide-react";
+import { Search, TrendingDown, Package, Filter, RefreshCw } from "lucide-react";
 import type { InventoryItem } from "@/actions/admin";
 import { updateInventory } from "@/actions/admin";
 import { Input } from "@/components/ui/input";
@@ -42,6 +42,8 @@ export default function InventoryList({
 }: InventoryListProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncMessage, setSyncMessage] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState(initialSearchQuery || "");
   const [stockUpdates, setStockUpdates] = useState<Record<string, number>>({});
 
@@ -118,6 +120,43 @@ export default function InventoryList({
     router.push(`/admin/inventory?${params.toString()}`);
   };
 
+  const handleSyncStock = async () => {
+    if (isSyncing) return;
+
+    logger.group("[InventoryList] 재고 동기화 시작");
+    setIsSyncing(true);
+    setSyncMessage(null);
+
+    try {
+      const response = await fetch("/api/sync-stock");
+      const result = await response.json();
+
+      logger.info("[InventoryList] 재고 동기화 결과", result);
+
+      if (result.success) {
+        setSyncMessage(
+          `재고 동기화 완료: 성공 ${result.syncedCount}개, 실패 ${result.failedCount}개`
+        );
+        // 3초 후 메시지 자동 제거
+        setTimeout(() => {
+          setSyncMessage(null);
+        }, 5000);
+        // 페이지 새로고침하여 최신 재고 반영
+        router.refresh();
+      } else {
+        setSyncMessage(`재고 동기화 실패: ${result.message}`);
+      }
+    } catch (error) {
+      logger.error("[InventoryList] 재고 동기화 오류", error);
+      setSyncMessage(
+        `재고 동기화 중 오류 발생: ${error instanceof Error ? error.message : "알 수 없는 오류"}`
+      );
+    } finally {
+      setIsSyncing(false);
+      logger.groupEnd();
+    }
+  };
+
   const getItemKey = (item: InventoryItem) => {
     return item.variant_id || item.product_id;
   };
@@ -168,7 +207,24 @@ export default function InventoryList({
             <Filter className="w-4 h-4 mr-2" />
             재고부족만
           </Button>
+          <Button
+            onClick={handleSyncStock}
+            disabled={isSyncing}
+            className="bg-[#4a3f48] hover:bg-[#3a3338] text-white"
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${isSyncing ? "animate-spin" : ""}`} />
+            {isSyncing ? "동기화 중..." : "재고 동기화"}
+          </Button>
         </div>
+        {syncMessage && (
+          <div className={`mt-3 p-3 rounded-lg text-sm ${
+            syncMessage.includes("실패") || syncMessage.includes("오류")
+              ? "bg-red-50 text-red-700"
+              : "bg-green-50 text-green-700"
+          }`}>
+            {syncMessage}
+          </div>
+        )}
       </div>
 
       {/* 재고 목록 */}
