@@ -111,37 +111,85 @@ export function useSyncUser() {
           }
 
           // 에러 응답 파싱 시도
-          let errorMessage = `HTTP ${response.status}`;
+          let errorMessage = `HTTP ${response.status} ${response.statusText}`;
           let errorData: any = null;
+          let parseErrorOccurred = false;
+          
           try {
             const contentType = response.headers.get("content-type");
             logger.debug("[useSyncUser] 에러 응답 파싱 시도", {
               contentType,
               status: response.status,
+              statusText: response.statusText,
             });
             
             if (contentType?.includes("application/json")) {
-              errorData = await response.json();
-              errorMessage = errorData.error || errorData.message || errorMessage;
+              try {
+                errorData = await response.json();
+                errorMessage = errorData.error || errorData.message || errorMessage;
+              } catch (jsonError) {
+                parseErrorOccurred = true;
+                logger.debug("[useSyncUser] JSON 파싱 실패", {
+                  jsonError: jsonError instanceof Error ? jsonError.message : String(jsonError),
+                });
+              }
             } else {
-              const errorText = await response.text();
-              errorMessage = errorText || errorMessage;
+              try {
+                const errorText = await response.text();
+                errorMessage = errorText || errorMessage;
+                // 텍스트 응답도 errorData에 저장
+                errorData = { text: errorText };
+              } catch (textError) {
+                parseErrorOccurred = true;
+                logger.debug("[useSyncUser] 텍스트 파싱 실패", {
+                  textError: textError instanceof Error ? textError.message : String(textError),
+                });
+              }
             }
           } catch (parseError) {
+            parseErrorOccurred = true;
             // 파싱 실패 시 상태 코드만 사용
             logger.debug("[useSyncUser] 에러 응답 파싱 실패", {
               parseError: parseError instanceof Error ? parseError.message : String(parseError),
             });
           }
 
-          logger.error("[useSyncUser] 동기화 실패", {
+          // 에러 정보 객체 구성 (최소한의 정보는 항상 포함)
+          const errorInfo: Record<string, any> = {
             status: response.status,
             statusText: response.statusText,
             error: errorMessage,
-            errorData: errorData,
             url: response.url,
-            headers: Object.fromEntries(response.headers.entries()),
-          });
+          };
+
+          // errorData가 있으면 추가
+          if (errorData !== null) {
+            errorInfo.errorData = errorData;
+          }
+
+          // 파싱 에러가 발생했으면 표시
+          if (parseErrorOccurred) {
+            errorInfo.parseError = "에러 응답 파싱 실패";
+          }
+
+          // 헤더 정보 추가 (민감 정보는 마스킹됨)
+          try {
+            const headers: Record<string, string> = {};
+            response.headers.forEach((value, key) => {
+              // Authorization 헤더는 마스킹
+              if (key.toLowerCase() === "authorization") {
+                headers[key] = "***";
+              } else {
+                headers[key] = value;
+              }
+            });
+            errorInfo.headers = headers;
+          } catch (headerError) {
+            // 헤더 읽기 실패는 조용히 처리
+            errorInfo.headersError = "헤더 읽기 실패";
+          }
+
+          logger.error("[useSyncUser] 동기화 실패", errorInfo);
           logger.groupEnd();
           return;
         }
@@ -153,15 +201,19 @@ export function useSyncUser() {
         syncedRef.current = true;
         logger.groupEnd();
       } catch (error) {
-        // 에러 객체를 더 명확하게 로깅
-        let errorInfo: Record<string, any> = {};
+        // 에러 객체를 더 명확하게 로깅 (빈 객체가 전달되지 않도록 보장)
+        let errorInfo: Record<string, any> = {
+          timestamp: new Date().toISOString(),
+        };
         
         if (error instanceof TypeError && error.message === "Failed to fetch") {
           // 네트워크 오류 (서버가 응답하지 않음, CORS 오류 등)
           errorInfo = {
+            ...errorInfo,
             name: "NetworkError",
             message: "네트워크 오류: 서버에 연결할 수 없습니다",
             type: "Failed to fetch",
+            originalMessage: error.message,
             possibleCauses: [
               "서버가 실행 중이지 않음",
               "CORS 설정 문제",
@@ -171,22 +223,41 @@ export function useSyncUser() {
           };
         } else if (error instanceof Error) {
           errorInfo = {
+            ...errorInfo,
             name: error.name,
             message: error.message,
             stack: error.stack?.substring(0, 500), // 스택 일부만
           };
         } else if (error && typeof error === "object") {
           // 일반 객체인 경우
-          errorInfo = {
-            type: "object",
-            keys: Object.keys(error),
-            stringified: JSON.stringify(error).substring(0, 300),
-          };
+          try {
+            const keys = Object.keys(error);
+            errorInfo = {
+              ...errorInfo,
+              type: "object",
+              keys: keys,
+              keyCount: keys.length,
+              stringified: JSON.stringify(error).substring(0, 300),
+            };
+          } catch (stringifyError) {
+            errorInfo = {
+              ...errorInfo,
+              type: "object",
+              stringifyError: "객체 직렬화 실패",
+            };
+          }
         } else {
           errorInfo = {
+            ...errorInfo,
             type: typeof error,
             value: String(error),
           };
+        }
+        
+        // 최소한의 정보는 항상 포함되도록 보장
+        if (Object.keys(errorInfo).length <= 1) {
+          errorInfo.unknownError = "알 수 없는 에러 형식";
+          errorInfo.rawError = String(error);
         }
         
         logger.error("[useSyncUser] 동기화 중 예외 발생", errorInfo);
