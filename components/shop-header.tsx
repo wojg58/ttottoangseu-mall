@@ -76,6 +76,13 @@ export default function ShopHeader() {
 
   // 장바구니 아이템 수량 조회 (Server Action 사용)
   useEffect(() => {
+    // 관리자 페이지에서는 장바구니 수량 조회 건너뛰기
+    if (pathname?.startsWith("/admin")) {
+      logger.debug("[ShopHeader] 관리자 페이지에서는 장바구니 수량 조회 건너뜀");
+      setCartItemCount(0);
+      return;
+    }
+
     async function fetchCartItemCount() {
       if (!isSignedIn || !userId) {
         setCartItemCount(0);
