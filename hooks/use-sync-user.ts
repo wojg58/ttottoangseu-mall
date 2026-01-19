@@ -19,6 +19,12 @@ export function useSyncUser() {
   const syncedRef = useRef(false);
 
   useEffect(() => {
+    // 관리자 페이지에서는 동기화 건너뛰기 (관리자는 이미 Supabase에 있을 가능성이 높음)
+    if (typeof window !== "undefined" && window.location.pathname.startsWith("/admin")) {
+      logger.debug("[useSyncUser] 관리자 페이지에서는 동기화 건너뜀");
+      return;
+    }
+
     // 디버깅: 현재 상태 로그 (민감 정보 제외)
     logger.debug("[useSyncUser] useEffect 실행", {
       synced: syncedRef.current,
