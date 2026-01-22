@@ -19,7 +19,6 @@
 
 import { logger } from "@/lib/logger";
 import bcrypt from "bcrypt";
-import crypto from "crypto";
 
 // 네이버 스마트스토어 API 기본 URL
 export const BASE_URL = "https://api.commerce.naver.com/external";
@@ -95,25 +94,9 @@ function warnIfLoginKeySuspected(clientId: string) {
   }
 }
 
-function createBcryptSaltFromClientSecret(
-  clientSecret: string,
-  rounds = 10,
-) {
-  const normalized = clientSecret
-    .trim()
-    .replace(/^"(.*)"$/, "$1")
-    .replace(/^'(.*)'$/, "$1");
-  const digest = crypto
-    .createHash("sha256")
-    .update(normalized)
-    .digest("base64");
-  const bcryptSaltBody = digest
-    .replace(/\+/g, ".")
-    .replace(/=+$/g, "")
-    .slice(0, 22)
-    .padEnd(22, ".");
-  const roundsText = String(rounds).padStart(2, "0");
-  return `$2b$${roundsText}$${bcryptSaltBody}`;
+function toBase64Url(value: string) {
+  const base64 = Buffer.from(value, "utf-8").toString("base64");
+  return base64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
 }
 
 // 네이버 스마트스토어 API 응답 타입
@@ -244,14 +227,46 @@ export class SmartStoreApiClient {
     try {
       const timestamp = Date.now();
       const password = `${this.clientId}_${timestamp}`;
+      const clientIdLength = this.clientId.length;
+      const clientSecretLength = this.clientSecret.length;
+      const clientIdPrefix = this.clientId.slice(0, 4);
+      const clientIdSuffix = this.clientId.slice(-4);
+      const clientSecretPrefix = this.clientSecret.slice(0, 4);
+      const clientSecretSuffix = this.clientSecret.slice(-4);
+
+      // #region agent log
+      fetch(
+        "http://127.0.0.1:7242/ingest/4cdb12f7-9503-41e2-9643-35fd98685c1a",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sessionId: "debug-session",
+            runId: "pre-fix",
+            hypothesisId: "H3",
+            location: "lib/utils/smartstore-api.ts:getAccessToken",
+            message: "token request inputs (sanitized)",
+            data: {
+              timestampLength: String(timestamp).length,
+              clientIdLength,
+              clientIdPrefix,
+              clientIdSuffix,
+              clientSecretLength,
+              clientSecretPrefix,
+              clientSecretSuffix,
+            },
+            timestamp: Date.now(),
+          }),
+        },
+      ).catch(() => {});
+      // #endregion agent log
 
       let hashed: string;
       try {
         logger.info(
           "[SmartStoreAPI] 공식 문서 Node.js 예제 확인: bcrypt hash + base64",
         );
-        const salt = createBcryptSaltFromClientSecret(this.clientSecret);
-        hashed = bcrypt.hashSync(password, salt);
+        hashed = bcrypt.hashSync(password, this.clientSecret);
       } catch (error) {
         logger.error("[SmartStoreAPI] 서명 생성 실패", {
           error: error instanceof Error ? error.message : "알 수 없는 오류",
@@ -260,7 +275,41 @@ export class SmartStoreApiClient {
         });
         throw error;
       }
-      const signature = Buffer.from(hashed, "utf-8").toString("base64");
+      const signature =
+        typeof Buffer.from(hashed, "utf-8").toString === "function"
+          ? Buffer.from(hashed, "utf-8").toString("base64url")
+          : toBase64Url(hashed);
+      const hashedPrefix = hashed.slice(0, 4);
+      const hashedSuffix = hashed.slice(-4);
+      const signaturePrefix = signature.slice(0, 4);
+      const signatureSuffix = signature.slice(-4);
+
+      // #region agent log
+      fetch(
+        "http://127.0.0.1:7242/ingest/4cdb12f7-9503-41e2-9643-35fd98685c1a",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sessionId: "debug-session",
+            runId: "pre-fix",
+            hypothesisId: "H4",
+            location: "lib/utils/smartstore-api.ts:getAccessToken",
+            message: "bcrypt hash and signature lengths",
+            data: {
+              hashLength: hashed.length,
+              hashPrefix: hashedPrefix,
+              hashSuffix: hashedSuffix,
+              signatureLength: signature.length,
+              signaturePrefix,
+              signatureSuffix,
+            signatureEncoding: "base64url",
+            },
+            timestamp: Date.now(),
+          }),
+        },
+      ).catch(() => {});
+      // #endregion agent log
 
       logger.info("[SmartStoreAPI] 서명 생성 완료", {
         timestamp,

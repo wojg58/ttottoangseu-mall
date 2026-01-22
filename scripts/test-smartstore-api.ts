@@ -16,7 +16,6 @@
 
 import "dotenv/config";
 import bcrypt from "bcrypt";
-import crypto from "crypto";
 import { createRequire } from "module";
 
 const BASE_URL = "https://api.commerce.naver.com/external";
@@ -132,25 +131,9 @@ function ensureSmartstoreEnv(
   return value;
 }
 
-function createBcryptSaltFromClientSecret(
-  clientSecret: string,
-  rounds = 10,
-) {
-  const normalized = clientSecret
-    .trim()
-    .replace(/^"(.*)"$/, "$1")
-    .replace(/^'(.*)'$/, "$1");
-  const digest = crypto
-    .createHash("sha256")
-    .update(normalized)
-    .digest("base64");
-  const bcryptSaltBody = digest
-    .replace(/\+/g, ".")
-    .replace(/=+$/g, "")
-    .slice(0, 22)
-    .padEnd(22, ".");
-  const roundsText = String(rounds).padStart(2, "0");
-  return `$2b$${roundsText}$${bcryptSaltBody}`;
+function toBase64Url(value: string) {
+  const base64 = Buffer.from(value, "utf-8").toString("base64");
+  return base64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
 }
 
 async function getAccessToken(): Promise<string> {
@@ -167,16 +150,80 @@ async function getAccessToken(): Promise<string> {
   const clientId = normalizeEnvValue(clientIdRaw);
   const timestamp = Date.now();
   const password = `${clientId}_${timestamp}`;
+  const clientIdInfo = describeValueForLog(clientIdRaw);
+  const clientSecretInfo = describeValueForLog(clientSecret);
+
+  // #region agent log
+  fetch(
+    "http://127.0.0.1:7242/ingest/4cdb12f7-9503-41e2-9643-35fd98685c1a",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        sessionId: "debug-session",
+        runId: "pre-fix",
+        hypothesisId: "H1",
+        location: "scripts/test-smartstore-api.ts:getAccessToken",
+        message: "token request inputs (sanitized)",
+        data: {
+          timestampLength: String(timestamp).length,
+          clientIdLength: clientIdInfo.length,
+          clientIdTrimmed: clientIdInfo.trimmed,
+          clientIdPrefix: clientIdInfo.prefix,
+          clientIdSuffix: clientIdInfo.suffix,
+          clientSecretLength: clientSecretInfo.length,
+          clientSecretTrimmed: clientSecretInfo.trimmed,
+          clientSecretPrefix: clientSecretInfo.prefix,
+          clientSecretSuffix: clientSecretInfo.suffix,
+        },
+        timestamp: Date.now(),
+      }),
+    },
+  ).catch(() => {});
+  // #endregion agent log
 
   let hashed: string;
   try {
-    const salt = createBcryptSaltFromClientSecret(clientSecret);
-    hashed = bcrypt.hashSync(password, salt);
+    hashed = bcrypt.hashSync(password, clientSecret);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     throw new Error(`서명 생성 실패: ${message}`);
   }
-  const signature = Buffer.from(hashed, "utf-8").toString("base64");
+  const signature =
+    typeof Buffer.from(hashed, "utf-8").toString === "function"
+      ? Buffer.from(hashed, "utf-8").toString("base64url")
+      : toBase64Url(hashed);
+  const hashedPrefix = hashed.slice(0, 4);
+  const hashedSuffix = hashed.slice(-4);
+  const signaturePrefix = signature.slice(0, 4);
+  const signatureSuffix = signature.slice(-4);
+
+  // #region agent log
+  fetch(
+    "http://127.0.0.1:7242/ingest/4cdb12f7-9503-41e2-9643-35fd98685c1a",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        sessionId: "debug-session",
+        runId: "pre-fix",
+        hypothesisId: "H2",
+        location: "scripts/test-smartstore-api.ts:getAccessToken",
+        message: "bcrypt hash and signature lengths",
+        data: {
+          hashLength: hashed.length,
+          hashPrefix: hashedPrefix,
+          hashSuffix: hashedSuffix,
+          signatureLength: signature.length,
+          signaturePrefix,
+          signatureSuffix,
+          signatureEncoding: "base64url",
+        },
+        timestamp: Date.now(),
+      }),
+    },
+  ).catch(() => {});
+  // #endregion agent log
 
   const response = await fetch(`${BASE_URL}/v1/oauth2/token`, {
     method: "POST",
