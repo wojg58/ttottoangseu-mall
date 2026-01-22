@@ -1,4 +1,138 @@
 /**
+ * @file scripts/test-smartstore-api.ts
+ * @description 스마트스토어 API 연동 테스트 스크립트
+ *
+ * 실행:
+ * - pnpm tsx scripts/test-smartstore-api.ts
+ *
+ * 필수 환경 변수:
+ * - NAVER_SMARTSTORE_CLIENT_ID
+ * - NAVER_SMARTSTORE_CLIENT_SECRET
+ * - TEST_CHANNEL_PRODUCT_NO
+ */
+
+import fs from "fs";
+import path from "path";
+import bcrypt from "bcrypt";
+import dotenv from "dotenv";
+
+dotenv.config();
+
+const BASE_URL = "https://api.commerce.naver.com/external";
+const CLIENT_ID = process.env.NAVER_SMARTSTORE_CLIENT_ID;
+const CLIENT_SECRET = process.env.NAVER_SMARTSTORE_CLIENT_SECRET;
+const TEST_CHANNEL_PRODUCT_NO = process.env.TEST_CHANNEL_PRODUCT_NO;
+
+function mask(value: string, visible: number = 4) {
+  if (value.length <= visible) return "*".repeat(value.length);
+  return `${value.slice(0, visible)}***`;
+}
+
+function ensureEnv(name: string, value?: string) {
+  if (!value) {
+    throw new Error(`환경 변수 누락: ${name}`);
+  }
+  return value;
+}
+
+async function getAccessToken(): Promise<string> {
+  const clientId = ensureEnv("NAVER_SMARTSTORE_CLIENT_ID", CLIENT_ID);
+  const clientSecret = ensureEnv(
+    "NAVER_SMARTSTORE_CLIENT_SECRET",
+    CLIENT_SECRET,
+  );
+
+  const timestamp = Date.now();
+  const password = `${clientId}_${timestamp}`;
+
+  const hashed = bcrypt.hashSync(password, clientSecret);
+  const signature = Buffer.from(hashed, "utf-8").toString("base64");
+
+  const response = await fetch(`${BASE_URL}/v1/oauth2/token`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: new URLSearchParams({
+      client_id: clientId,
+      timestamp: timestamp.toString(),
+      client_secret_sign: signature,
+      grant_type: "client_credentials",
+      type: "SELF",
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(
+      `토큰 발급 실패: ${response.status} ${response.statusText} - ${errorText}`,
+    );
+  }
+
+  const data = await response.json();
+  return data.access_token;
+}
+
+async function getChannelProduct(token: string, channelProductNo: string) {
+  const response = await fetch(
+    `${BASE_URL}/v2/products/channel-products/${channelProductNo}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  );
+
+  const responseText = await response.text();
+  if (!response.ok) {
+    throw new Error(
+      `상품 조회 실패: ${response.status} ${response.statusText} - ${responseText}`,
+    );
+  }
+
+  return JSON.parse(responseText);
+}
+
+async function main() {
+  console.log("🚀 스마트스토어 API 테스트 시작");
+  console.log(
+    "[ENV] client_id:",
+    mask(ensureEnv("NAVER_SMARTSTORE_CLIENT_ID", CLIENT_ID)),
+  );
+  console.log(
+    "[ENV] client_secret:",
+    mask(ensureEnv("NAVER_SMARTSTORE_CLIENT_SECRET", CLIENT_SECRET)),
+  );
+  const channelProductNo = ensureEnv(
+    "TEST_CHANNEL_PRODUCT_NO",
+    TEST_CHANNEL_PRODUCT_NO,
+  );
+  console.log("[ENV] test_channel_product_no:", channelProductNo);
+
+  console.log("\n--- 1. 토큰 발급 테스트 ---");
+  const token = await getAccessToken();
+  console.log("✅ 토큰 발급 성공 (token 길이:", token.length, ")");
+
+  console.log("\n--- 2. 채널 상품 조회 테스트 ---");
+  const product = await getChannelProduct(token, channelProductNo);
+  console.log("✅ 채널 상품 조회 성공");
+
+  const outputDir = path.join(process.cwd(), "tmp");
+  if (!fs.existsSync(outputDir)) {
+    fs.mkdirSync(outputDir, { recursive: true });
+  }
+
+  const outputPath = path.join(outputDir, "channel-product.json");
+  fs.writeFileSync(outputPath, JSON.stringify(product, null, 2));
+  console.log(`📁 응답 저장됨: ${outputPath}`);
+}
+
+main().catch((error) => {
+  const message = error instanceof Error ? error.message : String(error);
+  console.error("❌ 실패:", message);
+  process.exit(1);
+});
+/**
  * 스마트스토어 API 연동 테스트 스크립트
  *
  * 목적: 네이버 스마트스토어 API의 실제 응답 구조를 확인하기 위한 테스트

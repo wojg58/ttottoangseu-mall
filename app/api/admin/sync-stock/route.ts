@@ -21,6 +21,7 @@ import {
   syncProductStock,
 } from "@/actions/sync-stock";
 import { getSmartStoreApiClient } from "@/lib/utils/smartstore-api";
+import { getServiceRoleClient } from "@/lib/supabase/service-role";
 import { logger } from "@/lib/logger";
 
 /**
@@ -52,6 +53,8 @@ async function executeSync(request: NextRequest) {
     const variantOnly = searchParams.get("variantOnly") === "true";
     const productOnly = searchParams.get("productOnly") === "true";
     const testProductId = searchParams.get("testProductId"); // 검증용: 특정 상품 ID로 테스트
+    const sampleOnly = searchParams.get("sampleOnly") === "true";
+    const sampleSize = Number(searchParams.get("sampleSize") || "3");
 
     // 검증 모드: 특정 상품 ID로 getProduct vs getChannelProduct 비교
     if (testProductId) {
@@ -101,6 +104,76 @@ async function executeSync(request: NextRequest) {
         success: true,
         message: "검증 완료",
         comparison,
+      });
+    }
+
+    // 샘플 모드: 첫 1~3개 상품만 SmartStore 조회 테스트
+    if (sampleOnly) {
+      const supabase = getServiceRoleClient();
+      const apiClient = getSmartStoreApiClient();
+      const limitedSize = Number.isFinite(sampleSize)
+        ? Math.min(Math.max(sampleSize, 1), 3)
+        : 3;
+
+      const { data: products, error: productsError } = await supabase
+        .from("products")
+        .select("id, name, smartstore_product_id")
+        .not("smartstore_product_id", "is", null)
+        .is("deleted_at", null)
+        .limit(limitedSize);
+
+      if (productsError || !products) {
+        logger.error(`[${method} /api/admin/sync-stock] 샘플 모드 조회 실패`, {
+          productsError,
+        });
+        logger.groupEnd();
+        return NextResponse.json(
+          {
+            success: false,
+            message: "샘플 모드 상품 조회 실패",
+            error: productsError?.message,
+          },
+          { status: 500 },
+        );
+      }
+
+      const samples = [];
+      for (const product of products) {
+        const smartstoreId = String(product.smartstore_product_id).trim();
+        try {
+          const channelProduct = await apiClient.getChannelProduct(smartstoreId);
+          samples.push({
+            productId: product.id,
+            name: product.name,
+            smartstoreProductId: smartstoreId,
+            success: !!channelProduct,
+            channelProductNo: channelProduct?.channelProductNo,
+            originProductNo: channelProduct?.originProductNo,
+            stockQuantity: channelProduct?.stockQuantity,
+            statusType: channelProduct?.statusType,
+            channelProductDisplayStatusType:
+              channelProduct?.channelProductDisplayStatusType,
+          });
+        } catch (error) {
+          samples.push({
+            productId: product.id,
+            name: product.name,
+            smartstoreProductId: smartstoreId,
+            success: false,
+            error: error instanceof Error ? error.message : "알 수 없는 오류",
+          });
+        }
+      }
+
+      logger.info(`[${method} /api/admin/sync-stock] 샘플 모드 완료`, {
+        count: samples.length,
+        samples,
+      });
+      logger.groupEnd();
+      return NextResponse.json({
+        success: true,
+        message: "샘플 모드 완료",
+        samples,
       });
     }
 

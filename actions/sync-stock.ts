@@ -112,14 +112,28 @@ export async function syncProductStock(
       .eq("smartstore_product_id", smartstoreProductId)
       .is("deleted_at", null);
 
+    if (productCount === 0) {
+      logger.error("[syncProductStock] 상품을 찾을 수 없습니다", {
+        smartstoreProductId,
+        reason: "smartstore_product_id가 존재하지 않습니다",
+      });
+      logger.groupEnd();
+      return {
+        success: false,
+        message: `상품을 찾을 수 없습니다: ${smartstoreProductId} (존재하지 않음)`,
+      };
+    }
+
     if (productCount && productCount > 1) {
-      logger.warn("[syncProductStock] 중복된 smartstore_product_id 발견", {
+      logger.error("[syncProductStock] 중복된 smartstore_product_id 발견", {
         smartstoreProductId,
         count: productCount,
-        note: "첫 번째 상품으로 동기화 진행 (데이터 정합성 문제)",
       });
-      // 중복이 있어도 첫 번째 상품을 사용하여 동기화 진행
-      // (데이터 정합성 문제이지만 동기화는 계속 진행)
+      logger.groupEnd();
+      return {
+        success: false,
+        message: `중복된 smartstore_product_id: ${smartstoreProductId} (${productCount}개)`,
+      };
     }
 
     const { data: product, error: findError } = await supabase
@@ -586,6 +600,34 @@ export async function syncVariantStocks(
     logger.info("[syncVariantStocks] Supabase 상품 조회 시작", {
       smartstoreProductId,
     });
+    const { count: variantProductCount } = await supabase
+      .from("products")
+      .select("id", { count: "exact", head: true })
+      .eq("smartstore_product_id", smartstoreProductId)
+      .is("deleted_at", null);
+
+    if (variantProductCount === 0) {
+      logger.error("[syncVariantStocks] 상품을 찾을 수 없습니다", {
+        smartstoreProductId,
+        reason: "smartstore_product_id가 존재하지 않습니다",
+      });
+      result.success = false;
+      result.message = `상품을 찾을 수 없습니다: ${smartstoreProductId} (존재하지 않음)`;
+      logger.groupEnd();
+      return result;
+    }
+
+    if (variantProductCount && variantProductCount > 1) {
+      logger.error("[syncVariantStocks] 중복된 smartstore_product_id 발견", {
+        smartstoreProductId,
+        count: variantProductCount,
+      });
+      result.success = false;
+      result.message = `중복된 smartstore_product_id: ${smartstoreProductId} (${variantProductCount}개)`;
+      logger.groupEnd();
+      return result;
+    }
+
     const { data: product, error: findError } = await supabase
       .from("products")
       .select("id, name")
