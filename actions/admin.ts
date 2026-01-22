@@ -11,6 +11,7 @@
 "use server";
 
 import { auth, currentUser } from "@clerk/nextjs/server";
+import { syncAllStocks, syncAllVariantStocks } from "@/actions/sync-stock";
 import { getServiceRoleClient } from "@/lib/supabase/service-role";
 import logger from "@/lib/logger";
 import type {
@@ -1361,6 +1362,94 @@ export async function getInventoryList(
   logger.groupEnd();
 
   return { items: paginatedItems, total, totalPages };
+}
+
+export interface SyncInventoryResult {
+  success: boolean;
+  message: string;
+  productSync?: Awaited<ReturnType<typeof syncAllStocks>>;
+  variantSync?: Awaited<ReturnType<typeof syncAllVariantStocks>>;
+  summary?: {
+    totalSynced: number;
+    totalFailed: number;
+    totalSkipped: number;
+    elapsedMs: number;
+  };
+}
+
+/**
+ * 스마트스토어 재고 동기화 (관리자 전용)
+ */
+export async function syncInventoryFromSmartstore(): Promise<SyncInventoryResult> {
+  logger.group("[syncInventoryFromSmartstore] 재고 동기화 시작");
+  const startTime = Date.now();
+
+  const isAdminUser = await isAdmin();
+  if (!isAdminUser) {
+    logger.warn("[syncInventoryFromSmartstore] ❌ 관리자 권한 없음 - 동기화 중단");
+    logger.groupEnd();
+    return { success: false, message: "관리자 권한이 필요합니다." };
+  }
+
+  logger.info(
+    "[syncInventoryFromSmartstore] ✅ 관리자 권한 확인됨 - 동기화 진행",
+  );
+
+  const productStartTime = Date.now();
+  logger.info("[syncInventoryFromSmartstore] 상품 재고 동기화 시작");
+  const productSync = await syncAllStocks();
+  const productElapsedMs = Date.now() - productStartTime;
+  logger.info("[syncInventoryFromSmartstore] 상품 재고 동기화 완료", {
+    success: productSync.success,
+    syncedCount: productSync.syncedCount,
+    failedCount: productSync.failedCount,
+    skippedCount: productSync.skippedCount || 0,
+    elapsedMs: productElapsedMs,
+  });
+
+  const variantStartTime = Date.now();
+  logger.info("[syncInventoryFromSmartstore] 옵션 재고 동기화 시작");
+  const variantSync = await syncAllVariantStocks();
+  const variantElapsedMs = Date.now() - variantStartTime;
+  logger.info("[syncInventoryFromSmartstore] 옵션 재고 동기화 완료", {
+    success: variantSync.success,
+    syncedCount: variantSync.syncedCount,
+    failedCount: variantSync.failedCount,
+    skippedCount: variantSync.skippedCount || 0,
+    elapsedMs: variantElapsedMs,
+  });
+
+  const totalElapsed = Date.now() - startTime;
+  const totalSynced =
+    (productSync.syncedCount || 0) + (variantSync.syncedCount || 0);
+  const totalFailed =
+    (productSync.failedCount || 0) + (variantSync.failedCount || 0);
+  const totalSkipped =
+    (productSync.skippedCount || 0) + (variantSync.skippedCount || 0);
+  const success = productSync.success && variantSync.success;
+
+  logger.info("[syncInventoryFromSmartstore] 전체 동기화 완료", {
+    totalSynced,
+    totalFailed,
+    totalSkipped,
+    elapsedMs: totalElapsed,
+  });
+  logger.groupEnd();
+
+  return {
+    success,
+    message: success
+      ? "재고 동기화 완료"
+      : "재고 동기화 중 일부 실패가 발생했습니다.",
+    productSync,
+    variantSync,
+    summary: {
+      totalSynced,
+      totalFailed,
+      totalSkipped,
+      elapsedMs: totalElapsed,
+    },
+  };
 }
 
 // 재고 업데이트 (상품 또는 옵션)
