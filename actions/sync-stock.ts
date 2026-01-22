@@ -79,25 +79,74 @@ export async function syncProductStock(
     // 1. Supabase에서 해당 상품 조회
     logger.info("[syncProductStock] Supabase 상품 조회 시작", {
       smartstoreProductId,
+      smartstoreProductIdType: typeof smartstoreProductId,
+      smartstoreProductIdLength: smartstoreProductId?.length,
     });
     const supabase = getServiceRoleClient();
+    
+    // 디버깅: 실제 DB에 있는 값 확인 (비슷한 ID로 검색)
+    const { data: similarProducts } = await supabase
+      .from("products")
+      .select("id, name, smartstore_product_id, status, deleted_at")
+      .not("smartstore_product_id", "is", null)
+      .is("deleted_at", null)
+      .limit(10);
+    
+    if (similarProducts && similarProducts.length > 0) {
+      logger.debug("[syncProductStock] DB에 있는 smartstore_product_id 샘플", {
+        sampleProducts: similarProducts.map((p) => ({
+          id: p.id,
+          name: p.name,
+          smartstore_product_id: p.smartstore_product_id,
+          smartstore_product_id_type: typeof p.smartstore_product_id,
+        })),
+      });
+    }
+
     const { data: product, error: findError } = await supabase
       .from("products")
-      .select("id, name, stock, status")
+      .select("id, name, stock, status, smartstore_product_id")
       .eq("smartstore_product_id", smartstoreProductId)
-      .eq("deleted_at", null)
+      .is("deleted_at", null)
       .single();
 
     if (findError || !product) {
+      // 더 자세한 진단 정보 수집
+      const { data: allProductsWithId } = await supabase
+        .from("products")
+        .select("id, name, smartstore_product_id")
+        .eq("smartstore_product_id", smartstoreProductId)
+        .limit(5);
+      
+      const { data: productsWithoutDeletedCheck } = await supabase
+        .from("products")
+        .select("id, name, smartstore_product_id, deleted_at")
+        .eq("smartstore_product_id", smartstoreProductId)
+        .limit(5);
+
       logger.error("[syncProductStock] 상품을 찾을 수 없습니다", {
         smartstoreProductId,
-        findError,
+        findError: findError
+          ? {
+              message: findError.message,
+              code: findError.code,
+              details: findError.details,
+              hint: findError.hint,
+            }
+          : null,
         product,
+        // 진단 정보
+        allProductsWithId: allProductsWithId || [],
+        productsWithoutDeletedCheck: productsWithoutDeletedCheck || [],
+        queryUsed: {
+          table: "products",
+          condition: `smartstore_product_id = '${smartstoreProductId}' AND deleted_at IS NULL`,
+        },
       });
       logger.groupEnd();
       return {
         success: false,
-        message: `상품을 찾을 수 없습니다: ${smartstoreProductId}`,
+        message: `상품을 찾을 수 없습니다: ${smartstoreProductId}${findError ? ` (${findError.message})` : ""}`,
       };
     }
 
@@ -254,6 +303,23 @@ export async function syncAllStocks(): Promise<SyncStockResult> {
       .is("deleted_at", null)
       .in("status", ["active", "sold_out"]); // active와 sold_out 모두 동기화
 
+    // 디버깅: 실제 조회된 상품의 smartstore_product_id 샘플 확인
+    if (products && products.length > 0) {
+      const sampleIds = products
+        .slice(0, 5)
+        .map((p) => ({
+          id: p.id,
+          name: p.name,
+          smartstore_product_id: p.smartstore_product_id,
+          smartstore_product_id_type: typeof p.smartstore_product_id,
+          smartstore_product_id_length: p.smartstore_product_id?.length,
+        }));
+      logger.info("[syncAllStocks] 조회된 상품 샘플 (최대 5개)", {
+        sampleIds,
+        totalCount: products.length,
+      });
+    }
+
     if (findError) {
       logger.error("[syncAllStocks] 상품 조회 실패", findError);
       result.success = false;
@@ -292,18 +358,38 @@ export async function syncAllStocks(): Promise<SyncStockResult> {
 
     // 2. 각 상품의 재고 동기화
     for (const product of products) {
-      if (!product.smartstore_product_id) continue;
+      if (!product.smartstore_product_id) {
+        logger.warn("[syncAllStocks] smartstore_product_id가 null인 상품 건너뜀", {
+          productId: product.id,
+          productName: product.name,
+        });
+        continue;
+      }
 
-      const syncResult = await syncProductStock(
-        product.smartstore_product_id,
-      );
+      // smartstore_product_id 값 검증
+      const smartstoreId = String(product.smartstore_product_id).trim();
+      if (!smartstoreId || smartstoreId === "null" || smartstoreId === "undefined") {
+        logger.warn("[syncAllStocks] 유효하지 않은 smartstore_product_id", {
+          productId: product.id,
+          productName: product.name,
+          smartstore_product_id: product.smartstore_product_id,
+        });
+        result.failedCount++;
+        result.errors.push({
+          productId: product.smartstore_product_id || "null",
+          error: `유효하지 않은 smartstore_product_id: ${product.smartstore_product_id}`,
+        });
+        continue;
+      }
+
+      const syncResult = await syncProductStock(smartstoreId);
 
       if (syncResult.success) {
         result.syncedCount++;
       } else {
         result.failedCount++;
         result.errors.push({
-          productId: product.smartstore_product_id,
+          productId: smartstoreId,
           error: syncResult.message,
         });
       }
