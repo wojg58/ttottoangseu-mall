@@ -112,15 +112,13 @@ export async function syncProductStock(
       .is("deleted_at", null);
 
     if (productCount && productCount > 1) {
-      logger.error("[syncProductStock] 중복된 smartstore_product_id 발견", {
+      logger.warn("[syncProductStock] 중복된 smartstore_product_id 발견", {
         smartstoreProductId,
         count: productCount,
+        note: "첫 번째 상품으로 동기화 진행 (데이터 정합성 문제)",
       });
-      logger.groupEnd();
-      return {
-        success: false,
-        message: `중복된 상품이 발견되었습니다: ${smartstoreProductId} (${productCount}개)`,
-      };
+      // 중복이 있어도 첫 번째 상품을 사용하여 동기화 진행
+      // (데이터 정합성 문제이지만 동기화는 계속 진행)
     }
 
     const { data: product, error: findError } = await supabase
