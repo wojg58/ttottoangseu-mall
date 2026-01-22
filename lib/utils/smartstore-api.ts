@@ -101,6 +101,7 @@ export interface SmartStoreProductWithOptions {
   originProductNo?: number; // 원상품 번호 (재고 수정 시 필요, 응답에서 직접 확인 불가)
   channelProductNo: number; // 채널상품 번호 (API 엔드포인트에서 사용한 값)
   name: string;
+  stockQuantity?: number; // 원상품 재고 수량 (채널상품 조회 응답에서 추출)
   optionInfo?: SmartStoreOptionInfo;
 }
 
@@ -451,6 +452,7 @@ export class SmartStoreApiClient {
       const normalized: SmartStoreProductWithOptions = {
         channelProductNo: parseInt(channelProductNo, 10),
         name: data.originProduct.name,
+        stockQuantity: data.originProduct.stockQuantity, // 원상품 재고 수량
         optionInfo: data.originProduct.detailAttribute.optionInfo,
         originProductNo: originProductNo,
       };

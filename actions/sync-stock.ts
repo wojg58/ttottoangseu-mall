@@ -178,15 +178,19 @@ export async function syncProductStock(
     });
 
     // 2. 네이버 스마트스토어에서 재고 조회
-    logger.info("[syncProductStock] SmartStore API 호출 시작", {
+    // smartstore_product_id는 채널상품 번호이므로 getChannelProduct 사용
+    logger.info("[syncProductStock] SmartStore 채널 상품 조회 시작", {
       smartstoreProductId,
+      note: "smartstore_product_id는 채널상품 번호이므로 getChannelProduct 사용",
     });
     const apiClient = getSmartStoreApiClient();
-    const smartstoreProduct = await apiClient.getProduct(smartstoreProductId);
+    
+    // 채널상품 조회 (originProduct.stockQuantity 포함)
+    const channelProduct = await apiClient.getChannelProduct(smartstoreProductId);
 
-    if (!smartstoreProduct) {
+    if (!channelProduct) {
       logger.error(
-        "[syncProductStock] 네이버 스마트스토어에서 상품 정보를 가져올 수 없습니다",
+        "[syncProductStock] 네이버 스마트스토어에서 채널 상품 정보를 가져올 수 없습니다",
         {
           smartstoreProductId,
           reason: "API 응답이 null입니다. API 클라이언트 로그를 확인하세요.",
@@ -199,14 +203,64 @@ export async function syncProductStock(
       };
     }
 
+    // 채널상품 조회 응답에서 재고 정보 추출
+    // 채널상품 조회 응답에는 originProduct.stockQuantity가 포함되어 있음
+    let stockQuantity: number | null = null;
+    
+    // 1차: 채널상품 조회 응답에서 직접 재고 정보 가져오기
+    if (channelProduct.stockQuantity !== undefined) {
+      stockQuantity = channelProduct.stockQuantity;
+      logger.info("[syncProductStock] 채널상품 조회 응답에서 재고 정보 추출", {
+        stockQuantity,
+      });
+    } else if (channelProduct.originProductNo) {
+      // 2차: 원상품 번호로 재고 조회 API 호출
+      logger.debug("[syncProductStock] 원상품 번호로 재고 조회 시도", {
+        originProductNo: channelProduct.originProductNo,
+      });
+      const originProduct = await apiClient.getProduct(
+        String(channelProduct.originProductNo),
+      );
+      if (originProduct) {
+        stockQuantity = originProduct.stockQuantity;
+        logger.info("[syncProductStock] 원상품 조회 성공", {
+          originProductNo: channelProduct.originProductNo,
+          stockQuantity,
+        });
+      } else {
+        logger.warn("[syncProductStock] 원상품 조회 실패", {
+          originProductNo: channelProduct.originProductNo,
+        });
+      }
+    }
+
+    // 재고 정보를 가져오지 못한 경우 에러 반환
+    if (stockQuantity === null) {
+      logger.error(
+        "[syncProductStock] 재고 정보를 가져올 수 없습니다",
+        {
+          smartstoreProductId,
+          channelProductNo: channelProduct.channelProductNo,
+          originProductNo: channelProduct.originProductNo,
+          hasStockQuantityInResponse: channelProduct.stockQuantity !== undefined,
+        },
+      );
+      logger.groupEnd();
+      return {
+        success: false,
+        message: `재고 정보를 가져올 수 없습니다: ${smartstoreProductId} (원상품 번호: ${channelProduct.originProductNo || "없음"})`,
+      };
+    }
+
     logger.info("[syncProductStock] SmartStore API 응답 성공", {
       smartstoreProductId,
-      stockQuantity: smartstoreProduct.stockQuantity,
-      saleStatus: smartstoreProduct.saleStatus,
+      channelProductNo: channelProduct.channelProductNo,
+      originProductNo: channelProduct.originProductNo,
+      stockQuantity,
     });
 
     // 3. 재고 및 상태 업데이트
-    const newStock = smartstoreProduct.stockQuantity;
+    const newStock = stockQuantity!; // 위에서 null 체크 완료
     let newStatus: "active" | "hidden" | "sold_out" = product.status as
       | "active"
       | "hidden"
