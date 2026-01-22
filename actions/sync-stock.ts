@@ -50,6 +50,7 @@ export interface SyncStockResult {
   message: string;
   syncedCount: number;
   failedCount: number;
+  skippedCount: number; // 종료/판매중지/삭제된 상품 수
   errors: Array<{ productId: string; error: string }>;
 }
 
@@ -70,7 +71,7 @@ export interface SyncVariantStockResult {
  */
 export async function syncProductStock(
   smartstoreProductId: string,
-): Promise<{ success: boolean; message: string; stock?: number }> {
+): Promise<{ success: boolean; message: string; stock?: number; skipped?: boolean }> {
   logger.group(`[syncProductStock] 시작: ${smartstoreProductId}`);
   try {
     // 환경변수 점검
@@ -204,6 +205,7 @@ export async function syncProductStock(
     // 채널상품 조회 응답에서 재고 정보 추출
     // 채널상품 조회 응답에는 originProduct.stockQuantity가 포함되어 있음
     let stockQuantity: number | null = null;
+    let productStatus: string | null = null; // 상품 상태 (종료/판매중지 확인용)
     
     // 1차: 채널상품 조회 응답에서 직접 재고 정보 가져오기
     if (channelProduct.stockQuantity !== undefined) {
@@ -221,15 +223,63 @@ export async function syncProductStock(
       );
       if (originProduct) {
         stockQuantity = originProduct.stockQuantity;
+        productStatus = originProduct.saleStatus; // 상품 상태 확인
         logger.info("[syncProductStock] 원상품 조회 성공", {
           originProductNo: channelProduct.originProductNo,
           stockQuantity,
+          saleStatus: productStatus,
         });
       } else {
         logger.warn("[syncProductStock] 원상품 조회 실패", {
           originProductNo: channelProduct.originProductNo,
         });
       }
+    }
+
+    // 종료/판매중지/삭제된 상품 확인
+    // SmartStore API 응답에서 상품 상태 확인
+    const channelStatus = channelProduct.channelProductDisplayStatusType;
+    const originStatus = channelProduct.statusType;
+    const isDiscontinued = 
+      productStatus === "SUSPENSION" || 
+      productStatus === "OUTOFSTOCK" ||
+      originStatus === "DISCONTINUED" ||
+      channelStatus === "DISCONTINUED" ||
+      channelStatus === "SUSPENSION" ||
+      (channelProduct as any).message?.includes("종료") ||
+      (channelProduct as any).message?.includes("판매중지");
+
+    if (isDiscontinued) {
+      logger.info("[syncProductStock] 종료/판매중지된 상품 감지", {
+        smartstoreProductId,
+        productStatus,
+        channelProductNo: channelProduct.channelProductNo,
+      });
+      
+      // products.status를 hidden으로 업데이트
+      const { error: updateError } = await supabase
+        .from("products")
+        .update({ status: "hidden" })
+        .eq("id", product.id);
+      
+      if (updateError) {
+        logger.error("[syncProductStock] 상품 상태 업데이트 실패", {
+          productId: product.id,
+          updateError,
+        });
+      } else {
+        logger.info("[syncProductStock] 상품 상태를 hidden으로 업데이트 완료", {
+          productId: product.id,
+          productName: product.name,
+        });
+      }
+      
+      logger.groupEnd();
+      return {
+        success: true,
+        message: `종료된 상품 (status: hidden으로 업데이트됨)`,
+        skipped: true, // skipped 플래그 추가
+      };
     }
 
     // 재고 정보를 가져오지 못한 경우 에러 반환
@@ -351,6 +401,7 @@ export async function syncAllStocks(): Promise<SyncStockResult> {
     message: "",
     syncedCount: 0,
     failedCount: 0,
+    skippedCount: 0, // 종료/판매중지/삭제된 상품 수
     errors: [],
   };
 
@@ -457,7 +508,12 @@ export async function syncAllStocks(): Promise<SyncStockResult> {
       const syncResult = await syncProductStock(smartstoreId);
 
       if (syncResult.success) {
-        result.syncedCount++;
+        if (syncResult.skipped) {
+          // 종료/판매중지된 상품은 skippedCount에 추가
+          result.skippedCount++;
+        } else {
+          result.syncedCount++;
+        }
       } else {
         result.failedCount++;
         result.errors.push({
@@ -472,10 +528,11 @@ export async function syncAllStocks(): Promise<SyncStockResult> {
       }
     }
 
-    result.message = `재고 동기화 완료: 성공 ${result.syncedCount}개, 실패 ${result.failedCount}개`;
+    result.message = `재고 동기화 완료: 성공 ${result.syncedCount}개, 실패 ${result.failedCount}개, 건너뜀 ${result.skippedCount}개`;
     logger.info("[syncAllStocks] 동기화 완료", {
       syncedCount: result.syncedCount,
       failedCount: result.failedCount,
+      skippedCount: result.skippedCount,
       totalProcessed: products.length,
       errors: result.errors.slice(0, 10), // 최대 10개만
     });

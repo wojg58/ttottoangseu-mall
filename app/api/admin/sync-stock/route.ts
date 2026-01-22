@@ -18,7 +18,9 @@ import { isAdmin } from "@/actions/admin";
 import {
   syncAllStocks,
   syncAllVariantStocks,
+  syncProductStock,
 } from "@/actions/sync-stock";
+import { getSmartStoreApiClient } from "@/lib/utils/smartstore-api";
 import { logger } from "@/lib/logger";
 
 /**
@@ -49,6 +51,58 @@ async function executeSync(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const variantOnly = searchParams.get("variantOnly") === "true";
     const productOnly = searchParams.get("productOnly") === "true";
+    const testProductId = searchParams.get("testProductId"); // 검증용: 특정 상품 ID로 테스트
+
+    // 검증 모드: 특정 상품 ID로 getProduct vs getChannelProduct 비교
+    if (testProductId) {
+      logger.info(`[${method} /api/admin/sync-stock] 검증 모드: ${testProductId}`);
+      const apiClient = getSmartStoreApiClient();
+      
+      // 1. getProduct 호출 (원상품 번호용)
+      logger.info("[검증] getProduct 호출 시작", { productId: testProductId });
+      const productResult = await apiClient.getProduct(testProductId);
+      
+      // 2. getChannelProduct 호출 (채널상품 번호용)
+      logger.info("[검증] getChannelProduct 호출 시작", { channelProductNo: testProductId });
+      const channelProductResult = await apiClient.getChannelProduct(testProductId);
+      
+      // 3. 결과 비교
+      const comparison = {
+        testProductId,
+        getProduct: {
+          success: productResult !== null,
+          result: productResult ? {
+            productId: productResult.productId,
+            name: productResult.name,
+            stockQuantity: productResult.stockQuantity,
+            saleStatus: productResult.saleStatus,
+          } : null,
+        },
+        getChannelProduct: {
+          success: channelProductResult !== null,
+          result: channelProductResult ? {
+            channelProductNo: channelProductResult.channelProductNo,
+            originProductNo: channelProductResult.originProductNo,
+            name: channelProductResult.name,
+            stockQuantity: channelProductResult.stockQuantity,
+            statusType: channelProductResult.statusType,
+            channelProductDisplayStatusType: channelProductResult.channelProductDisplayStatusType,
+          } : null,
+        },
+        recommendation: productResult ? "getProduct 사용 가능 (원상품 번호)" : 
+                      channelProductResult ? "getChannelProduct 사용 가능 (채널상품 번호)" : 
+                      "둘 다 실패 - 상품 ID 확인 필요",
+      };
+      
+      logger.info("[검증] API 비교 결과", comparison);
+      logger.groupEnd();
+      
+      return NextResponse.json({
+        success: true,
+        message: "검증 완료",
+        comparison,
+      });
+    }
 
     const results: {
       productSync?: Awaited<ReturnType<typeof syncAllStocks>>;
@@ -66,6 +120,7 @@ async function executeSync(request: NextRequest) {
         success: results.productSync.success,
         syncedCount: results.productSync.syncedCount,
         failedCount: results.productSync.failedCount,
+        skippedCount: results.productSync.skippedCount || 0,
         elapsedMs: productElapsed,
         errors: results.productSync.errors.slice(0, 5), // 최대 5개만
       });
@@ -94,11 +149,13 @@ async function executeSync(request: NextRequest) {
     const totalFailed =
       (results.productSync?.failedCount || 0) +
       (results.variantSync?.failedCount || 0);
+    const totalSkipped = results.productSync?.skippedCount || 0;
 
     logger.info(`[${method} /api/admin/sync-stock] 전체 동기화 완료`, {
       totalElapsedMs: totalElapsed,
       totalSynced,
       totalFailed,
+      totalSkipped,
     });
     logger.groupEnd();
 
@@ -110,6 +167,7 @@ async function executeSync(request: NextRequest) {
         summary: {
           totalSynced,
           totalFailed,
+          totalSkipped,
           elapsedMs: totalElapsed,
         },
       },

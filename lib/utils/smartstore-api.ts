@@ -103,6 +103,8 @@ export interface SmartStoreProductWithOptions {
   name: string;
   stockQuantity?: number; // 원상품 재고 수량 (채널상품 조회 응답에서 추출)
   optionInfo?: SmartStoreOptionInfo;
+  statusType?: string; // 원상품 상태 (종료/판매중지 확인용)
+  channelProductDisplayStatusType?: string; // 채널상품 표시 상태 (종료/판매중지 확인용)
 }
 
 // 네이버 스마트스토어 API 클라이언트
@@ -274,43 +276,83 @@ export class SmartStoreApiClient {
   }
 
   /**
-   * 상품 정보 조회 (단일 상품)
+   * 상품 정보 조회 (단일 상품) - 원상품 번호용
+   * 
+   * @param productId 원상품 번호 (originProductNo)
+   * @returns 상품 정보 또는 null
    */
   async getProduct(productId: string): Promise<SmartStoreProduct | null> {
-    logger.group(`[SmartStoreAPI] 상품 정보 조회: ${productId}`);
+    const apiUrl = `${BASE_URL}/v1/products/${productId}`;
+    logger.group(`[SmartStoreAPI] 상품 정보 조회 (원상품 번호용): ${productId}`);
+    logger.info("[SmartStoreAPI] API 호출 시작", {
+      endpoint: "GET /v1/products/{productId}",
+      url: apiUrl,
+      productId,
+      note: "이 API는 원상품 번호(originProductNo)를 사용합니다",
+    });
 
     try {
-      const response = await this.fetchWithRetry(
-        `${BASE_URL}/v1/products/${productId}`,
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
+      const response = await this.fetchWithRetry(apiUrl, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
         },
-      );
+      });
+
+      // 응답 상태 코드 및 본문 상세 로깅
+      const responseStatus = response.status;
+      const responseStatusText = response.statusText;
+      let responseBody: string | object = "";
+      let responseBodySummary = "";
+
+      try {
+        responseBody = await response.text();
+        responseBodySummary = responseBody.length > 500 
+          ? responseBody.substring(0, 500) + "..." 
+          : responseBody;
+        
+        // JSON 파싱 시도
+        try {
+          responseBody = JSON.parse(responseBody);
+        } catch {
+          // JSON이 아니면 텍스트로 유지
+        }
+      } catch (e) {
+        responseBodySummary = "응답 본문 읽기 실패";
+      }
+
+      logger.info("[SmartStoreAPI] API 응답 수신", {
+        status: responseStatus,
+        statusText: responseStatusText,
+        ok: response.ok,
+        responseBodySummary: typeof responseBody === "string" 
+          ? responseBodySummary 
+          : JSON.stringify(responseBody).substring(0, 500),
+      });
 
       if (!response.ok) {
-        const errorText = await response.text();
         const errorDetails = {
           productId,
-          status: response.status,
-          statusText: response.statusText,
-          error: errorText,
+          endpoint: "GET /v1/products/{productId}",
+          url: apiUrl,
+          status: responseStatus,
+          statusText: responseStatusText,
+          responseBody: responseBodySummary,
+          error: typeof responseBody === "string" ? responseBody : JSON.stringify(responseBody),
         };
         logger.error("[SmartStoreAPI] 상품 정보 조회 실패 (HTTP 에러)", errorDetails);
         logger.groupEnd();
-        // 에러를 명시적으로 던지지 않고 null 반환 (기존 호환성 유지)
-        // 하지만 상세 로그는 남김
         return null;
       }
 
       const data: SmartStoreApiResponse<SmartStoreProduct> =
-        await response.json();
+        typeof responseBody === "object" ? responseBody : JSON.parse(responseBody as string);
 
       if (data.code !== "SUCCESS") {
         const errorDetails = {
           productId,
+          endpoint: "GET /v1/products/{productId}",
+          url: apiUrl,
           code: data.code,
           message: data.message,
           responseData: data,
@@ -322,6 +364,7 @@ export class SmartStoreApiClient {
 
       logger.info("[SmartStoreAPI] 상품 정보 조회 성공", {
         productId,
+        endpoint: "GET /v1/products/{productId}",
         stockQuantity: data.data.stockQuantity,
         saleStatus: data.data.saleStatus,
         name: data.data.name,
@@ -331,6 +374,8 @@ export class SmartStoreApiClient {
     } catch (error) {
       const errorDetails = {
         productId,
+        endpoint: "GET /v1/products/{productId}",
+        url: apiUrl,
         error: error instanceof Error ? error.message : "알 수 없는 오류",
         stack: error instanceof Error ? error.stack : undefined,
       };
@@ -407,35 +452,73 @@ export class SmartStoreApiClient {
   async getChannelProduct(
     channelProductNo: string,
   ): Promise<SmartStoreProductWithOptions | null> {
+    const apiUrl = `${BASE_URL}/v2/products/channel-products/${channelProductNo}`;
     logger.group(
       `[SmartStoreAPI] 채널 상품 조회: ${channelProductNo}`,
     );
+    logger.info("[SmartStoreAPI] API 호출 시작", {
+      endpoint: "GET /v2/products/channel-products/{channelProductNo}",
+      url: apiUrl,
+      channelProductNo,
+      note: "이 API는 채널상품 번호(channelProductNo)를 사용합니다",
+    });
 
     try {
-      const response = await this.fetchWithRetry(
-        `${BASE_URL}/v2/products/channel-products/${channelProductNo}`,
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
+      const response = await this.fetchWithRetry(apiUrl, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
         },
-      );
+      });
+
+      // 응답 상태 코드 및 본문 상세 로깅
+      const responseStatus = response.status;
+      const responseStatusText = response.statusText;
+      let responseBody: string | object = "";
+      let responseBodySummary = "";
+
+      try {
+        responseBody = await response.text();
+        responseBodySummary = responseBody.length > 500 
+          ? responseBody.substring(0, 500) + "..." 
+          : responseBody;
+        
+        // JSON 파싱 시도
+        try {
+          responseBody = JSON.parse(responseBody);
+        } catch {
+          // JSON이 아니면 텍스트로 유지
+        }
+      } catch (e) {
+        responseBodySummary = "응답 본문 읽기 실패";
+      }
+
+      logger.info("[SmartStoreAPI] API 응답 수신", {
+        status: responseStatus,
+        statusText: responseStatusText,
+        ok: response.ok,
+        responseBodySummary: typeof responseBody === "string" 
+          ? responseBodySummary 
+          : JSON.stringify(responseBody).substring(0, 500),
+      });
 
       if (!response.ok) {
-        const errorText = await response.text();
         const errorDetails = {
           channelProductNo,
-          status: response.status,
-          statusText: response.statusText,
-          error: errorText,
+          endpoint: "GET /v2/products/channel-products/{channelProductNo}",
+          url: apiUrl,
+          status: responseStatus,
+          statusText: responseStatusText,
+          responseBody: responseBodySummary,
+          error: typeof responseBody === "string" ? responseBody : JSON.stringify(responseBody),
         };
         logger.error("[SmartStoreAPI] 채널 상품 조회 실패 (HTTP 에러)", errorDetails);
         logger.groupEnd();
         return null;
       }
 
-      const data: SmartStoreChannelProductResponse = await response.json();
+      const data: SmartStoreChannelProductResponse =
+        typeof responseBody === "object" ? responseBody : JSON.parse(responseBody as string);
 
       // originProductNo 추출 시도 (응답 구조에 따라 다를 수 있음)
       // 채널 상품 조회 응답에서 직접 가져올 수 없으면 원상품 조회 API 호출 필요
@@ -455,6 +538,9 @@ export class SmartStoreApiClient {
         stockQuantity: data.originProduct.stockQuantity, // 원상품 재고 수량
         optionInfo: data.originProduct.detailAttribute.optionInfo,
         originProductNo: originProductNo,
+        // 상품 상태 정보 추가 (종료/판매중지 확인용)
+        statusType: data.originProduct.statusType,
+        channelProductDisplayStatusType: data.smartstoreChannelProduct.channelProductDisplayStatusType,
       };
 
       logger.info("[SmartStoreAPI] 채널 상품 조회 성공", {
