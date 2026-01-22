@@ -246,6 +246,14 @@ async function getAccessToken(): Promise<string> {
       statusText: response.statusText,
       responseText: errorText,
     });
+    if (
+      response.status === 403 &&
+      errorText.includes("GW.IP_NOT_ALLOWED")
+    ) {
+      console.error(
+        "[HELP] 허용 IP(Whitelist) 미등록으로 차단되었습니다. 커머스API센터 > 내 스토어 애플리케이션에서 현재 공인 IP를 등록하세요.",
+      );
+    }
     throw new Error(
       `토큰 발급 실패: ${response.status} ${response.statusText} - ${errorText}`,
     );
