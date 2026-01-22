@@ -234,33 +234,6 @@ export class SmartStoreApiClient {
       const clientSecretPrefix = this.clientSecret.slice(0, 4);
       const clientSecretSuffix = this.clientSecret.slice(-4);
 
-      // #region agent log
-      fetch(
-        "http://127.0.0.1:7242/ingest/4cdb12f7-9503-41e2-9643-35fd98685c1a",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            sessionId: "debug-session",
-            runId: "pre-fix",
-            hypothesisId: "H3",
-            location: "lib/utils/smartstore-api.ts:getAccessToken",
-            message: "token request inputs (sanitized)",
-            data: {
-              timestampLength: String(timestamp).length,
-              clientIdLength,
-              clientIdPrefix,
-              clientIdSuffix,
-              clientSecretLength,
-              clientSecretPrefix,
-              clientSecretSuffix,
-            },
-            timestamp: Date.now(),
-          }),
-        },
-      ).catch(() => {});
-      // #endregion agent log
-
       let hashed: string;
       try {
         logger.info(
@@ -283,33 +256,6 @@ export class SmartStoreApiClient {
       const hashedSuffix = hashed.slice(-4);
       const signaturePrefix = signature.slice(0, 4);
       const signatureSuffix = signature.slice(-4);
-
-      // #region agent log
-      fetch(
-        "http://127.0.0.1:7242/ingest/4cdb12f7-9503-41e2-9643-35fd98685c1a",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            sessionId: "debug-session",
-            runId: "pre-fix",
-            hypothesisId: "H4",
-            location: "lib/utils/smartstore-api.ts:getAccessToken",
-            message: "bcrypt hash and signature lengths",
-            data: {
-              hashLength: hashed.length,
-              hashPrefix: hashedPrefix,
-              hashSuffix: hashedSuffix,
-              signatureLength: signature.length,
-              signaturePrefix,
-              signatureSuffix,
-            signatureEncoding: "base64url",
-            },
-            timestamp: Date.now(),
-          }),
-        },
-      ).catch(() => {});
-      // #endregion agent log
 
       logger.info("[SmartStoreAPI] 서명 생성 완료", {
         timestamp,

@@ -153,35 +153,6 @@ async function getAccessToken(): Promise<string> {
   const clientIdInfo = describeValueForLog(clientIdRaw);
   const clientSecretInfo = describeValueForLog(clientSecret);
 
-  // #region agent log
-  fetch(
-    "http://127.0.0.1:7242/ingest/4cdb12f7-9503-41e2-9643-35fd98685c1a",
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        sessionId: "debug-session",
-        runId: "pre-fix",
-        hypothesisId: "H1",
-        location: "scripts/test-smartstore-api.ts:getAccessToken",
-        message: "token request inputs (sanitized)",
-        data: {
-          timestampLength: String(timestamp).length,
-          clientIdLength: clientIdInfo.length,
-          clientIdTrimmed: clientIdInfo.trimmed,
-          clientIdPrefix: clientIdInfo.prefix,
-          clientIdSuffix: clientIdInfo.suffix,
-          clientSecretLength: clientSecretInfo.length,
-          clientSecretTrimmed: clientSecretInfo.trimmed,
-          clientSecretPrefix: clientSecretInfo.prefix,
-          clientSecretSuffix: clientSecretInfo.suffix,
-        },
-        timestamp: Date.now(),
-      }),
-    },
-  ).catch(() => {});
-  // #endregion agent log
-
   let hashed: string;
   try {
     hashed = bcrypt.hashSync(password, clientSecret);
@@ -197,33 +168,6 @@ async function getAccessToken(): Promise<string> {
   const hashedSuffix = hashed.slice(-4);
   const signaturePrefix = signature.slice(0, 4);
   const signatureSuffix = signature.slice(-4);
-
-  // #region agent log
-  fetch(
-    "http://127.0.0.1:7242/ingest/4cdb12f7-9503-41e2-9643-35fd98685c1a",
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        sessionId: "debug-session",
-        runId: "pre-fix",
-        hypothesisId: "H2",
-        location: "scripts/test-smartstore-api.ts:getAccessToken",
-        message: "bcrypt hash and signature lengths",
-        data: {
-          hashLength: hashed.length,
-          hashPrefix: hashedPrefix,
-          hashSuffix: hashedSuffix,
-          signatureLength: signature.length,
-          signaturePrefix,
-          signatureSuffix,
-          signatureEncoding: "base64url",
-        },
-        timestamp: Date.now(),
-      }),
-    },
-  ).catch(() => {});
-  // #endregion agent log
 
   const response = await fetch(`${BASE_URL}/v1/oauth2/token`, {
     method: "POST",
