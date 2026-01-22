@@ -40,10 +40,13 @@ type SyncTargetProductLight = Pick<
   "id" | "name" | "smartstore_product_id"
 >;
 
-function applySyncTargetFilters<T>(query: T) {
-  return query
-    .not("smartstore_product_id", "is", null)
-    .is("deleted_at", null);
+type SyncTargetFilterQuery<T> = {
+  not: (column: string, operator: string, value: unknown) => T;
+  is: (column: string, value: null) => T;
+};
+
+function applySyncTargetFilters<T extends SyncTargetFilterQuery<T>>(query: T): T {
+  return query.not("smartstore_product_id", "is", null).is("deleted_at", null);
 }
 
 async function getSyncTargetProducts(
@@ -62,7 +65,7 @@ async function getSyncTargetProducts(
   }
   const { data, error } = await query;
   return {
-    data: data as SyncTargetProduct[] | null,
+    data: (data as unknown as SyncTargetProduct[] | null),
     error: error
       ? {
           message: error.message,
@@ -104,7 +107,7 @@ async function findSyncTargetBySmartstoreId(
       .eq("smartstore_product_id", smartstoreProductId),
   ).maybeSingle();
   return {
-    data: data as SyncTargetProduct | null,
+    data: (data as unknown as SyncTargetProduct | null),
     error: error
       ? {
           message: error.message,
@@ -185,6 +188,7 @@ export async function syncProductStock(
   try {
     // 환경변수 점검
     validateEnvironmentVariables();
+    const supabase = getServiceRoleClient();
 
     // 1. Supabase에서 해당 상품 조회
     logger.info("[syncProductStock] Supabase 상품 조회 시작", {
@@ -306,37 +310,21 @@ export async function syncProductStock(
     }
 
     // 채널상품 조회 응답에서 재고 정보 추출
-    // 채널상품 조회 응답에는 originProduct.stockQuantity가 포함되어 있음
+    // 규칙: 옵션 재고 합산 우선, 아니면 단일 재고 필드 사용
+    const options = apiClient.extractOptionStocks(channelProduct);
+    const hasOptionStocks =
+      channelProduct.optionInfo?.useStockManagement === true && options.length > 0;
+    const singleFieldStock =
+      channelProduct.stockQuantity !== undefined ? channelProduct.stockQuantity : null;
+    let usedSource: "sum_options" | "single_field" | null = null;
     let stockQuantity: number | null = null;
-    let productStatus: string | null = null; // 상품 상태 (종료/판매중지 확인용)
-    
-    // 1차: 채널상품 조회 응답에서 직접 재고 정보 가져오기
-    if (channelProduct.stockQuantity !== undefined) {
-      stockQuantity = channelProduct.stockQuantity;
-      logger.info("[syncProductStock] 채널상품 조회 응답에서 재고 정보 추출", {
-        stockQuantity,
-      });
-    } else if (channelProduct.originProductNo) {
-      // 2차: 원상품 번호로 재고 조회 API 호출
-      logger.debug("[syncProductStock] 원상품 번호로 재고 조회 시도", {
-        originProductNo: channelProduct.originProductNo,
-      });
-      const originProduct = await apiClient.getProduct(
-        String(channelProduct.originProductNo),
-      );
-      if (originProduct) {
-        stockQuantity = originProduct.stockQuantity;
-        productStatus = originProduct.saleStatus; // 상품 상태 확인
-        logger.info("[syncProductStock] 원상품 조회 성공", {
-          originProductNo: channelProduct.originProductNo,
-          stockQuantity,
-          saleStatus: productStatus,
-        });
-      } else {
-        logger.warn("[syncProductStock] 원상품 조회 실패", {
-          originProductNo: channelProduct.originProductNo,
-        });
-      }
+
+    if (hasOptionStocks) {
+      stockQuantity = options.reduce((sum, option) => sum + option.stockQuantity, 0);
+      usedSource = "sum_options";
+    } else if (singleFieldStock !== null) {
+      stockQuantity = singleFieldStock;
+      usedSource = "single_field";
     }
 
     // 종료/판매중지/삭제된 상품 확인
@@ -344,8 +332,6 @@ export async function syncProductStock(
     const channelStatus = channelProduct.channelProductDisplayStatusType;
     const originStatus = channelProduct.statusType;
     const isDiscontinued = 
-      productStatus === "SUSPENSION" || 
-      productStatus === "OUTOFSTOCK" ||
       originStatus === "DISCONTINUED" ||
       channelStatus === "DISCONTINUED" ||
       channelStatus === "SUSPENSION" ||
@@ -355,8 +341,9 @@ export async function syncProductStock(
     if (isDiscontinued) {
       logger.info("[syncProductStock] 종료/판매중지된 상품 감지", {
         smartstoreProductId,
-        productStatus,
         channelProductNo: channelProduct.channelProductNo,
+        channelStatus,
+        originStatus,
       });
       
       // products.status를 hidden으로 업데이트
@@ -394,6 +381,8 @@ export async function syncProductStock(
           channelProductNo: channelProduct.channelProductNo,
           originProductNo: channelProduct.originProductNo,
           hasStockQuantityInResponse: channelProduct.stockQuantity !== undefined,
+          useStockManagement: channelProduct.optionInfo?.useStockManagement ?? false,
+          optionCount: options.length,
         },
       );
       logger.groupEnd();
@@ -408,6 +397,7 @@ export async function syncProductStock(
       channelProductNo: channelProduct.channelProductNo,
       originProductNo: channelProduct.originProductNo,
       stockQuantity,
+      usedSource,
     });
 
     // 3. 재고 및 상태 업데이트
@@ -466,12 +456,14 @@ export async function syncProductStock(
     }
 
     logger.info("[syncProductStock] 재고 동기화 완료", {
-      productName: product.name,
-      oldStock: product.stock,
-      oldStatus: product.status,
-      newStock,
-      newStatus: updatedData?.status || newStatus,
-      statusChanged: newStatus !== product.status,
+      productId: product.id,
+      smartstoreProductId,
+      usedSource,
+      stockChange: `${product.stock} -> ${newStock}`,
+      statusChange:
+        product.status === (updatedData?.status || newStatus)
+          ? "unchanged"
+          : `${product.status} -> ${updatedData?.status || newStatus}`,
     });
     logger.groupEnd();
 

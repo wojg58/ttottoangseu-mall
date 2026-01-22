@@ -172,6 +172,13 @@ export interface SmartStoreChannelProductResponse {
   };
 }
 
+export interface SmartStoreChannelProductApiResult {
+  data: SmartStoreChannelProductResponse;
+  responseText: string;
+  status: number;
+  statusText: string;
+}
+
 // 채널 상품 조회 결과를 위한 정규화된 타입
 export interface SmartStoreProductWithOptions {
   originProductNo?: number; // 원상품 번호 (재고 수정 시 필요, 응답에서 직접 확인 불가)
@@ -582,18 +589,16 @@ export class SmartStoreApiClient {
   }
 
   /**
-   * 채널 상품 조회 (옵션 정보 포함)
-   * 
+   * 채널 상품 원본 응답 조회 (옵션 정보 포함)
+   *
    * @param channelProductNo 채널상품 번호 (products.smartstore_product_id 값)
-   * @returns 채널 상품 정보 (옵션 포함) 또는 null
+   * @returns 채널 상품 원본 응답 또는 null
    */
-  async getChannelProduct(
+  async getChannelProductRaw(
     channelProductNo: string,
-  ): Promise<SmartStoreProductWithOptions | null> {
+  ): Promise<SmartStoreChannelProductApiResult | null> {
     const apiUrl = `${BASE_URL}/v2/products/channel-products/${channelProductNo}`;
-    logger.group(
-      `[SmartStoreAPI] 채널 상품 조회: ${channelProductNo}`,
-    );
+    logger.group(`[SmartStoreAPI] 채널 상품 원본 조회: ${channelProductNo}`);
     logger.info("[SmartStoreAPI] API 호출 시작", {
       endpoint: "GET /v2/products/channel-products/{channelProductNo}",
       url: apiUrl,
@@ -609,55 +614,81 @@ export class SmartStoreApiClient {
         },
       });
 
-      // 응답 상태 코드 및 본문 상세 로깅
-      const responseStatus = response.status;
-      const responseStatusText = response.statusText;
-      let responseBody: string | object = "";
-      let responseBodySummary = "";
-
-      try {
-        responseBody = await response.text();
-        responseBodySummary = responseBody.length > 500 
-          ? responseBody.substring(0, 500) + "..." 
-          : responseBody;
-        
-        // JSON 파싱 시도
-        try {
-          responseBody = JSON.parse(responseBody);
-        } catch {
-          // JSON이 아니면 텍스트로 유지
-        }
-      } catch (e) {
-        responseBodySummary = "응답 본문 읽기 실패";
-      }
+      const responseText = await response.text();
+      const responseSummary =
+        responseText.length > 500
+          ? `${responseText.substring(0, 500)}...`
+          : responseText;
 
       logger.info("[SmartStoreAPI] API 응답 수신", {
-        status: responseStatus,
-        statusText: responseStatusText,
+        status: response.status,
+        statusText: response.statusText,
         ok: response.ok,
-        responseBodySummary: typeof responseBody === "string" 
-          ? responseBodySummary 
-          : JSON.stringify(responseBody).substring(0, 500),
+        responseBodySummary: responseSummary,
       });
 
       if (!response.ok) {
-        const errorDetails = {
+        logger.error("[SmartStoreAPI] 채널 상품 조회 실패 (HTTP 에러)", {
           channelProductNo,
           endpoint: "GET /v2/products/channel-products/{channelProductNo}",
           url: apiUrl,
-          status: responseStatus,
-          statusText: responseStatusText,
-          responseBody: responseBodySummary,
-          error: typeof responseBody === "string" ? responseBody : JSON.stringify(responseBody),
-        };
-        logger.error("[SmartStoreAPI] 채널 상품 조회 실패 (HTTP 에러)", errorDetails);
+          status: response.status,
+          statusText: response.statusText,
+          responseText,
+        });
         logger.groupEnd();
         return null;
       }
 
-      const data: SmartStoreChannelProductResponse =
-        typeof responseBody === "object" ? responseBody : JSON.parse(responseBody as string);
+      let data: SmartStoreChannelProductResponse;
+      try {
+        data = JSON.parse(responseText) as SmartStoreChannelProductResponse;
+      } catch (error) {
+        logger.error("[SmartStoreAPI] 채널 상품 응답 JSON 파싱 실패", {
+          channelProductNo,
+          responseText: responseSummary,
+          error: error instanceof Error ? error.message : "알 수 없는 오류",
+        });
+        logger.groupEnd();
+        return null;
+      }
 
+      logger.groupEnd();
+      return {
+        data,
+        responseText,
+        status: response.status,
+        statusText: response.statusText,
+      };
+    } catch (error) {
+      logger.error("[SmartStoreAPI] 채널 상품 원본 조회 예외", {
+        channelProductNo,
+        error: error instanceof Error ? error.message : "알 수 없는 오류",
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+      logger.groupEnd();
+      return null;
+    }
+  }
+
+  /**
+   * 채널 상품 조회 (옵션 정보 포함)
+   * 
+   * @param channelProductNo 채널상품 번호 (products.smartstore_product_id 값)
+   * @returns 채널 상품 정보 (옵션 포함) 또는 null
+   */
+  async getChannelProduct(
+    channelProductNo: string,
+  ): Promise<SmartStoreProductWithOptions | null> {
+    logger.group(`[SmartStoreAPI] 채널 상품 조회: ${channelProductNo}`);
+    try {
+      const rawResult = await this.getChannelProductRaw(channelProductNo);
+      if (!rawResult) {
+        logger.groupEnd();
+        return null;
+      }
+
+      const data = rawResult.data;
       // originProductNo 추출 시도 (응답 구조에 따라 다를 수 있음)
       // 채널 상품 조회 응답에서 직접 가져올 수 없으면 원상품 조회 API 호출 필요
       let originProductNo: number | undefined = undefined;
@@ -711,18 +742,29 @@ export class SmartStoreApiClient {
   /**
    * 옵션별 재고 목록 추출
    * 
-   * @param product 채널 상품 정보
+   * @param source 채널 상품 정보 또는 채널 상품 원본 응답
    * @returns 사용 가능한 옵션별 재고 목록
    */
   extractOptionStocks(
-    product: SmartStoreProductWithOptions,
+    source: SmartStoreProductWithOptions | SmartStoreChannelProductResponse,
   ): SmartStoreOptionStock[] {
-    const { optionInfo } = product;
+    const channelProductNo =
+      "channelProductNo" in source
+        ? source.channelProductNo
+        : undefined;
+    const productName =
+      "name" in source
+        ? source.name
+        : source.originProduct?.name;
+    const optionInfo =
+      "originProduct" in source
+        ? source.originProduct?.detailAttribute?.optionInfo
+        : source.optionInfo;
 
     if (!optionInfo || !optionInfo.useStockManagement) {
       logger.warn("[SmartStoreAPI] 재고관리 미사용 상품", {
-        channelProductNo: product.channelProductNo,
-        name: product.name,
+        channelProductNo,
+        name: productName,
       });
       return [];
     }
@@ -743,7 +785,7 @@ export class SmartStoreApiClient {
     );
 
     logger.info("[SmartStoreAPI] 옵션 추출 완료", {
-      channelProductNo: product.channelProductNo,
+      channelProductNo,
       totalOptions: options.length,
       usableOptions: usableOptions.length,
     });
