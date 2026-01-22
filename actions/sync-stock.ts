@@ -103,12 +103,32 @@ export async function syncProductStock(
       });
     }
 
+    // .single() 대신 .maybeSingle() 사용 (0개 또는 1개 허용)
+    // 여러 개가 있을 경우를 대비해 먼저 count 확인
+    const { count: productCount } = await supabase
+      .from("products")
+      .select("id", { count: "exact", head: true })
+      .eq("smartstore_product_id", smartstoreProductId)
+      .is("deleted_at", null);
+
+    if (productCount && productCount > 1) {
+      logger.error("[syncProductStock] 중복된 smartstore_product_id 발견", {
+        smartstoreProductId,
+        count: productCount,
+      });
+      logger.groupEnd();
+      return {
+        success: false,
+        message: `중복된 상품이 발견되었습니다: ${smartstoreProductId} (${productCount}개)`,
+      };
+    }
+
     const { data: product, error: findError } = await supabase
       .from("products")
       .select("id, name, stock, status, smartstore_product_id")
       .eq("smartstore_product_id", smartstoreProductId)
       .is("deleted_at", null)
-      .single();
+      .maybeSingle(); // .single() 대신 .maybeSingle() 사용
 
     if (findError || !product) {
       // 더 자세한 진단 정보 수집
@@ -220,7 +240,7 @@ export async function syncProductStock(
       .update(updateData)
       .eq("id", product.id)
       .select("stock, status")
-      .single();
+      .maybeSingle(); // .single() 대신 .maybeSingle() 사용
 
     if (updateError) {
       logger.error("[syncProductStock] 재고 업데이트 실패", {
@@ -456,12 +476,19 @@ export async function syncVariantStocks(
       .select("id, name")
       .eq("smartstore_product_id", smartstoreProductId)
       .is("deleted_at", null)
-      .single();
+      .maybeSingle(); // .single() 대신 .maybeSingle() 사용
 
     if (findError || !product) {
       logger.error("[syncVariantStocks] 상품을 찾을 수 없습니다", {
         smartstoreProductId,
-        findError,
+        findError: findError
+          ? {
+              message: findError.message,
+              code: findError.code,
+              details: findError.details,
+              hint: findError.hint,
+            }
+          : null,
         product,
       });
       result.success = false;
@@ -559,7 +586,7 @@ export async function syncVariantStocks(
             .eq("smartstore_origin_product_no", originProductNo)
             .eq("smartstore_option_id", option.id)
             .is("deleted_at", null)
-            .single();
+            .maybeSingle(); // .single() 대신 .maybeSingle() 사용
 
         if (!findVariantError && foundVariant) {
           variant = foundVariant;
@@ -575,7 +602,7 @@ export async function syncVariantStocks(
             .eq("product_id", product.id)
             .eq("sku", option.sellerManagerCode)
             .is("deleted_at", null)
-            .single();
+            .maybeSingle(); // .single() 대신 .maybeSingle() 사용
 
         if (!findVariantError && foundVariant) {
           variant = foundVariant;
@@ -629,7 +656,7 @@ export async function syncVariantStocks(
         .update({ stock: option.stockQuantity })
         .eq("id", variant.id)
         .select("stock")
-        .single();
+        .maybeSingle(); // .single() 대신 .maybeSingle() 사용
 
       if (updateError) {
         result.failedCount++;
