@@ -8,9 +8,9 @@
  * 3. 상세 로깅 및 성능 측정
  *
  * 사용 방법:
- * - POST /api/admin/sync-stock: 전체 재고 동기화 (상품 + 옵션)
- * - POST /api/admin/sync-stock?variantOnly=true: 옵션만 동기화
- * - POST /api/admin/sync-stock?productOnly=true: 상품만 동기화
+ * - GET/POST /api/admin/sync-stock: 전체 재고 동기화 (상품 + 옵션)
+ * - GET/POST /api/admin/sync-stock?variantOnly=true: 옵션만 동기화
+ * - GET/POST /api/admin/sync-stock?productOnly=true: 상품만 동기화
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -21,15 +21,19 @@ import {
 } from "@/actions/sync-stock";
 import { logger } from "@/lib/logger";
 
-export async function POST(request: NextRequest) {
+/**
+ * 재고 동기화 실행 공통 로직
+ */
+async function executeSync(request: NextRequest) {
   const startTime = Date.now();
-  logger.group("[POST /api/admin/sync-stock] 재고 동기화 시작");
+  const method = request.method;
+  logger.group(`[${method} /api/admin/sync-stock] 재고 동기화 시작`);
 
   try {
     // 1. 관리자 권한 확인
     const adminCheck = await isAdmin();
     if (!adminCheck) {
-      logger.error("[POST /api/admin/sync-stock] 관리자 권한 없음");
+      logger.error(`[${method} /api/admin/sync-stock] 관리자 권한 없음`);
       logger.groupEnd();
       return NextResponse.json(
         {
@@ -40,7 +44,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    logger.info("[POST /api/admin/sync-stock] 관리자 권한 확인 완료");
+    logger.info(`[${method} /api/admin/sync-stock] 관리자 권한 확인 완료`);
 
     const searchParams = request.nextUrl.searchParams;
     const variantOnly = searchParams.get("variantOnly") === "true";
@@ -53,12 +57,12 @@ export async function POST(request: NextRequest) {
 
     // 2. 상품 재고 동기화
     if (!variantOnly) {
-      logger.info("[POST /api/admin/sync-stock] 상품 재고 동기화 시작");
+      logger.info(`[${method} /api/admin/sync-stock] 상품 재고 동기화 시작`);
       const productStartTime = Date.now();
       results.productSync = await syncAllStocks();
       const productElapsed = Date.now() - productStartTime;
 
-      logger.info("[POST /api/admin/sync-stock] 상품 재고 동기화 완료", {
+      logger.info(`[${method} /api/admin/sync-stock] 상품 재고 동기화 완료`, {
         success: results.productSync.success,
         syncedCount: results.productSync.syncedCount,
         failedCount: results.productSync.failedCount,
@@ -69,12 +73,12 @@ export async function POST(request: NextRequest) {
 
     // 3. 옵션 재고 동기화
     if (!productOnly) {
-      logger.info("[POST /api/admin/sync-stock] 옵션 재고 동기화 시작");
+      logger.info(`[${method} /api/admin/sync-stock] 옵션 재고 동기화 시작`);
       const variantStartTime = Date.now();
       results.variantSync = await syncAllVariantStocks();
       const variantElapsed = Date.now() - variantStartTime;
 
-      logger.info("[POST /api/admin/sync-stock] 옵션 재고 동기화 완료", {
+      logger.info(`[${method} /api/admin/sync-stock] 옵션 재고 동기화 완료`, {
         success: results.variantSync.success,
         syncedCount: results.variantSync.syncedCount,
         failedCount: results.variantSync.failedCount,
@@ -91,7 +95,7 @@ export async function POST(request: NextRequest) {
       (results.productSync?.failedCount || 0) +
       (results.variantSync?.failedCount || 0);
 
-    logger.info("[POST /api/admin/sync-stock] 전체 동기화 완료", {
+    logger.info(`[${method} /api/admin/sync-stock] 전체 동기화 완료`, {
       totalElapsedMs: totalElapsed,
       totalSynced,
       totalFailed,
@@ -113,7 +117,7 @@ export async function POST(request: NextRequest) {
     );
   } catch (error) {
     const totalElapsed = Date.now() - startTime;
-    logger.error("[POST /api/admin/sync-stock] 예외 발생", error);
+    logger.error(`[${method} /api/admin/sync-stock] 예외 발생`, error);
     logger.groupEnd();
 
     return NextResponse.json(
@@ -125,4 +129,12 @@ export async function POST(request: NextRequest) {
       { status: 500 },
     );
   }
+}
+
+export async function GET(request: NextRequest) {
+  return executeSync(request);
+}
+
+export async function POST(request: NextRequest) {
+  return executeSync(request);
 }
