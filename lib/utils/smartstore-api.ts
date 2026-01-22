@@ -140,6 +140,19 @@ export class SmartStoreApiClient {
 
     try {
       // 2. bcrypt 서명 생성
+      // clientSecret은 bcrypt salt 형식이어야 함 (예: $2a$10$...)
+      const isBcryptSalt = /^\$2[aby]\$\d{2}\$/.test(this.clientSecret);
+      if (!isBcryptSalt) {
+        logger.error("[SmartStoreAPI] client_secret 형식 오류", {
+          message:
+            "NAVER_SMARTSTORE_CLIENT_SECRET가 bcrypt salt 형식이 아닙니다. ($2a$/$2b$로 시작해야 함)",
+          secretPrefix: this.clientSecret.slice(0, 4),
+          secretLength: this.clientSecret.length,
+        });
+        throw new Error(
+          "NAVER_SMARTSTORE_CLIENT_SECRET 형식 오류 (bcrypt salt 아님)",
+        );
+      }
       const timestamp = Date.now();
       const password = `${this.clientId}_${timestamp}`;
 
