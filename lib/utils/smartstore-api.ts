@@ -291,12 +291,16 @@ export class SmartStoreApiClient {
 
       if (!response.ok) {
         const errorText = await response.text();
-        logger.error("[SmartStoreAPI] 상품 정보 조회 실패", {
+        const errorDetails = {
           productId,
           status: response.status,
+          statusText: response.statusText,
           error: errorText,
-        });
+        };
+        logger.error("[SmartStoreAPI] 상품 정보 조회 실패 (HTTP 에러)", errorDetails);
         logger.groupEnd();
+        // 에러를 명시적으로 던지지 않고 null 반환 (기존 호환성 유지)
+        // 하지만 상세 로그는 남김
         return null;
       }
 
@@ -304,20 +308,32 @@ export class SmartStoreApiClient {
         await response.json();
 
       if (data.code !== "SUCCESS") {
-        logger.error("[SmartStoreAPI] 상품 정보 조회 실패", {
+        const errorDetails = {
           productId,
           code: data.code,
           message: data.message,
-        });
+          responseData: data,
+        };
+        logger.error("[SmartStoreAPI] 상품 정보 조회 실패 (API 에러)", errorDetails);
         logger.groupEnd();
         return null;
       }
 
-      logger.info("[SmartStoreAPI] 상품 정보 조회 성공", data.data);
+      logger.info("[SmartStoreAPI] 상품 정보 조회 성공", {
+        productId,
+        stockQuantity: data.data.stockQuantity,
+        saleStatus: data.data.saleStatus,
+        name: data.data.name,
+      });
       logger.groupEnd();
       return data.data;
     } catch (error) {
-      logger.error("[SmartStoreAPI] 상품 정보 조회 예외", error);
+      const errorDetails = {
+        productId,
+        error: error instanceof Error ? error.message : "알 수 없는 오류",
+        stack: error instanceof Error ? error.stack : undefined,
+      };
+      logger.error("[SmartStoreAPI] 상품 정보 조회 예외", errorDetails);
       logger.groupEnd();
       return null;
     }
@@ -407,11 +423,13 @@ export class SmartStoreApiClient {
 
       if (!response.ok) {
         const errorText = await response.text();
-        logger.error("[SmartStoreAPI] 채널 상품 조회 실패", {
+        const errorDetails = {
           channelProductNo,
           status: response.status,
+          statusText: response.statusText,
           error: errorText,
-        });
+        };
+        logger.error("[SmartStoreAPI] 채널 상품 조회 실패 (HTTP 에러)", errorDetails);
         logger.groupEnd();
         return null;
       }
@@ -438,15 +456,27 @@ export class SmartStoreApiClient {
       };
 
       logger.info("[SmartStoreAPI] 채널 상품 조회 성공", {
+        channelProductNo: normalized.channelProductNo,
+        originProductNo: normalized.originProductNo,
         name: normalized.name,
         hasOptions: !!normalized.optionInfo,
         useStockManagement:
           normalized.optionInfo?.useStockManagement ?? false,
+        optionCount: normalized.optionInfo
+          ? (normalized.optionInfo.optionStandards.length +
+            normalized.optionInfo.optionCombinations.length +
+            normalized.optionInfo.optionSimple.length)
+          : 0,
       });
       logger.groupEnd();
       return normalized;
     } catch (error) {
-      logger.error("[SmartStoreAPI] 채널 상품 조회 예외", error);
+      const errorDetails = {
+        channelProductNo,
+        error: error instanceof Error ? error.message : "알 수 없는 오류",
+        stack: error instanceof Error ? error.stack : undefined,
+      };
+      logger.error("[SmartStoreAPI] 채널 상품 조회 예외", errorDetails);
       logger.groupEnd();
       return null;
     }
