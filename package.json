@@ -11,6 +11,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "test": "vitest",
     "gen:types": "pnpm dlx supabase gen types typescript --project-id \"janmtfeeolgjpmeaioty\" --schema public > database.types.ts"
   },
   "dependencies": {
@@ -75,10 +76,16 @@
     "@types/papaparse": "^5.5.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/react": "^16.1.0",
+    "@vitejs/plugin-react": "^4.7.0",
     "dotenv": "^17.2.3",
     "eslint": "^9",
     "eslint-config-next": "15.5.6",
+    "jsdom": "^25.0.1",
     "tailwindcss": "^4",
+    "vite-tsconfig-paths": "^4.3.1",
+    "vitest": "^2.1.9",
     "tsx": "^4.21.0",
     "tw-animate-css": "^1.3.0",
     "typescript": "^5"

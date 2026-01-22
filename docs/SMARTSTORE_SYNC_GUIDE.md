@@ -24,6 +24,9 @@ NAVER_COMMERCE_CLIENT_SECRET=your_commerce_client_secret
 # (기존 호환) 아래 키도 동작하지만, 혼동 방지를 위해 위 키 사용 권장
 NAVER_SMARTSTORE_CLIENT_ID=your_commerce_client_id
 NAVER_SMARTSTORE_CLIENT_SECRET=your_commerce_client_secret
+
+# 관리자 동기화 시크릿 (API 보호용)
+ADMIN_SYNC_SECRET=your_admin_secret
 ```
 
 **중요:**
@@ -94,13 +97,13 @@ WHERE id = 'ttotto_01';
 
 ```bash
 # 브라우저 또는 터미널에서
-curl http://localhost:3000/api/sync-stock
+curl -H "x-admin-secret: <ADMIN_SYNC_SECRET>" http://localhost:3000/api/admin/sync-stock
 ```
 
 #### 단일 상품 재고 동기화
 
 ```bash
-curl "http://localhost:3000/api/sync-stock?productId=1234567890"
+curl -H "x-admin-secret: <ADMIN_SYNC_SECRET>" "http://localhost:3000/api/admin/sync-stock?productId=1234567890"
 ```
 
 ### 방법 2: Server Action 직접 호출
@@ -126,7 +129,7 @@ const result = await syncProductStock("1234567890");
 3. 트리거: **매일** 또는 **5분마다**
 4. 동작: **프로그램 시작**
 5. 프로그램: `curl`
-6. 인수: `http://localhost:3000/api/sync-stock`
+6. 인수: `-H "x-admin-secret: <ADMIN_SYNC_SECRET>" http://localhost:3000/api/admin/sync-stock`
 
 #### macOS/Linux (Cron)
 
@@ -135,7 +138,7 @@ const result = await syncProductStock("1234567890");
 crontab -e
 
 # 5분마다 실행
-*/5 * * * * curl http://localhost:3000/api/sync-stock
+*/5 * * * * curl -H "x-admin-secret: <ADMIN_SYNC_SECRET>" http://localhost:3000/api/admin/sync-stock
 ```
 
 #### Node.js 스크립트 (권장)
@@ -148,8 +151,11 @@ const https = require("https");
 const options = {
   hostname: "localhost",
   port: 3000,
-  path: "/api/sync-stock",
+  path: "/api/admin/sync-stock",
   method: "GET",
+  headers: {
+    "x-admin-secret": process.env.ADMIN_SYNC_SECRET || "",
+  },
 };
 
 const req = https.request(options, (res) => {

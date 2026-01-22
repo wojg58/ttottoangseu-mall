@@ -10,6 +10,10 @@
  * - GET /api/sync-stock: 모든 상품 재고 동기화
  * - GET /api/sync-stock?productId={smartstore_product_id}: 단일 상품 재고 동기화
  *
+ * 인증:
+ * - header: x-admin-secret
+ * - env: ADMIN_SYNC_SECRET
+ *
  * 주기적 실행:
  * - 로컬호스트에서 cron job 또는 스케줄러로 주기적으로 호출
  * - 예: 5분마다 실행
@@ -24,8 +28,54 @@ import {
 } from "@/actions/sync-stock";
 import { logger } from "@/lib/logger";
 
+function maskSecret(value: string) {
+  return {
+    length: value.length,
+    prefix: value.slice(0, 4),
+    suffix: value.slice(-4),
+  };
+}
+
+function validateAdminSecret(request: NextRequest) {
+  const secret = process.env.ADMIN_SYNC_SECRET;
+  const header = request.headers.get("x-admin-secret") || "";
+
+  if (!secret) {
+    logger.error("[/api/sync-stock] ADMIN_SYNC_SECRET 미설정");
+    return {
+      ok: false,
+      status: 500,
+      message: "서버 설정 오류: ADMIN_SYNC_SECRET이 필요합니다.",
+    };
+  }
+
+  if (header !== secret) {
+    logger.warn("[/api/sync-stock] 관리자 시크릿 불일치", {
+      provided: header ? maskSecret(header) : null,
+    });
+    return {
+      ok: false,
+      status: 401,
+      message: "인증 실패: x-admin-secret이 올바르지 않습니다.",
+    };
+  }
+
+  return { ok: true as const };
+}
+
 export async function GET(request: NextRequest) {
   try {
+    const auth = validateAdminSecret(request);
+    if (!auth.ok) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: auth.message,
+        },
+        { status: auth.status },
+      );
+    }
+
     const searchParams = request.nextUrl.searchParams;
     const productId = searchParams.get("productId");
     const variantMode = searchParams.get("variant") === "true"; // 옵션 단위 동기화 여부

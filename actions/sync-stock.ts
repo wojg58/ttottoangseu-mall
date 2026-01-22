@@ -18,7 +18,7 @@
 
 "use server";
 
-import { getSmartStoreApiClient } from "@/lib/utils/smartstore-api";
+import { deriveStocks, getSmartStoreApiClient } from "@/lib/utils/smartstore-api";
 import { getServiceRoleClient } from "@/lib/supabase/service-role";
 import { logger } from "@/lib/logger";
 
@@ -44,6 +44,21 @@ type SyncTargetFilterQuery<T> = {
   not: (column: string, operator: string, value: unknown) => T;
   is: (column: string, value: null) => T;
 };
+
+type VariantStockUpdateResult = {
+  syncedCount: number;
+  failedCount: number;
+  errors: Array<{
+    variantId: string;
+    optionId: number;
+    error: string;
+  }>;
+};
+
+function isIpNotAllowedError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.includes("GW.IP_NOT_ALLOWED");
+}
 
 function applySyncTargetFilters<T extends SyncTargetFilterQuery<T>>(query: T): T {
   return query.not("smartstore_product_id", "is", null).is("deleted_at", null);
@@ -117,6 +132,137 @@ async function findSyncTargetBySmartstoreId(
         }
       : null,
   };
+}
+
+async function updateVariantStocks(
+  supabase: ReturnType<typeof getServiceRoleClient>,
+  productId: string,
+  productName: string,
+  channelProductNo: number,
+  originProductNo: number | null,
+  options: Array<{
+    id: number;
+    stockQuantity: number;
+    optionName1: string;
+    optionName2?: string;
+    sellerManagerCode?: string;
+  }>,
+): Promise<VariantStockUpdateResult> {
+  const result: VariantStockUpdateResult = {
+    syncedCount: 0,
+    failedCount: 0,
+    errors: [],
+  };
+
+  for (const option of options) {
+    let variant = null;
+
+    if (originProductNo) {
+      const { data: foundVariant, error: findVariantError } = await supabase
+        .from("product_variants")
+        .select("id, stock, sku, variant_value")
+        .eq("product_id", productId)
+        .eq("smartstore_origin_product_no", originProductNo)
+        .eq("smartstore_option_id", option.id)
+        .is("deleted_at", null)
+        .maybeSingle();
+
+      if (!findVariantError && foundVariant) {
+        variant = foundVariant;
+      }
+    }
+
+    if (!variant && option.sellerManagerCode) {
+      const { data: foundVariant, error: findVariantError } = await supabase
+        .from("product_variants")
+        .select("id, stock, sku, variant_value")
+        .eq("product_id", productId)
+        .eq("sku", option.sellerManagerCode)
+        .is("deleted_at", null)
+        .maybeSingle();
+
+      if (!findVariantError && foundVariant) {
+        variant = foundVariant;
+        await supabase
+          .from("product_variants")
+          .update({
+            smartstore_origin_product_no: originProductNo,
+            smartstore_option_id: option.id,
+            smartstore_channel_product_no: channelProductNo,
+          })
+          .eq("id", variant.id);
+      }
+    }
+
+    if (!variant) {
+      result.failedCount++;
+      const errorMessage = `매핑된 variant 없음 (옵션: ${option.optionName1}${option.optionName2 ? `/${option.optionName2}` : ""})`;
+      result.errors.push({
+        variantId: "unknown",
+        optionId: option.id,
+        error: errorMessage,
+      });
+      logger.warn("[syncVariantStocks] 매핑 실패", {
+        productId,
+        productName,
+        optionId: option.id,
+        optionName1: option.optionName1,
+        optionName2: option.optionName2,
+        sellerManagerCode: option.sellerManagerCode,
+        originProductNo,
+        channelProductNo,
+        searchMethods: {
+          byOriginProductNo: !!originProductNo,
+          bySku: !!option.sellerManagerCode,
+        },
+      });
+      continue;
+    }
+
+    logger.debug("[syncVariantStocks] 옵션 재고 업데이트 시작", {
+      variantId: variant.id,
+      variantSku: variant.sku,
+      oldStock: variant.stock,
+      newStock: option.stockQuantity,
+      optionId: option.id,
+    });
+
+    const { error: updateError, data: updatedVariant } = await supabase
+      .from("product_variants")
+      .update({ stock: option.stockQuantity })
+      .eq("id", variant.id)
+      .select("stock")
+      .maybeSingle();
+
+    if (updateError) {
+      result.failedCount++;
+      result.errors.push({
+        variantId: variant.id,
+        optionId: option.id,
+        error: updateError.message,
+      });
+      logger.error("[syncVariantStocks] 재고 업데이트 실패", {
+        variantId: variant.id,
+        optionId: option.id,
+        updateError: {
+          message: updateError.message,
+          code: updateError.code,
+          details: updateError.details,
+          hint: updateError.hint,
+        },
+        productId,
+      });
+    } else {
+      result.syncedCount++;
+      logger.debug("[syncVariantStocks] 옵션 재고 업데이트 성공", {
+        variantId: variant.id,
+        oldStock: variant.stock,
+        newStock: updatedVariant?.stock || option.stockQuantity,
+      });
+    }
+  }
+
+  return result;
 }
 
 // 환경변수 점검
@@ -299,9 +445,34 @@ export async function syncProductStock(
       note: "smartstore_product_id는 채널상품 번호이므로 getChannelProduct 사용",
     });
     const apiClient = getSmartStoreApiClient();
-    
-    // 채널상품 조회 (originProduct.stockQuantity 포함)
-    const channelProduct = await apiClient.getChannelProduct(smartstoreProductId);
+
+    let channelProduct;
+    try {
+      channelProduct = await apiClient.getChannelProduct(smartstoreProductId);
+    } catch (error) {
+      if (isIpNotAllowedError(error)) {
+        logger.error("[syncProductStock] IP 허용 필요 (GW.IP_NOT_ALLOWED)", {
+          smartstoreProductId,
+          message:
+            "네이버 커머스 API센터에서 IP 허용(Whitelist) 설정이 필요합니다.",
+        });
+        logger.groupEnd();
+        return {
+          success: false,
+          message:
+            "GW.IP_NOT_ALLOWED: 커머스 API센터에서 IP 허용 설정이 필요합니다.",
+        };
+      }
+      logger.error("[syncProductStock] 채널 상품 조회 실패", {
+        smartstoreProductId,
+        error: error instanceof Error ? error.message : "알 수 없는 오류",
+      });
+      logger.groupEnd();
+      return {
+        success: false,
+        message: `채널 상품 조회 실패: ${error instanceof Error ? error.message : "알 수 없는 오류"}`,
+      };
+    }
 
     if (!channelProduct) {
       // #region agent log
@@ -339,23 +510,24 @@ export async function syncProductStock(
       };
     }
 
-    // 채널상품 조회 응답에서 재고 정보 추출
-    // 규칙: 옵션 재고 합산 우선, 아니면 단일 재고 필드 사용
-    const options = apiClient.extractOptionStocks(channelProduct);
-    const hasOptionStocks =
-      channelProduct.optionInfo?.useStockManagement === true && options.length > 0;
-    const singleFieldStock =
-      channelProduct.stockQuantity !== undefined ? channelProduct.stockQuantity : null;
-    let usedSource: "sum_options" | "single_field" | null = null;
-    let stockQuantity: number | null = null;
-
-    if (hasOptionStocks) {
-      stockQuantity = options.reduce((sum, option) => sum + option.stockQuantity, 0);
-      usedSource = "sum_options";
-    } else if (singleFieldStock !== null) {
-      stockQuantity = singleFieldStock;
-      usedSource = "single_field";
+    let stockInfo;
+    try {
+      stockInfo = deriveStocks(channelProduct);
+    } catch (error) {
+      logger.error("[syncProductStock] 재고 파싱 실패", {
+        smartstoreProductId,
+        error: error instanceof Error ? error.message : "알 수 없는 오류",
+      });
+      logger.groupEnd();
+      return {
+        success: false,
+        message: `재고 정보를 파싱할 수 없습니다: ${smartstoreProductId}`,
+      };
     }
+
+    const options = apiClient.extractOptionStocks(channelProduct);
+    const usedSource = stockInfo.mode === "options_sum" ? "sum_options" : "single_field";
+    const stockQuantity = stockInfo.productStock;
     // #region agent log
     fetch("http://127.0.0.1:7242/ingest/4cdb12f7-9503-41e2-9643-35fd98685c1a", {
       method: "POST",
@@ -424,25 +596,6 @@ export async function syncProductStock(
     }
 
     // 재고 정보를 가져오지 못한 경우 에러 반환
-    if (stockQuantity === null) {
-      logger.error(
-        "[syncProductStock] 재고 정보를 가져올 수 없습니다",
-        {
-          smartstoreProductId,
-          channelProductNo: channelProduct.channelProductNo,
-          originProductNo: channelProduct.originProductNo,
-          hasStockQuantityInResponse: channelProduct.stockQuantity !== undefined,
-          useStockManagement: channelProduct.optionInfo?.useStockManagement ?? false,
-          optionCount: options.length,
-        },
-      );
-      logger.groupEnd();
-      return {
-        success: false,
-        message: `재고 정보를 가져올 수 없습니다: ${smartstoreProductId} (원상품 번호: ${channelProduct.originProductNo || "없음"})`,
-      };
-    }
-
     logger.info("[syncProductStock] SmartStore API 응답 성공", {
       smartstoreProductId,
       channelProductNo: channelProduct.channelProductNo,
@@ -452,7 +605,7 @@ export async function syncProductStock(
     });
 
     // 3. 재고 및 상태 업데이트
-    const newStock = stockQuantity!; // 위에서 null 체크 완료
+    const newStock = stockQuantity;
     let newStatus: "active" | "hidden" | "sold_out" = product.status as
       | "active"
       | "hidden"
@@ -506,6 +659,27 @@ export async function syncProductStock(
       };
     }
 
+    if (options.length > 0) {
+      logger.info("[syncProductStock] 옵션 재고 업데이트 시작", {
+        productId: product.id,
+        optionCount: options.length,
+      });
+      const variantResult = await updateVariantStocks(
+        supabase,
+        product.id,
+        product.name,
+        channelProduct.channelProductNo,
+        channelProduct.originProductNo ?? null,
+        options,
+      );
+      logger.info("[syncProductStock] 옵션 재고 업데이트 완료", {
+        productId: product.id,
+        syncedCount: variantResult.syncedCount,
+        failedCount: variantResult.failedCount,
+        errors: variantResult.errors.slice(0, 5),
+      });
+    }
+
     logger.info("[syncProductStock] 재고 동기화 완료", {
       productId: product.id,
       smartstoreProductId,
@@ -556,16 +730,16 @@ export async function syncAllStocks(): Promise<SyncStockResult> {
     validateEnvironmentVariables();
 
     // 1. Supabase에서 동기화 대상 상품 조회
-    // sold_out 상품도 포함 (재고가 생기면 active로 복구하기 위해)
+    // 판매중(active) 상품만 동기화
     logger.info("[syncAllStocks] 동기화 대상 상품 조회 시작", {
       queryConditions: {
-        status: "in ('active', 'sold_out')",
+        status: "in ('active')",
         ...SYNC_TARGET_FILTER_LOG,
       },
     });
     const { data: products, error: findError } = await getSyncTargetProducts(
       "id, name, smartstore_product_id, status",
-      ["active", "sold_out"],
+      ["active"],
     );
 
     // 디버깅: 실제 조회된 상품의 smartstore_product_id 샘플 확인
@@ -619,7 +793,6 @@ export async function syncAllStocks(): Promise<SyncStockResult> {
     logger.info("[syncAllStocks] 동기화 대상 상품 조회 완료", {
       totalCount: products.length,
       activeCount: products.filter((p) => p.status === "active").length,
-      soldOutCount: products.filter((p) => p.status === "sold_out").length,
     });
 
     // 2. 각 상품의 재고 동기화
@@ -782,14 +955,25 @@ export async function syncVariantStocks(
       smartstoreProductId,
     });
     const supabase = getServiceRoleClient();
-    const channelProduct = await apiClient.getChannelProduct(
-      smartstoreProductId,
-    );
-
-    if (!channelProduct) {
+    let channelProduct;
+    try {
+      channelProduct = await apiClient.getChannelProduct(smartstoreProductId);
+    } catch (error) {
+      if (isIpNotAllowedError(error)) {
+        logger.error("[syncVariantStocks] IP 허용 필요 (GW.IP_NOT_ALLOWED)", {
+          smartstoreProductId,
+          message:
+            "네이버 커머스 API센터에서 IP 허용(Whitelist) 설정이 필요합니다.",
+        });
+        result.success = false;
+        result.message =
+          "GW.IP_NOT_ALLOWED: 커머스 API센터에서 IP 허용 설정이 필요합니다.";
+        logger.groupEnd();
+        return result;
+      }
       logger.error("[syncVariantStocks] 스마트스토어 상품 조회 실패", {
         smartstoreProductId,
-        reason: "API 응답이 null입니다. API 클라이언트 로그를 확인하세요.",
+        error: error instanceof Error ? error.message : "알 수 없는 오류",
       });
       result.success = false;
       result.message = `스마트스토어 상품 조회 실패: ${smartstoreProductId}`;
@@ -848,119 +1032,17 @@ export async function syncVariantStocks(
       // originProductNo 없이도 SKU로 매핑 시도 가능
     }
 
-    // 5. 각 옵션별로 우리 DB의 variant 찾아서 재고 업데이트
-    for (const option of options) {
-      let variant = null;
-
-      // originProductNo가 있으면 복합키로 매칭
-      if (originProductNo) {
-        const { data: foundVariant, error: findVariantError } =
-          await supabase
-            .from("product_variants")
-            .select("id, stock, sku, variant_value")
-            .eq("product_id", product.id)
-            .eq("smartstore_origin_product_no", originProductNo)
-            .eq("smartstore_option_id", option.id)
-            .is("deleted_at", null)
-            .maybeSingle(); // .single() 대신 .maybeSingle() 사용
-
-        if (!findVariantError && foundVariant) {
-          variant = foundVariant;
-        }
-      }
-
-      // 매핑 실패 시 SKU로 매칭 시도
-      if (!variant && option.sellerManagerCode) {
-        const { data: foundVariant, error: findVariantError } =
-          await supabase
-            .from("product_variants")
-            .select("id, stock, sku, variant_value")
-            .eq("product_id", product.id)
-            .eq("sku", option.sellerManagerCode)
-            .is("deleted_at", null)
-            .maybeSingle(); // .single() 대신 .maybeSingle() 사용
-
-        if (!findVariantError && foundVariant) {
-          variant = foundVariant;
-          // 매핑 정보 업데이트
-          await supabase
-            .from("product_variants")
-            .update({
-              smartstore_origin_product_no: originProductNo,
-              smartstore_option_id: option.id,
-              smartstore_channel_product_no: channelProduct.channelProductNo,
-            })
-            .eq("id", variant.id);
-        }
-      }
-
-      if (!variant) {
-        result.failedCount++;
-        const errorMessage = `매핑된 variant 없음 (옵션: ${option.optionName1}${option.optionName2 ? `/${option.optionName2}` : ""})`;
-        result.errors.push({
-          variantId: "unknown",
-          optionId: option.id,
-          error: errorMessage,
-        });
-        logger.warn("[syncVariantStocks] 매핑 실패", {
-          productId: product.id,
-          productName: product.name,
-          optionId: option.id,
-          optionName1: option.optionName1,
-          optionName2: option.optionName2,
-          sellerManagerCode: option.sellerManagerCode,
-          originProductNo,
-          channelProductNo: channelProduct.channelProductNo,
-          searchMethods: {
-            byOriginProductNo: !!originProductNo,
-            bySku: !!option.sellerManagerCode,
-          },
-        });
-        continue;
-      }
-
-      // 재고 업데이트
-      logger.debug("[syncVariantStocks] 옵션 재고 업데이트 시작", {
-        variantId: variant.id,
-        variantSku: variant.sku,
-        oldStock: variant.stock,
-        newStock: option.stockQuantity,
-        optionId: option.id,
-      });
-      const { error: updateError, data: updatedVariant } = await supabase
-        .from("product_variants")
-        .update({ stock: option.stockQuantity })
-        .eq("id", variant.id)
-        .select("stock")
-        .maybeSingle(); // .single() 대신 .maybeSingle() 사용
-
-      if (updateError) {
-        result.failedCount++;
-        result.errors.push({
-          variantId: variant.id,
-          optionId: option.id,
-          error: updateError.message,
-        });
-        logger.error("[syncVariantStocks] 재고 업데이트 실패", {
-          variantId: variant.id,
-          optionId: option.id,
-          updateError: {
-            message: updateError.message,
-            code: updateError.code,
-            details: updateError.details,
-            hint: updateError.hint,
-          },
-          productId: product.id,
-        });
-      } else {
-        result.syncedCount++;
-        logger.debug("[syncVariantStocks] 옵션 재고 업데이트 성공", {
-          variantId: variant.id,
-          oldStock: variant.stock,
-          newStock: updatedVariant?.stock || option.stockQuantity,
-        });
-      }
-    }
+    const variantResult = await updateVariantStocks(
+      supabase,
+      product.id,
+      product.name,
+      channelProduct.channelProductNo,
+      originProductNo,
+      options,
+    );
+    result.syncedCount = variantResult.syncedCount;
+    result.failedCount = variantResult.failedCount;
+    result.errors = variantResult.errors;
 
     result.message = `옵션 재고 동기화 완료: 성공 ${result.syncedCount}개, 실패 ${result.failedCount}개`;
     logger.info("[syncVariantStocks] 동기화 완료", {

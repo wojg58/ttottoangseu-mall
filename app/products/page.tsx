@@ -15,6 +15,8 @@ import { getProducts } from "@/actions/products";
 import ProductCard from "@/components/product-card";
 import ProductSortSelect from "@/components/product-sort-select";
 
+export const revalidate = 0;
+
 interface ProductsPageProps {
   searchParams: Promise<{
     featured?: string;

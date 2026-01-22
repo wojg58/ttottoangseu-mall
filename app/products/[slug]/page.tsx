@@ -27,6 +27,8 @@ import ProductImageGallery from "@/components/product-image-gallery";
 import ProductDetailOptions from "@/components/product-detail-options";
 import ProductDetailTabs from "@/components/product-detail-tabs";
 
+export const revalidate = 0;
+
 interface ProductDetailPageProps {
   params: Promise<{
     slug: string;

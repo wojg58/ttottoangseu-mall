@@ -23,6 +23,8 @@ import WallpaperPreview from "@/components/WallpaperPreview";
 import logger from "@/lib/logger";
 import type { ProductListItem, Category } from "@/types/database";
 
+export const revalidate = 0;
+
 // 베스트 상품 목록 (4개)
 const BEST_PRODUCT_NAMES = [
   "산리오 헬로키티 블랙엔젤 스타일업 롱다리 마스코트 인형 키링 그레이 드레스",

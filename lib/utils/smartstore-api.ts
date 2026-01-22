@@ -94,10 +94,10 @@ function warnIfLoginKeySuspected(clientId: string) {
   }
 }
 
-function toBase64Url(value: string) {
-  const base64 = Buffer.from(value, "utf-8").toString("base64");
-  return base64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+function detectIpNotAllowed(responseText: string) {
+  return responseText.includes("GW.IP_NOT_ALLOWED");
 }
+
 
 // 네이버 스마트스토어 API 응답 타입
 export interface SmartStoreProduct {
@@ -197,6 +197,8 @@ export class SmartStoreApiClient {
   // 토큰 캐싱 (중요!)
   private cachedToken: string | null = null;
   private cachedTokenExpiresAt: number = 0;
+  private ipBlocked = false;
+  private ipBlockedMessage: string | null = null;
 
   constructor() {
     this.clientId =
@@ -223,6 +225,12 @@ export class SmartStoreApiClient {
    * OAuth 2.0 액세스 토큰 발급 (캐싱 + bcrypt 서명 포함)
    */
   private async getAccessToken(): Promise<string> {
+    if (this.ipBlocked) {
+      throw new Error(
+        this.ipBlockedMessage ||
+          "GW.IP_NOT_ALLOWED: 커머스API센터 IP 허용 설정이 필요합니다.",
+      );
+    }
     // #region agent log
     fetch("http://127.0.0.1:7242/ingest/4cdb12f7-9503-41e2-9643-35fd98685c1a", {
       method: "POST",
@@ -273,10 +281,7 @@ export class SmartStoreApiClient {
         });
         throw error;
       }
-      const signature =
-        typeof Buffer.from(hashed, "utf-8").toString === "function"
-          ? Buffer.from(hashed, "utf-8").toString("base64url")
-          : toBase64Url(hashed);
+      const signature = Buffer.from(hashed, "utf-8").toString("base64");
       const hashedPrefix = hashed.slice(0, 4);
       const hashedSuffix = hashed.slice(-4);
       const signaturePrefix = signature.slice(0, 4);
@@ -304,6 +309,18 @@ export class SmartStoreApiClient {
 
       if (!response.ok) {
         const errorText = await response.text();
+        if (response.status === 403 && detectIpNotAllowed(errorText)) {
+          this.ipBlocked = true;
+          this.ipBlockedMessage =
+            "GW.IP_NOT_ALLOWED: 네이버 커머스 API센터에서 IP 허용(Whitelist) 설정이 필요합니다.";
+          logger.error("[SmartStoreAPI] IP 허용 필요 (GW.IP_NOT_ALLOWED)", {
+            status: response.status,
+            statusText: response.statusText,
+            responseText: errorText.substring(0, 300),
+            action: "커머스API센터 > 내 스토어 애플리케이션 > 허용 IP 등록",
+          });
+          throw new Error(this.ipBlockedMessage);
+        }
         logger.error("[SmartStoreAPI] 토큰 발급 실패", {
           status: response.status,
           statusText: response.statusText,
@@ -344,6 +361,12 @@ export class SmartStoreApiClient {
     retried = false,
   ): Promise<Response> {
     try {
+      if (this.ipBlocked) {
+        throw new Error(
+          this.ipBlockedMessage ||
+            "GW.IP_NOT_ALLOWED: 커머스API센터 IP 허용 설정이 필요합니다.",
+        );
+      }
       const token = await this.getAccessToken();
       
       if (!token) {
@@ -463,109 +486,7 @@ export class SmartStoreApiClient {
    * @param productId 원상품 번호 (originProductNo)
    * @returns 상품 정보 또는 null
    */
-  async getProduct(productId: string): Promise<SmartStoreProduct | null> {
-    const apiUrl = `${BASE_URL}/v1/products/${productId}`;
-    logger.group(`[SmartStoreAPI] 상품 정보 조회 (원상품 번호용): ${productId}`);
-    logger.info("[SmartStoreAPI] API 호출 시작", {
-      endpoint: "GET /v1/products/{productId}",
-      url: apiUrl,
-      productId,
-      note: "이 API는 원상품 번호(originProductNo)를 사용합니다",
-    });
-
-    try {
-      const response = await this.fetchWithRetry(apiUrl, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-
-      // 응답 상태 코드 및 본문 상세 로깅
-      const responseStatus = response.status;
-      const responseStatusText = response.statusText;
-      let responseBody: string | object = "";
-      let responseBodySummary = "";
-
-      try {
-        responseBody = await response.text();
-        responseBodySummary = responseBody.length > 500 
-          ? responseBody.substring(0, 500) + "..." 
-          : responseBody;
-        
-        // JSON 파싱 시도
-        try {
-          responseBody = JSON.parse(responseBody);
-        } catch {
-          // JSON이 아니면 텍스트로 유지
-        }
-      } catch (e) {
-        responseBodySummary = "응답 본문 읽기 실패";
-      }
-
-      logger.info("[SmartStoreAPI] API 응답 수신", {
-        status: responseStatus,
-        statusText: responseStatusText,
-        ok: response.ok,
-        responseBodySummary: typeof responseBody === "string" 
-          ? responseBodySummary 
-          : JSON.stringify(responseBody).substring(0, 500),
-      });
-
-      if (!response.ok) {
-        const errorDetails = {
-          productId,
-          endpoint: "GET /v1/products/{productId}",
-          url: apiUrl,
-          status: responseStatus,
-          statusText: responseStatusText,
-          responseBody: responseBodySummary,
-          error: typeof responseBody === "string" ? responseBody : JSON.stringify(responseBody),
-        };
-        logger.error("[SmartStoreAPI] 상품 정보 조회 실패 (HTTP 에러)", errorDetails);
-        logger.groupEnd();
-        return null;
-      }
-
-      const data: SmartStoreApiResponse<SmartStoreProduct> =
-        typeof responseBody === "object" ? responseBody : JSON.parse(responseBody as string);
-
-      if (data.code !== "SUCCESS") {
-        const errorDetails = {
-          productId,
-          endpoint: "GET /v1/products/{productId}",
-          url: apiUrl,
-          code: data.code,
-          message: data.message,
-          responseData: data,
-        };
-        logger.error("[SmartStoreAPI] 상품 정보 조회 실패 (API 에러)", errorDetails);
-        logger.groupEnd();
-        return null;
-      }
-
-      logger.info("[SmartStoreAPI] 상품 정보 조회 성공", {
-        productId,
-        endpoint: "GET /v1/products/{productId}",
-        stockQuantity: data.data.stockQuantity,
-        saleStatus: data.data.saleStatus,
-        name: data.data.name,
-      });
-      logger.groupEnd();
-      return data.data;
-    } catch (error) {
-      const errorDetails = {
-        productId,
-        endpoint: "GET /v1/products/{productId}",
-        url: apiUrl,
-        error: error instanceof Error ? error.message : "알 수 없는 오류",
-        stack: error instanceof Error ? error.stack : undefined,
-      };
-      logger.error("[SmartStoreAPI] 상품 정보 조회 예외", errorDetails);
-      logger.groupEnd();
-      return null;
-    }
-  }
+  // getProduct 제거: 채널상품 번호 기반 동기화만 사용
 
   /**
    * 상품 목록 조회 (페이지네이션)
@@ -633,7 +554,13 @@ export class SmartStoreApiClient {
    */
   async getChannelProductRaw(
     channelProductNo: string,
-  ): Promise<SmartStoreChannelProductApiResult | null> {
+  ): Promise<SmartStoreChannelProductApiResult> {
+    if (this.ipBlocked) {
+      throw new Error(
+        this.ipBlockedMessage ||
+          "GW.IP_NOT_ALLOWED: 커머스API센터 IP 허용 설정이 필요합니다.",
+      );
+    }
     const apiUrl = `${BASE_URL}/v2/products/channel-products/${channelProductNo}`;
     logger.group(`[SmartStoreAPI] 채널 상품 원본 조회: ${channelProductNo}`);
     // #region agent log
@@ -701,6 +628,18 @@ export class SmartStoreApiClient {
       });
 
       if (!response.ok) {
+        if (response.status === 403 && detectIpNotAllowed(responseText)) {
+          this.ipBlocked = true;
+          this.ipBlockedMessage =
+            "GW.IP_NOT_ALLOWED: 네이버 커머스 API센터에서 IP 허용(Whitelist) 설정이 필요합니다.";
+          logger.error("[SmartStoreAPI] IP 허용 필요 (GW.IP_NOT_ALLOWED)", {
+            status: response.status,
+            statusText: response.statusText,
+            responseText: responseText.substring(0, 300),
+            action: "커머스API센터 > 내 스토어 애플리케이션 > 허용 IP 등록",
+          });
+          throw new Error(this.ipBlockedMessage);
+        }
         // #region agent log
         fetch("http://127.0.0.1:7242/ingest/4cdb12f7-9503-41e2-9643-35fd98685c1a", {
           method: "POST",
@@ -730,7 +669,9 @@ export class SmartStoreApiClient {
           responseText,
         });
         logger.groupEnd();
-        return null;
+        throw new Error(
+          `채널 상품 조회 실패: ${response.status} ${response.statusText}`,
+        );
       }
 
       let data: SmartStoreChannelProductResponse;
@@ -761,7 +702,7 @@ export class SmartStoreApiClient {
           error: error instanceof Error ? error.message : "알 수 없는 오류",
         });
         logger.groupEnd();
-        return null;
+        throw new Error("채널 상품 응답 JSON 파싱 실패");
       }
 
       logger.groupEnd();
@@ -796,7 +737,7 @@ export class SmartStoreApiClient {
         stack: error instanceof Error ? error.stack : undefined,
       });
       logger.groupEnd();
-      return null;
+      throw error;
     }
   }
 
@@ -808,15 +749,10 @@ export class SmartStoreApiClient {
    */
   async getChannelProduct(
     channelProductNo: string,
-  ): Promise<SmartStoreProductWithOptions | null> {
+  ): Promise<SmartStoreProductWithOptions> {
     logger.group(`[SmartStoreAPI] 채널 상품 조회: ${channelProductNo}`);
     try {
       const rawResult = await this.getChannelProductRaw(channelProductNo);
-      if (!rawResult) {
-        logger.groupEnd();
-        return null;
-      }
-
       const data = rawResult.data;
       // originProductNo 추출 시도 (응답 구조에 따라 다를 수 있음)
       // 채널 상품 조회 응답에서 직접 가져올 수 없으면 원상품 조회 API 호출 필요
@@ -864,7 +800,7 @@ export class SmartStoreApiClient {
       };
       logger.error("[SmartStoreAPI] 채널 상품 조회 예외", errorDetails);
       logger.groupEnd();
-      return null;
+      throw error;
     }
   }
 
@@ -898,15 +834,7 @@ export class SmartStoreApiClient {
       return [];
     }
 
-    // 표준형 > 조합형 > 단독형 순으로 확인
-    const options =
-      optionInfo.optionStandards.length > 0
-        ? optionInfo.optionStandards
-        : optionInfo.optionCombinations.length > 0
-          ? optionInfo.optionCombinations
-          : optionInfo.optionSimple.length > 0
-            ? optionInfo.optionSimple
-            : [];
+    const options = getOptionStocksFromInfo(optionInfo);
 
     // usable이 false인 옵션 제외
     const usableOptions = options.filter(
@@ -921,6 +849,57 @@ export class SmartStoreApiClient {
 
     return usableOptions;
   }
+}
+
+function getOptionStocksFromInfo(
+  optionInfo: SmartStoreOptionInfo,
+): SmartStoreOptionStock[] {
+  // 표준형 > 조합형 > 단독형 순으로 확인
+  return optionInfo.optionStandards.length > 0
+    ? optionInfo.optionStandards
+    : optionInfo.optionCombinations.length > 0
+      ? optionInfo.optionCombinations
+      : optionInfo.optionSimple.length > 0
+        ? optionInfo.optionSimple
+        : [];
+}
+
+export function deriveStocks(channelProduct: SmartStoreProductWithOptions): {
+  productStock: number;
+  options?: Array<{ optionId: number; stock: number }>;
+  mode: "options_sum" | "single";
+} {
+  const optionInfo = channelProduct.optionInfo;
+  const useStockManagement = optionInfo?.useStockManagement ?? false;
+
+  if (useStockManagement && optionInfo) {
+    const options = getOptionStocksFromInfo(optionInfo).filter(
+      (opt) => opt.usable !== false,
+    );
+    if (options.length > 0) {
+      const productStock = options.reduce(
+        (sum, opt) => sum + opt.stockQuantity,
+        0,
+      );
+      return {
+        productStock,
+        options: options.map((opt) => ({
+          optionId: opt.id,
+          stock: opt.stockQuantity,
+        })),
+        mode: "options_sum",
+      };
+    }
+  }
+
+  if (typeof channelProduct.stockQuantity !== "number") {
+    throw new Error("채널 상품 응답에 재고 정보가 없습니다");
+  }
+
+  return {
+    productStock: channelProduct.stockQuantity,
+    mode: "single",
+  };
 }
 
 // 싱글톤 인스턴스
