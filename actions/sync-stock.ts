@@ -185,6 +185,21 @@ export async function syncProductStock(
   smartstoreProductId: string,
 ): Promise<{ success: boolean; message: string; stock?: number; skipped?: boolean }> {
   logger.group(`[syncProductStock] 시작: ${smartstoreProductId}`);
+  // #region agent log
+  fetch("http://127.0.0.1:7242/ingest/4cdb12f7-9503-41e2-9643-35fd98685c1a", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      sessionId: "debug-session",
+      runId: "pre-fix",
+      hypothesisId: "H1",
+      location: "actions/sync-stock.ts:syncProductStock:entry",
+      message: "syncProductStock 시작",
+      data: { smartstoreProductId },
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {});
+  // #endregion agent log
   try {
     // 환경변수 점검
     validateEnvironmentVariables();
@@ -289,6 +304,21 @@ export async function syncProductStock(
     const channelProduct = await apiClient.getChannelProduct(smartstoreProductId);
 
     if (!channelProduct) {
+      // #region agent log
+      fetch("http://127.0.0.1:7242/ingest/4cdb12f7-9503-41e2-9643-35fd98685c1a", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId: "debug-session",
+          runId: "pre-fix",
+          hypothesisId: "H2",
+          location: "actions/sync-stock.ts:syncProductStock:channel-null",
+          message: "채널 상품 조회 결과가 null",
+          data: { smartstoreProductId },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+      // #endregion agent log
       logger.error(
         "[syncProductStock] 네이버 스마트스토어에서 채널 상품 정보를 가져올 수 없습니다",
         {
@@ -326,6 +356,27 @@ export async function syncProductStock(
       stockQuantity = singleFieldStock;
       usedSource = "single_field";
     }
+    // #region agent log
+    fetch("http://127.0.0.1:7242/ingest/4cdb12f7-9503-41e2-9643-35fd98685c1a", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        sessionId: "debug-session",
+        runId: "pre-fix",
+        hypothesisId: "H3",
+        location: "actions/sync-stock.ts:syncProductStock:stock-calc",
+        message: "재고 계산 완료",
+        data: {
+          smartstoreProductId,
+          usedSource,
+          stockQuantity,
+          optionCount: options.length,
+          useStockManagement: channelProduct.optionInfo?.useStockManagement ?? false,
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion agent log
 
     // 종료/판매중지/삭제된 상품 확인
     // SmartStore API 응답에서 상품 상태 확인

@@ -223,6 +223,24 @@ export class SmartStoreApiClient {
    * OAuth 2.0 액세스 토큰 발급 (캐싱 + bcrypt 서명 포함)
    */
   private async getAccessToken(): Promise<string> {
+    // #region agent log
+    fetch("http://127.0.0.1:7242/ingest/4cdb12f7-9503-41e2-9643-35fd98685c1a", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        sessionId: "debug-session",
+        runId: "pre-fix",
+        hypothesisId: "H4",
+        location: "lib/utils/smartstore-api.ts:getAccessToken:entry",
+        message: "토큰 발급 시작 (환경 변수 존재 여부)",
+        data: {
+          clientIdPresent: !!this.clientId,
+          clientSecretPresent: !!this.clientSecret,
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion agent log
     // 1. 캐시된 토큰이 유효하면 재사용
     if (this.cachedToken && Date.now() < this.cachedTokenExpiresAt) {
       logger.info("[SmartStoreAPI] 캐시된 토큰 재사용");
@@ -360,6 +378,25 @@ export class SmartStoreApiClient {
 
       return response;
     } catch (error) {
+      // #region agent log
+      fetch("http://127.0.0.1:7242/ingest/4cdb12f7-9503-41e2-9643-35fd98685c1a", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId: "debug-session",
+          runId: "pre-fix",
+          hypothesisId: "H5",
+          location: "lib/utils/smartstore-api.ts:fetchWithRetry:catch",
+          message: "fetchWithRetry 예외 발생",
+          data: {
+            url,
+            retried,
+            error: error instanceof Error ? error.message : "알 수 없는 오류",
+          },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+      // #endregion agent log
       logger.error("[SmartStoreAPI] fetchWithRetry 예외", {
         url,
         error: error instanceof Error ? error.message : "알 수 없는 오류",
@@ -599,6 +636,21 @@ export class SmartStoreApiClient {
   ): Promise<SmartStoreChannelProductApiResult | null> {
     const apiUrl = `${BASE_URL}/v2/products/channel-products/${channelProductNo}`;
     logger.group(`[SmartStoreAPI] 채널 상품 원본 조회: ${channelProductNo}`);
+    // #region agent log
+    fetch("http://127.0.0.1:7242/ingest/4cdb12f7-9503-41e2-9643-35fd98685c1a", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        sessionId: "debug-session",
+        runId: "pre-fix",
+        hypothesisId: "H1",
+        location: "lib/utils/smartstore-api.ts:getChannelProductRaw:entry",
+        message: "채널 상품 원본 조회 시작",
+        data: { channelProductNo, apiUrl },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion agent log
     logger.info("[SmartStoreAPI] API 호출 시작", {
       endpoint: "GET /v2/products/channel-products/{channelProductNo}",
       url: apiUrl,
@@ -615,6 +667,27 @@ export class SmartStoreApiClient {
       });
 
       const responseText = await response.text();
+      // #region agent log
+      fetch("http://127.0.0.1:7242/ingest/4cdb12f7-9503-41e2-9643-35fd98685c1a", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId: "debug-session",
+          runId: "pre-fix",
+          hypothesisId: "H2",
+          location: "lib/utils/smartstore-api.ts:getChannelProductRaw:response",
+          message: "채널 상품 응답 수신",
+          data: {
+            channelProductNo,
+            status: response.status,
+            statusText: response.statusText,
+            ok: response.ok,
+            responseTextLength: responseText.length,
+          },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+      // #endregion agent log
       const responseSummary =
         responseText.length > 500
           ? `${responseText.substring(0, 500)}...`
@@ -628,6 +701,26 @@ export class SmartStoreApiClient {
       });
 
       if (!response.ok) {
+        // #region agent log
+        fetch("http://127.0.0.1:7242/ingest/4cdb12f7-9503-41e2-9643-35fd98685c1a", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sessionId: "debug-session",
+            runId: "pre-fix",
+            hypothesisId: "H3",
+            location: "lib/utils/smartstore-api.ts:getChannelProductRaw:http-error",
+            message: "채널 상품 HTTP 에러",
+            data: {
+              channelProductNo,
+              status: response.status,
+              statusText: response.statusText,
+              responseTextPreview: responseText.substring(0, 200),
+            },
+            timestamp: Date.now(),
+          }),
+        }).catch(() => {});
+        // #endregion agent log
         logger.error("[SmartStoreAPI] 채널 상품 조회 실패 (HTTP 에러)", {
           channelProductNo,
           endpoint: "GET /v2/products/channel-products/{channelProductNo}",
@@ -644,6 +737,24 @@ export class SmartStoreApiClient {
       try {
         data = JSON.parse(responseText) as SmartStoreChannelProductResponse;
       } catch (error) {
+        // #region agent log
+        fetch("http://127.0.0.1:7242/ingest/4cdb12f7-9503-41e2-9643-35fd98685c1a", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sessionId: "debug-session",
+            runId: "pre-fix",
+            hypothesisId: "H4",
+            location: "lib/utils/smartstore-api.ts:getChannelProductRaw:parse-error",
+            message: "채널 상품 JSON 파싱 실패",
+            data: {
+              channelProductNo,
+              responseTextPreview: responseText.substring(0, 200),
+            },
+            timestamp: Date.now(),
+          }),
+        }).catch(() => {});
+        // #endregion agent log
         logger.error("[SmartStoreAPI] 채널 상품 응답 JSON 파싱 실패", {
           channelProductNo,
           responseText: responseSummary,
@@ -661,6 +772,24 @@ export class SmartStoreApiClient {
         statusText: response.statusText,
       };
     } catch (error) {
+      // #region agent log
+      fetch("http://127.0.0.1:7242/ingest/4cdb12f7-9503-41e2-9643-35fd98685c1a", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId: "debug-session",
+          runId: "pre-fix",
+          hypothesisId: "H2",
+          location: "lib/utils/smartstore-api.ts:getChannelProductRaw:catch",
+          message: "채널 상품 원본 조회 예외",
+          data: {
+            channelProductNo,
+            error: error instanceof Error ? error.message : "알 수 없는 오류",
+          },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+      // #endregion agent log
       logger.error("[SmartStoreAPI] 채널 상품 원본 조회 예외", {
         channelProductNo,
         error: error instanceof Error ? error.message : "알 수 없는 오류",
