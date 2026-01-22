@@ -33,10 +33,10 @@ function getOriginProductNoFromResponse(response: unknown): number | undefined {
 }
 
 async function main() {
-  const channelProductNo = ensureEnv(
-    "CHANNEL_PRODUCT_NO",
-    process.env.CHANNEL_PRODUCT_NO,
-  );
+  const argChannelProductNo = process.argv[2];
+  const channelProductNo =
+    argChannelProductNo ||
+    ensureEnv("CHANNEL_PRODUCT_NO", process.env.CHANNEL_PRODUCT_NO);
 
   console.log("🚀 채널상품 조회 테스트 시작");
   console.log("[INFO] channelProductNo:", channelProductNo);
