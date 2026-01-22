@@ -22,6 +22,100 @@ import { getSmartStoreApiClient } from "@/lib/utils/smartstore-api";
 import { getServiceRoleClient } from "@/lib/supabase/service-role";
 import { logger } from "@/lib/logger";
 
+const SYNC_TARGET_FILTER_LOG = {
+  smartstore_product_id: "is not null",
+  deleted_at: "is null",
+} as const;
+
+type SyncTargetProduct = {
+  id: string;
+  name: string;
+  stock: number;
+  status: "active" | "hidden" | "sold_out";
+  smartstore_product_id: string;
+};
+
+type SyncTargetProductLight = Pick<
+  SyncTargetProduct,
+  "id" | "name" | "smartstore_product_id"
+>;
+
+function applySyncTargetFilters<T>(query: T) {
+  return query
+    .not("smartstore_product_id", "is", null)
+    .is("deleted_at", null);
+}
+
+async function getSyncTargetProducts(
+  select: string,
+  statuses?: Array<"active" | "sold_out">,
+): Promise<{
+  data: SyncTargetProduct[] | null;
+  error: { message: string; code?: string; details?: string } | null;
+}> {
+  const supabase = getServiceRoleClient();
+  let query = applySyncTargetFilters(
+    supabase.from("products").select(select),
+  );
+  if (statuses && statuses.length > 0) {
+    query = query.in("status", statuses);
+  }
+  const { data, error } = await query;
+  return {
+    data: data as SyncTargetProduct[] | null,
+    error: error
+      ? {
+          message: error.message,
+          code: error.code,
+          details: error.details,
+        }
+      : null,
+  };
+}
+
+async function countSyncTargetBySmartstoreId(
+  smartstoreProductId: string,
+): Promise<number | null> {
+  const supabase = getServiceRoleClient();
+  const { count, error } = await applySyncTargetFilters(
+    supabase
+      .from("products")
+      .select("id", { count: "exact", head: true })
+      .eq("smartstore_product_id", smartstoreProductId),
+  );
+  if (error) {
+    return null;
+  }
+  return count ?? 0;
+}
+
+async function findSyncTargetBySmartstoreId(
+  smartstoreProductId: string,
+  select: string,
+): Promise<{
+  data: SyncTargetProduct | null;
+  error: { message: string; code?: string; details?: string; hint?: string } | null;
+}> {
+  const supabase = getServiceRoleClient();
+  const { data, error } = await applySyncTargetFilters(
+    supabase
+      .from("products")
+      .select(select)
+      .eq("smartstore_product_id", smartstoreProductId),
+  ).maybeSingle();
+  return {
+    data: data as SyncTargetProduct | null,
+    error: error
+      ? {
+          message: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint,
+        }
+      : null,
+  };
+}
+
 // 환경변수 점검
 function validateEnvironmentVariables() {
   const required = [
@@ -73,6 +167,7 @@ export interface SyncVariantStockResult {
   message: string;
   syncedCount: number;
   failedCount: number;
+  skippedCount: number;
   errors: Array<{
     variantId: string;
     optionId: number;
@@ -96,20 +191,17 @@ export async function syncProductStock(
       smartstoreProductId,
       smartstoreProductIdType: typeof smartstoreProductId,
       smartstoreProductIdLength: smartstoreProductId?.length,
+      filter: SYNC_TARGET_FILTER_LOG,
     });
-    const supabase = getServiceRoleClient();
     
     // 디버깅: 실제 DB에 있는 값 확인 (비슷한 ID로 검색)
-    const { data: similarProducts } = await supabase
-      .from("products")
-      .select("id, name, smartstore_product_id, status, deleted_at")
-      .not("smartstore_product_id", "is", null)
-      .is("deleted_at", null)
-      .limit(10);
+    const { data: similarProducts } = await getSyncTargetProducts(
+      "id, name, smartstore_product_id",
+    );
     
     if (similarProducts && similarProducts.length > 0) {
       logger.debug("[syncProductStock] DB에 있는 smartstore_product_id 샘플", {
-        sampleProducts: similarProducts.map((p) => ({
+        sampleProducts: (similarProducts as SyncTargetProductLight[]).map((p) => ({
           id: p.id,
           name: p.name,
           smartstore_product_id: p.smartstore_product_id,
@@ -120,21 +212,16 @@ export async function syncProductStock(
 
     // .single() 대신 .maybeSingle() 사용 (0개 또는 1개 허용)
     // 여러 개가 있을 경우를 대비해 먼저 count 확인
-    const { count: productCount } = await supabase
-      .from("products")
-      .select("id", { count: "exact", head: true })
-      .eq("smartstore_product_id", smartstoreProductId)
-      .is("deleted_at", null);
+    const productCount = await countSyncTargetBySmartstoreId(
+      smartstoreProductId,
+    );
 
     if (productCount === 0) {
-      logger.error("[syncProductStock] 상품을 찾을 수 없습니다", {
-        smartstoreProductId,
-        reason: "smartstore_product_id가 존재하지 않습니다",
-      });
       logger.groupEnd();
       return {
-        success: false,
-        message: `상품을 찾을 수 없습니다: ${smartstoreProductId} (존재하지 않음)`,
+        success: true,
+        skipped: true,
+        message: "동기화 대상 상품이 없습니다",
       };
     }
 
@@ -150,27 +237,12 @@ export async function syncProductStock(
       };
     }
 
-    const { data: product, error: findError } = await supabase
-      .from("products")
-      .select("id, name, stock, status, smartstore_product_id")
-      .eq("smartstore_product_id", smartstoreProductId)
-      .is("deleted_at", null)
-      .maybeSingle(); // .single() 대신 .maybeSingle() 사용
+    const { data: product, error: findError } = await findSyncTargetBySmartstoreId(
+      smartstoreProductId,
+      "id, name, stock, status, smartstore_product_id",
+    );
 
     if (findError || !product) {
-      // 더 자세한 진단 정보 수집
-      const { data: allProductsWithId } = await supabase
-        .from("products")
-        .select("id, name, smartstore_product_id")
-        .eq("smartstore_product_id", smartstoreProductId)
-        .limit(5);
-      
-      const { data: productsWithoutDeletedCheck } = await supabase
-        .from("products")
-        .select("id, name, smartstore_product_id, deleted_at")
-        .eq("smartstore_product_id", smartstoreProductId)
-        .limit(5);
-
       logger.error("[syncProductStock] 상품을 찾을 수 없습니다", {
         smartstoreProductId,
         findError: findError
@@ -182,9 +254,6 @@ export async function syncProductStock(
             }
           : null,
         product,
-        // 진단 정보
-        allProductsWithId: allProductsWithId || [],
-        productsWithoutDeletedCheck: productsWithoutDeletedCheck || [],
         queryUsed: {
           table: "products",
           condition: `smartstore_product_id = '${smartstoreProductId}' AND deleted_at IS NULL`,
@@ -448,17 +517,13 @@ export async function syncAllStocks(): Promise<SyncStockResult> {
     logger.info("[syncAllStocks] 동기화 대상 상품 조회 시작", {
       queryConditions: {
         status: "in ('active', 'sold_out')",
-        deleted_at: "is null",
-        smartstore_product_id: "is not null",
+        ...SYNC_TARGET_FILTER_LOG,
       },
     });
-    const supabase = getServiceRoleClient();
-    const { data: products, error: findError } = await supabase
-      .from("products")
-      .select("id, name, smartstore_product_id, status")
-      .not("smartstore_product_id", "is", null)
-      .is("deleted_at", null)
-      .in("status", ["active", "sold_out"]); // active와 sold_out 모두 동기화
+    const { data: products, error: findError } = await getSyncTargetProducts(
+      "id, name, smartstore_product_id, status",
+      ["active", "sold_out"],
+    );
 
     // 디버깅: 실제 조회된 상품의 smartstore_product_id 샘플 확인
     if (products && products.length > 0) {
@@ -500,7 +565,8 @@ export async function syncAllStocks(): Promise<SyncStockResult> {
 
     if (!products || products.length === 0) {
       logger.info("[syncAllStocks] 동기화 대상 상품 없음", {
-        queryConditions: "status in ('active', 'sold_out'), deleted_at is null, smartstore_product_id is not null",
+        queryConditions:
+          "status in ('active', 'sold_out'), smartstore_product_id is not null, deleted_at is null",
       });
       result.message = "동기화 대상 상품이 없습니다";
       logger.groupEnd();
@@ -543,7 +609,7 @@ export async function syncAllStocks(): Promise<SyncStockResult> {
 
       if (syncResult.success) {
         if (syncResult.skipped) {
-          // 종료/판매중지된 상품은 skippedCount에 추가
+          // soft delete 또는 기타 skip은 skippedCount에 추가
           result.skippedCount++;
         } else {
           result.syncedCount++;
@@ -593,13 +659,14 @@ export async function syncAllStocks(): Promise<SyncStockResult> {
  */
 export async function syncVariantStocks(
   smartstoreProductId: string,
-): Promise<SyncVariantStockResult> {
+): Promise<SyncVariantStockResult & { skipped?: boolean }> {
   logger.group(`[syncVariantStocks] 시작: ${smartstoreProductId}`);
   const result: SyncVariantStockResult = {
     success: true,
     message: "",
     syncedCount: 0,
     failedCount: 0,
+    skippedCount: 0,
     errors: [],
   };
 
@@ -607,28 +674,23 @@ export async function syncVariantStocks(
     // 환경변수 점검
     validateEnvironmentVariables();
 
-    const supabase = getServiceRoleClient();
     const apiClient = getSmartStoreApiClient();
 
     // 1. Supabase에서 해당 상품 조회
     logger.info("[syncVariantStocks] Supabase 상품 조회 시작", {
       smartstoreProductId,
+      filter: SYNC_TARGET_FILTER_LOG,
     });
-    const { count: variantProductCount } = await supabase
-      .from("products")
-      .select("id", { count: "exact", head: true })
-      .eq("smartstore_product_id", smartstoreProductId)
-      .is("deleted_at", null);
+    const variantProductCount = await countSyncTargetBySmartstoreId(
+      smartstoreProductId,
+    );
 
     if (variantProductCount === 0) {
-      logger.error("[syncVariantStocks] 상품을 찾을 수 없습니다", {
-        smartstoreProductId,
-        reason: "smartstore_product_id가 존재하지 않습니다",
-      });
-      result.success = false;
-      result.message = `상품을 찾을 수 없습니다: ${smartstoreProductId} (존재하지 않음)`;
+      result.success = true;
+      result.message = "동기화 대상 상품이 없습니다";
+      result.skippedCount = 1;
       logger.groupEnd();
-      return result;
+      return { ...result, skipped: true };
     }
 
     if (variantProductCount && variantProductCount > 1) {
@@ -642,12 +704,10 @@ export async function syncVariantStocks(
       return result;
     }
 
-    const { data: product, error: findError } = await supabase
-      .from("products")
-      .select("id, name")
-      .eq("smartstore_product_id", smartstoreProductId)
-      .is("deleted_at", null)
-      .maybeSingle(); // .single() 대신 .maybeSingle() 사용
+    const { data: product, error: findError } = await findSyncTargetBySmartstoreId(
+      smartstoreProductId,
+      "id, name",
+    );
 
     if (findError || !product) {
       logger.error("[syncVariantStocks] 상품을 찾을 수 없습니다", {
@@ -662,10 +722,11 @@ export async function syncVariantStocks(
           : null,
         product,
       });
-      result.success = false;
-      result.message = `상품을 찾을 수 없습니다: ${smartstoreProductId}`;
+      result.success = true;
+      result.message = "동기화 대상 상품이 없습니다";
+      result.skippedCount = 1;
       logger.groupEnd();
-      return result;
+      return { ...result, skipped: true };
     }
 
     logger.info("[syncVariantStocks] 상품 조회 성공", {
@@ -677,6 +738,7 @@ export async function syncVariantStocks(
     logger.info("[syncVariantStocks] SmartStore 채널 상품 조회 시작", {
       smartstoreProductId,
     });
+    const supabase = getServiceRoleClient();
     const channelProduct = await apiClient.getChannelProduct(
       smartstoreProductId,
     );
@@ -892,6 +954,7 @@ export async function syncAllVariantStocks(): Promise<SyncVariantStockResult> {
     message: "",
     syncedCount: 0,
     failedCount: 0,
+    skippedCount: 0,
     errors: [],
   };
 
@@ -906,16 +969,13 @@ export async function syncAllVariantStocks(): Promise<SyncVariantStockResult> {
     logger.info("[syncAllVariantStocks] 동기화 대상 상품 조회 시작", {
       queryConditions: {
         status: "in ('active', 'sold_out')",
-        deleted_at: "is null",
-        smartstore_product_id: "is not null",
+        ...SYNC_TARGET_FILTER_LOG,
       },
     });
-    const { data: products, error: findError } = await supabase
-      .from("products")
-      .select("smartstore_product_id, status")
-      .not("smartstore_product_id", "is", null)
-      .is("deleted_at", null)
-      .in("status", ["active", "sold_out"]); // active와 sold_out 모두 동기화
+    const { data: products, error: findError } = await getSyncTargetProducts(
+      "smartstore_product_id, status",
+      ["active", "sold_out"],
+    );
 
     if (findError) {
       logger.error("[syncAllVariantStocks] 상품 조회 실패", findError);
@@ -941,7 +1001,8 @@ export async function syncAllVariantStocks(): Promise<SyncVariantStockResult> {
     if (!products || products.length === 0) {
       totalResult.message = "동기화 대상 상품 없음";
       logger.info("[syncAllVariantStocks] 동기화 대상 상품 없음", {
-        queryConditions: "status in ('active', 'sold_out'), deleted_at is null, smartstore_product_id is not null",
+        queryConditions:
+          "status in ('active', 'sold_out'), smartstore_product_id is not null, deleted_at is null",
       });
       logger.groupEnd();
       return totalResult;
@@ -960,6 +1021,7 @@ export async function syncAllVariantStocks(): Promise<SyncVariantStockResult> {
 
       totalResult.syncedCount += result.syncedCount;
       totalResult.failedCount += result.failedCount;
+      totalResult.skippedCount += result.skippedCount;
       totalResult.errors.push(...result.errors);
 
       // API 레이트 리밋 방지
