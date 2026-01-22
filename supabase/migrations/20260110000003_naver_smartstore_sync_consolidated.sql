@@ -34,6 +34,31 @@ CREATE TABLE IF NOT EXISTS public.naver_sync_queue (
     CONSTRAINT chk_naver_sync_queue_status CHECK (status IN ('pending', 'processing', 'completed', 'failed'))
 );
 
+-- 기존 테이블이 이미 존재하고 variant_id 타입이 TEXT인 경우 UUID로 변환
+DO $$
+DECLARE
+    variant_data_type TEXT;
+BEGIN
+    SELECT data_type
+      INTO variant_data_type
+      FROM information_schema.columns
+     WHERE table_schema = 'public'
+       AND table_name = 'naver_sync_queue'
+       AND column_name = 'variant_id';
+
+    IF variant_data_type = 'text' THEN
+        -- UUID 형식이 아닌 값은 NULL 처리 후 타입 변환
+        UPDATE public.naver_sync_queue
+           SET variant_id = NULL
+         WHERE variant_id IS NOT NULL
+           AND variant_id !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$';
+
+        ALTER TABLE public.naver_sync_queue
+          ALTER COLUMN variant_id TYPE UUID
+          USING variant_id::uuid;
+    END IF;
+END $$;
+
 -- 외래키 제약조건
 DO $$
 BEGIN
