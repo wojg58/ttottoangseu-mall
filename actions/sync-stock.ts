@@ -192,13 +192,19 @@ export async function syncProductStock(
         "[syncProductStock] 네이버 스마트스토어에서 채널 상품 정보를 가져올 수 없습니다",
         {
           smartstoreProductId,
-          reason: "API 응답이 null입니다. API 클라이언트 로그를 확인하세요.",
+          reason: "API 응답이 null입니다. 서버 로그에서 다음을 확인하세요:",
+          checkPoints: [
+            "[SmartStoreAPI] API 호출 시작 - 호출 URL 확인",
+            "[SmartStoreAPI] API 응답 수신 - HTTP 상태 코드 확인",
+            "[SmartStoreAPI] 채널 상품 조회 실패 - 에러 상세 확인",
+            "[SmartStoreAPI] 액세스 토큰 발급 - 토큰 발급 성공 여부 확인",
+          ],
         },
       );
       logger.groupEnd();
       return {
         success: false,
-        message: `네이버 스마트스토어에서 상품 정보를 가져올 수 없습니다: ${smartstoreProductId}`,
+        message: `네이버 스마트스토어에서 상품 정보를 가져올 수 없습니다: ${smartstoreProductId} (서버 로그 확인 필요)`,
       };
     }
 

@@ -169,11 +169,16 @@ export class SmartStoreApiClient {
 
       if (!response.ok) {
         const errorText = await response.text();
-        logger.error("[SmartStoreAPI] 토큰 발급 실패", {
+        const errorDetails = {
           status: response.status,
+          statusText: response.statusText,
           error: errorText,
-        });
-        throw new Error(`토큰 발급 실패: ${response.status}`);
+          url: `${BASE_URL}/v1/oauth2/token`,
+          hasClientId: !!this.clientId,
+          hasClientSecret: !!this.clientSecret,
+        };
+        logger.error("[SmartStoreAPI] 토큰 발급 실패", errorDetails);
+        throw new Error(`토큰 발급 실패: ${response.status} - ${errorText}`);
       }
 
       const data = await response.json();
@@ -204,24 +209,48 @@ export class SmartStoreApiClient {
     options: RequestInit,
     retried = false,
   ): Promise<Response> {
-    const token = await this.getAccessToken();
+    try {
+      const token = await this.getAccessToken();
+      
+      if (!token) {
+        logger.error("[SmartStoreAPI] 토큰이 없습니다");
+        throw new Error("SmartStore API 토큰 발급 실패");
+      }
 
-    const response = await fetch(url, {
-      ...options,
-      headers: {
-        ...options.headers,
-        Authorization: `Bearer ${token}`,
-      },
-    });
+      logger.debug("[SmartStoreAPI] API 호출", {
+        url,
+        method: options.method || "GET",
+        hasToken: !!token,
+        tokenLength: token.length,
+      });
 
-    // 401 Unauthorized → 토큰 재발급 후 1회만 재시도
-    if (response.status === 401 && !retried) {
-      logger.warn("[SmartStoreAPI] 401 발생, 토큰 재발급 후 재시도");
-      this.cachedToken = null; // 캐시 무효화
-      return this.fetchWithRetry(url, options, true);
+      const response = await fetch(url, {
+        ...options,
+        headers: {
+          ...options.headers,
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      // 401 Unauthorized → 토큰 재발급 후 1회만 재시도
+      if (response.status === 401 && !retried) {
+        logger.warn("[SmartStoreAPI] 401 발생, 토큰 재발급 후 재시도", {
+          url,
+          status: response.status,
+        });
+        this.cachedToken = null; // 캐시 무효화
+        return this.fetchWithRetry(url, options, true);
+      }
+
+      return response;
+    } catch (error) {
+      logger.error("[SmartStoreAPI] fetchWithRetry 예외", {
+        url,
+        error: error instanceof Error ? error.message : "알 수 없는 오류",
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+      throw error;
     }
-
-    return response;
   }
 
   /**
