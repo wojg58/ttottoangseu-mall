@@ -62,8 +62,12 @@ export const env = {
 
   // 네이버 스마트스토어
   naver: {
-    clientId: process.env.NAVER_SMARTSTORE_CLIENT_ID,
-    clientSecret: process.env.NAVER_SMARTSTORE_CLIENT_SECRET,
+    clientId:
+      process.env.NAVER_COMMERCE_CLIENT_ID ||
+      process.env.NAVER_SMARTSTORE_CLIENT_ID,
+    clientSecret:
+      process.env.NAVER_COMMERCE_CLIENT_SECRET ||
+      process.env.NAVER_SMARTSTORE_CLIENT_SECRET,
   },
 
   // Toss Payments

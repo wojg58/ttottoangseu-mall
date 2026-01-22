@@ -19,9 +19,102 @@
 
 import { logger } from "@/lib/logger";
 import bcrypt from "bcrypt";
+import crypto from "crypto";
 
 // 네이버 스마트스토어 API 기본 URL
 export const BASE_URL = "https://api.commerce.naver.com/external";
+
+const LOGIN_CLIENT_ID_KEYS = [
+  "NAVER_LOGIN_CLIENT_ID",
+  "NAVER_OAUTH_CLIENT_ID",
+  "NAVER_SOCIAL_CLIENT_ID",
+  "NAVER_CLIENT_ID",
+] as const;
+
+function normalizeEnvValue(value: string) {
+  return value
+    .trim()
+    .replace(/^"(.*)"$/, "$1")
+    .replace(/^'(.*)'$/, "$1");
+}
+
+function describeEnvValue(value: string) {
+  const normalized = normalizeEnvValue(value);
+  return {
+    length: normalized.length,
+    prefix: normalized.slice(0, 4),
+    suffix: normalized.slice(-4),
+  };
+}
+
+function getCommonPrefixLength(a: string, b: string) {
+  const max = Math.min(a.length, b.length);
+  let count = 0;
+  while (count < max && a[count] === b[count]) count += 1;
+  return count;
+}
+
+function getCommonSuffixLength(a: string, b: string) {
+  const max = Math.min(a.length, b.length);
+  let count = 0;
+  while (count < max && a[a.length - 1 - count] === b[b.length - 1 - count]) {
+    count += 1;
+  }
+  return count;
+}
+
+function warnIfLoginKeySuspected(clientId: string) {
+  const normalized = normalizeEnvValue(clientId);
+  const matchedEnvKeys: string[] = [];
+
+  for (const key of LOGIN_CLIENT_ID_KEYS) {
+    const candidate = process.env[key];
+    if (!candidate) continue;
+    const candidateNormalized = normalizeEnvValue(candidate);
+    const sameValue = candidateNormalized === normalized;
+    const prefixMatch =
+      getCommonPrefixLength(candidateNormalized, normalized) >= 6;
+    const suffixMatch =
+      getCommonSuffixLength(candidateNormalized, normalized) >= 4;
+    if (sameValue || (prefixMatch && suffixMatch)) {
+      matchedEnvKeys.push(key);
+    }
+  }
+
+  if (matchedEnvKeys.length > 0) {
+    const info = describeEnvValue(clientId);
+    logger.warn(
+      "[SmartStoreAPI] client_id가 네이버 로그인(OAuth) 키와 유사해 보입니다.",
+      {
+        matchedEnvKeys,
+        clientIdLength: info.length,
+        clientIdPrefix: info.prefix,
+        clientIdSuffix: info.suffix,
+      },
+    );
+  }
+}
+
+function createBcryptSaltFromClientSecret(
+  clientSecret: string,
+  rounds = 10,
+) {
+  const normalized = clientSecret
+    .trim()
+    .replace(/^"(.*)"$/, "$1")
+    .replace(/^'(.*)'$/, "$1");
+  const digest = crypto
+    .createHash("sha256")
+    .update(normalized)
+    .digest("base64");
+  const bcryptSaltBody = digest
+    .replace(/\+/g, ".")
+    .replace(/=+$/g, "")
+    .slice(0, 22)
+    .padEnd(22, ".");
+  const roundsText = String(rounds).padStart(2, "0");
+  return `$2b$${roundsText}$${bcryptSaltBody}`;
+}
 
 // 네이버 스마트스토어 API 응답 타입
 export interface SmartStoreProduct {
@@ -116,13 +209,23 @@ export class SmartStoreApiClient {
   private cachedTokenExpiresAt: number = 0;
 
   constructor() {
-    this.clientId = process.env.NAVER_SMARTSTORE_CLIENT_ID || "";
-    this.clientSecret = process.env.NAVER_SMARTSTORE_CLIENT_SECRET || "";
+    this.clientId =
+      process.env.NAVER_COMMERCE_CLIENT_ID ||
+      process.env.NAVER_SMARTSTORE_CLIENT_ID ||
+      "";
+    this.clientSecret =
+      process.env.NAVER_COMMERCE_CLIENT_SECRET ||
+      process.env.NAVER_SMARTSTORE_CLIENT_SECRET ||
+      "";
 
     if (!this.clientId || !this.clientSecret) {
       logger.warn(
         "[SmartStoreAPI] 네이버 스마트스토어 API 키가 설정되지 않았습니다.",
       );
+    }
+
+    if (this.clientId) {
+      warnIfLoginKeySuspected(this.clientId);
     }
   }
 
@@ -139,25 +242,24 @@ export class SmartStoreApiClient {
     logger.group("[SmartStoreAPI] 액세스 토큰 발급 중...");
 
     try {
-      // 2. bcrypt 서명 생성
-      // clientSecret은 bcrypt salt 형식이어야 함 (예: $2a$10$...)
-      const isBcryptSalt = /^\$2[aby]\$\d{2}\$/.test(this.clientSecret);
-      if (!isBcryptSalt) {
-        logger.error("[SmartStoreAPI] client_secret 형식 오류", {
-          message:
-            "NAVER_SMARTSTORE_CLIENT_SECRET가 bcrypt salt 형식이 아닙니다. ($2a$/$2b$로 시작해야 함)",
-          secretPrefix: this.clientSecret.slice(0, 4),
-          secretLength: this.clientSecret.length,
-        });
-        throw new Error(
-          "NAVER_SMARTSTORE_CLIENT_SECRET 형식 오류 (bcrypt salt 아님)",
-        );
-      }
       const timestamp = Date.now();
       const password = `${this.clientId}_${timestamp}`;
 
-      // bcrypt 서명 생성 (CLIENT_SECRET을 salt로 사용)
-      const hashed = bcrypt.hashSync(password, this.clientSecret);
+      let hashed: string;
+      try {
+        logger.info(
+          "[SmartStoreAPI] 공식 문서 Node.js 예제 확인: bcrypt hash + base64",
+        );
+        const salt = createBcryptSaltFromClientSecret(this.clientSecret);
+        hashed = bcrypt.hashSync(password, salt);
+      } catch (error) {
+        logger.error("[SmartStoreAPI] 서명 생성 실패", {
+          error: error instanceof Error ? error.message : "알 수 없는 오류",
+          clientSecretPrefix: this.clientSecret.slice(0, 4),
+          clientSecretLength: this.clientSecret.length,
+        });
+        throw error;
+      }
       const signature = Buffer.from(hashed, "utf-8").toString("base64");
 
       logger.info("[SmartStoreAPI] 서명 생성 완료", {
@@ -182,16 +284,15 @@ export class SmartStoreApiClient {
 
       if (!response.ok) {
         const errorText = await response.text();
-        const errorDetails = {
+        logger.error("[SmartStoreAPI] 토큰 발급 실패", {
           status: response.status,
           statusText: response.statusText,
-          error: errorText,
+          responseText: errorText,
           url: `${BASE_URL}/v1/oauth2/token`,
-          hasClientId: !!this.clientId,
-          hasClientSecret: !!this.clientSecret,
-        };
-        logger.error("[SmartStoreAPI] 토큰 발급 실패", errorDetails);
-        throw new Error(`토큰 발급 실패: ${response.status} - ${errorText}`);
+        });
+        throw new Error(
+          `토큰 발급 실패: ${response.status} ${response.statusText} - ${errorText}`,
+        );
       }
 
       const data = await response.json();

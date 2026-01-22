@@ -19,8 +19,12 @@ const sharp = require("sharp");
 // 환경변수 로드
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const NAVER_CLIENT_ID = process.env.NAVER_SMARTSTORE_CLIENT_ID;
-const NAVER_CLIENT_SECRET = process.env.NAVER_SMARTSTORE_CLIENT_SECRET;
+const NAVER_CLIENT_ID =
+  process.env.NAVER_COMMERCE_CLIENT_ID ||
+  process.env.NAVER_SMARTSTORE_CLIENT_ID;
+const NAVER_CLIENT_SECRET =
+  process.env.NAVER_COMMERCE_CLIENT_SECRET ||
+  process.env.NAVER_SMARTSTORE_CLIENT_SECRET;
 
 if (!SUPABASE_URL || !SERVICE_KEY) {
   console.error("❌ 환경변수 누락!");

@@ -17,10 +17,18 @@
 `.env` 파일에 다음 환경 변수를 추가하세요:
 
 ```env
-# 네이버 스마트스토어 API
-NAVER_SMARTSTORE_CLIENT_ID=your_client_id
-NAVER_SMARTSTORE_CLIENT_SECRET=your_client_secret
+# 네이버 스마트스토어(커머스) API
+NAVER_COMMERCE_CLIENT_ID=your_commerce_client_id
+NAVER_COMMERCE_CLIENT_SECRET=your_commerce_client_secret
+
+# (기존 호환) 아래 키도 동작하지만, 혼동 방지를 위해 위 키 사용 권장
+NAVER_SMARTSTORE_CLIENT_ID=your_commerce_client_id
+NAVER_SMARTSTORE_CLIENT_SECRET=your_commerce_client_secret
 ```
+
+**중요:**
+- 위 값은 **네이버 스마트스토어(커머스) API 전용 키**입니다.
+- **네이버 로그인(OAuth) 키가 아닙니다.**
 
 ### 2. 네이버 스마트스토어 API 키 발급
 
@@ -28,11 +36,25 @@ NAVER_SMARTSTORE_CLIENT_SECRET=your_client_secret
 2. **애플리케이션 등록** 클릭
 3. 애플리케이션 정보 입력:
    - **애플리케이션 이름**: 원하는 이름
-   - **사용 API**: **스마트스토어 API** 선택
+   - **사용 API**: **스마트스토어(커머스) API** 선택
    - **서비스 환경**: **웹** 선택
    - **로그인 오픈 API 서비스 환경**: **웹** 선택
 4. **등록** 클릭
 5. 발급된 **Client ID**와 **Client Secret**을 `.env` 파일에 입력
+
+#### 키 위치/확인 경로 (중요)
+- **(1) Naver Developers > 내 애플리케이션 > 해당 앱 > API 설정**
+  - **스마트스토어(커머스) API**가 **활성화** 되어 있는지 확인
+- **(2) Naver Developers > 개요**
+  - **Client ID / Client Secret** 위치
+  - **Client Secret은 "보기/재발급" 버튼**으로 확인
+- **(3) 스마트스토어 판매자센터**
+  - 해당 앱(Client ID)이 **연동/승인 상태**인지 확인
+  - **메뉴명은 판매자센터 UI에 따라 다를 수 있음**
+
+#### 절대 주의
+- **네이버 로그인(OAuth) 키 화면에서 가져오면 안 됩니다.**
+  - 예: "네이버 로그인" 또는 "Login API" 화면에서 보이는 키는 **스마트스토어 토큰 발급에 사용할 수 없습니다.**
 
 ### 3. 데이터베이스 마이그레이션 적용
 
@@ -193,9 +215,11 @@ req.end();
 
 ### "토큰 발급 실패" 오류
 
-- 네이버 스마트스토어 API 키가 올바른지 확인
+- 네이버 스마트스토어(커머스) API 키가 올바른지 확인
+- **네이버 로그인(OAuth) 키와 섞이지 않았는지 확인**
 - `.env` 파일에 환경 변수가 제대로 설정되었는지 확인
-- 네이버 개발자 센터에서 API 권한이 활성화되었는지 확인
+- 네이버 개발자 센터에서 **스마트스토어(커머스) API** 권한이 활성화되었는지 확인
+- 스마트스토어 판매자센터에서 해당 앱(Client ID)이 **연동/승인** 상태인지 확인
 
 ### "상품을 찾을 수 없습니다" 오류
 

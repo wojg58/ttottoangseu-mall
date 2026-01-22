@@ -27,8 +27,6 @@ function validateEnvironmentVariables() {
   const required = [
     "NEXT_PUBLIC_SUPABASE_URL",
     "SUPABASE_SERVICE_ROLE_KEY",
-    "NAVER_SMARTSTORE_CLIENT_ID",
-    "NAVER_SMARTSTORE_CLIENT_SECRET",
   ];
 
   const missing: string[] = [];
@@ -36,6 +34,22 @@ function validateEnvironmentVariables() {
     if (!process.env[key]) {
       missing.push(key);
     }
+  }
+
+  const smartstoreClientId =
+    process.env.NAVER_COMMERCE_CLIENT_ID ||
+    process.env.NAVER_SMARTSTORE_CLIENT_ID;
+  const smartstoreClientSecret =
+    process.env.NAVER_COMMERCE_CLIENT_SECRET ||
+    process.env.NAVER_SMARTSTORE_CLIENT_SECRET;
+
+  if (!smartstoreClientId) {
+    missing.push("NAVER_COMMERCE_CLIENT_ID 또는 NAVER_SMARTSTORE_CLIENT_ID");
+  }
+  if (!smartstoreClientSecret) {
+    missing.push(
+      "NAVER_COMMERCE_CLIENT_SECRET 또는 NAVER_SMARTSTORE_CLIENT_SECRET",
+    );
   }
 
   if (missing.length > 0) {
