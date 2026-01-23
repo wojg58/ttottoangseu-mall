@@ -1254,7 +1254,7 @@ export async function getInventoryList(
   const productIds = products.map((p) => p.id);
   let variantsQuery = supabase
     .from("product_variants")
-    .select("id, variant_name, variant_value, stock, sku, product_id")
+    .select("id, variant_name, variant_value, stock, sku, product_id, smartstore_option_id")
     .in("product_id", productIds)
     .is("deleted_at", null);
 
@@ -1294,7 +1294,12 @@ export async function getInventoryList(
 
     if (productVariants.length > 0) {
       // 옵션이 있는 경우: 옵션별로 표시
+      // 단, 네이버와 매핑되지 않은 옵션(smartstore_option_id가 null)은 상품 재고를 사용
       for (const variant of productVariants) {
+        // 매핑된 옵션만 옵션 재고 사용, 매핑 안 된 옵션은 상품 재고 사용
+        const isMapped = variant.smartstore_option_id !== null;
+        const displayStock = isMapped ? variant.stock : product.stock;
+        
         inventoryItems.push({
           product_id: product.id,
           product_name: product.name,
@@ -1302,10 +1307,10 @@ export async function getInventoryList(
           variant_id: variant.id,
           variant_name: variant.variant_name,
           variant_value: variant.variant_value,
-          variant_stock: variant.stock,
+          variant_stock: isMapped ? variant.stock : null, // 매핑 안 된 옵션은 null로 표시하여 상품 재고 사용
           sku: variant.sku,
           category_name: categoryName,
-          is_low_stock: variant.stock <= 10,
+          is_low_stock: displayStock <= 10,
         });
       }
     } else {
