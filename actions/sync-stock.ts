@@ -329,22 +329,28 @@ function validateEnvironmentVariables() {
     normalizeEnvValue(rawSmartstoreClientSecret);
 
   logger.warn("[sync-stock] 환경변수 형식 점검 (값 미노출)", {
+    // Client ID 검증
     clientIdSource: rawCommerceClientId
       ? "NAVER_COMMERCE_CLIENT_ID"
       : rawSmartstoreClientId
         ? "NAVER_SMARTSTORE_CLIENT_ID"
         : "missing",
+    clientIdExists: !!(rawCommerceClientId || rawSmartstoreClientId),
+    clientIdRawLength: rawCommerceClientId?.length || rawSmartstoreClientId?.length || 0,
     clientIdLength: smartstoreClientId.length,
-    // 키 이름 변경: clientSecret* → cs* (마스킹 회피)
+    // Client Secret 검증 (키 이름 변경: clientSecret* → cs* (마스킹 회피))
     csSource: rawCommerceClientSecret
       ? "NAVER_COMMERCE_CLIENT_SECRET"
       : rawSmartstoreClientSecret
         ? "NAVER_SMARTSTORE_CLIENT_SECRET"
         : "missing",
+    csExists: !!(rawCommerceClientSecret || rawSmartstoreClientSecret),
+    csRawLength: rawCommerceClientSecret?.length || rawSmartstoreClientSecret?.length || 0,
     csLength: smartstoreClientSecret.length,
     csStartsBcrypt:
-      smartstoreClientSecret.startsWith("$2a$") ||
-      smartstoreClientSecret.startsWith("$2b$"),
+      smartstoreClientSecret.length > 0 &&
+      (smartstoreClientSecret.startsWith("$2a$") ||
+        smartstoreClientSecret.startsWith("$2b$")),
     csHadQuotes:
       (rawCommerceClientSecret &&
         (rawCommerceClientSecret.startsWith("'") ||
@@ -353,6 +359,8 @@ function validateEnvironmentVariables() {
         (rawSmartstoreClientSecret.startsWith("'") ||
           rawSmartstoreClientSecret.startsWith('"'))) ||
       false,
+    // 디버깅: normalize 전후 비교
+    csNormalizedEmpty: smartstoreClientSecret.length === 0,
   });
 
   if (!smartstoreClientId) {
