@@ -308,12 +308,51 @@ function validateEnvironmentVariables() {
     }
   }
 
+  const normalizeEnvValue = (value?: string) =>
+    value
+      ? value
+          .trim()
+          .replace(/^"(.*)"$/, "$1")
+          .replace(/^'(.*)'$/, "$1")
+      : "";
+
+  const rawCommerceClientId = process.env.NAVER_COMMERCE_CLIENT_ID;
+  const rawSmartstoreClientId = process.env.NAVER_SMARTSTORE_CLIENT_ID;
+  const rawCommerceClientSecret = process.env.NAVER_COMMERCE_CLIENT_SECRET;
+  const rawSmartstoreClientSecret = process.env.NAVER_SMARTSTORE_CLIENT_SECRET;
+
   const smartstoreClientId =
-    process.env.NAVER_COMMERCE_CLIENT_ID ||
-    process.env.NAVER_SMARTSTORE_CLIENT_ID;
+    normalizeEnvValue(rawCommerceClientId) ||
+    normalizeEnvValue(rawSmartstoreClientId);
   const smartstoreClientSecret =
-    process.env.NAVER_COMMERCE_CLIENT_SECRET ||
-    process.env.NAVER_SMARTSTORE_CLIENT_SECRET;
+    normalizeEnvValue(rawCommerceClientSecret) ||
+    normalizeEnvValue(rawSmartstoreClientSecret);
+
+  logger.warn("[sync-stock] 환경변수 형식 점검 (값 미노출)", {
+    clientIdSource: rawCommerceClientId
+      ? "NAVER_COMMERCE_CLIENT_ID"
+      : rawSmartstoreClientId
+        ? "NAVER_SMARTSTORE_CLIENT_ID"
+        : "missing",
+    clientIdLength: smartstoreClientId.length,
+    clientSecretSource: rawCommerceClientSecret
+      ? "NAVER_COMMERCE_CLIENT_SECRET"
+      : rawSmartstoreClientSecret
+        ? "NAVER_SMARTSTORE_CLIENT_SECRET"
+        : "missing",
+    clientSecretLength: smartstoreClientSecret.length,
+    clientSecretStartsWithBcrypt:
+      smartstoreClientSecret.startsWith("$2a$") ||
+      smartstoreClientSecret.startsWith("$2b$"),
+    clientSecretHadQuotes:
+      (rawCommerceClientSecret &&
+        (rawCommerceClientSecret.startsWith("'") ||
+          rawCommerceClientSecret.startsWith('"'))) ||
+      (rawSmartstoreClientSecret &&
+        (rawSmartstoreClientSecret.startsWith("'") ||
+          rawSmartstoreClientSecret.startsWith('"'))) ||
+      false,
+  });
 
   if (!smartstoreClientId) {
     missing.push("NAVER_COMMERCE_CLIENT_ID 또는 NAVER_SMARTSTORE_CLIENT_ID");

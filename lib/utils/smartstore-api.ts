@@ -193,8 +193,10 @@ export interface SmartStoreProductWithOptions {
 // 네이버 스마트스토어 API 클라이언트
 export class SmartStoreApiClient {
   private static didLogSecretCheck = false;
+  private static didLogSecretErrorCheck = false;
   private clientId: string;
   private clientSecret: string;
+  private rawClientSecret: string;
   // 토큰 캐싱 (중요!)
   private cachedToken: string | null = null;
   private cachedTokenExpiresAt: number = 0;
@@ -214,6 +216,7 @@ export class SmartStoreApiClient {
     this.clientSecret = rawClientSecret
       ? normalizeEnvValue(rawClientSecret)
       : "";
+    this.rawClientSecret = rawClientSecret;
 
     const rawSecretEnv = process.env.NAVER_COMMERCE_CLIENT_SECRET;
     const rawSecretFallback = process.env.NAVER_SMARTSTORE_CLIENT_SECRET;
@@ -299,6 +302,18 @@ export class SmartStoreApiClient {
         );
         hashed = bcrypt.hashSync(password, this.clientSecret);
       } catch (error) {
+        if (!SmartStoreApiClient.didLogSecretErrorCheck) {
+          const normalizedSecret = normalizeEnvValue(this.rawClientSecret || "");
+          logger.warn("[SmartStoreAPI] client_secret 형식 검증(서명 실패 시)", {
+            typeofValue: typeof this.rawClientSecret,
+            length: normalizedSecret.length,
+            startsWithBcrypt:
+              normalizedSecret.startsWith("$2a$") ||
+              normalizedSecret.startsWith("$2b$"),
+            hasLeadingOrTrailingSpaces: this.rawClientSecret !== normalizedSecret,
+          });
+          SmartStoreApiClient.didLogSecretErrorCheck = true;
+        }
         logger.error("[SmartStoreAPI] 서명 생성 실패", {
           error: error instanceof Error ? error.message : "알 수 없는 오류",
           clientSecretPrefix: this.clientSecret.slice(0, 4),
