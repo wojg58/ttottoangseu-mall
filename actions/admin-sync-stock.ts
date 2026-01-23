@@ -45,20 +45,26 @@ export async function syncAdminStock(): Promise<AdminSyncStockResult> {
 
   logger.info("[syncAdminStock] ✅ 관리자 권한 확인됨 - 동기화 진행");
 
+  logger.info("[syncAdminStock] 상품 재고 동기화 시작");
   const productSync = await syncAllStocks();
   logger.info("[syncAdminStock] 상품 재고 동기화 완료", {
     success: productSync.success,
+    message: productSync.message,
     syncedCount: productSync.syncedCount,
     failedCount: productSync.failedCount,
     skippedCount: productSync.skippedCount || 0,
+    errors: productSync.errors?.slice(0, 3) || [],
   });
 
+  logger.info("[syncAdminStock] 옵션 재고 동기화 시작");
   const variantSync = await syncAllVariantStocks();
   logger.info("[syncAdminStock] 옵션 재고 동기화 완료", {
     success: variantSync.success,
+    message: variantSync.message,
     syncedCount: variantSync.syncedCount,
     failedCount: variantSync.failedCount,
     skippedCount: variantSync.skippedCount || 0,
+    errors: variantSync.errors?.slice(0, 3) || [],
   });
 
   const success = productSync.success && variantSync.success;
