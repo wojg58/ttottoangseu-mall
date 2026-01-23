@@ -167,9 +167,12 @@ async function run() {
                   `[INFO] 옵션 정보 조회 완료: 옵션 ID ${variantInfo.optionId}, 채널상품 ${variantInfo.channelProductNo}`,
                 );
               } else {
+                // 매핑되지 않은 옵션: 상품 단위로 처리
                 console.warn(
-                  `[WARN] 옵션 매핑 정보 없음 (variant_id: ${job.variant_id}), 상품 단위로 처리`,
+                  `[WARN] 옵션 매핑 정보 없음 (variant_id: ${job.variant_id}, smartstore_option_id: ${variant?.smartstore_option_id || 'null'}), 상품 단위로 처리`,
                 );
+                // variantInfo를 null로 유지하여 상품 단위 처리로 전환
+                variantInfo = null;
               }
             }
 
@@ -341,8 +344,10 @@ async function run() {
                     );
                     updatedOriginProduct.stockQuantity = totalStock;
 
+                    // detailAttribute 재구성 시 seoInfo 제외 (재고 변경 시 불필요)
+                    const { seoInfo, ...detailAttributeWithoutSeo } = originProductData.detailAttribute || {};
                     updatedOriginProduct.detailAttribute = {
-                      ...originProductData.detailAttribute,
+                      ...detailAttributeWithoutSeo,
                       optionInfo: {
                         ...originProductData.detailAttribute.optionInfo,
                         optionCombinations: updatedOptionCombinations,
@@ -372,6 +377,12 @@ async function run() {
                     );
                     // 옵션을 찾을 수 없으면 상품 단위로 처리
                     updatedOriginProduct.stockQuantity = job.target_stock;
+                    
+                    // detailAttribute 재구성 시 seoInfo 제외 (재고 변경 시 불필요)
+                    if (originProductData.detailAttribute?.seoInfo) {
+                      const { seoInfo, ...detailAttributeWithoutSeo } = originProductData.detailAttribute;
+                      updatedOriginProduct.detailAttribute = detailAttributeWithoutSeo;
+                    }
                   }
                 } else {
                   // 상품 단위 동기화: 기존 로직 (비율 분배)
@@ -417,8 +428,10 @@ async function run() {
 
                   updatedOriginProduct.stockQuantity = job.target_stock;
 
+                  // detailAttribute 재구성 시 seoInfo 제외 (재고 변경 시 불필요)
+                  const { seoInfo: seoInfo2, ...detailAttributeWithoutSeo2 } = originProductData.detailAttribute || {};
                   updatedOriginProduct.detailAttribute = {
-                    ...originProductData.detailAttribute,
+                    ...detailAttributeWithoutSeo2,
                     optionInfo: {
                       ...originProductData.detailAttribute.optionInfo,
                       optionCombinations: updatedOptionCombinations,
@@ -442,6 +455,20 @@ async function run() {
                   `[INFO] 옵션이 없는 상품: originProduct.stockQuantity만 업데이트 (${job.target_stock}개)`,
                 );
                 updatedOriginProduct.stockQuantity = job.target_stock;
+                
+                // 옵션이 없는 상품도 seoInfo 제거 (재고 변경 시 불필요)
+                if (updatedOriginProduct.detailAttribute?.seoInfo) {
+                  console.log(`[INFO] seoInfo 제거 (재고 변경 시 불필요)`);
+                  const { seoInfo, ...restDetailAttribute } = updatedOriginProduct.detailAttribute;
+                  updatedOriginProduct.detailAttribute = restDetailAttribute;
+                }
+              }
+
+              // 최종 안전장치: seoInfo가 남아있으면 제거 (네이버 API 제한 단어 문제 방지)
+              if (updatedOriginProduct.detailAttribute?.seoInfo) {
+                console.log(`[INFO] seoInfo 최종 제거 (안전장치)`);
+                const { seoInfo, ...restDetailAttribute } = updatedOriginProduct.detailAttribute;
+                updatedOriginProduct.detailAttribute = restDetailAttribute;
               }
 
               requestBody = {
