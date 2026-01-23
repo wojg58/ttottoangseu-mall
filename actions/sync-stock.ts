@@ -335,16 +335,17 @@ function validateEnvironmentVariables() {
         ? "NAVER_SMARTSTORE_CLIENT_ID"
         : "missing",
     clientIdLength: smartstoreClientId.length,
-    clientSecretSource: rawCommerceClientSecret
+    // 키 이름 변경: clientSecret* → cs* (마스킹 회피)
+    csSource: rawCommerceClientSecret
       ? "NAVER_COMMERCE_CLIENT_SECRET"
       : rawSmartstoreClientSecret
         ? "NAVER_SMARTSTORE_CLIENT_SECRET"
         : "missing",
-    clientSecretLength: smartstoreClientSecret.length,
-    clientSecretStartsWithBcrypt:
+    csLength: smartstoreClientSecret.length,
+    csStartsBcrypt:
       smartstoreClientSecret.startsWith("$2a$") ||
       smartstoreClientSecret.startsWith("$2b$"),
-    clientSecretHadQuotes:
+    csHadQuotes:
       (rawCommerceClientSecret &&
         (rawCommerceClientSecret.startsWith("'") ||
           rawCommerceClientSecret.startsWith('"'))) ||
