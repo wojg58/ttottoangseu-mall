@@ -172,6 +172,35 @@ async function updateVariantStocks(
       }
     }
 
+    if (!variant) {
+      const { data: foundVariant, error: findVariantError } = await supabase
+        .from("product_variants")
+        .select("id, stock, sku, variant_value, smartstore_channel_product_no")
+        .eq("product_id", productId)
+        .eq("smartstore_option_id", option.id)
+        .eq("smartstore_channel_product_no", channelProductNo)
+        .is("deleted_at", null)
+        .maybeSingle();
+
+      if (!findVariantError && foundVariant) {
+        variant = foundVariant;
+        if (originProductNo) {
+          await supabase
+            .from("product_variants")
+            .update({
+              smartstore_origin_product_no: originProductNo,
+            })
+            .eq("id", variant.id);
+        }
+        logger.info("[syncVariantStocks] 옵션 매핑 발견 (채널상품번호 기준)", {
+          variantId: variant.id,
+          productId,
+          channelProductNo,
+          optionId: option.id,
+        });
+      }
+    }
+
     if (!variant && option.sellerManagerCode) {
       const { data: foundVariant, error: findVariantError } = await supabase
         .from("product_variants")

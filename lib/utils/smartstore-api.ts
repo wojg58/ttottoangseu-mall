@@ -192,6 +192,7 @@ export interface SmartStoreProductWithOptions {
 
 // 네이버 스마트스토어 API 클라이언트
 export class SmartStoreApiClient {
+  private static didLogSecretCheck = false;
   private clientId: string;
   private clientSecret: string;
   // 토큰 캐싱 (중요!)
@@ -201,14 +202,38 @@ export class SmartStoreApiClient {
   private ipBlockedMessage: string | null = null;
 
   constructor() {
-    this.clientId =
+    const rawClientId =
       process.env.NAVER_COMMERCE_CLIENT_ID ||
       process.env.NAVER_SMARTSTORE_CLIENT_ID ||
       "";
-    this.clientSecret =
+    const rawClientSecret =
       process.env.NAVER_COMMERCE_CLIENT_SECRET ||
       process.env.NAVER_SMARTSTORE_CLIENT_SECRET ||
       "";
+    this.clientId = rawClientId ? normalizeEnvValue(rawClientId) : "";
+    this.clientSecret = rawClientSecret
+      ? normalizeEnvValue(rawClientSecret)
+      : "";
+
+    const rawSecretEnv = process.env.NAVER_COMMERCE_CLIENT_SECRET;
+    const rawSecretFallback = process.env.NAVER_SMARTSTORE_CLIENT_SECRET;
+    if (!SmartStoreApiClient.didLogSecretCheck) {
+      const normalizedSecret = normalizeEnvValue(this.clientSecret || "");
+      logger.warn("[SmartStoreAPI] client_secret 형식 검증", {
+        typeofValue: typeof this.clientSecret,
+        length: normalizedSecret.length,
+        startsWithBcrypt:
+          normalizedSecret.startsWith("$2a$") ||
+          normalizedSecret.startsWith("$2b$"),
+        hasLeadingOrTrailingSpaces: rawClientSecret !== normalizedSecret,
+        sourceEnv: rawSecretEnv
+          ? "NAVER_COMMERCE_CLIENT_SECRET"
+          : rawSecretFallback
+            ? "NAVER_SMARTSTORE_CLIENT_SECRET"
+            : "missing",
+      });
+      SmartStoreApiClient.didLogSecretCheck = true;
+    }
 
     if (!this.clientId || !this.clientSecret) {
       logger.warn(

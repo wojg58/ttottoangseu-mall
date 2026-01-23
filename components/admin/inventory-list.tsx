@@ -19,7 +19,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Search, TrendingDown, Package, Filter, RefreshCw } from "lucide-react";
 import type { InventoryItem } from "@/actions/admin";
-import { syncInventoryFromSmartstore, updateInventory } from "@/actions/admin";
+import { syncAdminStock } from "@/actions/admin-sync-stock";
+import { updateInventory } from "@/actions/admin";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import logger from "@/lib/logger-client";
@@ -151,16 +152,13 @@ export default function InventoryList({
     setSyncMessage(null);
 
     try {
-      const result = await syncInventoryFromSmartstore();
+      const result = await syncAdminStock();
 
       logger.info("[InventoryList] 재고 동기화 결과", result);
 
       if (result.success) {
-        const summary = result.summary;
         setSyncMessage(
-          summary
-            ? `재고 동기화 완료: 성공 ${summary.totalSynced}개, 실패 ${summary.totalFailed}개`
-            : "재고 동기화 완료",
+          `재고 동기화 완료: 상품 ${result.syncedProducts}개, 옵션 ${result.syncedVariants}개`,
         );
         // 3초 후 메시지 자동 제거
         setTimeout(() => {
