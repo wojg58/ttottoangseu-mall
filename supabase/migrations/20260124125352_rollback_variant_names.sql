@@ -45,9 +45,6 @@ BEGIN
     IF backup_count = 0 THEN
         RAISE EXCEPTION '백업 테이블이 비어있습니다.';
     END IF;
-    
-    -- 백업 테이블명을 세션 변수에 저장 (다음 단계에서 사용)
-    PERFORM set_config('app.backup_table_name', backup_table_name, false);
 END $$;
 
 -- 2. 롤백 실행: 백업 테이블에서 variant_value 복원
@@ -56,8 +53,17 @@ DECLARE
     backup_table_name TEXT;
     restored_count INT;
 BEGIN
-    -- 세션 변수에서 백업 테이블명 가져오기
-    backup_table_name := current_setting('app.backup_table_name');
+    -- 백업 테이블 찾기 (가장 최근 것)
+    SELECT tablename INTO backup_table_name
+    FROM pg_tables
+    WHERE schemaname = 'public'
+        AND tablename LIKE 'product_variants_backup_%'
+    ORDER BY tablename DESC
+    LIMIT 1;
+    
+    IF backup_table_name IS NULL THEN
+        RAISE EXCEPTION '백업 테이블을 찾을 수 없습니다.';
+    END IF;
     
     -- 백업 테이블과 조인하여 variant_value 복원
     EXECUTE format('
@@ -73,7 +79,7 @@ BEGIN
     
     GET DIAGNOSTICS restored_count = ROW_COUNT;
     
-    RAISE NOTICE '✅ 롤백 완료: % 개 옵션명 복원됨', restored_count;
+    RAISE NOTICE '✅ 롤백 완료: % 개 옵션명 복원됨 (백업 테이블: %)', restored_count, backup_table_name;
     
     IF restored_count = 0 THEN
         RAISE NOTICE '⚠️ 복원된 항목이 없습니다. (이미 원본 상태일 수 있음)';
@@ -86,7 +92,18 @@ DECLARE
     backup_table_name TEXT;
     mismatch_count INT;
 BEGIN
-    backup_table_name := current_setting('app.backup_table_name');
+    -- 백업 테이블 찾기 (가장 최근 것)
+    SELECT tablename INTO backup_table_name
+    FROM pg_tables
+    WHERE schemaname = 'public'
+        AND tablename LIKE 'product_variants_backup_%'
+    ORDER BY tablename DESC
+    LIMIT 1;
+    
+    IF backup_table_name IS NULL THEN
+        RAISE WARNING '백업 테이블을 찾을 수 없어 검증을 건너뜁니다.';
+        RETURN;
+    END IF;
     
     -- 불일치 항목 확인
     EXECUTE format('
