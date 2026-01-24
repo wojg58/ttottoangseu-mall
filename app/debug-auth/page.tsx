@@ -8,6 +8,7 @@
 import { currentUser } from "@clerk/nextjs/server";
 import { isAdmin } from "@/actions/admin";
 import { logger } from "@/lib/logger";
+import Link from "next/link";
 
 export default async function DebugAuthPage() {
   logger.info("[DebugAuthPage] 인증 상태 진단 시작");
@@ -35,9 +36,9 @@ export default async function DebugAuthPage() {
             <div>
               <p className="text-red-600">❌ 로그인되지 않음</p>
               <p className="mt-2 text-gray-600">
-                <a href="/sign-in" className="text-blue-600 underline">
+                <Link href="/sign-in" className="text-blue-600 underline">
                   로그인 페이지로 이동
-                </a>
+                </Link>
               </p>
             </div>
           )}
@@ -79,7 +80,7 @@ export default async function DebugAuthPage() {
                     <p className="font-semibold">관리자 권한을 얻는 방법:</p>
                     <ol className="list-decimal list-inside space-y-1 text-sm text-gray-600">
                       <li>
-                        <strong>Clerk Role 설정:</strong> Clerk Dashboard에서 사용자에게 "admin" role 부여
+                        <strong>Clerk Role 설정:</strong> Clerk Dashboard에서 사용자에게 &quot;admin&quot; role 부여
                       </li>
                       <li>
                         <strong>Public Metadata 설정:</strong> Clerk Dashboard에서 사용자의 publicMetadata에
@@ -122,19 +123,19 @@ export default async function DebugAuthPage() {
           <h2 className="text-xl font-semibold mb-4">5. 빠른 링크</h2>
           <div className="space-y-2">
             <p>
-              <a href="/sign-in" className="text-blue-600 underline">
+              <Link href="/sign-in" className="text-blue-600 underline">
                 로그인 페이지
-              </a>
+              </Link>
             </p>
             <p>
-              <a href="/admin" className="text-blue-600 underline">
+              <Link href="/admin" className="text-blue-600 underline">
                 관리자 페이지
-              </a>
+              </Link>
             </p>
             <p>
-              <a href="/" className="text-blue-600 underline">
+              <Link href="/" className="text-blue-600 underline">
                 홈페이지
-              </a>
+              </Link>
             </p>
           </div>
         </div>
