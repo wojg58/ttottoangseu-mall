@@ -288,12 +288,6 @@ export class SmartStoreApiClient {
     try {
       const timestamp = Date.now();
       const password = `${this.clientId}_${timestamp}`;
-      const clientIdLength = this.clientId.length;
-      const clientSecretLength = this.clientSecret.length;
-      const clientIdPrefix = this.clientId.slice(0, 4);
-      const clientIdSuffix = this.clientId.slice(-4);
-      const clientSecretPrefix = this.clientSecret.slice(0, 4);
-      const clientSecretSuffix = this.clientSecret.slice(-4);
 
       let hashed: string;
       try {
@@ -322,10 +316,6 @@ export class SmartStoreApiClient {
         throw error;
       }
       const signature = Buffer.from(hashed, "utf-8").toString("base64");
-      const hashedPrefix = hashed.slice(0, 4);
-      const hashedSuffix = hashed.slice(-4);
-      const signaturePrefix = signature.slice(0, 4);
-      const signatureSuffix = signature.slice(-4);
 
       logger.info("[SmartStoreAPI] 서명 생성 완료", {
         timestamp,
