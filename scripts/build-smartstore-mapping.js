@@ -190,6 +190,144 @@ function extractOptionStocks(channelProductData) {
 
 const delay = (ms) => new Promise((r) => setTimeout(r, ms));
 
+// 옵션명 정규화 함수 (매칭 개선)
+function normalizeOptionName(name) {
+  if (!name) return "";
+  
+  let normalized = name;
+  
+  // 1. 전각 문자를 반각으로 변환
+  normalized = normalized
+    // 전각 숫자를 반각으로 변환
+    .replace(/[０-９]/g, (char) => String.fromCharCode(char.charCodeAt(0) - 0xfee0))
+    // 전각 영문자를 반각으로 변환
+    .replace(/[Ａ-Ｚａ-ｚ]/g, (char) => String.fromCharCode(char.charCodeAt(0) - 0xfee0))
+    // 전각 기호를 반각으로 변환
+    .replace(/[。．]/g, ".")
+    .replace(/[＋]/g, "+")
+    .replace(/[×✕✖]/g, "x")
+    .replace(/[－]/g, "-")
+    .replace(/[（(]/g, "(")
+    .replace(/[）)]/g, ")")
+    .replace(/[：]/g, ":")
+    .replace(/[，]/g, ",");
+  
+  // 2. 숫자 접두사 제거 (예: "1.블랙 헬로키티" → "블랙 헬로키티")
+  normalized = normalized.replace(/^\d+[\.。]\s*/, "");
+  
+  // 3. "번" 제거 (예: "1번 고양이" → "1.고양이" → "고양이")
+  normalized = normalized.replace(/(\d+)번\s*/g, "");
+  
+  // 4. 색상 순서 정규화 (예: "옐로+핑크" → "핑크+옐로"로 정렬)
+  // 색상 목록 정의
+  const colorOrder = {
+    '핑크': 1, '옐로': 2, '레드': 3, '블루': 4, '그린': 5, '퍼플': 6, '민트': 7,
+    '블랙': 8, '화이트': 9, '브라운': 10, '그레이': 11, '아이보리': 12, '베이지': 13,
+    '오렌지': 14, '네이비': 15, '골드': 16, '실버': 17, '터키': 18
+  };
+  
+  // "+" 또는 "＋"로 연결된 색상 조합 정규화
+  if (normalized.includes('+') || normalized.includes('＋')) {
+    const parts = normalized.split(/[＋+]/).map(p => p.trim()).filter(p => p);
+    const sortedParts = parts.sort((a, b) => {
+      const aColor = Object.keys(colorOrder).find(c => a.includes(c));
+      const bColor = Object.keys(colorOrder).find(c => b.includes(c));
+      if (aColor && bColor) {
+        return (colorOrder[aColor] || 999) - (colorOrder[bColor] || 999);
+      }
+      return a.localeCompare(b);
+    });
+    normalized = sortedParts.join('+');
+  }
+  
+  // 5. 괄호 처리: 괄호 내용 추출 및 정규화
+  // 괄호가 있는 경우 괄호 내용을 별도로 처리
+  const bracketMatch = normalized.match(/^(.+?)\s*[（(](.+?)[）)]/);
+  if (bracketMatch) {
+    const baseName = bracketMatch[1].trim();
+    const bracketContent = bracketMatch[2].trim();
+    // 괄호 내용도 정규화
+    normalized = `${baseName}(${bracketContent})`;
+  }
+  
+  // 6. 공백 정규화 (여러 공백을 하나로, 앞뒤 공백 제거)
+  normalized = normalized.replace(/\s+/g, " ").trim();
+  
+  // 7. 소문자 변환 (영문의 경우)
+  normalized = normalized.toLowerCase();
+  
+  return normalized;
+}
+
+// 옵션명 매칭 함수 (정규화된 옵션명으로 매칭)
+function matchOptionName(dbVariantValue, smartstoreOptionName) {
+  if (!dbVariantValue || !smartstoreOptionName) return false;
+  
+  const normalizedDb = normalizeOptionName(dbVariantValue);
+  const normalizedSmartstore = normalizeOptionName(smartstoreOptionName);
+  
+  // 1. 정규화된 옵션명으로 직접 매칭
+  if (normalizedDb === normalizedSmartstore) return true;
+  
+  // 2. 숫자 접두사 제거 후 매칭 (예: "1.블랙" vs "블랙")
+  const removeNumberPrefix = (name) => name.replace(/^\d+[\.。]\s*/, "").trim();
+  const dbWithoutPrefix = removeNumberPrefix(normalizedDb);
+  const smartstoreWithoutPrefix = removeNumberPrefix(normalizedSmartstore);
+  if (dbWithoutPrefix === smartstoreWithoutPrefix) return true;
+  
+  // 3. 괄호 제거 후 매칭 (예: "쿠로미(퍼플)" vs "쿠로미")
+  const removeBrackets = (name) => name.replace(/\s*[（(].*?[）)]\s*/g, "").trim();
+  const dbWithoutBrackets = removeBrackets(normalizedDb);
+  const smartstoreWithoutBrackets = removeBrackets(normalizedSmartstore);
+  if (dbWithoutBrackets === smartstoreWithoutBrackets) return true;
+  
+  // 4. 핵심 단어 추출 및 매칭
+  const extractCore = (name) => {
+    return name
+      .replace(/^\d+[\.。]\s*/, "") // 숫자 접두사 제거
+      .replace(/\s*[（(].*?[）)]\s*/g, "") // 괄호 내용 제거
+      .replace(/\s+/g, "") // 공백 제거
+      .toLowerCase();
+  };
+  
+  const dbCore = extractCore(normalizedDb);
+  const smartstoreCore = extractCore(normalizedSmartstore);
+  
+  // 핵심 단어가 일치하는지 확인
+  if (dbCore === smartstoreCore) return true;
+  
+  // 5. 부분 매칭 (한쪽이 다른 쪽을 포함하는지 확인)
+  if (dbCore.length > 3 && smartstoreCore.length > 3) {
+    if (dbCore.includes(smartstoreCore) || smartstoreCore.includes(dbCore)) {
+      return true;
+    }
+  }
+  
+  // 6. 색상/캐릭터명만 추출하여 매칭 (예: "블랙 헬로키티" vs "블랙헬로키티")
+  const extractKeywords = (name) => {
+    // 색상 및 캐릭터명 추출
+    const colors = ['핑크', '옐로', '레드', '블루', '그린', '퍼플', '민트', '블랙', '화이트', 
+                    '브라운', '그레이', '아이보리', '베이지', '오렌지', '네이비', '골드', '실버', '터키'];
+    const characters = ['헬로키티', '쿠로미', '마이멜로디', '시나모롤', '포차코', '폼폼푸린', 
+                        '한교동', '턱시도샘', '구데타마', '캐로피', '타이니참', '바니', '머메이드', 
+                        '호피', '베이비', '스탠다드', '애니멀'];
+    
+    const keywords = [];
+    colors.forEach(c => { if (name.includes(c)) keywords.push(c); });
+    characters.forEach(c => { if (name.includes(c)) keywords.push(c); });
+    
+    return keywords.sort().join('');
+  };
+  
+  const dbKeywords = extractKeywords(normalizedDb);
+  const smartstoreKeywords = extractKeywords(normalizedSmartstore);
+  if (dbKeywords && smartstoreKeywords && dbKeywords === smartstoreKeywords) {
+    return true;
+  }
+  
+  return false;
+}
+
 // 이미지 다운로드 + 800×800 압축 + Supabase Storage 업로드
 async function downloadCompressAndUploadImage(
   imageUrl,
@@ -724,21 +862,54 @@ async function buildMapping() {
 
           // 2차: 옵션명으로 매칭 (SKU 없을 때)
           if (!variant && option.optionName1) {
-            const { data } = await supabase
+            // 먼저 정규화된 옵션명으로 매칭 시도
+            const optionValue = option.optionName2
+              ? `${option.optionName1}/${option.optionName2}`
+              : option.optionName1;
+            
+            // 모든 variant를 가져와서 정규화된 옵션명으로 매칭
+            const { data: allVariants } = await supabase
               .from("product_variants")
               .select("id, variant_value, sku")
               .eq("product_id", product.id)
-              .ilike("variant_value", `%${option.optionName1}%`)
-              .is("deleted_at", null)
-              .limit(1);
+              .is("deleted_at", null);
 
-            if (data && data.length > 0) {
-              variant = data[0];
-              console.log(
-                `[INFO]   옵션명 매칭 성공: ${option.optionName1} → ${variant.variant_value}`,
-              );
+            if (allVariants && allVariants.length > 0) {
+              // 정규화된 옵션명으로 매칭
+              for (const v of allVariants) {
+                if (matchOptionName(v.variant_value, optionValue)) {
+                  variant = v;
+                  console.log(
+                    `[INFO]   옵션명 매칭 성공 (정규화): ${optionValue} → ${v.variant_value}`,
+                  );
+                  break;
+                }
+              }
+              
+              // 정규화 매칭 실패 시 기존 방식 (부분 매칭)으로 폴백
+              if (!variant) {
+                const { data } = await supabase
+                  .from("product_variants")
+                  .select("id, variant_value, sku")
+                  .eq("product_id", product.id)
+                  .ilike("variant_value", `%${option.optionName1}%`)
+                  .is("deleted_at", null)
+                  .limit(1);
+
+                if (data && data.length > 0) {
+                  variant = data[0];
+                  console.log(
+                    `[INFO]   옵션명 매칭 성공 (부분 매칭): ${option.optionName1} → ${variant.variant_value}`,
+                  );
+                }
+              }
             }
           }
+
+          // 스마트스토어 옵션명 결정
+          const smartstoreOptionName = option.optionName2
+            ? `${option.optionName1}/${option.optionName2}`
+            : option.optionName1;
 
           if (variant) {
             // 매핑 정보 저장
@@ -764,9 +935,7 @@ async function buildMapping() {
                 productName: product.name,
                 originProductNo: originProductNo || "N/A",
                 optionId: option.id,
-                optionName: option.optionName2
-                  ? `${option.optionName1}/${option.optionName2}`
-                  : option.optionName1,
+                optionName: smartstoreOptionName,
                 sellerManagerCode: option.sellerManagerCode,
                 reason: `DB 업데이트 실패: ${updateError.message}`,
               });
@@ -775,17 +944,55 @@ async function buildMapping() {
               console.log(
                 `[INFO]   ✅ 매핑 완료: ${option.optionName1} (옵션 ID: ${option.id})`,
               );
+
+              // 매핑 테이블에 저장 (옵션명이 다른 경우만)
+              const oldVariantValue = variant.variant_value;
+              const newVariantValue = smartstoreOptionName;
+              
+              if (oldVariantValue !== newVariantValue) {
+                // 매핑 신뢰도 결정
+                let mappingConfidence = "normalized";
+                if (option.sellerManagerCode && variant.sku === option.sellerManagerCode) {
+                  mappingConfidence = "exact"; // SKU로 매칭된 경우
+                } else if (normalizeOptionName(oldVariantValue) === normalizeOptionName(newVariantValue)) {
+                  mappingConfidence = "exact"; // 정규화 후 정확히 일치
+                }
+
+                // variant_name_mapping 테이블에 저장 (upsert)
+                const { error: mappingError } = await supabase
+                  .from("variant_name_mapping")
+                  .upsert({
+                    variant_id: variant.id,
+                    product_id: product.id,
+                    old_variant_value: oldVariantValue,
+                    new_variant_value: newVariantValue,
+                    smartstore_option_id: option.id,
+                    smartstore_channel_product_no: channelProductNo,
+                    mapping_confidence: mappingConfidence,
+                    mapping_reason: null,
+                  }, {
+                    onConflict: "variant_id",
+                  });
+
+                if (mappingError) {
+                  console.warn(
+                    `[WARN] 매핑 테이블 저장 실패: ${mappingError.message}`,
+                  );
+                } else {
+                  console.log(
+                    `[INFO]   📝 매핑 테이블 저장: ${oldVariantValue} → ${newVariantValue} (${mappingConfidence})`,
+                  );
+                }
+              }
             }
           } else {
-            // 매핑 실패 → 누락 목록에 추가
+            // 매핑 실패 → 누락 목록에 추가 및 매핑 테이블에 'failed' 상태로 저장
             result.failedCount++;
             const unmappedOption = {
               productName: product.name,
               originProductNo: originProductNo || "N/A",
               optionId: option.id,
-              optionName: option.optionName2
-                ? `${option.optionName1}/${option.optionName2}`
-                : option.optionName1,
+              optionName: smartstoreOptionName,
               sellerManagerCode: option.sellerManagerCode,
               reason: option.sellerManagerCode
                 ? "SKU 불일치"
@@ -795,6 +1002,37 @@ async function buildMapping() {
             console.warn(
               `[WARN]   ❌ 매핑 실패: ${unmappedOption.optionName} (${unmappedOption.reason})`,
             );
+
+            // 매핑 실패 항목도 매핑 테이블에 저장 (수동 보정용)
+            // 해당 상품의 모든 variant를 가져와서 매핑 실패로 기록
+            const { data: allVariantsForProduct } = await supabase
+              .from("product_variants")
+              .select("id, variant_value")
+              .eq("product_id", product.id)
+              .is("deleted_at", null);
+
+            if (allVariantsForProduct && allVariantsForProduct.length > 0) {
+              // 매핑 실패한 옵션명을 매핑 테이블에 저장 (variant_id는 NULL로)
+              // 나중에 수동으로 매핑할 수 있도록
+              const { error: failedMappingError } = await supabase
+                .from("variant_name_mapping")
+                .insert({
+                  variant_id: null, // 매핑 실패로 variant_id 없음
+                  product_id: product.id,
+                  old_variant_value: "UNMAPPED",
+                  new_variant_value: smartstoreOptionName,
+                  smartstore_option_id: option.id,
+                  smartstore_channel_product_no: channelProductNo,
+                  mapping_confidence: "failed",
+                  mapping_reason: unmappedOption.reason,
+                });
+
+              if (failedMappingError) {
+                console.warn(
+                  `[WARN] 매핑 실패 항목 저장 실패: ${failedMappingError.message}`,
+                );
+              }
+            }
           }
         }
 
@@ -1212,17 +1450,45 @@ async function buildMapping() {
                 ? `${option.optionName1}/${option.optionName2}`
                 : option.optionName1;
 
-              const { data } = await supabase
+              // 모든 variant를 가져와서 정규화된 옵션명으로 매칭
+              const { data: allVariants } = await supabase
                 .from("product_variants")
                 .select("id, stock, variant_value")
                 .eq("product_id", product.id)
-                .ilike("variant_value", `%${option.optionName1}%`)
-                .is("deleted_at", null)
-                .limit(1);
+                .is("deleted_at", null);
 
-              if (data && data.length > 0) {
-                variant = data[0];
+              if (allVariants && allVariants.length > 0) {
+                // 정규화된 옵션명으로 매칭
+                for (const v of allVariants) {
+                  if (matchOptionName(v.variant_value, optionValue)) {
+                    variant = v;
+                    console.log(
+                      `[INFO]   옵션명 매칭 성공 (정규화): ${optionValue} → ${v.variant_value}`,
+                    );
+                    break;
+                  }
+                }
+                
+                // 정규화 매칭 실패 시 기존 방식 (부분 매칭)으로 폴백
+                if (!variant) {
+                  const { data } = await supabase
+                    .from("product_variants")
+                    .select("id, stock, variant_value")
+                    .eq("product_id", product.id)
+                    .ilike("variant_value", `%${option.optionName1}%`)
+                    .is("deleted_at", null)
+                    .limit(1);
 
+                  if (data && data.length > 0) {
+                    variant = data[0];
+                    console.log(
+                      `[INFO]   옵션명 매칭 성공 (부분 매칭): ${option.optionName1} → ${variant.variant_value}`,
+                    );
+                  }
+                }
+              }
+
+              if (variant) {
                 // 매핑 정보 업데이트
                 const updateData = {
                   smartstore_option_id: option.id,

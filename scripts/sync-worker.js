@@ -23,6 +23,16 @@ if (!SUPABASE_URL || !SERVICE_KEY) {
 }
 
 const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
+
+// 환경 변수 정규화 함수 (공백, 따옴표 제거)
+function normalizeEnvValue(value) {
+  if (!value) return "";
+  return value
+    .trim()
+    .replace(/^"(.*)"$/, "$1")
+    .replace(/^'(.*)'$/, "$1");
+}
+
 let accessToken = null;
 let tokenExpiresAt = 0;
 
@@ -45,24 +55,33 @@ async function getNaverToken() {
   const type = "SELF";
   const accountId = process.env.NAVER_SMARTSTORE_ACCOUNT_ID || "";
 
+  // 환경 변수 정규화 (공백, 따옴표 제거)
+  const normalizedClientId = normalizeEnvValue(NAVER_CLIENT_ID);
+  const normalizedClientSecret = normalizeEnvValue(NAVER_CLIENT_SECRET);
+
   // client_secret_sign 생성 (네이버 API 문서 방식)
   // 1. password = clientId_timestamp 형식으로 생성
   // 2. bcrypt.hashSync(password, clientSecret) - clientSecret을 salt로 사용
   // 3. 결과를 base64로 인코딩
-  const password = `${NAVER_CLIENT_ID}_${timestamp}`;
+  const password = `${normalizedClientId}_${timestamp}`;
   let clientSecretSign;
   try {
-    const hashed = bcrypt.hashSync(password, NAVER_CLIENT_SECRET);
-    clientSecretSign = Buffer.from(hashed, "utf-8").toString("base64");
+    const hashed = bcrypt.hashSync(password, normalizedClientSecret);
+    // base64url 인코딩 (URL-safe base64, test-smartstore-api.ts와 동일)
+    const base64 = Buffer.from(hashed, "utf-8").toString("base64");
+    clientSecretSign = base64
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_")
+      .replace(/=+$/, "");
   } catch (error) {
     throw new Error(`client_secret_sign 생성 실패: ${error.message}`);
   }
 
   // 요청 바디 준비
+  // ⚠️ 중요: client_secret_sign을 사용할 때는 client_secret을 요청 본문에 포함시키지 않음
   const requestBodyParams = {
     grant_type: "client_credentials",
-    client_id: NAVER_CLIENT_ID,
-    client_secret: NAVER_CLIENT_SECRET,
+    client_id: normalizedClientId,
     timestamp: timestamp.toString(),
     client_secret_sign: clientSecretSign,
     type: type,
