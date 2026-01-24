@@ -986,50 +986,70 @@ async function buildMapping() {
               }
             }
           } else {
-            // 매핑 실패 → 누락 목록에 추가 및 매핑 테이블에 'failed' 상태로 저장
-            result.failedCount++;
-            const unmappedOption = {
-              productName: product.name,
-              originProductNo: originProductNo || "N/A",
-              optionId: option.id,
-              optionName: smartstoreOptionName,
-              sellerManagerCode: option.sellerManagerCode,
-              reason: option.sellerManagerCode
-                ? "SKU 불일치"
-                : "SKU 없음 + 옵션명 매칭 실패",
-            };
-            result.unmappedOptions.push(unmappedOption);
+            // 매핑 실패 → 새 variant 생성 (Smartstore 옵션명으로)
             console.warn(
-              `[WARN]   ❌ 매핑 실패: ${unmappedOption.optionName} (${unmappedOption.reason})`,
+              `[WARN]   ❌ 매핑 실패: ${smartstoreOptionName} - 새 variant 생성 중...`,
             );
 
-            // 매핑 실패 항목도 매핑 테이블에 저장 (수동 보정용)
-            // 해당 상품의 모든 variant를 가져와서 매핑 실패로 기록
-            const { data: allVariantsForProduct } = await supabase
+            // 새 variant 생성
+            const { data: newVariant, error: createError } = await supabase
               .from("product_variants")
-              .select("id, variant_value")
-              .eq("product_id", product.id)
-              .is("deleted_at", null);
+              .insert({
+                product_id: product.id,
+                variant_name: "옵션",
+                variant_value: smartstoreOptionName, // Smartstore 옵션명으로 생성
+                stock: option.stockQuantity || 0,
+                price_adjustment: option.price || 0,
+                sku: option.sellerManagerCode || null,
+                smartstore_option_id: option.id,
+                smartstore_channel_product_no: channelProductNo,
+              })
+              .select("id")
+              .single();
 
-            if (allVariantsForProduct && allVariantsForProduct.length > 0) {
-              // 매핑 실패한 옵션명을 매핑 테이블에 저장 (variant_id는 NULL로)
-              // 나중에 수동으로 매핑할 수 있도록
-              const { error: failedMappingError } = await supabase
+            if (createError) {
+              console.error(
+                `[ERROR] 새 variant 생성 실패: ${createError.message}`,
+              );
+              result.failedCount++;
+              result.unmappedOptions.push({
+                productName: product.name,
+                originProductNo: originProductNo || "N/A",
+                optionId: option.id,
+                optionName: smartstoreOptionName,
+                sellerManagerCode: option.sellerManagerCode,
+                reason: `variant 생성 실패: ${createError.message}`,
+              });
+            } else {
+              // 새 variant 생성 성공
+              result.mappedCount++;
+              console.log(
+                `[INFO]   ✅ 새 variant 생성 완료: ${smartstoreOptionName} (ID: ${newVariant.id})`,
+              );
+
+              // 매핑 테이블에 저장 (새로 생성된 variant)
+              const { error: mappingError } = await supabase
                 .from("variant_name_mapping")
-                .insert({
-                  variant_id: null, // 매핑 실패로 variant_id 없음
+                .upsert({
+                  variant_id: newVariant.id,
                   product_id: product.id,
-                  old_variant_value: "UNMAPPED",
+                  old_variant_value: "NEW", // 새로 생성된 variant
                   new_variant_value: smartstoreOptionName,
                   smartstore_option_id: option.id,
                   smartstore_channel_product_no: channelProductNo,
-                  mapping_confidence: "failed",
-                  mapping_reason: unmappedOption.reason,
+                  mapping_confidence: "manual", // 새로 생성된 것이므로 manual
+                  mapping_reason: "매핑 실패로 인한 새 variant 생성",
+                }, {
+                  onConflict: "variant_id",
                 });
 
-              if (failedMappingError) {
+              if (mappingError) {
                 console.warn(
-                  `[WARN] 매핑 실패 항목 저장 실패: ${failedMappingError.message}`,
+                  `[WARN] 매핑 테이블 저장 실패: ${mappingError.message}`,
+                );
+              } else {
+                console.log(
+                  `[INFO]   📝 매핑 테이블 저장: NEW → ${smartstoreOptionName} (manual)`,
                 );
               }
             }
